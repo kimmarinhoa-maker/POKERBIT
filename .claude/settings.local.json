@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(node scripts/check-unlinked.js:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(npx next build:*)",
+      "Bash(taskkill:*)"
+    ]
+  }
+}

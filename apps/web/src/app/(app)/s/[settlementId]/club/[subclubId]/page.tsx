@@ -1,0 +1,294 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { getSettlementFull, formatDate, isAdmin } from '@/lib/api';
+import Spinner from '@/components/Spinner';
+
+import SubNavTabs from '@/components/settlement/SubNavTabs';
+import LockWeekModal from '@/components/settlement/LockWeekModal';
+import WeekSelector from '@/components/WeekSelector';
+import ResumoClube from '@/components/settlement/ResumoClube';
+import Detalhamento from '@/components/settlement/Detalhamento';
+import Jogadores from '@/components/settlement/Jogadores';
+import Ajustes from '@/components/settlement/Ajustes';
+import DRE from '@/components/settlement/DRE';
+import Liga from '@/components/settlement/Liga';
+import Extrato from '@/components/settlement/Extrato';
+import Liquidacao from '@/components/settlement/Liquidacao';
+import Rakeback from '@/components/settlement/Rakeback';
+import Comprovantes from '@/components/settlement/Comprovantes';
+import Conciliacao from '@/components/settlement/Conciliacao';
+
+export default function SubclubPanelPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const settlementId = params.settlementId as string;
+  const subclubId = decodeURIComponent(params.subclubId as string);
+  const activeTab = searchParams.get('tab') || 'resumo';
+
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [weekNotFound, setWeekNotFound] = useState(false);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getSettlementFull(settlementId);
+      if (res.success && res.data) {
+        setData(res.data);
+      } else {
+        setError(res.error || 'Erro ao carregar settlement');
+      }
+    } catch {
+      setError('Erro de conexao com o servidor');
+    } finally {
+      setLoading(false);
+    }
+  }, [settlementId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  async function handleFinalize() {
+    setShowLockModal(true);
+  }
+
+  function handleTabChange(tab: string) {
+    router.push(`/s/${settlementId}/club/${encodeURIComponent(subclubId)}?tab=${tab}`);
+  }
+
+  // ─── Loading ─────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20 min-h-[60vh]">
+        <div className="text-center">
+          <Spinner size="xl" className="mx-auto mb-4" />
+          <p className="text-dark-400 text-sm">Carregando settlement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="p-8">
+        <div className="card text-center py-16">
+          <p className="text-red-400 mb-4">{error || 'Settlement nao encontrado'}</p>
+          <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">
+            Voltar ao Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { settlement, fees, subclubs } = data;
+
+  // Find current subclub
+  const currentSubclub = subclubs.find(
+    (sc: any) => sc.name === subclubId || sc.id === subclubId
+  );
+
+  if (!currentSubclub) {
+    return (
+      <div className="p-8">
+        <div className="card text-center py-16">
+          <p className="text-red-400 mb-4">Subclube &quot;{subclubId}&quot; nao encontrado</p>
+          <button
+            onClick={() => router.push(`/s/${settlementId}`)}
+            className="btn-secondary text-sm"
+          >
+            Voltar para Semana
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate week_end
+  const weekEnd = (() => {
+    if (!settlement.week_start) return undefined;
+    const d = new Date(settlement.week_start + 'T00:00:00');
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().split('T')[0];
+  })();
+
+  // ─── Render content based on tab ──────────────────────────────────
+  function renderContent() {
+    switch (activeTab) {
+      case 'resumo':
+        return (
+          <ResumoClube
+            subclub={currentSubclub}
+            fees={fees}
+            weekStart={settlement.week_start}
+            weekEnd={weekEnd}
+          />
+        );
+      case 'detalhamento':
+        return <Detalhamento subclub={currentSubclub} />;
+      case 'jogadores':
+        return <Jogadores subclub={currentSubclub} />;
+
+      // Tabs funcionais
+      case 'ajustes':
+        return (
+          <Ajustes
+            subclub={currentSubclub}
+            weekStart={settlement.week_start}
+            settlementStatus={settlement.status}
+            onDataChange={loadData}
+          />
+        );
+      case 'dre':
+        return <DRE subclub={currentSubclub} fees={fees} />;
+      case 'liga':
+        return <Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} />;
+      case 'extrato':
+        return (
+          <Extrato
+            weekStart={settlement.week_start}
+            settlementStatus={settlement.status}
+            onDataChange={loadData}
+          />
+        );
+      case 'liquidacao':
+        return (
+          <Liquidacao
+            subclub={currentSubclub}
+            weekStart={settlement.week_start}
+            clubId={settlement.club_id}
+            settlementId={settlementId}
+            settlementStatus={settlement.status}
+            onDataChange={loadData}
+          />
+        );
+
+      case 'rakeback':
+        return (
+          <Rakeback
+            subclub={currentSubclub}
+            weekStart={settlement.week_start}
+            fees={fees}
+            settlementId={settlementId}
+            settlementStatus={settlement.status}
+            onDataChange={loadData}
+          />
+        );
+      case 'comprovantes':
+        return (
+          <Comprovantes
+            subclub={currentSubclub}
+            weekStart={settlement.week_start}
+            clubId={settlement.club_id}
+            fees={fees}
+          />
+        );
+      case 'conciliacao':
+        return (
+          <Conciliacao
+            weekStart={settlement.week_start}
+            clubId={settlement.club_id}
+            settlementStatus={settlement.status}
+            onDataChange={loadData}
+            agents={(currentSubclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
+            players={(currentSubclub.players || []).map((p: any) => ({ external_player_id: p.external_player_id, nickname: p.nickname }))}
+          />
+        );
+
+      default:
+        return (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-dark-400">Tab nao encontrada: {activeTab}</p>
+          </div>
+        );
+    }
+  }
+
+  // ─── Main layout ──────────────────────────────────────────────────
+  return (
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      {/* Lock Week Modal */}
+      <LockWeekModal
+        show={showLockModal}
+        settlementId={settlementId}
+        weekStart={settlement.week_start}
+        notes={settlement.notes || ''}
+        subclubs={subclubs}
+        onClose={() => setShowLockModal(false)}
+        onSuccess={() => { setShowLockModal(false); loadData(); }}
+      />
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push(`/s/${settlementId}`)}
+            className="text-dark-400 hover:text-dark-200 text-sm flex items-center gap-1 transition-colors"
+            aria-label="Voltar para visao geral"
+          >
+            ← Voltar
+          </button>
+          <div className="h-4 w-px bg-dark-700" />
+          <WeekSelector
+            currentSettlementId={settlementId}
+            weekStart={settlement.week_start}
+            weekEnd={weekEnd || ''}
+            status={settlement.status}
+            onNotFound={() => setWeekNotFound(true)}
+          />
+          <span className="text-dark-500 text-xs">v{settlement.version}</span>
+          <div className="h-4 w-px bg-dark-700" />
+          <select
+            value={currentSubclub.name}
+            onChange={(e) => {
+              router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
+            }}
+            className="bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5 text-sm text-white font-medium focus:border-poker-500 focus:outline-none cursor-pointer"
+            aria-label="Selecionar subclube"
+          >
+            {subclubs.map((sc: any) => (
+              <option key={sc.id || sc.name} value={sc.name}>
+                {sc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {settlement.status === 'DRAFT' && isAdmin() && (
+            <button onClick={handleFinalize} className="btn-primary text-sm flex items-center gap-2">
+              Finalizar Semana
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2-column layout */}
+      {weekNotFound ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center bg-dark-950/30">
+          <div className="text-5xl mb-4">📅</div>
+          <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
+          <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Col 1: Sub-nav tabs */}
+          <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
+
+          {/* Col 2: Content area */}
+          <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
+            {renderContent()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

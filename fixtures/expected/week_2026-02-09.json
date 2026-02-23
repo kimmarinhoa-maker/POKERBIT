@@ -1,0 +1,7135 @@
+{
+  "meta": {
+    "fileName": "semana_2026-02-09.xlsx",
+    "weekStart": "2026-02-09",
+    "playerCount": 222,
+    "clubes": [
+      "TGP",
+      "IMPERIO",
+      "CH",
+      "3BET",
+      "CONFRARIA",
+      "OUTROS"
+    ]
+  },
+  "clubs": {
+    "TGP": {
+      "totals": {
+        "players": 51,
+        "agents": 12,
+        "ganhos": -66414.6,
+        "rakeGerado": 44268.229999999996,
+        "ggr": 0
+      },
+      "agents": [
+        {
+          "agentName": "AG TGP AltoVale",
+          "agentRate": 0,
+          "playerCount": 8,
+          "rakeTime": 2188.5299999999997,
+          "ganhosTime": -5692.299999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -5692.299999999999,
+          "players": [
+            {
+              "id": "37490",
+              "nick": "AG TGP AltoVale",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -6241.65,
+              "rakeGerado": 1980.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -6241.65,
+              "rakeBreakdown": {
+                "ringGame": 1921,
+                "mtt": 41.8,
+                "sng": 17.5,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1980.3
+              }
+            },
+            {
+              "id": "310784",
+              "nick": "Mamamia6",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -295.25,
+              "rakeGerado": 51.790000000000006,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -295.25,
+              "rakeBreakdown": {
+                "ringGame": 51.2,
+                "mtt": 0.59,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 51.790000000000006
+              }
+            },
+            {
+              "id": "900443",
+              "nick": "checkk4i20",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -5,
+              "rakeGerado": 0.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.5
+              }
+            },
+            {
+              "id": "982525",
+              "nick": "Dr Carlos",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": 1458.3500000000001,
+              "rakeGerado": 55.11,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1458.3500000000001,
+              "rakeBreakdown": {
+                "ringGame": 1.5,
+                "mtt": 49.71,
+                "sng": 3.9,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55.11
+              }
+            },
+            {
+              "id": "1246909",
+              "nick": "DjoiLoves",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -294.85,
+              "rakeGerado": 58.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -294.85,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 58.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 58.5
+              }
+            },
+            {
+              "id": "1597491",
+              "nick": "Mazin94",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -282.75,
+              "rakeGerado": 34.99,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -282.75,
+              "rakeBreakdown": {
+                "ringGame": 26.4,
+                "mtt": 8.59,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 34.989999999999995
+              }
+            },
+            {
+              "id": "1610909",
+              "nick": "Sandroo17",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -18.5,
+              "rakeGerado": 1.9,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -18.5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 1.6,
+                "sng": 0.3,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1.9000000000000001
+              }
+            },
+            {
+              "id": "1625107",
+              "nick": "Tzar",
+              "agentId": "37490",
+              "agentName": "AG TGP AltoVale",
+              "ganhos": -12.649999999999999,
+              "rakeGerado": 5.44,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -12.649999999999999,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 5.44,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 5.44
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG TGP WILL",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 74.5,
+          "ganhosTime": 117.05,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 117.05,
+          "players": [
+            {
+              "id": "546904",
+              "nick": "AA.Carrara",
+              "agentId": "288224",
+              "agentName": "AG TGP WILL",
+              "ganhos": 117.05,
+              "rakeGerado": 74.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 117.05,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 74.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 74.5
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG TGP SUBAG",
+          "agentRate": 0,
+          "playerCount": 4,
+          "rakeTime": 830.5,
+          "ganhosTime": 9148.15,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 9148.15,
+          "players": [
+            {
+              "id": "338442",
+              "nick": "Ivan Martins",
+              "agentId": "294350",
+              "agentName": "AG TGP SUBAG",
+              "ganhos": 0,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            },
+            {
+              "id": "672278",
+              "nick": "LuFeOl2188",
+              "agentId": "294350",
+              "agentName": "AG TGP SUBAG",
+              "ganhos": 307.65,
+              "rakeGerado": 462.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 307.65,
+              "rakeBreakdown": {
+                "ringGame": 429.69999999999993,
+                "mtt": 32.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 462.19999999999993
+              }
+            },
+            {
+              "id": "1520468",
+              "nick": "ctrltudo01",
+              "agentId": "294350",
+              "agentName": "AG TGP SUBAG",
+              "ganhos": 8897.45,
+              "rakeGerado": 350,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 8897.45,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 350,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 350
+              }
+            },
+            {
+              "id": "1575209",
+              "nick": "TGP DEYVISON",
+              "agentId": "294350",
+              "agentName": "AG TGP SUBAG",
+              "ganhos": -56.95,
+              "rakeGerado": 18.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -56.95,
+              "rakeBreakdown": {
+                "ringGame": 11.3,
+                "mtt": 7,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 18.3
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "Ag. tgp Zeuuss",
+          "agentRate": 0,
+          "playerCount": 7,
+          "rakeTime": 260.05,
+          "ganhosTime": 119.15000000000009,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 119.15000000000009,
+          "players": [
+            {
+              "id": "298857",
+              "nick": "cesaroyal",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": -130.39999999999998,
+              "rakeGerado": 72.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -130.39999999999998,
+              "rakeBreakdown": {
+                "ringGame": 69.5,
+                "mtt": 3,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 72.5
+              }
+            },
+            {
+              "id": "375354",
+              "nick": "Battousai",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": -200.5,
+              "rakeGerado": 26.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -200.5,
+              "rakeBreakdown": {
+                "ringGame": 11.3,
+                "mtt": 15.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 26.8
+              }
+            },
+            {
+              "id": "701282",
+              "nick": "#SUB50",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": 31.400000000000002,
+              "rakeGerado": 3.55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 31.400000000000002,
+              "rakeBreakdown": {
+                "ringGame": 3.55,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.55
+              }
+            },
+            {
+              "id": "1095115",
+              "nick": "Mr.Euler",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": -10,
+              "rakeGerado": 0.8999999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -10,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0.9,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.9
+              }
+            },
+            {
+              "id": "1119451",
+              "nick": "pesadinho",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": 19.15000000000001,
+              "rakeGerado": 96.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 19.15000000000001,
+              "rakeBreakdown": {
+                "ringGame": 96.80000000000001,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 96.80000000000001
+              }
+            },
+            {
+              "id": "1579699",
+              "nick": "Jefiinhoo",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": -435,
+              "rakeGerado": 43.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -435,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 43.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 43.5
+              }
+            },
+            {
+              "id": "1629957",
+              "nick": "galegoooo29",
+              "agentId": "436493",
+              "agentName": "Ag. tgp Zeuuss",
+              "ganhos": 844.5,
+              "rakeGerado": 16,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 844.5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 16,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 16
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "Ag. TGP Nacho",
+          "agentRate": 0,
+          "playerCount": 12,
+          "rakeTime": 3022.8,
+          "ganhosTime": -947.4999999999983,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -947.4999999999983,
+          "players": [
+            {
+              "id": "291769",
+              "nick": "KEPLER1985",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": 11.15,
+              "rakeGerado": 55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 11.15,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 55,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55
+              }
+            },
+            {
+              "id": "411051",
+              "nick": "Peach",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -387.35,
+              "rakeGerado": 66,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -387.35,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 66,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 66
+              }
+            },
+            {
+              "id": "493368",
+              "nick": "Magnetar8",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -335,
+              "rakeGerado": 32,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -335,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 32,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 32
+              }
+            },
+            {
+              "id": "589273",
+              "nick": "bigdogpckt",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -3166.25,
+              "rakeGerado": 1681.8000000000002,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -3166.25,
+              "rakeBreakdown": {
+                "ringGame": 66.5,
+                "mtt": 1615.3,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1681.8
+              }
+            },
+            {
+              "id": "637659",
+              "nick": "joker111",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": 444.15,
+              "rakeGerado": 228.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 444.15,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 228.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 228.5
+              }
+            },
+            {
+              "id": "637661",
+              "nick": "segurabb",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -1146.55,
+              "rakeGerado": 219,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1146.55,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 219,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 219
+              }
+            },
+            {
+              "id": "637664",
+              "nick": "Borabill_",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -1360.6999999999998,
+              "rakeGerado": 185.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1360.6999999999998,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 185.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 185.5
+              }
+            },
+            {
+              "id": "665325",
+              "nick": "perseverance",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -375,
+              "rakeGerado": 37.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -375,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 37.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 37.5
+              }
+            },
+            {
+              "id": "691286",
+              "nick": "trincadaço",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -550,
+              "rakeGerado": 55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -550,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 55,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55
+              }
+            },
+            {
+              "id": "1165921",
+              "nick": "otataehfoda",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": -569.9,
+              "rakeGerado": 130,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -569.9,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 130,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 130
+              }
+            },
+            {
+              "id": "1165923",
+              "nick": "vitalbrasill",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": 5736.900000000001,
+              "rakeGerado": 146.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 5736.900000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 146.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 146.5
+              }
+            },
+            {
+              "id": "1165927",
+              "nick": "BaixadaBet",
+              "agentId": "691236",
+              "agentName": "Ag. TGP Nacho",
+              "ganhos": 751.0500000000001,
+              "rakeGerado": 186,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 751.0500000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 186,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 186
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "HOME GAME UDI.TGP",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 363.19999999999993,
+          "ganhosTime": 2021.3,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 2021.3,
+          "players": [
+            {
+              "id": "1001862",
+              "nick": "plo5_AA",
+              "agentId": "1001864",
+              "agentName": "HOME GAME UDI.TGP",
+              "ganhos": 2021.3,
+              "rakeGerado": 363.19999999999993,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2021.3,
+              "rakeBreakdown": {
+                "ringGame": 363.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 363.2
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "Ag. tgp Henrique",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 18.05,
+          "ganhosTime": 42.9,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 42.9,
+          "players": [
+            {
+              "id": "1076399",
+              "nick": "Ag. tgp Henrique",
+              "agentId": "1076399",
+              "agentName": "Ag. tgp Henrique",
+              "ganhos": 42.9,
+              "rakeGerado": 18.05,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 42.9,
+              "rakeBreakdown": {
+                "ringGame": 7.05,
+                "mtt": 11,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 18.05
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "Ag. TGP Durval",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 8532.95,
+          "ganhosTime": 2106.4499999999985,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 2106.4499999999985,
+          "players": [
+            {
+              "id": "1174079",
+              "nick": "Ag. TGP Durval",
+              "agentId": "1174079",
+              "agentName": "Ag. TGP Durval",
+              "ganhos": 2106.4499999999985,
+              "rakeGerado": 8532.95,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2106.4499999999985,
+              "rakeBreakdown": {
+                "ringGame": 8532.95,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 8532.95
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG. TGP Admin24",
+          "agentRate": 0,
+          "playerCount": 11,
+          "rakeTime": 21695.799999999996,
+          "ganhosTime": -46457.2,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -46457.2,
+          "players": [
+            {
+              "id": "986748",
+              "nick": "Morpheus..",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 23500,
+              "rakeGerado": 525,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 23500,
+              "rakeBreakdown": {
+                "ringGame": 525,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 525
+              }
+            },
+            {
+              "id": "986751",
+              "nick": "IJustGamble",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": -80324.95,
+              "rakeGerado": 8172.750000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -80324.95,
+              "rakeBreakdown": {
+                "ringGame": 8172.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 8172.75
+              }
+            },
+            {
+              "id": "986761",
+              "nick": "HomemBobo",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": -2503.15,
+              "rakeGerado": 521.7,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2503.15,
+              "rakeBreakdown": {
+                "ringGame": 521.7,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 521.7
+              }
+            },
+            {
+              "id": "1089157",
+              "nick": "sweethome",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 10330.35,
+              "rakeGerado": 2261.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 10330.35,
+              "rakeBreakdown": {
+                "ringGame": 2261.1000000000004,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2261.1000000000004
+              }
+            },
+            {
+              "id": "1201168",
+              "nick": "AG. TGP Admin24",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": -197.5,
+              "rakeGerado": 40,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -197.5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 40,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 40
+              }
+            },
+            {
+              "id": "1229354",
+              "nick": "Paraisopolis",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 2253.85,
+              "rakeGerado": 1972.6000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2253.85,
+              "rakeBreakdown": {
+                "ringGame": 1972.5999999999997,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1972.5999999999997
+              }
+            },
+            {
+              "id": "1523506",
+              "nick": "Raspador",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 1350.65,
+              "rakeGerado": 618.05,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1350.65,
+              "rakeBreakdown": {
+                "ringGame": 618.0500000000001,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 618.0500000000001
+              }
+            },
+            {
+              "id": "1534644",
+              "nick": "Slowhand.",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": -3650.6999999999994,
+              "rakeGerado": 1007.1500000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -3650.6999999999994,
+              "rakeBreakdown": {
+                "ringGame": 1007.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1007.15
+              }
+            },
+            {
+              "id": "1560024",
+              "nick": "Xavier-ID",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 2907.55,
+              "rakeGerado": 1978.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2907.55,
+              "rakeBreakdown": {
+                "ringGame": 1973.25,
+                "mtt": 5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1978.25
+              }
+            },
+            {
+              "id": "1560392",
+              "nick": "DreamHigh",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": -1392.0000000000002,
+              "rakeGerado": 1892.6,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1392.0000000000002,
+              "rakeBreakdown": {
+                "ringGame": 1892.6,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1892.6
+              }
+            },
+            {
+              "id": "1563127",
+              "nick": "GIKPoP",
+              "agentId": "1201168",
+              "agentName": "AG. TGP Admin24",
+              "ganhos": 1268.7,
+              "rakeGerado": 2706.6000000000004,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1268.7,
+              "rakeBreakdown": {
+                "ringGame": 2706.6,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2706.6
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "Capaneze.TGP",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 4974.549999999999,
+          "ganhosTime": -21945.7,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -21945.7,
+          "players": [
+            {
+              "id": "1384064",
+              "nick": "Capaneze.TGP",
+              "agentId": "1384064",
+              "agentName": "Capaneze.TGP",
+              "ganhos": -24702.95,
+              "rakeGerado": 3669.6499999999996,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -24702.95,
+              "rakeBreakdown": {
+                "ringGame": 3669.65,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3669.65
+              }
+            },
+            {
+              "id": "1547009",
+              "nick": "JP...",
+              "agentId": "1384064",
+              "agentName": "Capaneze.TGP",
+              "ganhos": 2757.25,
+              "rakeGerado": 1304.9,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2757.25,
+              "rakeBreakdown": {
+                "ringGame": 1304.9,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1304.9
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "TGP SALUM",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 782.65,
+          "ganhosTime": 5040.849999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 5040.849999999999,
+          "players": [
+            {
+              "id": "1444833",
+              "nick": "TGP SALUM",
+              "agentId": "1444833",
+              "agentName": "TGP SALUM",
+              "ganhos": 5040.849999999999,
+              "rakeGerado": 782.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 5040.849999999999,
+              "rakeBreakdown": {
+                "ringGame": 662.65,
+                "mtt": 120,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 782.65
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "TGP Carpazene nov",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 1524.6500000000003,
+          "ganhosTime": -9967.75,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -9967.75,
+          "players": [
+            {
+              "id": "1062584",
+              "nick": "carpaneze87",
+              "agentId": "1596764",
+              "agentName": "TGP Carpazene nov",
+              "ganhos": -127.65,
+              "rakeGerado": 42.95,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -127.65,
+              "rakeBreakdown": {
+                "ringGame": 42.95,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 42.95
+              }
+            },
+            {
+              "id": "1596764",
+              "nick": "TGP Carpazene nov",
+              "agentId": "1596764",
+              "agentName": "TGP Carpazene nov",
+              "ganhos": -9840.1,
+              "rakeGerado": 1481.7000000000003,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -9840.1,
+              "rakeBreakdown": {
+                "ringGame": 1481.7,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1481.7
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "IMPERIO": {
+      "totals": {
+        "players": 67,
+        "agents": 21,
+        "ganhos": -16916.9,
+        "rakeGerado": 12522.03,
+        "ggr": 19.2
+      },
+      "agents": [
+        {
+          "agentName": "AG BB AMS BB",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 351.9,
+          "ganhosTime": 986.1,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 986.1,
+          "players": [
+            {
+              "id": "1392887",
+              "nick": "Rafaellara",
+              "agentId": "37534",
+              "agentName": "AG BB AMS BB",
+              "ganhos": -252.89999999999998,
+              "rakeGerado": 116.15,
+              "ggr": 6,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -252.89999999999998,
+              "rakeBreakdown": {
+                "ringGame": 116.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 116.15
+              }
+            },
+            {
+              "id": "1476144",
+              "nick": "Dr. Paloma",
+              "agentId": "37534",
+              "agentName": "AG BB AMS BB",
+              "ganhos": 1239,
+              "rakeGerado": 235.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1239,
+              "rakeBreakdown": {
+                "ringGame": 235.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 235.75
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS IMPÉRIO",
+          "agentRate": 0,
+          "playerCount": 31,
+          "rakeTime": 3609.2400000000007,
+          "ganhosTime": -3338.4000000000005,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -3338.4000000000005,
+          "players": [
+            {
+              "id": "290727",
+              "nick": "Monica Raim",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -21.45,
+              "rakeGerado": 3.79,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -21.45,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 3.79,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.79
+              }
+            },
+            {
+              "id": "291165",
+              "nick": "lucasj2",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -647.6,
+              "rakeGerado": 98.39,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -647.6,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 98.39,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 98.39
+              }
+            },
+            {
+              "id": "298301",
+              "nick": "dadai10",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -628.35,
+              "rakeGerado": 335.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -628.35,
+              "rakeBreakdown": {
+                "ringGame": 334.95000000000005,
+                "mtt": 0.3,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 335.25000000000006
+              }
+            },
+            {
+              "id": "299857",
+              "nick": "Merras",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 257.85,
+              "rakeGerado": 193.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 257.85,
+              "rakeBreakdown": {
+                "ringGame": 193.25,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 193.25
+              }
+            },
+            {
+              "id": "305818",
+              "nick": "CRONOS5",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -1232.4000000000003,
+              "rakeGerado": 279.90000000000003,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1232.4000000000003,
+              "rakeBreakdown": {
+                "ringGame": 279.90000000000003,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 279.90000000000003
+              }
+            },
+            {
+              "id": "313948",
+              "nick": "cheques 07",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -12.3,
+              "rakeGerado": 1.8499999999999996,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -12.3,
+              "rakeBreakdown": {
+                "ringGame": 1.8499999999999999,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1.8499999999999999
+              }
+            },
+            {
+              "id": "317464",
+              "nick": "allssandrr",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 10.95,
+              "rakeGerado": 4.85,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 10.95,
+              "rakeBreakdown": {
+                "ringGame": 4.85,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 4.85
+              }
+            },
+            {
+              "id": "327612",
+              "nick": "edriano98",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 5343.8,
+              "rakeGerado": 126,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 5343.8,
+              "rakeBreakdown": {
+                "ringGame": 3.25,
+                "mtt": 114.05,
+                "sng": 8.7,
+                "spin": 0,
+                "tlt": 0,
+                "total": 126
+              }
+            },
+            {
+              "id": "353677",
+              "nick": "Junior Lopes",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -100,
+              "rakeGerado": 6.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100,
+              "rakeBreakdown": {
+                "ringGame": 6.1,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 6.1
+              }
+            },
+            {
+              "id": "373248",
+              "nick": "Catirino",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 0.05,
+              "rakeGerado": 0.6900000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0.05,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.29,
+                "sng": 0.4,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.69
+              }
+            },
+            {
+              "id": "387523",
+              "nick": "christiAAn B",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -5,
+              "rakeGerado": 0.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.5
+              }
+            },
+            {
+              "id": "403572",
+              "nick": "Vô Dió",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -124.2,
+              "rakeGerado": 34.15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -124.2,
+              "rakeBreakdown": {
+                "ringGame": 33.4,
+                "mtt": 0,
+                "sng": 0.75,
+                "spin": 0,
+                "tlt": 0,
+                "total": 34.15
+              }
+            },
+            {
+              "id": "403989",
+              "nick": "403989",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -637.1500000000001,
+              "rakeGerado": 78.88,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -637.1500000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 78.88,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 78.88
+              }
+            },
+            {
+              "id": "409813",
+              "nick": "marcinho777",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 72.55,
+              "rakeGerado": 6.790000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 72.55,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 6.79,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 6.79
+              }
+            },
+            {
+              "id": "461714",
+              "nick": "blackmocCity",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -204.35000000000002,
+              "rakeGerado": 37.35,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -204.35000000000002,
+              "rakeBreakdown": {
+                "ringGame": 37.35,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 37.35
+              }
+            },
+            {
+              "id": "558228",
+              "nick": "Júlio",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -154.39999999999998,
+              "rakeGerado": 515.15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -154.39999999999998,
+              "rakeBreakdown": {
+                "ringGame": 515.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 515.15
+              }
+            },
+            {
+              "id": "561891",
+              "nick": "Cleitin Janu",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": 0,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            },
+            {
+              "id": "612172",
+              "nick": "92o",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -20.2,
+              "rakeGerado": 4.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -20.2,
+              "rakeBreakdown": {
+                "ringGame": 2.7,
+                "mtt": 1.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 4.2
+              }
+            },
+            {
+              "id": "645575",
+              "nick": "Douglas",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -1,
+              "rakeGerado": 0.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.1,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.1
+              }
+            },
+            {
+              "id": "665772",
+              "nick": "Carlos312",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -300,
+              "rakeGerado": 19.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -300,
+              "rakeBreakdown": {
+                "ringGame": 13.75,
+                "mtt": 5.75,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 19.5
+              }
+            },
+            {
+              "id": "739112",
+              "nick": "WallasB 😉",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -19.6,
+              "rakeGerado": 2.64,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -19.6,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 2.64,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2.64
+              }
+            },
+            {
+              "id": "858677",
+              "nick": "Kinkenhos",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -3,
+              "rakeGerado": 0.29000000000000004,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -3,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.29,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.29
+              }
+            },
+            {
+              "id": "973020",
+              "nick": "theuss07",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -63.650000000000006,
+              "rakeGerado": 29.08,
+              "ggr": 3,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -63.650000000000006,
+              "rakeBreakdown": {
+                "ringGame": 24.2,
+                "mtt": 4.88,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 29.08
+              }
+            },
+            {
+              "id": "1046241",
+              "nick": "Ediane 98",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -206,
+              "rakeGerado": 34.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -206,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 29,
+                "sng": 5.1,
+                "spin": 0,
+                "tlt": 0,
+                "total": 34.1
+              }
+            },
+            {
+              "id": "1098123",
+              "nick": "lehgonca",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -2029.4,
+              "rakeGerado": 751.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2029.4,
+              "rakeBreakdown": {
+                "ringGame": 751.1999999999999,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 751.1999999999999
+              }
+            },
+            {
+              "id": "1347119",
+              "nick": "diegadAAs",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -33.650000000000006,
+              "rakeGerado": 6.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -33.650000000000006,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 6.3,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 6.3
+              }
+            },
+            {
+              "id": "1440387",
+              "nick": "Van+Basten",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -15,
+              "rakeGerado": 1.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -15,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 1.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1.5
+              }
+            },
+            {
+              "id": "1453541",
+              "nick": "Johnal",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -1949.4499999999998,
+              "rakeGerado": 897.1000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1949.4499999999998,
+              "rakeBreakdown": {
+                "ringGame": 897.1,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 897.1
+              }
+            },
+            {
+              "id": "1485348",
+              "nick": "igorbala",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -97.4,
+              "rakeGerado": 27.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -97.4,
+              "rakeBreakdown": {
+                "ringGame": 8.9,
+                "mtt": 0,
+                "sng": 18.4,
+                "spin": 0,
+                "tlt": 0,
+                "total": 27.299999999999997
+              }
+            },
+            {
+              "id": "1532986",
+              "nick": "tockarente",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -498.05,
+              "rakeGerado": 109.45,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -498.05,
+              "rakeBreakdown": {
+                "ringGame": 109.45,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 109.45
+              }
+            },
+            {
+              "id": "1610631",
+              "nick": "BOMFIM $",
+              "agentId": "288885",
+              "agentName": "AG AMS IMPÉRIO",
+              "ganhos": -20,
+              "rakeGerado": 3.59,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -20,
+              "rakeBreakdown": {
+                "ringGame": 3.1,
+                "mtt": 0.49,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.59
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS CARNEIROsw",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 196.4,
+          "ganhosTime": -1112.3,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1112.3,
+          "players": [
+            {
+              "id": "385342",
+              "nick": "GalinhAA",
+              "agentId": "290200",
+              "agentName": "AG AMS CARNEIROsw",
+              "ganhos": -1112.3,
+              "rakeGerado": 196.4,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1112.3,
+              "rakeBreakdown": {
+                "ringGame": 86.4,
+                "mtt": 110,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 196.4
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG TW The Wolf",
+          "agentRate": 0,
+          "playerCount": 6,
+          "rakeTime": 354.71,
+          "ganhosTime": -491.05,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -491.05,
+          "players": [
+            {
+              "id": "292610",
+              "nick": "AnalistaJr",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": -138.65,
+              "rakeGerado": 27.21,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -138.65,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 27.21,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 27.21
+              }
+            },
+            {
+              "id": "292727",
+              "nick": "AG TW The Wolf",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": -100,
+              "rakeGerado": 31.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100,
+              "rakeBreakdown": {
+                "ringGame": 31.5,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 31.5
+              }
+            },
+            {
+              "id": "303845",
+              "nick": "santos2020",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": 109.65,
+              "rakeGerado": 20.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 109.65,
+              "rakeBreakdown": {
+                "ringGame": 20.65,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 20.65
+              }
+            },
+            {
+              "id": "530505",
+              "nick": "iHarvey",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": -7.55,
+              "rakeGerado": 3.35,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -7.55,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 3.35,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.35
+              }
+            },
+            {
+              "id": "1505166",
+              "nick": "Pedgui",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": -300,
+              "rakeGerado": 265.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -300,
+              "rakeBreakdown": {
+                "ringGame": 265.3,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 265.3
+              }
+            },
+            {
+              "id": "1578923",
+              "nick": "enchantée",
+              "agentId": "292727",
+              "agentName": "AG TW The Wolf",
+              "ganhos": -54.5,
+              "rakeGerado": 6.7,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -54.5,
+              "rakeBreakdown": {
+                "ringGame": 0.75,
+                "mtt": 5.95,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 6.7
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - VLM",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 2435.53,
+          "ganhosTime": -1044.3000000000002,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1044.3000000000002,
+          "players": [
+            {
+              "id": "297163",
+              "nick": "AG AMS - VLM",
+              "agentId": "297163",
+              "agentName": "AG AMS - VLM",
+              "ganhos": -922.3000000000001,
+              "rakeGerado": 2414.53,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -922.3000000000001,
+              "rakeBreakdown": {
+                "ringGame": 1911.45,
+                "mtt": 503.08,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2414.53
+              }
+            },
+            {
+              "id": "923615",
+              "nick": "dioneles",
+              "agentId": "297163",
+              "agentName": "AG AMS - VLM",
+              "ganhos": -122,
+              "rakeGerado": 21,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -122,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 21,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 21
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - CABRIOLA",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 76.75,
+          "ganhosTime": 930.35,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 930.35,
+          "players": [
+            {
+              "id": "301348",
+              "nick": "AG AMS - CABRIOLA",
+              "agentId": "301348",
+              "agentName": "AG AMS - CABRIOLA",
+              "ganhos": -297.9,
+              "rakeGerado": 55.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -297.9,
+              "rakeBreakdown": {
+                "ringGame": 37.25,
+                "mtt": 18,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55.25
+              }
+            },
+            {
+              "id": "1337895",
+              "nick": "Gabriel.T",
+              "agentId": "301348",
+              "agentName": "AG AMS - CABRIOLA",
+              "ganhos": 1228.25,
+              "rakeGerado": 21.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1228.25,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 21.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 21.5
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Thiago Velo",
+          "agentRate": 0,
+          "playerCount": 6,
+          "rakeTime": 2300.8500000000004,
+          "ganhosTime": -1442.3999999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1442.3999999999999,
+          "players": [
+            {
+              "id": "307218",
+              "nick": "AG AMS - Thiago Velo",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": 667.8,
+              "rakeGerado": 469.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 667.8,
+              "rakeBreakdown": {
+                "ringGame": 469.25,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 469.25
+              }
+            },
+            {
+              "id": "917683",
+              "nick": "Isiuldornine",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": -961.6499999999999,
+              "rakeGerado": 561.15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -961.6499999999999,
+              "rakeBreakdown": {
+                "ringGame": 561.1500000000001,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 561.1500000000001
+              }
+            },
+            {
+              "id": "1135278",
+              "nick": "Asa Branca",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": -452.24999999999994,
+              "rakeGerado": 128.95,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -452.24999999999994,
+              "rakeBreakdown": {
+                "ringGame": 128.95,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 128.95
+              }
+            },
+            {
+              "id": "1139156",
+              "nick": "Agente_impe.",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": -261.8,
+              "rakeGerado": 144.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -261.8,
+              "rakeBreakdown": {
+                "ringGame": 144.8,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 144.8
+              }
+            },
+            {
+              "id": "1422800",
+              "nick": "capa007",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": -556.8,
+              "rakeGerado": 971.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -556.8,
+              "rakeBreakdown": {
+                "ringGame": 971.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 971.2
+              }
+            },
+            {
+              "id": "1573241",
+              "nick": "Poker_siihi",
+              "agentId": "307218",
+              "agentName": "AG AMS - Thiago Velo",
+              "ganhos": 122.30000000000001,
+              "rakeGerado": 25.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 122.30000000000001,
+              "rakeBreakdown": {
+                "ringGame": 25.5,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 25.5
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - FOX",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 328.45,
+          "ganhosTime": -488.05000000000007,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -488.05000000000007,
+          "players": [
+            {
+              "id": "1443589",
+              "nick": "SIN KING",
+              "agentId": "320729",
+              "agentName": "AG AMS - FOX",
+              "ganhos": 88.04999999999998,
+              "rakeGerado": 189.45,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 88.04999999999998,
+              "rakeBreakdown": {
+                "ringGame": 189.45000000000002,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 189.45000000000002
+              }
+            },
+            {
+              "id": "1450084",
+              "nick": "SlN KING",
+              "agentId": "320729",
+              "agentName": "AG AMS - FOX",
+              "ganhos": -576.1,
+              "rakeGerado": 139,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -576.1,
+              "rakeBreakdown": {
+                "ringGame": 139,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 139
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Maguxe",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 191.75,
+          "ganhosTime": -2495.6,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -2495.6,
+          "players": [
+            {
+              "id": "459187",
+              "nick": "AG AMS - Maguxe",
+              "agentId": "459187",
+              "agentName": "AG AMS - Maguxe",
+              "ganhos": -2495.6,
+              "rakeGerado": 191.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2495.6,
+              "rakeBreakdown": {
+                "ringGame": 191.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 191.75
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Rafael712",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 4.35,
+          "ganhosTime": -100,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -100,
+          "players": [
+            {
+              "id": "529921",
+              "nick": "AG AMS - Rafael712",
+              "agentId": "529921",
+              "agentName": "AG AMS - Rafael712",
+              "ganhos": -100,
+              "rakeGerado": 4.35,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100,
+              "rakeBreakdown": {
+                "ringGame": 4.35,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 4.35
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Euler",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 103.35000000000001,
+          "ganhosTime": -1330,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1330,
+          "players": [
+            {
+              "id": "541324",
+              "nick": "AG AMS - Euler",
+              "agentId": "541324",
+              "agentName": "AG AMS - Euler",
+              "ganhos": -1330,
+              "rakeGerado": 103.35000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1330,
+              "rakeBreakdown": {
+                "ringGame": 103.35,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 103.35
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS KILLER",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 179.5,
+          "ganhosTime": -1505.1,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1505.1,
+          "players": [
+            {
+              "id": "696596",
+              "nick": "AG AMS KILLER",
+              "agentId": "696596",
+              "agentName": "AG AMS KILLER",
+              "ganhos": -1505.1,
+              "rakeGerado": 179.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1505.1,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 179.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 179.5
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Seu Login",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 2,
+          "ganhosTime": 14.15,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 14.15,
+          "players": [
+            {
+              "id": "1630373",
+              "nick": "Dr.Fabio",
+              "agentId": "766185",
+              "agentName": "AG AMS - Seu Login",
+              "ganhos": 14.15,
+              "rakeGerado": 2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 14.15,
+              "rakeBreakdown": {
+                "ringGame": 2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS REGGA",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 15,
+          "ganhosTime": -150,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -150,
+          "players": [
+            {
+              "id": "970154",
+              "nick": "AG AMS REGGA",
+              "agentId": "970154",
+              "agentName": "AG AMS REGGA",
+              "ganhos": -150,
+              "rakeGerado": 15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -150,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 15,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 15
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS JAXV",
+          "agentRate": 0,
+          "playerCount": 3,
+          "rakeTime": 414.1,
+          "ganhosTime": 1376.6499999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 1376.6499999999999,
+          "players": [
+            {
+              "id": "1146798",
+              "nick": "AG AMS JAXV",
+              "agentId": "1146798",
+              "agentName": "AG AMS JAXV",
+              "ganhos": -311.1,
+              "rakeGerado": 94.60000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -311.1,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 18,
+                "sng": 76.6,
+                "spin": 0,
+                "tlt": 0,
+                "total": 94.6
+              }
+            },
+            {
+              "id": "1266845",
+              "nick": "IvanildeF",
+              "agentId": "1146798",
+              "agentName": "AG AMS JAXV",
+              "ganhos": 1354.4499999999998,
+              "rakeGerado": 233.95,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1354.4499999999998,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 11,
+                "sng": 222.95,
+                "spin": 0,
+                "tlt": 0,
+                "total": 233.95
+              }
+            },
+            {
+              "id": "1323190",
+              "nick": "Jjord",
+              "agentId": "1146798",
+              "agentName": "AG AMS JAXV",
+              "ganhos": 333.29999999999995,
+              "rakeGerado": 85.55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 333.29999999999995,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 85.55,
+                "spin": 0,
+                "tlt": 0,
+                "total": 85.55
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS Guilherme",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 0,
+          "ganhosTime": 0,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 0,
+          "players": [
+            {
+              "id": "1150947",
+              "nick": "AG AMS Guilherme",
+              "agentId": "1150947",
+              "agentName": "AG AMS Guilherme",
+              "ganhos": 0,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS DILSIN",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 30.8,
+          "ganhosTime": -292.75,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -292.75,
+          "players": [
+            {
+              "id": "1316820",
+              "nick": "AG AMS DILSIN",
+              "agentId": "1316820",
+              "agentName": "AG AMS DILSIN",
+              "ganhos": -292.75,
+              "rakeGerado": 30.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -292.75,
+              "rakeBreakdown": {
+                "ringGame": 30.799999999999997,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 30.799999999999997
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS BELEADO",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 173.55,
+          "ganhosTime": -1402,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1402,
+          "players": [
+            {
+              "id": "1469085",
+              "nick": "AG AMS BELEADO",
+              "agentId": "1469085",
+              "agentName": "AG AMS BELEADO",
+              "ganhos": -1402,
+              "rakeGerado": 173.55,
+              "ggr": 10,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1402,
+              "rakeBreakdown": {
+                "ringGame": 173.55,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 173.55
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - André Tak",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 397.54999999999995,
+          "ganhosTime": -3192.25,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -3192.25,
+          "players": [
+            {
+              "id": "1494676",
+              "nick": "AG AMS - André Tak",
+              "agentId": "1494676",
+              "agentName": "AG AMS - André Tak",
+              "ganhos": -3192.25,
+              "rakeGerado": 397.54999999999995,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -3192.25,
+              "rakeBreakdown": {
+                "ringGame": 397.54999999999995,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 397.54999999999995
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 962.8499999999999,
+          "ganhosTime": -508.60000000000014,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -508.60000000000014,
+          "players": [
+            {
+              "id": "1612433",
+              "nick": "AG AMS",
+              "agentId": "1612433",
+              "agentName": "AG AMS",
+              "ganhos": -508.60000000000014,
+              "rakeGerado": 962.8499999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -508.60000000000014,
+              "rakeBreakdown": {
+                "ringGame": 962.85,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 962.85
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG AMS - Lucas",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 393.40000000000003,
+          "ganhosTime": -1331.35,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1331.35,
+          "players": [
+            {
+              "id": "1627876",
+              "nick": "AG AMS - Lucas",
+              "agentId": "1627876",
+              "agentName": "AG AMS - Lucas",
+              "ganhos": -1331.35,
+              "rakeGerado": 393.40000000000003,
+              "ggr": 0.2,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1331.35,
+              "rakeBreakdown": {
+                "ringGame": 381.25,
+                "mtt": 12.15,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 393.4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "CH": {
+      "totals": {
+        "players": 22,
+        "agents": 5,
+        "ganhos": 1458.150000000002,
+        "rakeGerado": 3833.6400000000003,
+        "ggr": 0
+      },
+      "agents": [
+        {
+          "agentName": "AG CH GAMBIT_AA",
+          "agentRate": 0,
+          "playerCount": 3,
+          "rakeTime": 2297.2000000000003,
+          "ganhosTime": 4049.2000000000007,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 4049.2000000000007,
+          "players": [
+            {
+              "id": "372059",
+              "nick": "Pedrão.",
+              "agentId": "288556",
+              "agentName": "AG CH GAMBIT_AA",
+              "ganhos": -148.15,
+              "rakeGerado": 62.400000000000006,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -148.15,
+              "rakeBreakdown": {
+                "ringGame": 62.400000000000006,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 62.400000000000006
+              }
+            },
+            {
+              "id": "1531906",
+              "nick": "Pedrão..",
+              "agentId": "288556",
+              "agentName": "AG CH GAMBIT_AA",
+              "ganhos": -115.15,
+              "rakeGerado": 50.099999999999994,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -115.15,
+              "rakeBreakdown": {
+                "ringGame": 50.10000000000001,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 50.10000000000001
+              }
+            },
+            {
+              "id": "1564384",
+              "nick": "Poker_uqnwz",
+              "agentId": "288556",
+              "agentName": "AG CH GAMBIT_AA",
+              "ganhos": 4312.500000000001,
+              "rakeGerado": 2184.7000000000003,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 4312.500000000001,
+              "rakeBreakdown": {
+                "ringGame": 2184.7,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2184.7
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG CH Amanda",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 69.5,
+          "ganhosTime": -358.65000000000003,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -358.65000000000003,
+          "players": [
+            {
+              "id": "357172",
+              "nick": "unnamed",
+              "agentId": "292272",
+              "agentName": "AG CH Amanda",
+              "ganhos": -359.35,
+              "rakeGerado": 69.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -359.35,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 69.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 69.5
+              }
+            },
+            {
+              "id": "382286",
+              "nick": "c.magno",
+              "agentId": "292272",
+              "agentName": "AG CH Amanda",
+              "ganhos": 0.7000000000000001,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0.7000000000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG CH CF",
+          "agentRate": 0,
+          "playerCount": 15,
+          "rakeTime": 568.8399999999999,
+          "ganhosTime": 352.89999999999986,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 352.89999999999986,
+          "players": [
+            {
+              "id": "303570",
+              "nick": "AG CF DEDÉ",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": 1601.9499999999998,
+              "rakeGerado": 132.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1601.9499999999998,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 132.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 132.5
+              }
+            },
+            {
+              "id": "308564",
+              "nick": "Michel-CF",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -33.8,
+              "rakeGerado": 11.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -33.8,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 11.65,
+                "spin": 0,
+                "tlt": 0,
+                "total": 11.65
+              }
+            },
+            {
+              "id": "315136",
+              "nick": "rAAmos",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -127.10000000000001,
+              "rakeGerado": 26,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -127.10000000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 26,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 26
+              }
+            },
+            {
+              "id": "318827",
+              "nick": "Arthur pessanha",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -100.15,
+              "rakeGerado": 12.88,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100.15,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 6.38,
+                "sng": 6.5,
+                "spin": 0,
+                "tlt": 0,
+                "total": 12.879999999999999
+              }
+            },
+            {
+              "id": "335437",
+              "nick": "🔥RG🔥",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -158.7,
+              "rakeGerado": 64,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -158.7,
+              "rakeBreakdown": {
+                "ringGame": 42,
+                "mtt": 22,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 64
+              }
+            },
+            {
+              "id": "336022",
+              "nick": "eduardo beck",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -248.5,
+              "rakeGerado": 26.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -248.5,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 26.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 26.5
+              }
+            },
+            {
+              "id": "340269",
+              "nick": "Pepesinistro",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -81.89999999999999,
+              "rakeGerado": 5.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -81.89999999999999,
+              "rakeBreakdown": {
+                "ringGame": 5.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 5.75
+              }
+            },
+            {
+              "id": "591158",
+              "nick": "Caiomouralo",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -320,
+              "rakeGerado": 32,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -320,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 32,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 32
+              }
+            },
+            {
+              "id": "737876",
+              "nick": "Nico BZ 3",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": 1.1,
+              "rakeGerado": 4.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 1.1,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 4.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 4.5
+              }
+            },
+            {
+              "id": "835766",
+              "nick": "tatao",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -23.95,
+              "rakeGerado": 22.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -23.95,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 22.75,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 22.75
+              }
+            },
+            {
+              "id": "862528",
+              "nick": "Queiroz CF",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -448.35,
+              "rakeGerado": 81.16,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -448.35,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 81.16,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 81.16
+              }
+            },
+            {
+              "id": "892770",
+              "nick": "Douglasrdo",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": 388.75,
+              "rakeGerado": 50,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 388.75,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 50,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 50
+              }
+            },
+            {
+              "id": "1302108",
+              "nick": "Bruno Ladeira",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -131.34999999999997,
+              "rakeGerado": 79.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -131.34999999999997,
+              "rakeBreakdown": {
+                "ringGame": 79.5,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 79.5
+              }
+            },
+            {
+              "id": "1398189",
+              "nick": "MEF",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": 36.9,
+              "rakeGerado": 19.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 36.9,
+              "rakeBreakdown": {
+                "ringGame": 19.5,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 19.5
+              }
+            },
+            {
+              "id": "1577547",
+              "nick": "Gabriel Sanchez",
+              "agentId": "294321",
+              "agentName": "AG CH CF",
+              "ganhos": -2,
+              "rakeGerado": 0.15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.15,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.15
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG CH URUBUZINHO REI",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 481.85,
+          "ganhosTime": -819.85,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -819.85,
+          "players": [
+            {
+              "id": "296293",
+              "nick": "AG CH URUBUZINHO REI",
+              "agentId": "296293",
+              "agentName": "AG CH URUBUZINHO REI",
+              "ganhos": -819.85,
+              "rakeGerado": 481.85,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -819.85,
+              "rakeBreakdown": {
+                "ringGame": 423.8499999999999,
+                "mtt": 58,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 481.8499999999999
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "AG CH PIRIKITOAZUL",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 416.25,
+          "ganhosTime": -1765.4499999999998,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1765.4499999999998,
+          "players": [
+            {
+              "id": "346306",
+              "nick": "Leo enthoned",
+              "agentId": "303207",
+              "agentName": "AG CH PIRIKITOAZUL",
+              "ganhos": -1765.4499999999998,
+              "rakeGerado": 416.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1765.4499999999998,
+              "rakeBreakdown": {
+                "ringGame": 162.25,
+                "mtt": 254,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 416.25
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "3BET": {
+      "totals": {
+        "players": 22,
+        "agents": 6,
+        "ganhos": -4741,
+        "rakeGerado": 2649.8000000000006,
+        "ggr": 0
+      },
+      "agents": [
+        {
+          "agentName": "3BET Master Agente",
+          "agentRate": 0,
+          "playerCount": 3,
+          "rakeTime": 144.65,
+          "ganhosTime": -1499.4,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -1499.4,
+          "players": [
+            {
+              "id": "353413",
+              "nick": "Matheus Dantas",
+              "agentId": "294549",
+              "agentName": "3BET Master Agente",
+              "ganhos": -100.5,
+              "rakeGerado": 15.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100.5,
+              "rakeBreakdown": {
+                "ringGame": 15.25,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 15.25
+              }
+            },
+            {
+              "id": "746536",
+              "nick": "Yan Barra",
+              "agentId": "294549",
+              "agentName": "3BET Master Agente",
+              "ganhos": -400,
+              "rakeGerado": 25.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -400,
+              "rakeBreakdown": {
+                "ringGame": 25.65,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 25.65
+              }
+            },
+            {
+              "id": "1196950",
+              "nick": "drantonio",
+              "agentId": "294549",
+              "agentName": "3BET Master Agente",
+              "ganhos": -998.9,
+              "rakeGerado": 103.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -998.9,
+              "rakeBreakdown": {
+                "ringGame": 103.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 103.75
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "3BET RaiseYouFlop",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 727.6500000000002,
+          "ganhosTime": 2351.55,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 2351.55,
+          "players": [
+            {
+              "id": "311562",
+              "nick": "3BET RaiseYouFlop",
+              "agentId": "311562",
+              "agentName": "3BET RaiseYouFlop",
+              "ganhos": -55,
+              "rakeGerado": 5.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -55,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 5.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 5.5
+              }
+            },
+            {
+              "id": "774361",
+              "nick": "JG MT",
+              "agentId": "311562",
+              "agentName": "3BET RaiseYouFlop",
+              "ganhos": 2406.55,
+              "rakeGerado": 722.1500000000002,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2406.55,
+              "rakeBreakdown": {
+                "ringGame": 722.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 722.15
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "3BET Pokertiba",
+          "agentRate": 0,
+          "playerCount": 4,
+          "rakeTime": 545.05,
+          "ganhosTime": -77.2000000000001,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -77.2000000000001,
+          "players": [
+            {
+              "id": "313861",
+              "nick": "3BET Pokertiba",
+              "agentId": "313861",
+              "agentName": "3BET Pokertiba",
+              "ganhos": 32.65,
+              "rakeGerado": 13.100000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 32.65,
+              "rakeBreakdown": {
+                "ringGame": 13.1,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 13.1
+              }
+            },
+            {
+              "id": "1579163",
+              "nick": "RãKasprega",
+              "agentId": "313861",
+              "agentName": "3BET Pokertiba",
+              "ganhos": -299.75,
+              "rakeGerado": 40.7,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -299.75,
+              "rakeBreakdown": {
+                "ringGame": 36.7,
+                "mtt": 4,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 40.7
+              }
+            },
+            {
+              "id": "1579167",
+              "nick": "XiJimPong",
+              "agentId": "313861",
+              "agentName": "3BET Pokertiba",
+              "ganhos": -37.7,
+              "rakeGerado": 2.9,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -37.7,
+              "rakeBreakdown": {
+                "ringGame": 2.9,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2.9
+              }
+            },
+            {
+              "id": "1579172",
+              "nick": "Dedo pôdi",
+              "agentId": "313861",
+              "agentName": "3BET Pokertiba",
+              "ganhos": 227.5999999999999,
+              "rakeGerado": 488.3499999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 227.5999999999999,
+              "rakeBreakdown": {
+                "ringGame": 488.3500000000001,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 488.3500000000001
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "3BET Matusa",
+          "agentRate": 0,
+          "playerCount": 2,
+          "rakeTime": 18.85,
+          "ganhosTime": -40.9,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -40.9,
+          "players": [
+            {
+              "id": "325292",
+              "nick": "Comodoro",
+              "agentId": "327060",
+              "agentName": "3BET Matusa",
+              "ganhos": -21.65,
+              "rakeGerado": 17.05,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -21.65,
+              "rakeBreakdown": {
+                "ringGame": 17.05,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 17.05
+              }
+            },
+            {
+              "id": "327060",
+              "nick": "3BET Matusa",
+              "agentId": "327060",
+              "agentName": "3BET Matusa",
+              "ganhos": -19.25,
+              "rakeGerado": 1.7999999999999998,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -19.25,
+              "rakeBreakdown": {
+                "ringGame": 1.8,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1.8
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "3BET Tufao",
+          "agentRate": 0,
+          "playerCount": 10,
+          "rakeTime": 1199.7,
+          "ganhosTime": -5433.900000000001,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -5433.900000000001,
+          "players": [
+            {
+              "id": "331128",
+              "nick": "3BET Tufao",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -2191.2,
+              "rakeGerado": 489.45,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2191.2,
+              "rakeBreakdown": {
+                "ringGame": 0.55,
+                "mtt": 488.9,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 489.45
+              }
+            },
+            {
+              "id": "706103",
+              "nick": "arraxxxxca",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -225.65,
+              "rakeGerado": 152,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -225.65,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 152,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 152
+              }
+            },
+            {
+              "id": "971971",
+              "nick": "Baila Vini",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -150,
+              "rakeGerado": 15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -150,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 15,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 15
+              }
+            },
+            {
+              "id": "1407396",
+              "nick": "QQuensQQ",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": 228.2,
+              "rakeGerado": 55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 228.2,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 55,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55
+              }
+            },
+            {
+              "id": "1487379",
+              "nick": "Stró",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -968.4000000000001,
+              "rakeGerado": 174.4,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -968.4000000000001,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 174.4,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 174.4
+              }
+            },
+            {
+              "id": "1489037",
+              "nick": "Prosper",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -1406.9499999999998,
+              "rakeGerado": 134.04999999999998,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1406.9499999999998,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 134.05,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 134.05
+              }
+            },
+            {
+              "id": "1489061",
+              "nick": "Poker_1g1cl",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": 45.8,
+              "rakeGerado": 15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 45.8,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 15,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 15
+              }
+            },
+            {
+              "id": "1557744",
+              "nick": "AAmuleto",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -70.6,
+              "rakeGerado": 22.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -70.6,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 22.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 22.5
+              }
+            },
+            {
+              "id": "1598814",
+              "nick": "Olímpio$",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -528.25,
+              "rakeGerado": 77.05,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -528.25,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 77.05,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 77.05
+              }
+            },
+            {
+              "id": "1598845",
+              "nick": "Blessed��",
+              "agentId": "331128",
+              "agentName": "3BET Tufao",
+              "ganhos": -166.85,
+              "rakeGerado": 65.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -166.85,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 65.25,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 65.25
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "3BET JJNovo",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 13.899999999999999,
+          "ganhosTime": -41.150000000000006,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -41.150000000000006,
+          "players": [
+            {
+              "id": "1195961",
+              "nick": "3BET JJNovo",
+              "agentId": "1195961",
+              "agentName": "3BET JJNovo",
+              "ganhos": -41.150000000000006,
+              "rakeGerado": 13.899999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -41.150000000000006,
+              "rakeBreakdown": {
+                "ringGame": 5.1,
+                "mtt": 8.8,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 13.9
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "CONFRARIA": {
+      "totals": {
+        "players": 35,
+        "agents": 5,
+        "ganhos": -23856.15,
+        "rakeGerado": 7692.529999999999,
+        "ggr": 0
+      },
+      "agents": [
+        {
+          "agentName": "CONFRA Marcelo BN",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 667,
+          "ganhosTime": 2638.8999999999996,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 2638.8999999999996,
+          "players": [
+            {
+              "id": "1608848",
+              "nick": "Poker_ndmmh",
+              "agentId": "300090",
+              "agentName": "CONFRA Marcelo BN",
+              "ganhos": 2638.8999999999996,
+              "rakeGerado": 667,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2638.8999999999996,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 667,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 667
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "CONFRA Bem Amigos",
+          "agentRate": 0,
+          "playerCount": 4,
+          "rakeTime": 47.1,
+          "ganhosTime": -272.09999999999997,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -272.09999999999997,
+          "players": [
+            {
+              "id": "339226",
+              "nick": "Xarope",
+              "agentId": "303699",
+              "agentName": "CONFRA Bem Amigos",
+              "ganhos": 2.15,
+              "rakeGerado": 0.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 2.15,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0.5,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.5
+              }
+            },
+            {
+              "id": "565114",
+              "nick": "Gustavo321",
+              "agentId": "303699",
+              "agentName": "CONFRA Bem Amigos",
+              "ganhos": -162.54999999999998,
+              "rakeGerado": 36.150000000000006,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -162.54999999999998,
+              "rakeBreakdown": {
+                "ringGame": 36.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 36.15
+              }
+            },
+            {
+              "id": "612197",
+              "nick": "martelinhoo",
+              "agentId": "303699",
+              "agentName": "CONFRA Bem Amigos",
+              "ganhos": -99.7,
+              "rakeGerado": 9.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -99.7,
+              "rakeBreakdown": {
+                "ringGame": 1.35,
+                "mtt": 6.4,
+                "sng": 1.9,
+                "spin": 0,
+                "tlt": 0,
+                "total": 9.65
+              }
+            },
+            {
+              "id": "1122915",
+              "nick": "sacode",
+              "agentId": "303699",
+              "agentName": "CONFRA Bem Amigos",
+              "ganhos": -12,
+              "rakeGerado": 0.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -12,
+              "rakeBreakdown": {
+                "ringGame": 0.7,
+                "mtt": 0,
+                "sng": 0.1,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.7999999999999999
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "CONFRA MKT",
+          "agentRate": 0,
+          "playerCount": 28,
+          "rakeTime": 6851.63,
+          "ganhosTime": -25965.899999999998,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -25965.899999999998,
+          "players": [
+            {
+              "id": "310719",
+              "nick": "ericsipriano",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -129.5,
+              "rakeGerado": 33.4,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -129.5,
+              "rakeBreakdown": {
+                "ringGame": 13.399999999999999,
+                "mtt": 19.7,
+                "sng": 0.3,
+                "spin": 0,
+                "tlt": 0,
+                "total": 33.39999999999999
+              }
+            },
+            {
+              "id": "323016",
+              "nick": "Mcorrea",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 57.699999999999996,
+              "rakeGerado": 1.4000000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 57.699999999999996,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 1.4,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 1.4
+              }
+            },
+            {
+              "id": "325411",
+              "nick": "Mauro Club Pereira",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -20.35,
+              "rakeGerado": 2.09,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -20.35,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 2.09,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2.09
+              }
+            },
+            {
+              "id": "335986",
+              "nick": "Renan Henrique Freit",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -33.95,
+              "rakeGerado": 3.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -33.95,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 1,
+                "sng": 2.2,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.2
+              }
+            },
+            {
+              "id": "336512",
+              "nick": "Jairo Lopes Fortes",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -429.05,
+              "rakeGerado": 137.45,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -429.05,
+              "rakeBreakdown": {
+                "ringGame": 124.45,
+                "mtt": 13,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 137.45
+              }
+            },
+            {
+              "id": "347693",
+              "nick": "Paulo Silva",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 249.64999999999998,
+              "rakeGerado": 157.3,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 249.64999999999998,
+              "rakeBreakdown": {
+                "ringGame": 157.3,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 157.3
+              }
+            },
+            {
+              "id": "363180",
+              "nick": "Erivaldo Candido",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -208.25,
+              "rakeGerado": 32.83,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -208.25,
+              "rakeBreakdown": {
+                "ringGame": 9.75,
+                "mtt": 23.08,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 32.83
+              }
+            },
+            {
+              "id": "365335",
+              "nick": "Sandro Mendes pinhei",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 65.85,
+              "rakeGerado": 0.6,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 65.85,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.6,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.6
+              }
+            },
+            {
+              "id": "379777",
+              "nick": "narriman",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -2.7,
+              "rakeGerado": 0.8,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -2.7,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0.8,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.8
+              }
+            },
+            {
+              "id": "388061",
+              "nick": "Bismarck Barros",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 13.5,
+              "rakeGerado": 81.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 13.5,
+              "rakeBreakdown": {
+                "ringGame": 75.25000000000001,
+                "mtt": 6.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 81.75000000000001
+              }
+            },
+            {
+              "id": "390057",
+              "nick": "Jorge R",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -5466.549999999999,
+              "rakeGerado": 618.49,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -5466.549999999999,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 618.29,
+                "sng": 0.2,
+                "spin": 0,
+                "tlt": 0,
+                "total": 618.49
+              }
+            },
+            {
+              "id": "432875",
+              "nick": "Igor Vinicio Teixeir",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -40.9,
+              "rakeGerado": 29.050000000000004,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -40.9,
+              "rakeBreakdown": {
+                "ringGame": 29.05,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 29.05
+              }
+            },
+            {
+              "id": "433179",
+              "nick": "Leandro Lafaiete Sil",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 0,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            },
+            {
+              "id": "453281",
+              "nick": "Cesar Cardoso Chagas",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 0,
+              "rakeGerado": 0,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 0,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0
+              }
+            },
+            {
+              "id": "580268",
+              "nick": "Fernando Henrique Nu",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 37.45,
+              "rakeGerado": 67.30000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 37.45,
+              "rakeBreakdown": {
+                "ringGame": 39.3,
+                "mtt": 28,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 67.3
+              }
+            },
+            {
+              "id": "584069",
+              "nick": "Edson novo",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -1871.35,
+              "rakeGerado": 334.19999999999993,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -1871.35,
+              "rakeBreakdown": {
+                "ringGame": 334.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 334.2
+              }
+            },
+            {
+              "id": "621378",
+              "nick": "Peterson Roberto De",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -75,
+              "rakeGerado": 7.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -75,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 7.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 7.5
+              }
+            },
+            {
+              "id": "689368",
+              "nick": "Eber Dias dos Santos",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": 48.3,
+              "rakeGerado": 46.7,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 48.3,
+              "rakeBreakdown": {
+                "ringGame": 3.85,
+                "mtt": 0,
+                "sng": 42.85,
+                "spin": 0,
+                "tlt": 0,
+                "total": 46.7
+              }
+            },
+            {
+              "id": "795371",
+              "nick": "Alan Antônio zamarch",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -298.29999999999995,
+              "rakeGerado": 33.25,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -298.29999999999995,
+              "rakeBreakdown": {
+                "ringGame": 33.25,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 33.25
+              }
+            },
+            {
+              "id": "870220",
+              "nick": "nubi 1222v",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -162.89999999999998,
+              "rakeGerado": 17.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -162.89999999999998,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 17.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 17.5
+              }
+            },
+            {
+              "id": "932422",
+              "nick": "Leocir novo",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -262,
+              "rakeGerado": 207.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -262,
+              "rakeBreakdown": {
+                "ringGame": 207.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 207.2
+              }
+            },
+            {
+              "id": "972723",
+              "nick": "Allan Vinícius leao",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -15577.8,
+              "rakeGerado": 4392.75,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -15577.8,
+              "rakeBreakdown": {
+                "ringGame": 4392.75,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 4392.75
+              }
+            },
+            {
+              "id": "1011477",
+              "nick": "trm_poker",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -35,
+              "rakeGerado": 3.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -35,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 3.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 3.5
+              }
+            },
+            {
+              "id": "1274893",
+              "nick": "ice3man",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -600,
+              "rakeGerado": 136.87,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -600,
+              "rakeBreakdown": {
+                "ringGame": 136.45,
+                "mtt": 0.42,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 136.86999999999998
+              }
+            },
+            {
+              "id": "1409169",
+              "nick": "apelide",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -103.9,
+              "rakeGerado": 14.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -103.9,
+              "rakeBreakdown": {
+                "ringGame": 14.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 14.2
+              }
+            },
+            {
+              "id": "1481280",
+              "nick": "Handz",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -44.800000000000004,
+              "rakeGerado": 65.05,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -44.800000000000004,
+              "rakeBreakdown": {
+                "ringGame": 65.05,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 65.05
+              }
+            },
+            {
+              "id": "1600641",
+              "nick": "santosfc23",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -105,
+              "rakeGerado": 27.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -105,
+              "rakeBreakdown": {
+                "ringGame": 27.1,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 27.1
+              }
+            },
+            {
+              "id": "1605908",
+              "nick": "kaboobiee",
+              "agentId": "304976",
+              "agentName": "CONFRA MKT",
+              "ganhos": -971.0500000000001,
+              "rakeGerado": 400.15,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -971.0500000000001,
+              "rakeBreakdown": {
+                "ringGame": 400.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 400.15
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "CONFRA Edson São Ped",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 103.35000000000001,
+          "ganhosTime": -83.14999999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -83.14999999999999,
+          "players": [
+            {
+              "id": "316752",
+              "nick": "IMPERADOR.CF",
+              "agentId": "307238",
+              "agentName": "CONFRA Edson São Ped",
+              "ganhos": -83.14999999999999,
+              "rakeGerado": 103.35000000000001,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -83.14999999999999,
+              "rakeBreakdown": {
+                "ringGame": 61.15,
+                "mtt": 42.2,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 103.35
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "CONFRA PARCERIA",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 23.450000000000003,
+          "ganhosTime": -173.9,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -173.9,
+          "players": [
+            {
+              "id": "1245475",
+              "nick": "CONFRA PARCERIA",
+              "agentId": "1245475",
+              "agentName": "CONFRA PARCERIA",
+              "ganhos": -173.9,
+              "rakeGerado": 23.450000000000003,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -173.9,
+              "rakeBreakdown": {
+                "ringGame": 9.7,
+                "mtt": 13.75,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 23.45
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "OUTROS": {
+      "totals": {
+        "players": 25,
+        "agents": 2,
+        "ganhos": -333.5500000000024,
+        "rakeGerado": 9285.07,
+        "ggr": 207.3
+      },
+      "agents": [
+        {
+          "agentName": "AG André",
+          "agentRate": 0,
+          "playerCount": 1,
+          "rakeTime": 2797.9,
+          "ganhosTime": 8926.949999999999,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": 8926.949999999999,
+          "players": [
+            {
+              "id": "1617036",
+              "nick": "AG André",
+              "agentId": "1617036",
+              "agentName": "AG André",
+              "ganhos": 8926.949999999999,
+              "rakeGerado": 2797.9,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 8926.949999999999,
+              "rakeBreakdown": {
+                "ringGame": 2797.8999999999996,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2797.8999999999996
+              }
+            }
+          ]
+        },
+        {
+          "agentName": "None",
+          "agentRate": 0,
+          "playerCount": 24,
+          "rakeTime": 6487.169999999999,
+          "ganhosTime": -9260.500000000002,
+          "pctAgente": 0,
+          "rbAgente": 0,
+          "resultadoAgente": -9260.500000000002,
+          "players": [
+            {
+              "id": "295101",
+              "nick": "Victor2",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": 515.5,
+              "rakeGerado": 55.35,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 515.5,
+              "rakeBreakdown": {
+                "ringGame": 55.35,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 55.35
+              }
+            },
+            {
+              "id": "447287",
+              "nick": "Timao10",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -160.95,
+              "rakeGerado": 28.55,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -160.95,
+              "rakeBreakdown": {
+                "ringGame": 28.55,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 28.55
+              }
+            },
+            {
+              "id": "575602",
+              "nick": "Wesley c",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": 241.64999999999998,
+              "rakeGerado": 31.549999999999997,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 241.64999999999998,
+              "rakeBreakdown": {
+                "ringGame": 31.55,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 31.55
+              }
+            },
+            {
+              "id": "604055",
+              "nick": "LenonMDV7",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -25,
+              "rakeGerado": 2.5,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -25,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 2.5,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2.5
+              }
+            },
+            {
+              "id": "839035",
+              "nick": "VEM FIRME",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -910.1,
+              "rakeGerado": 348.54999999999995,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -910.1,
+              "rakeBreakdown": {
+                "ringGame": 339.94999999999993,
+                "mtt": 8.6,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 348.54999999999995
+              }
+            },
+            {
+              "id": "911128",
+              "nick": "Back Future",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -227.89999999999998,
+              "rakeGerado": 23.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -227.89999999999998,
+              "rakeBreakdown": {
+                "ringGame": 23.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 23.2
+              }
+            },
+            {
+              "id": "1085239",
+              "nick": "Istrumi",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -18.45,
+              "rakeGerado": 80.35,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -18.45,
+              "rakeBreakdown": {
+                "ringGame": 80.35,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 80.35
+              }
+            },
+            {
+              "id": "1123776",
+              "nick": "SNIPERchines",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -352.95000000000005,
+              "rakeGerado": 36.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -352.95000000000005,
+              "rakeBreakdown": {
+                "ringGame": 36.1,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 36.1
+              }
+            },
+            {
+              "id": "1243506",
+              "nick": "batmanroby",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": 42.85,
+              "rakeGerado": 10.95,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 42.85,
+              "rakeBreakdown": {
+                "ringGame": 10.95,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 10.95
+              }
+            },
+            {
+              "id": "1368001",
+              "nick": "dudursxx",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -117,
+              "rakeGerado": 11.71,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -117,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 11.71,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 11.71
+              }
+            },
+            {
+              "id": "1454224",
+              "nick": "Diogo UV-C",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -12,
+              "rakeGerado": 0.6,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -12,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 0.6,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.6
+              }
+            },
+            {
+              "id": "1472854",
+              "nick": "uchihawe",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -100,
+              "rakeGerado": 52,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100,
+              "rakeBreakdown": {
+                "ringGame": 52,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 52
+              }
+            },
+            {
+              "id": "1536625",
+              "nick": "Reê♣️♦️♠️♥️",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -20,
+              "rakeGerado": 2.1,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -20,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 2.1,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 2.1
+              }
+            },
+            {
+              "id": "1560744",
+              "nick": "PidoPoker00",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -84.39999999999999,
+              "rakeGerado": 15.009999999999998,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -84.39999999999999,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 15.01,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 15.01
+              }
+            },
+            {
+              "id": "1560784",
+              "nick": "vt7771",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -127,
+              "rakeGerado": 12.709999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -127,
+              "rakeBreakdown": {
+                "ringGame": 0,
+                "mtt": 12.71,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 12.71
+              }
+            },
+            {
+              "id": "1591210",
+              "nick": "AdaitonViana",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -178.79999999999998,
+              "rakeGerado": 29.2,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -178.79999999999998,
+              "rakeBreakdown": {
+                "ringGame": 29.2,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 29.2
+              }
+            },
+            {
+              "id": "1608604",
+              "nick": "eupelota",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -100,
+              "rakeGerado": 9.9,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -100,
+              "rakeBreakdown": {
+                "ringGame": 9.9,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 9.9
+              }
+            },
+            {
+              "id": "1609703",
+              "nick": "mTz4DdOn",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -580.55,
+              "rakeGerado": 87.78999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -580.55,
+              "rakeBreakdown": {
+                "ringGame": 9.600000000000001,
+                "mtt": 78.19,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 87.78999999999999
+              }
+            },
+            {
+              "id": "1611458",
+              "nick": "BobLeeSwagge",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -3.75,
+              "rakeGerado": 0.6,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -3.75,
+              "rakeBreakdown": {
+                "ringGame": 0.6,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 0.6
+              }
+            },
+            {
+              "id": "1612457",
+              "nick": "vamo filhoo",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -7348,
+              "rakeGerado": 5477.45,
+              "ggr": 207.3,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -7348,
+              "rakeBreakdown": {
+                "ringGame": 5477.45,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 5477.45
+              }
+            },
+            {
+              "id": "1613529",
+              "nick": "Poker_8wlv6",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -90.19999999999999,
+              "rakeGerado": 8.149999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -90.19999999999999,
+              "rakeBreakdown": {
+                "ringGame": 8.15,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 8.15
+              }
+            },
+            {
+              "id": "1625522",
+              "nick": "Jacks_",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -131.9,
+              "rakeGerado": 105.19999999999999,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -131.9,
+              "rakeBreakdown": {
+                "ringGame": 105.20000000000002,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 105.20000000000002
+              }
+            },
+            {
+              "id": "1626997",
+              "nick": "MD_chif",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": 606.4,
+              "rakeGerado": 49,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": 606.4,
+              "rakeBreakdown": {
+                "ringGame": 49,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 49
+              }
+            },
+            {
+              "id": "1631235",
+              "nick": "Poker_ypcr8",
+              "agentId": "None",
+              "agentName": "None",
+              "ganhos": -77.95,
+              "rakeGerado": 8.65,
+              "ggr": 0,
+              "rbRate": 0,
+              "rbValor": 0,
+              "resultado": -77.95,
+              "rakeBreakdown": {
+                "ringGame": 8.65,
+                "mtt": 0,
+                "sng": 0,
+                "spin": 0,
+                "tlt": 0,
+                "total": 8.65
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "allPlayers": [
+    {
+      "id": "37490",
+      "nick": "AG TGP AltoVale",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -6241.65,
+      "rakeGerado": 1980.3,
+      "ggr": 0
+    },
+    {
+      "id": "310784",
+      "nick": "Mamamia6",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -295.25,
+      "rakeGerado": 51.790000000000006,
+      "ggr": 0
+    },
+    {
+      "id": "900443",
+      "nick": "checkk4i20",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -5,
+      "rakeGerado": 0.5,
+      "ggr": 0
+    },
+    {
+      "id": "982525",
+      "nick": "Dr Carlos",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": 1458.3500000000001,
+      "rakeGerado": 55.11,
+      "ggr": 0
+    },
+    {
+      "id": "1246909",
+      "nick": "DjoiLoves",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -294.85,
+      "rakeGerado": 58.5,
+      "ggr": 0
+    },
+    {
+      "id": "1597491",
+      "nick": "Mazin94",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -282.75,
+      "rakeGerado": 34.99,
+      "ggr": 0
+    },
+    {
+      "id": "1610909",
+      "nick": "Sandroo17",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -18.5,
+      "rakeGerado": 1.9,
+      "ggr": 0
+    },
+    {
+      "id": "1625107",
+      "nick": "Tzar",
+      "clube": "TGP",
+      "agentName": "AG TGP AltoVale",
+      "ganhos": -12.649999999999999,
+      "rakeGerado": 5.44,
+      "ggr": 0
+    },
+    {
+      "id": "1392887",
+      "nick": "Rafaellara",
+      "clube": "IMPERIO",
+      "agentName": "AG BB AMS BB",
+      "ganhos": -252.89999999999998,
+      "rakeGerado": 116.15,
+      "ggr": 6
+    },
+    {
+      "id": "1476144",
+      "nick": "Dr. Paloma",
+      "clube": "IMPERIO",
+      "agentName": "AG BB AMS BB",
+      "ganhos": 1239,
+      "rakeGerado": 235.75,
+      "ggr": 0
+    },
+    {
+      "id": "546904",
+      "nick": "AA.Carrara",
+      "clube": "TGP",
+      "agentName": "AG TGP WILL",
+      "ganhos": 117.05,
+      "rakeGerado": 74.5,
+      "ggr": 0
+    },
+    {
+      "id": "372059",
+      "nick": "Pedrão.",
+      "clube": "CH",
+      "agentName": "AG CH GAMBIT_AA",
+      "ganhos": -148.15,
+      "rakeGerado": 62.400000000000006,
+      "ggr": 0
+    },
+    {
+      "id": "1531906",
+      "nick": "Pedrão..",
+      "clube": "CH",
+      "agentName": "AG CH GAMBIT_AA",
+      "ganhos": -115.15,
+      "rakeGerado": 50.099999999999994,
+      "ggr": 0
+    },
+    {
+      "id": "1564384",
+      "nick": "Poker_uqnwz",
+      "clube": "CH",
+      "agentName": "AG CH GAMBIT_AA",
+      "ganhos": 4312.500000000001,
+      "rakeGerado": 2184.7000000000003,
+      "ggr": 0
+    },
+    {
+      "id": "290727",
+      "nick": "Monica Raim",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -21.45,
+      "rakeGerado": 3.79,
+      "ggr": 0
+    },
+    {
+      "id": "291165",
+      "nick": "lucasj2",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -647.6,
+      "rakeGerado": 98.39,
+      "ggr": 0
+    },
+    {
+      "id": "298301",
+      "nick": "dadai10",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -628.35,
+      "rakeGerado": 335.25,
+      "ggr": 0
+    },
+    {
+      "id": "299857",
+      "nick": "Merras",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 257.85,
+      "rakeGerado": 193.25,
+      "ggr": 0
+    },
+    {
+      "id": "305818",
+      "nick": "CRONOS5",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -1232.4000000000003,
+      "rakeGerado": 279.90000000000003,
+      "ggr": 0
+    },
+    {
+      "id": "313948",
+      "nick": "cheques 07",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -12.3,
+      "rakeGerado": 1.8499999999999996,
+      "ggr": 0
+    },
+    {
+      "id": "317464",
+      "nick": "allssandrr",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 10.95,
+      "rakeGerado": 4.85,
+      "ggr": 0
+    },
+    {
+      "id": "327612",
+      "nick": "edriano98",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 5343.8,
+      "rakeGerado": 126,
+      "ggr": 0
+    },
+    {
+      "id": "353677",
+      "nick": "Junior Lopes",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -100,
+      "rakeGerado": 6.1,
+      "ggr": 0
+    },
+    {
+      "id": "373248",
+      "nick": "Catirino",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 0.05,
+      "rakeGerado": 0.6900000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "387523",
+      "nick": "christiAAn B",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -5,
+      "rakeGerado": 0.5,
+      "ggr": 0
+    },
+    {
+      "id": "403572",
+      "nick": "Vô Dió",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -124.2,
+      "rakeGerado": 34.15,
+      "ggr": 0
+    },
+    {
+      "id": "403989",
+      "nick": "403989",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -637.1500000000001,
+      "rakeGerado": 78.88,
+      "ggr": 0
+    },
+    {
+      "id": "409813",
+      "nick": "marcinho777",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 72.55,
+      "rakeGerado": 6.790000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "461714",
+      "nick": "blackmocCity",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -204.35000000000002,
+      "rakeGerado": 37.35,
+      "ggr": 0
+    },
+    {
+      "id": "558228",
+      "nick": "Júlio",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -154.39999999999998,
+      "rakeGerado": 515.15,
+      "ggr": 0
+    },
+    {
+      "id": "561891",
+      "nick": "Cleitin Janu",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": 0,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "612172",
+      "nick": "92o",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -20.2,
+      "rakeGerado": 4.2,
+      "ggr": 0
+    },
+    {
+      "id": "645575",
+      "nick": "Douglas",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -1,
+      "rakeGerado": 0.1,
+      "ggr": 0
+    },
+    {
+      "id": "665772",
+      "nick": "Carlos312",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -300,
+      "rakeGerado": 19.5,
+      "ggr": 0
+    },
+    {
+      "id": "739112",
+      "nick": "WallasB 😉",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -19.6,
+      "rakeGerado": 2.64,
+      "ggr": 0
+    },
+    {
+      "id": "858677",
+      "nick": "Kinkenhos",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -3,
+      "rakeGerado": 0.29000000000000004,
+      "ggr": 0
+    },
+    {
+      "id": "973020",
+      "nick": "theuss07",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -63.650000000000006,
+      "rakeGerado": 29.08,
+      "ggr": 3
+    },
+    {
+      "id": "1046241",
+      "nick": "Ediane 98",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -206,
+      "rakeGerado": 34.1,
+      "ggr": 0
+    },
+    {
+      "id": "1098123",
+      "nick": "lehgonca",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -2029.4,
+      "rakeGerado": 751.2,
+      "ggr": 0
+    },
+    {
+      "id": "1347119",
+      "nick": "diegadAAs",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -33.650000000000006,
+      "rakeGerado": 6.3,
+      "ggr": 0
+    },
+    {
+      "id": "1440387",
+      "nick": "Van+Basten",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -15,
+      "rakeGerado": 1.5,
+      "ggr": 0
+    },
+    {
+      "id": "1453541",
+      "nick": "Johnal",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -1949.4499999999998,
+      "rakeGerado": 897.1000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "1485348",
+      "nick": "igorbala",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -97.4,
+      "rakeGerado": 27.3,
+      "ggr": 0
+    },
+    {
+      "id": "1532986",
+      "nick": "tockarente",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -498.05,
+      "rakeGerado": 109.45,
+      "ggr": 0
+    },
+    {
+      "id": "1610631",
+      "nick": "BOMFIM $",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS IMPÉRIO",
+      "ganhos": -20,
+      "rakeGerado": 3.59,
+      "ggr": 0
+    },
+    {
+      "id": "385342",
+      "nick": "GalinhAA",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS CARNEIROsw",
+      "ganhos": -1112.3,
+      "rakeGerado": 196.4,
+      "ggr": 0
+    },
+    {
+      "id": "357172",
+      "nick": "unnamed",
+      "clube": "CH",
+      "agentName": "AG CH Amanda",
+      "ganhos": -359.35,
+      "rakeGerado": 69.5,
+      "ggr": 0
+    },
+    {
+      "id": "382286",
+      "nick": "c.magno",
+      "clube": "CH",
+      "agentName": "AG CH Amanda",
+      "ganhos": 0.7000000000000001,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "292610",
+      "nick": "AnalistaJr",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": -138.65,
+      "rakeGerado": 27.21,
+      "ggr": 0
+    },
+    {
+      "id": "292727",
+      "nick": "AG TW The Wolf",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": -100,
+      "rakeGerado": 31.5,
+      "ggr": 0
+    },
+    {
+      "id": "303845",
+      "nick": "santos2020",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": 109.65,
+      "rakeGerado": 20.65,
+      "ggr": 0
+    },
+    {
+      "id": "530505",
+      "nick": "iHarvey",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": -7.55,
+      "rakeGerado": 3.35,
+      "ggr": 0
+    },
+    {
+      "id": "1505166",
+      "nick": "Pedgui",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": -300,
+      "rakeGerado": 265.3,
+      "ggr": 0
+    },
+    {
+      "id": "1578923",
+      "nick": "enchantée",
+      "clube": "IMPERIO",
+      "agentName": "AG TW The Wolf",
+      "ganhos": -54.5,
+      "rakeGerado": 6.7,
+      "ggr": 0
+    },
+    {
+      "id": "303570",
+      "nick": "AG CF DEDÉ",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": 1601.9499999999998,
+      "rakeGerado": 132.5,
+      "ggr": 0
+    },
+    {
+      "id": "308564",
+      "nick": "Michel-CF",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -33.8,
+      "rakeGerado": 11.65,
+      "ggr": 0
+    },
+    {
+      "id": "315136",
+      "nick": "rAAmos",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -127.10000000000001,
+      "rakeGerado": 26,
+      "ggr": 0
+    },
+    {
+      "id": "318827",
+      "nick": "Arthur pessanha",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -100.15,
+      "rakeGerado": 12.88,
+      "ggr": 0
+    },
+    {
+      "id": "335437",
+      "nick": "🔥RG🔥",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -158.7,
+      "rakeGerado": 64,
+      "ggr": 0
+    },
+    {
+      "id": "336022",
+      "nick": "eduardo beck",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -248.5,
+      "rakeGerado": 26.5,
+      "ggr": 0
+    },
+    {
+      "id": "340269",
+      "nick": "Pepesinistro",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -81.89999999999999,
+      "rakeGerado": 5.75,
+      "ggr": 0
+    },
+    {
+      "id": "591158",
+      "nick": "Caiomouralo",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -320,
+      "rakeGerado": 32,
+      "ggr": 0
+    },
+    {
+      "id": "737876",
+      "nick": "Nico BZ 3",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": 1.1,
+      "rakeGerado": 4.5,
+      "ggr": 0
+    },
+    {
+      "id": "835766",
+      "nick": "tatao",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -23.95,
+      "rakeGerado": 22.75,
+      "ggr": 0
+    },
+    {
+      "id": "862528",
+      "nick": "Queiroz CF",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -448.35,
+      "rakeGerado": 81.16,
+      "ggr": 0
+    },
+    {
+      "id": "892770",
+      "nick": "Douglasrdo",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": 388.75,
+      "rakeGerado": 50,
+      "ggr": 0
+    },
+    {
+      "id": "1302108",
+      "nick": "Bruno Ladeira",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -131.34999999999997,
+      "rakeGerado": 79.5,
+      "ggr": 0
+    },
+    {
+      "id": "1398189",
+      "nick": "MEF",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": 36.9,
+      "rakeGerado": 19.5,
+      "ggr": 0
+    },
+    {
+      "id": "1577547",
+      "nick": "Gabriel Sanchez",
+      "clube": "CH",
+      "agentName": "AG CH CF",
+      "ganhos": -2,
+      "rakeGerado": 0.15,
+      "ggr": 0
+    },
+    {
+      "id": "338442",
+      "nick": "Ivan Martins",
+      "clube": "TGP",
+      "agentName": "AG TGP SUBAG",
+      "ganhos": 0,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "672278",
+      "nick": "LuFeOl2188",
+      "clube": "TGP",
+      "agentName": "AG TGP SUBAG",
+      "ganhos": 307.65,
+      "rakeGerado": 462.2,
+      "ggr": 0
+    },
+    {
+      "id": "1520468",
+      "nick": "ctrltudo01",
+      "clube": "TGP",
+      "agentName": "AG TGP SUBAG",
+      "ganhos": 8897.45,
+      "rakeGerado": 350,
+      "ggr": 0
+    },
+    {
+      "id": "1575209",
+      "nick": "TGP DEYVISON",
+      "clube": "TGP",
+      "agentName": "AG TGP SUBAG",
+      "ganhos": -56.95,
+      "rakeGerado": 18.3,
+      "ggr": 0
+    },
+    {
+      "id": "353413",
+      "nick": "Matheus Dantas",
+      "clube": "3BET",
+      "agentName": "3BET Master Agente",
+      "ganhos": -100.5,
+      "rakeGerado": 15.25,
+      "ggr": 0
+    },
+    {
+      "id": "746536",
+      "nick": "Yan Barra",
+      "clube": "3BET",
+      "agentName": "3BET Master Agente",
+      "ganhos": -400,
+      "rakeGerado": 25.65,
+      "ggr": 0
+    },
+    {
+      "id": "1196950",
+      "nick": "drantonio",
+      "clube": "3BET",
+      "agentName": "3BET Master Agente",
+      "ganhos": -998.9,
+      "rakeGerado": 103.75,
+      "ggr": 0
+    },
+    {
+      "id": "296293",
+      "nick": "AG CH URUBUZINHO REI",
+      "clube": "CH",
+      "agentName": "AG CH URUBUZINHO REI",
+      "ganhos": -819.85,
+      "rakeGerado": 481.85,
+      "ggr": 0
+    },
+    {
+      "id": "297163",
+      "nick": "AG AMS - VLM",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - VLM",
+      "ganhos": -922.3000000000001,
+      "rakeGerado": 2414.53,
+      "ggr": 0
+    },
+    {
+      "id": "923615",
+      "nick": "dioneles",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - VLM",
+      "ganhos": -122,
+      "rakeGerado": 21,
+      "ggr": 0
+    },
+    {
+      "id": "1608848",
+      "nick": "Poker_ndmmh",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Marcelo BN",
+      "ganhos": 2638.8999999999996,
+      "rakeGerado": 667,
+      "ggr": 0
+    },
+    {
+      "id": "301348",
+      "nick": "AG AMS - CABRIOLA",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - CABRIOLA",
+      "ganhos": -297.9,
+      "rakeGerado": 55.25,
+      "ggr": 0
+    },
+    {
+      "id": "1337895",
+      "nick": "Gabriel.T",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - CABRIOLA",
+      "ganhos": 1228.25,
+      "rakeGerado": 21.5,
+      "ggr": 0
+    },
+    {
+      "id": "346306",
+      "nick": "Leo enthoned",
+      "clube": "CH",
+      "agentName": "AG CH PIRIKITOAZUL",
+      "ganhos": -1765.4499999999998,
+      "rakeGerado": 416.25,
+      "ggr": 0
+    },
+    {
+      "id": "339226",
+      "nick": "Xarope",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Bem Amigos",
+      "ganhos": 2.15,
+      "rakeGerado": 0.5,
+      "ggr": 0
+    },
+    {
+      "id": "565114",
+      "nick": "Gustavo321",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Bem Amigos",
+      "ganhos": -162.54999999999998,
+      "rakeGerado": 36.150000000000006,
+      "ggr": 0
+    },
+    {
+      "id": "612197",
+      "nick": "martelinhoo",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Bem Amigos",
+      "ganhos": -99.7,
+      "rakeGerado": 9.65,
+      "ggr": 0
+    },
+    {
+      "id": "1122915",
+      "nick": "sacode",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Bem Amigos",
+      "ganhos": -12,
+      "rakeGerado": 0.8,
+      "ggr": 0
+    },
+    {
+      "id": "310719",
+      "nick": "ericsipriano",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -129.5,
+      "rakeGerado": 33.4,
+      "ggr": 0
+    },
+    {
+      "id": "323016",
+      "nick": "Mcorrea",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 57.699999999999996,
+      "rakeGerado": 1.4000000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "325411",
+      "nick": "Mauro Club Pereira",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -20.35,
+      "rakeGerado": 2.09,
+      "ggr": 0
+    },
+    {
+      "id": "335986",
+      "nick": "Renan Henrique Freit",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -33.95,
+      "rakeGerado": 3.2,
+      "ggr": 0
+    },
+    {
+      "id": "336512",
+      "nick": "Jairo Lopes Fortes",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -429.05,
+      "rakeGerado": 137.45,
+      "ggr": 0
+    },
+    {
+      "id": "347693",
+      "nick": "Paulo Silva",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 249.64999999999998,
+      "rakeGerado": 157.3,
+      "ggr": 0
+    },
+    {
+      "id": "363180",
+      "nick": "Erivaldo Candido",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -208.25,
+      "rakeGerado": 32.83,
+      "ggr": 0
+    },
+    {
+      "id": "365335",
+      "nick": "Sandro Mendes pinhei",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 65.85,
+      "rakeGerado": 0.6,
+      "ggr": 0
+    },
+    {
+      "id": "379777",
+      "nick": "narriman",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -2.7,
+      "rakeGerado": 0.8,
+      "ggr": 0
+    },
+    {
+      "id": "388061",
+      "nick": "Bismarck Barros",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 13.5,
+      "rakeGerado": 81.75,
+      "ggr": 0
+    },
+    {
+      "id": "390057",
+      "nick": "Jorge R",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -5466.549999999999,
+      "rakeGerado": 618.49,
+      "ggr": 0
+    },
+    {
+      "id": "432875",
+      "nick": "Igor Vinicio Teixeir",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -40.9,
+      "rakeGerado": 29.050000000000004,
+      "ggr": 0
+    },
+    {
+      "id": "433179",
+      "nick": "Leandro Lafaiete Sil",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 0,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "453281",
+      "nick": "Cesar Cardoso Chagas",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 0,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "580268",
+      "nick": "Fernando Henrique Nu",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 37.45,
+      "rakeGerado": 67.30000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "584069",
+      "nick": "Edson novo",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -1871.35,
+      "rakeGerado": 334.19999999999993,
+      "ggr": 0
+    },
+    {
+      "id": "621378",
+      "nick": "Peterson Roberto De",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -75,
+      "rakeGerado": 7.5,
+      "ggr": 0
+    },
+    {
+      "id": "689368",
+      "nick": "Eber Dias dos Santos",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": 48.3,
+      "rakeGerado": 46.7,
+      "ggr": 0
+    },
+    {
+      "id": "795371",
+      "nick": "Alan Antônio zamarch",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -298.29999999999995,
+      "rakeGerado": 33.25,
+      "ggr": 0
+    },
+    {
+      "id": "870220",
+      "nick": "nubi 1222v",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -162.89999999999998,
+      "rakeGerado": 17.5,
+      "ggr": 0
+    },
+    {
+      "id": "932422",
+      "nick": "Leocir novo",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -262,
+      "rakeGerado": 207.2,
+      "ggr": 0
+    },
+    {
+      "id": "972723",
+      "nick": "Allan Vinícius leao",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -15577.8,
+      "rakeGerado": 4392.75,
+      "ggr": 0
+    },
+    {
+      "id": "1011477",
+      "nick": "trm_poker",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -35,
+      "rakeGerado": 3.5,
+      "ggr": 0
+    },
+    {
+      "id": "1274893",
+      "nick": "ice3man",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -600,
+      "rakeGerado": 136.87,
+      "ggr": 0
+    },
+    {
+      "id": "1409169",
+      "nick": "apelide",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -103.9,
+      "rakeGerado": 14.2,
+      "ggr": 0
+    },
+    {
+      "id": "1481280",
+      "nick": "Handz",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -44.800000000000004,
+      "rakeGerado": 65.05,
+      "ggr": 0
+    },
+    {
+      "id": "1600641",
+      "nick": "santosfc23",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -105,
+      "rakeGerado": 27.1,
+      "ggr": 0
+    },
+    {
+      "id": "1605908",
+      "nick": "kaboobiee",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA MKT",
+      "ganhos": -971.0500000000001,
+      "rakeGerado": 400.15,
+      "ggr": 0
+    },
+    {
+      "id": "307218",
+      "nick": "AG AMS - Thiago Velo",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": 667.8,
+      "rakeGerado": 469.25,
+      "ggr": 0
+    },
+    {
+      "id": "917683",
+      "nick": "Isiuldornine",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": -961.6499999999999,
+      "rakeGerado": 561.15,
+      "ggr": 0
+    },
+    {
+      "id": "1135278",
+      "nick": "Asa Branca",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": -452.24999999999994,
+      "rakeGerado": 128.95,
+      "ggr": 0
+    },
+    {
+      "id": "1139156",
+      "nick": "Agente_impe.",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": -261.8,
+      "rakeGerado": 144.8,
+      "ggr": 0
+    },
+    {
+      "id": "1422800",
+      "nick": "capa007",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": -556.8,
+      "rakeGerado": 971.2,
+      "ggr": 0
+    },
+    {
+      "id": "1573241",
+      "nick": "Poker_siihi",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Thiago Velo",
+      "ganhos": 122.30000000000001,
+      "rakeGerado": 25.5,
+      "ggr": 0
+    },
+    {
+      "id": "316752",
+      "nick": "IMPERADOR.CF",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA Edson São Ped",
+      "ganhos": -83.14999999999999,
+      "rakeGerado": 103.35000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "311562",
+      "nick": "3BET RaiseYouFlop",
+      "clube": "3BET",
+      "agentName": "3BET RaiseYouFlop",
+      "ganhos": -55,
+      "rakeGerado": 5.5,
+      "ggr": 0
+    },
+    {
+      "id": "774361",
+      "nick": "JG MT",
+      "clube": "3BET",
+      "agentName": "3BET RaiseYouFlop",
+      "ganhos": 2406.55,
+      "rakeGerado": 722.1500000000002,
+      "ggr": 0
+    },
+    {
+      "id": "313861",
+      "nick": "3BET Pokertiba",
+      "clube": "3BET",
+      "agentName": "3BET Pokertiba",
+      "ganhos": 32.65,
+      "rakeGerado": 13.100000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "1579163",
+      "nick": "RãKasprega",
+      "clube": "3BET",
+      "agentName": "3BET Pokertiba",
+      "ganhos": -299.75,
+      "rakeGerado": 40.7,
+      "ggr": 0
+    },
+    {
+      "id": "1579167",
+      "nick": "XiJimPong",
+      "clube": "3BET",
+      "agentName": "3BET Pokertiba",
+      "ganhos": -37.7,
+      "rakeGerado": 2.9,
+      "ggr": 0
+    },
+    {
+      "id": "1579172",
+      "nick": "Dedo pôdi",
+      "clube": "3BET",
+      "agentName": "3BET Pokertiba",
+      "ganhos": 227.5999999999999,
+      "rakeGerado": 488.3499999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1443589",
+      "nick": "SIN KING",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - FOX",
+      "ganhos": 88.04999999999998,
+      "rakeGerado": 189.45,
+      "ggr": 0
+    },
+    {
+      "id": "1450084",
+      "nick": "SlN KING",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - FOX",
+      "ganhos": -576.1,
+      "rakeGerado": 139,
+      "ggr": 0
+    },
+    {
+      "id": "325292",
+      "nick": "Comodoro",
+      "clube": "3BET",
+      "agentName": "3BET Matusa",
+      "ganhos": -21.65,
+      "rakeGerado": 17.05,
+      "ggr": 0
+    },
+    {
+      "id": "327060",
+      "nick": "3BET Matusa",
+      "clube": "3BET",
+      "agentName": "3BET Matusa",
+      "ganhos": -19.25,
+      "rakeGerado": 1.7999999999999998,
+      "ggr": 0
+    },
+    {
+      "id": "331128",
+      "nick": "3BET Tufao",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -2191.2,
+      "rakeGerado": 489.45,
+      "ggr": 0
+    },
+    {
+      "id": "706103",
+      "nick": "arraxxxxca",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -225.65,
+      "rakeGerado": 152,
+      "ggr": 0
+    },
+    {
+      "id": "971971",
+      "nick": "Baila Vini",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -150,
+      "rakeGerado": 15,
+      "ggr": 0
+    },
+    {
+      "id": "1407396",
+      "nick": "QQuensQQ",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": 228.2,
+      "rakeGerado": 55,
+      "ggr": 0
+    },
+    {
+      "id": "1487379",
+      "nick": "Stró",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -968.4000000000001,
+      "rakeGerado": 174.4,
+      "ggr": 0
+    },
+    {
+      "id": "1489037",
+      "nick": "Prosper",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -1406.9499999999998,
+      "rakeGerado": 134.04999999999998,
+      "ggr": 0
+    },
+    {
+      "id": "1489061",
+      "nick": "Poker_1g1cl",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": 45.8,
+      "rakeGerado": 15,
+      "ggr": 0
+    },
+    {
+      "id": "1557744",
+      "nick": "AAmuleto",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -70.6,
+      "rakeGerado": 22.5,
+      "ggr": 0
+    },
+    {
+      "id": "1598814",
+      "nick": "Olímpio$",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -528.25,
+      "rakeGerado": 77.05,
+      "ggr": 0
+    },
+    {
+      "id": "1598845",
+      "nick": "Blessed��",
+      "clube": "3BET",
+      "agentName": "3BET Tufao",
+      "ganhos": -166.85,
+      "rakeGerado": 65.25,
+      "ggr": 0
+    },
+    {
+      "id": "298857",
+      "nick": "cesaroyal",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": -130.39999999999998,
+      "rakeGerado": 72.5,
+      "ggr": 0
+    },
+    {
+      "id": "375354",
+      "nick": "Battousai",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": -200.5,
+      "rakeGerado": 26.8,
+      "ggr": 0
+    },
+    {
+      "id": "701282",
+      "nick": "#SUB50",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": 31.400000000000002,
+      "rakeGerado": 3.55,
+      "ggr": 0
+    },
+    {
+      "id": "1095115",
+      "nick": "Mr.Euler",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": -10,
+      "rakeGerado": 0.8999999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1119451",
+      "nick": "pesadinho",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": 19.15000000000001,
+      "rakeGerado": 96.8,
+      "ggr": 0
+    },
+    {
+      "id": "1579699",
+      "nick": "Jefiinhoo",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": -435,
+      "rakeGerado": 43.5,
+      "ggr": 0
+    },
+    {
+      "id": "1629957",
+      "nick": "galegoooo29",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Zeuuss",
+      "ganhos": 844.5,
+      "rakeGerado": 16,
+      "ggr": 0
+    },
+    {
+      "id": "459187",
+      "nick": "AG AMS - Maguxe",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Maguxe",
+      "ganhos": -2495.6,
+      "rakeGerado": 191.75,
+      "ggr": 0
+    },
+    {
+      "id": "529921",
+      "nick": "AG AMS - Rafael712",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Rafael712",
+      "ganhos": -100,
+      "rakeGerado": 4.35,
+      "ggr": 0
+    },
+    {
+      "id": "541324",
+      "nick": "AG AMS - Euler",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Euler",
+      "ganhos": -1330,
+      "rakeGerado": 103.35000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "291769",
+      "nick": "KEPLER1985",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": 11.15,
+      "rakeGerado": 55,
+      "ggr": 0
+    },
+    {
+      "id": "411051",
+      "nick": "Peach",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -387.35,
+      "rakeGerado": 66,
+      "ggr": 0
+    },
+    {
+      "id": "493368",
+      "nick": "Magnetar8",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -335,
+      "rakeGerado": 32,
+      "ggr": 0
+    },
+    {
+      "id": "589273",
+      "nick": "bigdogpckt",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -3166.25,
+      "rakeGerado": 1681.8000000000002,
+      "ggr": 0
+    },
+    {
+      "id": "637659",
+      "nick": "joker111",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": 444.15,
+      "rakeGerado": 228.5,
+      "ggr": 0
+    },
+    {
+      "id": "637661",
+      "nick": "segurabb",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -1146.55,
+      "rakeGerado": 219,
+      "ggr": 0
+    },
+    {
+      "id": "637664",
+      "nick": "Borabill_",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -1360.6999999999998,
+      "rakeGerado": 185.5,
+      "ggr": 0
+    },
+    {
+      "id": "665325",
+      "nick": "perseverance",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -375,
+      "rakeGerado": 37.5,
+      "ggr": 0
+    },
+    {
+      "id": "691286",
+      "nick": "trincadaço",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -550,
+      "rakeGerado": 55,
+      "ggr": 0
+    },
+    {
+      "id": "1165921",
+      "nick": "otataehfoda",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": -569.9,
+      "rakeGerado": 130,
+      "ggr": 0
+    },
+    {
+      "id": "1165923",
+      "nick": "vitalbrasill",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": 5736.900000000001,
+      "rakeGerado": 146.5,
+      "ggr": 0
+    },
+    {
+      "id": "1165927",
+      "nick": "BaixadaBet",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Nacho",
+      "ganhos": 751.0500000000001,
+      "rakeGerado": 186,
+      "ggr": 0
+    },
+    {
+      "id": "696596",
+      "nick": "AG AMS KILLER",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS KILLER",
+      "ganhos": -1505.1,
+      "rakeGerado": 179.5,
+      "ggr": 0
+    },
+    {
+      "id": "1630373",
+      "nick": "Dr.Fabio",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Seu Login",
+      "ganhos": 14.15,
+      "rakeGerado": 2,
+      "ggr": 0
+    },
+    {
+      "id": "970154",
+      "nick": "AG AMS REGGA",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS REGGA",
+      "ganhos": -150,
+      "rakeGerado": 15,
+      "ggr": 0
+    },
+    {
+      "id": "1001862",
+      "nick": "plo5_AA",
+      "clube": "TGP",
+      "agentName": "HOME GAME UDI.TGP",
+      "ganhos": 2021.3,
+      "rakeGerado": 363.19999999999993,
+      "ggr": 0
+    },
+    {
+      "id": "1076399",
+      "nick": "Ag. tgp Henrique",
+      "clube": "TGP",
+      "agentName": "Ag. tgp Henrique",
+      "ganhos": 42.9,
+      "rakeGerado": 18.05,
+      "ggr": 0
+    },
+    {
+      "id": "1146798",
+      "nick": "AG AMS JAXV",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS JAXV",
+      "ganhos": -311.1,
+      "rakeGerado": 94.60000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "1266845",
+      "nick": "IvanildeF",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS JAXV",
+      "ganhos": 1354.4499999999998,
+      "rakeGerado": 233.95,
+      "ggr": 0
+    },
+    {
+      "id": "1323190",
+      "nick": "Jjord",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS JAXV",
+      "ganhos": 333.29999999999995,
+      "rakeGerado": 85.55,
+      "ggr": 0
+    },
+    {
+      "id": "1150947",
+      "nick": "AG AMS Guilherme",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS Guilherme",
+      "ganhos": 0,
+      "rakeGerado": 0,
+      "ggr": 0
+    },
+    {
+      "id": "1174079",
+      "nick": "Ag. TGP Durval",
+      "clube": "TGP",
+      "agentName": "Ag. TGP Durval",
+      "ganhos": 2106.4499999999985,
+      "rakeGerado": 8532.95,
+      "ggr": 0
+    },
+    {
+      "id": "1195961",
+      "nick": "3BET JJNovo",
+      "clube": "3BET",
+      "agentName": "3BET JJNovo",
+      "ganhos": -41.150000000000006,
+      "rakeGerado": 13.899999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "986748",
+      "nick": "Morpheus..",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 23500,
+      "rakeGerado": 525,
+      "ggr": 0
+    },
+    {
+      "id": "986751",
+      "nick": "IJustGamble",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": -80324.95,
+      "rakeGerado": 8172.750000000001,
+      "ggr": 0
+    },
+    {
+      "id": "986761",
+      "nick": "HomemBobo",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": -2503.15,
+      "rakeGerado": 521.7,
+      "ggr": 0
+    },
+    {
+      "id": "1089157",
+      "nick": "sweethome",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 10330.35,
+      "rakeGerado": 2261.1,
+      "ggr": 0
+    },
+    {
+      "id": "1201168",
+      "nick": "AG. TGP Admin24",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": -197.5,
+      "rakeGerado": 40,
+      "ggr": 0
+    },
+    {
+      "id": "1229354",
+      "nick": "Paraisopolis",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 2253.85,
+      "rakeGerado": 1972.6000000000001,
+      "ggr": 0
+    },
+    {
+      "id": "1523506",
+      "nick": "Raspador",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 1350.65,
+      "rakeGerado": 618.05,
+      "ggr": 0
+    },
+    {
+      "id": "1534644",
+      "nick": "Slowhand.",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": -3650.6999999999994,
+      "rakeGerado": 1007.1500000000001,
+      "ggr": 0
+    },
+    {
+      "id": "1560024",
+      "nick": "Xavier-ID",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 2907.55,
+      "rakeGerado": 1978.25,
+      "ggr": 0
+    },
+    {
+      "id": "1560392",
+      "nick": "DreamHigh",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": -1392.0000000000002,
+      "rakeGerado": 1892.6,
+      "ggr": 0
+    },
+    {
+      "id": "1563127",
+      "nick": "GIKPoP",
+      "clube": "TGP",
+      "agentName": "AG. TGP Admin24",
+      "ganhos": 1268.7,
+      "rakeGerado": 2706.6000000000004,
+      "ggr": 0
+    },
+    {
+      "id": "1245475",
+      "nick": "CONFRA PARCERIA",
+      "clube": "CONFRARIA",
+      "agentName": "CONFRA PARCERIA",
+      "ganhos": -173.9,
+      "rakeGerado": 23.450000000000003,
+      "ggr": 0
+    },
+    {
+      "id": "1316820",
+      "nick": "AG AMS DILSIN",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS DILSIN",
+      "ganhos": -292.75,
+      "rakeGerado": 30.8,
+      "ggr": 0
+    },
+    {
+      "id": "1384064",
+      "nick": "Capaneze.TGP",
+      "clube": "TGP",
+      "agentName": "Capaneze.TGP",
+      "ganhos": -24702.95,
+      "rakeGerado": 3669.6499999999996,
+      "ggr": 0
+    },
+    {
+      "id": "1547009",
+      "nick": "JP...",
+      "clube": "TGP",
+      "agentName": "Capaneze.TGP",
+      "ganhos": 2757.25,
+      "rakeGerado": 1304.9,
+      "ggr": 0
+    },
+    {
+      "id": "1444833",
+      "nick": "TGP SALUM",
+      "clube": "TGP",
+      "agentName": "TGP SALUM",
+      "ganhos": 5040.849999999999,
+      "rakeGerado": 782.65,
+      "ggr": 0
+    },
+    {
+      "id": "1469085",
+      "nick": "AG AMS BELEADO",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS BELEADO",
+      "ganhos": -1402,
+      "rakeGerado": 173.55,
+      "ggr": 10
+    },
+    {
+      "id": "1494676",
+      "nick": "AG AMS - André Tak",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - André Tak",
+      "ganhos": -3192.25,
+      "rakeGerado": 397.54999999999995,
+      "ggr": 0
+    },
+    {
+      "id": "1062584",
+      "nick": "carpaneze87",
+      "clube": "TGP",
+      "agentName": "TGP Carpazene nov",
+      "ganhos": -127.65,
+      "rakeGerado": 42.95,
+      "ggr": 0
+    },
+    {
+      "id": "1596764",
+      "nick": "TGP Carpazene nov",
+      "clube": "TGP",
+      "agentName": "TGP Carpazene nov",
+      "ganhos": -9840.1,
+      "rakeGerado": 1481.7000000000003,
+      "ggr": 0
+    },
+    {
+      "id": "1612433",
+      "nick": "AG AMS",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS",
+      "ganhos": -508.60000000000014,
+      "rakeGerado": 962.8499999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1617036",
+      "nick": "AG André",
+      "clube": "OUTROS",
+      "agentName": "AG André",
+      "ganhos": 8926.949999999999,
+      "rakeGerado": 2797.9,
+      "ggr": 0
+    },
+    {
+      "id": "1627876",
+      "nick": "AG AMS - Lucas",
+      "clube": "IMPERIO",
+      "agentName": "AG AMS - Lucas",
+      "ganhos": -1331.35,
+      "rakeGerado": 393.40000000000003,
+      "ggr": 0.2
+    },
+    {
+      "id": "295101",
+      "nick": "Victor2",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": 515.5,
+      "rakeGerado": 55.35,
+      "ggr": 0
+    },
+    {
+      "id": "447287",
+      "nick": "Timao10",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -160.95,
+      "rakeGerado": 28.55,
+      "ggr": 0
+    },
+    {
+      "id": "575602",
+      "nick": "Wesley c",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": 241.64999999999998,
+      "rakeGerado": 31.549999999999997,
+      "ggr": 0
+    },
+    {
+      "id": "604055",
+      "nick": "LenonMDV7",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -25,
+      "rakeGerado": 2.5,
+      "ggr": 0
+    },
+    {
+      "id": "839035",
+      "nick": "VEM FIRME",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -910.1,
+      "rakeGerado": 348.54999999999995,
+      "ggr": 0
+    },
+    {
+      "id": "911128",
+      "nick": "Back Future",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -227.89999999999998,
+      "rakeGerado": 23.2,
+      "ggr": 0
+    },
+    {
+      "id": "1085239",
+      "nick": "Istrumi",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -18.45,
+      "rakeGerado": 80.35,
+      "ggr": 0
+    },
+    {
+      "id": "1123776",
+      "nick": "SNIPERchines",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -352.95000000000005,
+      "rakeGerado": 36.1,
+      "ggr": 0
+    },
+    {
+      "id": "1243506",
+      "nick": "batmanroby",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": 42.85,
+      "rakeGerado": 10.95,
+      "ggr": 0
+    },
+    {
+      "id": "1368001",
+      "nick": "dudursxx",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -117,
+      "rakeGerado": 11.71,
+      "ggr": 0
+    },
+    {
+      "id": "1454224",
+      "nick": "Diogo UV-C",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -12,
+      "rakeGerado": 0.6,
+      "ggr": 0
+    },
+    {
+      "id": "1472854",
+      "nick": "uchihawe",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -100,
+      "rakeGerado": 52,
+      "ggr": 0
+    },
+    {
+      "id": "1536625",
+      "nick": "Reê♣️♦️♠️♥️",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -20,
+      "rakeGerado": 2.1,
+      "ggr": 0
+    },
+    {
+      "id": "1560744",
+      "nick": "PidoPoker00",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -84.39999999999999,
+      "rakeGerado": 15.009999999999998,
+      "ggr": 0
+    },
+    {
+      "id": "1560784",
+      "nick": "vt7771",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -127,
+      "rakeGerado": 12.709999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1591210",
+      "nick": "AdaitonViana",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -178.79999999999998,
+      "rakeGerado": 29.2,
+      "ggr": 0
+    },
+    {
+      "id": "1608604",
+      "nick": "eupelota",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -100,
+      "rakeGerado": 9.9,
+      "ggr": 0
+    },
+    {
+      "id": "1609703",
+      "nick": "mTz4DdOn",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -580.55,
+      "rakeGerado": 87.78999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1611458",
+      "nick": "BobLeeSwagge",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -3.75,
+      "rakeGerado": 0.6,
+      "ggr": 0
+    },
+    {
+      "id": "1612457",
+      "nick": "vamo filhoo",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -7348,
+      "rakeGerado": 5477.45,
+      "ggr": 207.3
+    },
+    {
+      "id": "1613529",
+      "nick": "Poker_8wlv6",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -90.19999999999999,
+      "rakeGerado": 8.149999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1625522",
+      "nick": "Jacks_",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -131.9,
+      "rakeGerado": 105.19999999999999,
+      "ggr": 0
+    },
+    {
+      "id": "1626997",
+      "nick": "MD_chif",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": 606.4,
+      "rakeGerado": 49,
+      "ggr": 0
+    },
+    {
+      "id": "1631235",
+      "nick": "Poker_ypcr8",
+      "clube": "OUTROS",
+      "agentName": "None",
+      "ganhos": -77.95,
+      "rakeGerado": 8.65,
+      "ggr": 0
+    }
+  ]
+}

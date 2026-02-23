@@ -1,0 +1,679 @@
+// ══════════════════════════════════════════════════════════════════════
+//  API Client — Comunicação com o backend
+// ══════════════════════════════════════════════════════════════════════
+
+const API_BASE = '/api';
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  meta?: Record<string, any>;
+}
+
+// ─── Auth storage ──────────────────────────────────────────────────
+
+export function getStoredAuth() {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('poker_auth');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuth(auth: any) {
+  localStorage.setItem('poker_auth', JSON.stringify(auth));
+}
+
+export function clearAuth() {
+  localStorage.removeItem('poker_auth');
+}
+
+function getToken(): string | null {
+  const auth = getStoredAuth();
+  return auth?.session?.access_token || null;
+}
+
+function getTenantId(): string | null {
+  const auth = getStoredAuth();
+  return auth?.tenants?.[0]?.id || null;
+}
+
+// ─── Fetch wrapper ─────────────────────────────────────────────────
+
+async function apiFetch<T = any>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  const token = getToken();
+  const tenantId = getTenantId();
+
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (tenantId) headers['X-Tenant-Id'] = tenantId;
+
+  // Don't set Content-Type for FormData (browser sets it with boundary)
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  let res: Response;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      return { success: false, error: 'Timeout: o servidor demorou mais de 30s para responder.' };
+    }
+    return { success: false, error: 'Servidor indisponivel. Verifique se o backend esta rodando (porta 3001).' };
+  }
+
+  if (!res.ok && res.status === 401) {
+    clearAuth();
+    window.location.href = '/login';
+    throw new Error('Sessao expirada');
+  }
+
+  // Read body as text first, then try to parse as JSON
+  const text = await res.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return {
+      success: false,
+      error: `Erro ${res.status}: ${text.substring(0, 200) || 'Resposta invalida do servidor'}`,
+    };
+  }
+
+  return data;
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────
+
+export async function login(email: string, password: string) {
+  const res = await apiFetch('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+  if (res.success && res.data) {
+    setStoredAuth(res.data);
+  }
+  return res;
+}
+
+export async function getMe() {
+  return apiFetch('/auth/me');
+}
+
+// ─── RBAC helpers ────────────────────────────────────────────────
+
+export function getStoredUserRole(): string | null {
+  const auth = getStoredAuth();
+  return auth?.tenants?.[0]?.role ?? null;
+}
+
+export function getStoredAllowedSubclubs(): { id: string; name: string }[] | null {
+  const auth = getStoredAuth();
+  return auth?.tenants?.[0]?.allowed_subclubs ?? null;
+}
+
+export function isAdmin(): boolean {
+  const role = getStoredUserRole();
+  return role === 'OWNER' || role === 'ADMIN';
+}
+
+// ─── Imports ───────────────────────────────────────────────────────
+
+export async function uploadXLSX(file: File, clubId: string, weekStart: string) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('club_id', clubId);
+  form.append('week_start', weekStart);
+
+  return apiFetch('/imports', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+// Import Wizard — Preview (não toca no banco)
+export async function importPreview(file: File, weekStartOverride?: string) {
+  const form = new FormData();
+  form.append('file', file);
+  if (weekStartOverride) form.append('week_start', weekStartOverride);
+
+  return apiFetch('/imports/preview', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+// Import Wizard — Confirm (persiste settlement + metrics)
+export async function importConfirm(file: File, clubId: string, weekStart: string) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('club_id', clubId);
+  form.append('week_start', weekStart);
+
+  return apiFetch('/imports/confirm', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function listImports() {
+  return apiFetch('/imports');
+}
+
+// ─── Settlements ───────────────────────────────────────────────────
+
+export async function listSettlements(clubId?: string, startDate?: string, endDate?: string) {
+  const params = new URLSearchParams();
+  if (clubId) params.set('club_id', clubId);
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  const qs = params.toString();
+  return apiFetch(`/settlements${qs ? `?${qs}` : ''}`);
+}
+
+export async function getSettlement(id: string) {
+  return apiFetch(`/settlements/${id}`);
+}
+
+// Settlement FULL — com breakdown por subclube, fees, adjustments, acertoLiga
+export async function getSettlementFull(id: string) {
+  return apiFetch(`/settlements/${id}/full`);
+}
+
+export async function finalizeSettlement(id: string) {
+  return apiFetch(`/settlements/${id}/finalize`, { method: 'POST' });
+}
+
+export async function voidSettlement(id: string, reason: string) {
+  return apiFetch(`/settlements/${id}/void`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function updateSettlementNotes(id: string, notes: string | null) {
+  return apiFetch(`/settlements/${id}/notes`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export async function updateAgentPaymentType(
+  settlementId: string,
+  agentId: string,
+  paymentType: 'fiado' | 'avista'
+) {
+  return apiFetch(`/settlements/${settlementId}/agents/${agentId}/payment-type`, {
+    method: 'PATCH',
+    body: JSON.stringify({ payment_type: paymentType }),
+  });
+}
+
+export async function updateAgentRbRate(
+  settlementId: string,
+  agentMetricId: string,
+  rbRate: number
+) {
+  return apiFetch(`/settlements/${settlementId}/agents/${agentMetricId}/rb-rate`, {
+    method: 'PATCH',
+    body: JSON.stringify({ rb_rate: rbRate }),
+  });
+}
+
+export async function syncSettlementAgents(settlementId: string) {
+  return apiFetch(`/settlements/${settlementId}/sync-agents`, {
+    method: 'POST',
+  });
+}
+
+// ─── Players ───────────────────────────────────────────────────────
+
+export async function listPlayers(search?: string, page?: number) {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (page) params.set('page', String(page));
+  return apiFetch(`/players?${params}`);
+}
+
+// ─── Organizations ─────────────────────────────────────────────────
+
+export async function listOrganizations(type?: string) {
+  const params = type ? `?type=${type}` : '';
+  return apiFetch(`/organizations${params}`);
+}
+
+export async function getOrgTree() {
+  return apiFetch('/organizations/tree');
+}
+
+export async function createOrganization(data: {
+  name: string; parent_id: string; type: 'SUBCLUB'; external_id?: string;
+}) {
+  return apiFetch('/organizations', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateOrganization(id: string, data: {
+  name?: string; external_id?: string; is_active?: boolean;
+}) {
+  return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteOrganization(id: string) {
+  return apiFetch(`/organizations/${id}`, { method: 'DELETE' });
+}
+
+export async function getPrefixRules() {
+  return apiFetch('/organizations/prefix-rules');
+}
+
+export async function createPrefixRule(data: {
+  prefix: string; subclub_id: string; priority?: number;
+}) {
+  return apiFetch('/organizations/prefix-rules', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updatePrefixRule(id: string, data: {
+  prefix?: string; subclub_id?: string; priority?: number;
+}) {
+  return apiFetch(`/organizations/prefix-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deletePrefixRule(id: string) {
+  return apiFetch(`/organizations/prefix-rules/${id}`, { method: 'DELETE' });
+}
+
+// ─── Ledger ────────────────────────────────────────────────────────
+
+export async function listLedger(weekStart: string, entityId?: string) {
+  const params = new URLSearchParams({ week_start: weekStart });
+  if (entityId) params.set('entity_id', entityId);
+  return apiFetch(`/ledger?${params}`);
+}
+
+export async function createLedgerEntry(data: {
+  entity_id: string;
+  entity_name?: string;
+  week_start: string;
+  dir: 'IN' | 'OUT';
+  amount: number;
+  method?: string;
+  description?: string;
+}) {
+  return apiFetch('/ledger', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteLedgerEntry(id: string) {
+  return apiFetch(`/ledger/${id}`, { method: 'DELETE' });
+}
+
+// ─── Config (fees + adjustments) ──────────────────────────────────
+
+export async function getFeeConfig() {
+  return apiFetch('/config/fees');
+}
+
+export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>) {
+  return apiFetch('/config/fees', {
+    method: 'PUT',
+    body: JSON.stringify({ fees }),
+  });
+}
+
+export async function getClubAdjustments(weekStart: string, subclubId?: string) {
+  const params = new URLSearchParams({ week_start: weekStart });
+  if (subclubId) params.set('subclub_id', subclubId);
+  return apiFetch(`/config/adjustments?${params}`);
+}
+
+export async function saveClubAdjustments(data: {
+  subclub_id: string;
+  week_start: string;
+  overlay?: number;
+  compras?: number;
+  security?: number;
+  outros?: number;
+  obs?: string;
+}) {
+  return apiFetch('/config/adjustments', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Rakeback Defaults ──────────────────────────────────────────
+
+export interface RBDefault {
+  id?: string;
+  subclub_id: string;
+  agent_rb_default: number;
+  player_rb_default: number;
+  organizations?: { name: string };
+}
+
+export async function getRakebackDefaults(): Promise<ApiResponse<RBDefault[]>> {
+  return apiFetch<RBDefault[]>('/config/rakeback-defaults');
+}
+
+export async function updateRakebackDefaults(defaults: RBDefault[]): Promise<ApiResponse<RBDefault[]>> {
+  return apiFetch<RBDefault[]>('/config/rakeback-defaults', {
+    method: 'PUT',
+    body: JSON.stringify({ defaults }),
+  });
+}
+
+// ─── Links (vinculação de jogadores/agentes) ─────────────────────
+
+export async function getUnlinkedPlayers(settlementId?: string) {
+  const params = settlementId ? `?settlement_id=${settlementId}` : '';
+  return apiFetch(`/links/unlinked${params}`);
+}
+
+export async function linkAgent(agentName: string, subclubId: string) {
+  return apiFetch('/links/agent', {
+    method: 'POST',
+    body: JSON.stringify({ agent_name: agentName, subclub_id: subclubId }),
+  });
+}
+
+export async function linkPlayer(externalPlayerId: string, subclubId: string, agentExternalId?: string, agentName?: string) {
+  return apiFetch('/links/player', {
+    method: 'POST',
+    body: JSON.stringify({
+      external_player_id: externalPlayerId,
+      subclub_id: subclubId,
+      agent_external_id: agentExternalId,
+      agent_name: agentName,
+    }),
+  });
+}
+
+export async function bulkLinkPlayers(players: Array<{
+  external_player_id: string;
+  subclub_id: string;
+  agent_external_id?: string;
+  agent_name?: string;
+}>) {
+  return apiFetch('/links/bulk-players', {
+    method: 'POST',
+    body: JSON.stringify({ players }),
+  });
+}
+
+export async function getAgentLinks() {
+  return apiFetch('/links/agents');
+}
+
+export async function deleteAgentLink(id: string) {
+  return apiFetch(`/links/agent/${id}`, { method: 'DELETE' });
+}
+
+export async function deletePlayerLink(id: string) {
+  return apiFetch(`/links/player/${id}`, { method: 'DELETE' });
+}
+
+// ─── Rakeback / Rates ─────────────────────────────────────────────
+
+export async function getAgentRates() {
+  return apiFetch('/organizations/agent-rates');
+}
+
+export async function updateAgentRate(agentId: string, rate: number, effectiveFrom?: string) {
+  return apiFetch(`/organizations/${agentId}/rate`, {
+    method: 'PUT',
+    body: JSON.stringify({ rate, effective_from: effectiveFrom }),
+  });
+}
+
+export async function updatePlayerRate(playerId: string, rate: number, effectiveFrom?: string) {
+  return apiFetch(`/players/${playerId}/rate`, {
+    method: 'PUT',
+    body: JSON.stringify({ rate, effective_from: effectiveFrom }),
+  });
+}
+
+export async function toggleAgentDirect(agentId: string, isDirect: boolean) {
+  return apiFetch(`/organizations/${agentId}/direct`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_direct: isDirect }),
+  });
+}
+
+// ─── Payment Methods ─────────────────────────────────────────────
+
+export async function listPaymentMethods() {
+  return apiFetch('/config/payment-methods');
+}
+
+export async function createPaymentMethod(data: { name: string; is_default?: boolean; sort_order?: number }) {
+  return apiFetch('/config/payment-methods', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updatePaymentMethod(id: string, data: { name?: string; is_default?: boolean; is_active?: boolean; sort_order?: number }) {
+  return apiFetch(`/config/payment-methods/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deletePaymentMethod(id: string) {
+  return apiFetch(`/config/payment-methods/${id}`, { method: 'DELETE' });
+}
+
+// ─── Bank Accounts ───────────────────────────────────────────────
+
+export async function listBankAccounts() {
+  return apiFetch('/config/bank-accounts');
+}
+
+export async function createBankAccount(data: { name: string; bank_code?: string; agency?: string; account_nr?: string; is_default?: boolean }) {
+  return apiFetch('/config/bank-accounts', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateBankAccount(id: string, data: { name?: string; bank_code?: string; agency?: string; account_nr?: string; is_default?: boolean; is_active?: boolean }) {
+  return apiFetch(`/config/bank-accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteBankAccount(id: string) {
+  return apiFetch(`/config/bank-accounts/${id}`, { method: 'DELETE' });
+}
+
+// ─── Carry-Forward ───────────────────────────────────────────────
+
+export async function getCarryForward(weekStart: string, clubId: string) {
+  const params = new URLSearchParams({ week_start: weekStart, club_id: clubId });
+  return apiFetch<Record<string, number>>(`/carry-forward?${params}`);
+}
+
+export async function closeWeek(settlementId: string) {
+  return apiFetch('/carry-forward/close-week', {
+    method: 'POST',
+    body: JSON.stringify({ settlement_id: settlementId }),
+  });
+}
+
+// ─── OFX / Bank Transactions ─────────────────────────────────────
+
+export async function uploadOFX(file: File, weekStart?: string) {
+  const form = new FormData();
+  form.append('file', file);
+  if (weekStart) form.append('week_start', weekStart);
+  return apiFetch('/ofx/upload', { method: 'POST', body: form });
+}
+
+export async function listOFXTransactions(weekStart?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (weekStart) params.set('week_start', weekStart);
+  if (status) params.set('status', status);
+  return apiFetch(`/ofx?${params}`);
+}
+
+export async function linkOFXTransaction(txId: string, entityId: string, entityName: string, category?: string) {
+  return apiFetch(`/ofx/${txId}/link`, {
+    method: 'PATCH',
+    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category }),
+  });
+}
+
+export async function unlinkOFXTransaction(txId: string) {
+  return apiFetch(`/ofx/${txId}/unlink`, { method: 'PATCH' });
+}
+
+export async function ignoreOFXTransaction(txId: string, ignore: boolean) {
+  return apiFetch(`/ofx/${txId}/ignore`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ignore }),
+  });
+}
+
+export async function applyOFXTransactions(weekStart: string) {
+  return apiFetch('/ofx/apply', {
+    method: 'POST',
+    body: JSON.stringify({ week_start: weekStart }),
+  });
+}
+
+export async function deleteOFXTransaction(txId: string) {
+  return apiFetch(`/ofx/${txId}`, { method: 'DELETE' });
+}
+
+// OFX Auto-Match (5-tier classification)
+export interface AutoMatchSuggestion {
+  transaction_id: string;
+  suggested_entity_id: string | null;
+  suggested_entity_name: string | null;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  match_tier: 1 | 2 | 3 | 4 | 5;
+  match_reason: string;
+  memo: string | null;
+  amount: number;
+  tx_date: string;
+  dir: string;
+}
+
+export async function ofxAutoMatch(weekStart: string): Promise<ApiResponse<AutoMatchSuggestion[]>> {
+  return apiFetch<AutoMatchSuggestion[]>('/ofx/auto-match', {
+    method: 'POST',
+    body: JSON.stringify({ week_start: weekStart }),
+  });
+}
+
+// ─── ChipPix / Bank Transactions ─────────────────────────────────
+
+export async function uploadChipPix(file: File, weekStart?: string, clubId?: string) {
+  const form = new FormData();
+  form.append('file', file);
+  if (weekStart) form.append('week_start', weekStart);
+  if (clubId) form.append('club_id', clubId);
+  return apiFetch('/chippix/upload', { method: 'POST', body: form });
+}
+
+export async function listChipPixTransactions(weekStart?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (weekStart) params.set('week_start', weekStart);
+  if (status) params.set('status', status);
+  return apiFetch(`/chippix?${params}`);
+}
+
+export async function linkChipPixTransaction(txId: string, entityId: string, entityName: string, category?: string) {
+  return apiFetch(`/chippix/${txId}/link`, {
+    method: 'PATCH',
+    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category }),
+  });
+}
+
+export async function unlinkChipPixTransaction(txId: string) {
+  return apiFetch(`/chippix/${txId}/unlink`, { method: 'PATCH' });
+}
+
+export async function ignoreChipPixTransaction(txId: string, ignore: boolean) {
+  return apiFetch(`/chippix/${txId}/ignore`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ignore }),
+  });
+}
+
+export async function applyChipPixTransactions(weekStart: string) {
+  return apiFetch('/chippix/apply', {
+    method: 'POST',
+    body: JSON.stringify({ week_start: weekStart }),
+  });
+}
+
+export async function deleteChipPixTransaction(txId: string) {
+  return apiFetch(`/chippix/${txId}`, { method: 'DELETE' });
+}
+
+// ─── Conciliacao ──────────────────────────────────────────────────
+
+export async function toggleReconciled(entryId: string, value: boolean) {
+  return apiFetch(`/ledger/${entryId}/reconcile`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_reconciled: value }),
+  });
+}
+
+// ─── Users (Gestao de Equipe) ────────────────────────────────────
+
+export interface TenantUser {
+  id: string;
+  user_id: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+}
+
+export async function getUsers(): Promise<ApiResponse<TenantUser[]>> {
+  return apiFetch<TenantUser[]>('/users');
+}
+
+export async function updateUserRole(userTenantId: string, role: string): Promise<ApiResponse> {
+  return apiFetch(`/users/${userTenantId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function removeUser(userTenantId: string): Promise<ApiResponse> {
+  return apiFetch(`/users/${userTenantId}`, { method: 'DELETE' });
+}
+
+export async function inviteUser(email: string, role: string): Promise<ApiResponse<any>> {
+  return apiFetch('/users/invite', {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────
+
+export function formatBRL(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+export function formatDate(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
+}
