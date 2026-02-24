@@ -340,7 +340,7 @@ function DreKpiCard({ icon, label, sublabel, value, borderColor, textColor }: {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
       {/* Colored top border */}
-      <div className={`h-0.5${borderColor.replace('border-', 'bg-')}`} />
+      <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
       <div className="p-4">
         <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium mb-1">{label}</p>
         {sublabel && (

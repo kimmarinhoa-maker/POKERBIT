@@ -402,7 +402,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-poker-500" />
+          <div className="h-0.5 bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Rake Total</p>
             <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(kpis.rakeTotal)}</p>
@@ -410,7 +410,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-yellow-500" />
+          <div className="h-0.5 bg-yellow-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Rakeback</p>
             <p className="text-xl font-bold mt-1 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
@@ -418,7 +418,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-red-500" />
+          <div className="h-0.5 bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Taxas Liga</p>
             <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(kpis.taxesOnRake)}</p>
@@ -426,7 +426,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+          <div className={`h-0.5 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lucro Liquido</p>
             <p className={`text-xl font-bold mt-1 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

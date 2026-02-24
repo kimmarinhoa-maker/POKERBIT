@@ -217,6 +217,7 @@ router.post(
   '/:id/sync-agents',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;

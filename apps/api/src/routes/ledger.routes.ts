@@ -4,7 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { ledgerService } from '../services/ledger.service';
 
 const router = Router();
@@ -24,6 +24,7 @@ router.post(
   '/',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const parsed = createEntrySchema.safeParse(req.body);
@@ -104,6 +105,7 @@ router.delete(
   '/:id',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).tenantId;
@@ -121,6 +123,7 @@ router.patch(
   '/:id/reconcile',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).tenantId;

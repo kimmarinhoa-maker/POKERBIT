@@ -44,7 +44,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
       {/* KPI Cards - 4 columns */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5${grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+          <div className={`h-0.5 ${grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Resultado Total</p>
             <p className={`text-xl font-bold mt-2 font-mono ${grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
@@ -53,7 +53,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-red-500" />
+          <div className="h-0.5 bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Taxas</p>
             <p className="text-xl font-bold mt-2 font-mono text-red-400">
@@ -62,7 +62,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5${grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}`} />
+          <div className={`h-0.5 ${grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lancamentos</p>
             <p className={`text-xl font-bold mt-2 font-mono ${grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}`}>
@@ -71,7 +71,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5${grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+          <div className={`h-0.5 ${grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Acerto Liga</p>
             <p className={`text-xl font-bold mt-2 font-mono ${grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}`}>

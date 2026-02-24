@@ -299,7 +299,8 @@ router.get(
       const { data: rows, error } = await supabaseAdmin
         .from('user_org_access')
         .select('org_id')
-        .eq('user_tenant_id', id);
+        .eq('user_id', ut.user_id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -354,13 +355,14 @@ router.put(
       const { error: delError } = await supabaseAdmin
         .from('user_org_access')
         .delete()
-        .eq('user_tenant_id', id);
+        .eq('user_id', ut.user_id)
+        .eq('tenant_id', tenantId);
 
       if (delError) throw delError;
 
       if (org_ids.length > 0) {
         const rows = org_ids.map((orgId: string) => ({
-          user_tenant_id: id,
+          user_id: ut.user_id,
           org_id: orgId,
           tenant_id: tenantId,
         }));

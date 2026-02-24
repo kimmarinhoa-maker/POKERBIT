@@ -17,6 +17,8 @@ interface AuthContextValue {
   tenantId: string | null;
   tenantName: string | null;
   isAdmin: boolean;
+  canWrite: boolean;
+  isScoped: boolean;
   allowedSubclubs: string[] | null; // null = all access
   loading: boolean;
   canAccess: (...roles: string[]) => boolean;
@@ -30,6 +32,8 @@ const AuthContext = createContext<AuthContextValue>({
   tenantId: null,
   tenantName: null,
   isAdmin: false,
+  canWrite: false,
+  isScoped: false,
   allowedSubclubs: null,
   loading: true,
   canAccess: () => false,
@@ -69,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const isAdmin = role === 'OWNER' || role === 'ADMIN';
+  const canWrite = role === 'OWNER' || role === 'ADMIN' || role === 'FINANCEIRO';
+  const isScoped = allowedSubclubs !== null && allowedSubclubs.length > 0;
 
   const canAccess = useCallback((...roles: string[]) => {
     return roles.includes(role);
@@ -93,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId,
         tenantName,
         isAdmin,
+        canWrite,
+        isScoped,
         allowedSubclubs,
         loading,
         canAccess,

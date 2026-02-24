@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, formatDate, formatBRL, isAdmin, getOrgTree } from '@/lib/api';
+import { getSettlementFull, voidSettlement, formatDate, formatBRL, getOrgTree } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
@@ -12,6 +13,7 @@ import ClubLogo from '@/components/ClubLogo';
 export default function SettlementOverviewPage() {
   const params = useParams();
   const router = useRouter();
+  const { canAccess } = useAuth();
   const settlementId = params.settlementId as string;
 
   const [data, setData] = useState<any>(null);
@@ -136,12 +138,12 @@ export default function SettlementOverviewPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {settlement.status === 'DRAFT' && isAdmin() && (
+          {settlement.status === 'DRAFT' && canAccess('OWNER', 'ADMIN') && (
             <button onClick={handleFinalize} className="btn-primary text-sm flex items-center gap-2">
               Finalizar
             </button>
           )}
-          {settlement.status === 'FINAL' && (
+          {settlement.status === 'FINAL' && canAccess('OWNER', 'ADMIN') && (
             <button
               onClick={() => { setShowVoidModal(true); setVoidReason(''); setVoidError(null); }}
               className="px-4 py-2 text-sm font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"

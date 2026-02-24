@@ -54,9 +54,9 @@ const navSections: NavSection[] = [
     label: 'FECHAMENTOS',
     items: [
       { href: '/s', label: 'Clubes', icon: Building2 },
-      { href: '/overview', label: 'Visao Geral', icon: Eye },
-      { href: '/liga-global', label: 'Liga Global', icon: Trophy },
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet },
+      { href: '/overview', label: 'Visao Geral', icon: Eye, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { href: '/liga-global', label: 'Liga Global', icon: Trophy, roles: ['OWNER', 'ADMIN'] },
+      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
     ],
   },
   {

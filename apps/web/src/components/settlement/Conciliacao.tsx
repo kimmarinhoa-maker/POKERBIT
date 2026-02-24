@@ -15,6 +15,7 @@ import VerificadorConciliacao from './conciliacao/VerificadorConciliacao';
 import type { VerificadorStats } from './conciliacao/VerificadorConciliacao';
 import type { AutoMatchSuggestion } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
 import Spinner from '@/components/Spinner';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -60,6 +61,8 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
   const isDraft = settlementStatus === 'DRAFT';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('ledger');
   const { toast } = useToast();
+  const { canAccess } = useAuth();
+  const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,10 +161,10 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
 
       {/* Tab content */}
       {activeSubTab === 'chippix' && (
-        <ChipPixTab weekStart={weekStart} clubId={clubId} isDraft={isDraft} onDataChange={onDataChange} agents={agents} players={players} />
+        <ChipPixTab weekStart={weekStart} clubId={clubId} isDraft={isDraft} canEdit={canEdit} onDataChange={onDataChange} agents={agents} players={players} />
       )}
       {activeSubTab === 'ofx' && (
-        <OFXTab weekStart={weekStart} isDraft={isDraft} onDataChange={onDataChange} agents={agents} players={players} />
+        <OFXTab weekStart={weekStart} isDraft={isDraft} canEdit={canEdit} onDataChange={onDataChange} agents={agents} players={players} />
       )}
       {activeSubTab === 'ledger' && (
         <LedgerTab
@@ -171,6 +174,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           setFilter={setFilter}
           loading={loading}
           isDraft={isDraft}
+          canEdit={canEdit}
           toggling={toggling}
           onToggle={handleToggle}
           fmtDateTime={fmtDateTime}
@@ -392,10 +396,11 @@ interface BankTx {
 
 type ChipPixFilter = 'all' | 'pending' | 'linked' | 'locked' | 'applied' | 'ignored';
 
-function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players }: {
+function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents, players }: {
   weekStart: string;
   clubId: string;
   isDraft: boolean;
+  canEdit: boolean;
   onDataChange: () => void;
   agents: AgentOption[];
   players: PlayerOption[];
@@ -682,19 +687,19 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.XLSX,.XLS" onChange={handleUpload} className="hidden" />
           <button
             onClick={() => fileRef.current?.click()}
-            disabled={uploading || !isDraft}
+            disabled={uploading || !isDraft || !canEdit}
             className="px-3 py-1 rounded-md text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none"
           >
             {uploading ? 'Importando...' : 'Importar'}
           </button>
           <button
             onClick={handleAutoLink}
-            disabled={autoLinking || !isDraft || kpis.pending === 0}
+            disabled={autoLinking || !isDraft || !canEdit || kpis.pending === 0}
             className="px-3 py-1 rounded-md text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none"
           >
             {autoLinking ? 'Vinculando...' : 'Auto-vincular'}
           </button>
-          {kpis.linked > 0 && isDraft && (
+          {kpis.linked > 0 && isDraft && canEdit && (
             <button
               onClick={handleApply}
               disabled={applying || !verificadoOk}
@@ -704,7 +709,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
               {applying ? 'Lockando...' : `Lockar (${kpis.linked})`}
             </button>
           )}
-          {txns.length > 0 && isDraft && (
+          {txns.length > 0 && isDraft && canEdit && (
             <button
               onClick={handleClear}
               className="px-2 py-1 rounded-md text-[10px] text-dark-500 border border-dark-700 hover:text-dark-300 transition-all"
@@ -940,9 +945,10 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
 
 type OFXFilter = 'all' | 'pending' | 'linked' | 'applied' | 'ignored';
 
-function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
+function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: {
   weekStart: string;
   isDraft: boolean;
+  canEdit: boolean;
   onDataChange: () => void;
   agents: AgentOption[];
   players: PlayerOption[];
@@ -1169,7 +1175,7 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
           <label className={`flex flex-col items-center justify-center py-6 cursor-pointer border-2 border-dashed rounded-lg transition-colors ${
             uploading ? 'border-poker-500/50 bg-poker-900/10' : 'border-dark-600/50 hover:border-dark-500'
           }`}>
-            <input type="file" accept=".ofx,.OFX" onChange={handleUpload} className="hidden" disabled={uploading} aria-label="Importar arquivo OFX" />
+            <input type="file" accept=".ofx,.OFX" onChange={handleUpload} className="hidden" disabled={uploading || !canEdit} aria-label="Importar arquivo OFX" />
             <span className="text-sm mb-2 text-dark-400">{uploading ? 'Aguarde...' : ''}</span>
             <span className="text-sm text-dark-300 font-medium">
               {uploading ? 'Importando...' : 'Importar OFX'}
@@ -1348,7 +1354,7 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
       )}
 
       {/* Actions bar */}
-      {kpis.linked > 0 && isDraft && (
+      {kpis.linked > 0 && isDraft && canEdit && (
         <div className="card bg-blue-500/5 border-blue-500/10 mb-4 flex items-center justify-between">
           <p className="text-sm text-dark-300">
             <span className="text-blue-400 font-bold">{kpis.linked}</span> transacoes vinculadas prontas para aplicar
@@ -1574,13 +1580,14 @@ function FonteBadge({ entry }: { entry: LedgerEntry }) {
 
 // ─── Ledger Tab ──────────────────────────────────────────────────────
 
-function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, toggling, onToggle, fmtDateTime }: {
+function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit, toggling, onToggle, fmtDateTime }: {
   entries: LedgerEntry[];
   kpis: { total: number; reconciled: number; pending: number; totalIn: number; totalOut: number; pendingAmount: number };
   filter: FilterMode;
   setFilter: (f: FilterMode) => void;
   loading: boolean;
   isDraft: boolean;
+  canEdit: boolean;
   toggling: string | null;
   onToggle: (id: string, current: boolean) => void;
   fmtDateTime: (dt: string) => string;
@@ -1675,8 +1682,8 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, togglin
                     >
                       <td className="px-4 py-2.5 text-center">
                         <button
-                          onClick={() => isDraft && onToggle(e.id, e.is_reconciled)}
-                          disabled={!isDraft || isToggling}
+                          onClick={() => isDraft && canEdit && onToggle(e.id, e.is_reconciled)}
+                          disabled={!isDraft || !canEdit || isToggling}
                           className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                             e.is_reconciled
                               ? 'bg-green-600/30 border-green-500 text-green-400'

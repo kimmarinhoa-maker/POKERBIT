@@ -260,7 +260,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       {!loading && entries.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5bg-blue-500" />
+            <div className="h-0.5 bg-blue-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Movimentacoes</p>
               <p className="text-xl font-bold mt-1 font-mono text-blue-400">{entries.length}</p>
@@ -268,7 +268,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
             </div>
           </div>
           <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5bg-poker-500" />
+            <div className="h-0.5 bg-poker-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Entradas (IN)</p>
               <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(totals.totalIn)}</p>
@@ -276,7 +276,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
             </div>
           </div>
           <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5bg-red-500" />
+            <div className="h-0.5 bg-red-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saidas (OUT)</p>
               <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(totals.totalOut)}</p>
@@ -284,7 +284,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
             </div>
           </div>
           <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className={`h-0.5${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+            <div className={`h-0.5 ${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo Liquido</p>
               <p className={`text-xl font-bold mt-1 font-mono ${totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}`}>{formatBRL(totals.net)}</p>
@@ -352,7 +352,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
                     <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Valor</th>
                     <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Metodo</th>
                     <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Descricao</th>
-                    {isDraft && (
+                    {isDraft && canEdit && (
                       <th className="px-3 py-3 text-center font-medium text-xs text-dark-400 w-10" />
                     )}
                   </tr>
@@ -390,7 +390,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
                       <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">
                         {e.description || '—'}
                       </td>
-                      {isDraft && (
+                      {isDraft && canEdit && (
                         <td className="px-3 py-2.5 text-center">
                           <button
                             onClick={() => handleDelete(e.id)}

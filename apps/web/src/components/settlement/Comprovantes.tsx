@@ -413,7 +413,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-blue-500" />
+          <div className="h-0.5 bg-blue-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Agentes</p>
             <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.total}</p>
@@ -421,7 +421,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-red-500" />
+          <div className="h-0.5 bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Pagar</p>
             <p className="text-xl font-bold mt-1 font-mono text-red-400">
@@ -430,7 +430,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5bg-emerald-500" />
+          <div className="h-0.5 bg-emerald-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Receber</p>
             <p className="text-xl font-bold mt-1 font-mono text-emerald-400">
@@ -439,7 +439,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+          <div className={`h-0.5 ${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
             <p className="text-sm font-bold mt-1 font-mono text-dark-200">

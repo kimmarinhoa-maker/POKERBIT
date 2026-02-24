@@ -15,9 +15,10 @@ interface Props {
   weekStart: string;
   status: string;
   logoMap?: Record<string, string | null>;
+  isScoped?: boolean;
 }
 
-export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart, status, logoMap = {} }: Props) {
+export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart, status, logoMap = {}, isScoped }: Props) {
   return (
     <div className="w-[180px] min-w-[180px] bg-dark-900 border-r border-dark-700 flex flex-col overflow-y-auto">
       {/* Header */}
@@ -26,11 +27,18 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
         <p className="text-sm text-dark-200 mt-1">
           {new Date(weekStart + 'T00:00:00').toLocaleDateString('pt-BR')}
         </p>
-        <span className={`mt-1 inline-block ${
-          status === 'DRAFT' ? 'badge-draft' : status === 'FINAL' ? 'badge-final' : 'badge-void'
-        }`}>
-          {status === 'DRAFT' ? 'RASCUNHO' : status}
-        </span>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className={`inline-block ${
+            status === 'DRAFT' ? 'badge-draft' : status === 'FINAL' ? 'badge-final' : 'badge-void'
+          }`}>
+            {status === 'DRAFT' ? 'RASCUNHO' : status}
+          </span>
+          {isScoped && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              LIMITADO
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Dashboard (visão geral) */}

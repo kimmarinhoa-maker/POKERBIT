@@ -571,7 +571,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                     </div>
                     <StatusBadge status={status} />
                     {/* Payment Type Badge (Fiado / A Vista) */}
-                    {isDraft ? (
+                    {isDraft && canPay ? (
                       <span
                         role="button"
                         aria-label={`Alternar tipo de pagamento de ${agent.agent_name} para ${currentPaymentType === 'avista' ? 'Fiado' : 'A Vista'}`}
@@ -721,7 +721,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                               <span className="text-dark-500">{e.method || ''}</span>
                               <span className="text-dark-600 truncate max-w-[150px]">{e.description || ''}</span>
                             </div>
-                            {isDraft && (
+                            {isDraft && canPay && (
                               <button
                                 onClick={() => handleDeleteEntry(e.id)}
                                 aria-label="Remover lancamento"

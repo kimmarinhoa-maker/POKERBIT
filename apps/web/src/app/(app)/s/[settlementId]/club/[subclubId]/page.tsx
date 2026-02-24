@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getSettlementFull, isAdmin, getOrgTree } from '@/lib/api';
+import { getSettlementFull, getOrgTree } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
+import { getVisibleTabKeys } from '@/components/settlement/SubNavTabs';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
 
@@ -40,10 +42,14 @@ export default function SubclubPanelPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAccess, role } = useAuth();
 
   const settlementId = params.settlementId as string;
   const subclubId = decodeURIComponent(params.subclubId as string);
-  const activeTab = searchParams.get('tab') || 'resumo';
+  const requestedTab = searchParams.get('tab') || 'resumo';
+  // Fallback: if requested tab is not visible for this role, redirect to 'resumo'
+  const visibleTabs = getVisibleTabKeys(role);
+  const activeTab = visibleTabs.has(requestedTab) ? requestedTab : 'resumo';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -303,7 +309,7 @@ export default function SubclubPanelPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {settlement.status === 'DRAFT' && isAdmin() && (
+          {settlement.status === 'DRAFT' && canAccess('OWNER', 'ADMIN') && (
             <button onClick={handleFinalize} className="btn-primary text-sm flex items-center gap-2">
               Finalizar Semana
             </button>
