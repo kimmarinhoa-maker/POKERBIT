@@ -65,7 +65,7 @@ export default function LancamentosPage() {
         id: o.id,
         name: o.name,
         icon: '',
-        logoUrl: o.logo_url || null,
+        logoUrl: o.metadata?.logo_url || null,
       }));
       setClubs(subclubs);
       setSelectedClubIds(subclubs.map((c) => c.id));
