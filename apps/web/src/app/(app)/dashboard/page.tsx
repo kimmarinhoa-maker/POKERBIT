@@ -37,6 +37,9 @@ interface WeekData {
   ggrTotal: number;
   despesas: { taxas: number; rakeback: number; lancamentos: number; total: number };
   resultadoFinal: number;
+  acertoLiga: number;
+  totalTaxasSigned: number;
+  totalLancamentos: number;
   clubes: ClubeData[];
 }
 
@@ -78,6 +81,8 @@ export default function DashboardPage() {
       const totalPlayers = Number(dt.players || 0);
       const rbTotal = Number(dt.rbTotal || 0);
       const totalTaxas = Number(dt.totalTaxas || 0);
+      const dtTotalTaxasSigned = Number(dt.totalTaxasSigned || -totalTaxas);
+      const dtAcertoLiga = Number(dt.acertoLiga || 0);
 
       // Build per-club data (enables toggle filtering)
       let totalLancamentos = 0;
@@ -119,7 +124,7 @@ export default function DashboardPage() {
         });
       }
 
-      const despesasTotal = round2(totalTaxas + totalLancamentos);
+      const despesasTotal = round2(totalTaxas + Math.abs(totalLancamentos));
 
       return {
         settlement,
@@ -135,6 +140,9 @@ export default function DashboardPage() {
           total: despesasTotal,
         },
         resultadoFinal: round2(resultadoTotal),
+        acertoLiga: round2(dtAcertoLiga),
+        totalTaxasSigned: round2(dtTotalTaxasSigned),
+        totalLancamentos: round2(totalLancamentos),
         clubes,
       };
     } catch {
@@ -287,6 +295,9 @@ export default function DashboardPage() {
         ggrTotal: week.ggrTotal,
         despesas: week.despesas,
         resultadoFinal: week.resultadoFinal,
+        acertoLiga: week.acertoLiga,
+        totalTaxasSigned: week.totalTaxasSigned,
+        totalLancamentos: week.totalLancamentos,
       };
     }
     const enabled = week.clubes.filter(c => !disabledClubs.has(c.nome));
@@ -297,8 +308,10 @@ export default function DashboardPage() {
     const taxas = round2(enabled.reduce((s, c) => s + c.taxas, 0));
     const rakeback = round2(enabled.reduce((s, c) => s + c.rakeback, 0));
     const lancamentos = round2(enabled.reduce((s, c) => s + c.lancamentos, 0));
-    const despesasTotal = round2(taxas + lancamentos);
+    const despesasTotal = round2(taxas + Math.abs(lancamentos));
     const resultadoFinal = round2(ganhosTotal + rakeTotal + ggrTotal);
+    const acertoLiga = round2(enabled.reduce((s, c) => s + c.acertoLiga, 0));
+    const totalTaxasSigned = round2(-taxas);
     return {
       jogadoresAtivos,
       rakeTotal,
@@ -306,6 +319,9 @@ export default function DashboardPage() {
       ggrTotal,
       despesas: { taxas, rakeback, lancamentos, total: despesasTotal },
       resultadoFinal,
+      acertoLiga,
+      totalTaxasSigned,
+      totalLancamentos: lancamentos,
     };
   }
 
@@ -319,17 +335,11 @@ export default function DashboardPage() {
   const deltaRake = f && fp ? calcDelta(f.rakeTotal, fp.rakeTotal) : null;
   const deltaGanhos = f && fp ? calcDelta(f.ganhosTotal, fp.ganhosTotal) : null;
   const deltaGGR = f && fp ? calcDelta(f.ggrTotal, fp.ggrTotal) : null;
-  const deltaResultado = f && fp ? calcDelta(f.resultadoFinal, fp.resultadoFinal) : null;
+  const deltaAcerto = f && fp ? calcDelta(f.acertoLiga, fp.acertoLiga) : null;
 
   const despesasBreakdown = f ? [
     { label: 'Taxas', value: formatCurrency(-f.despesas.taxas) },
     { label: 'Lancamentos', value: formatCurrency(f.despesas.lancamentos) },
-  ] : [];
-
-  const resultadoBreakdown = f ? [
-    { label: 'Profit/Loss', value: formatCurrency(f.ganhosTotal) },
-    { label: 'Rake', value: formatCurrency(f.rakeTotal) },
-    { label: 'GGR Rodeio', value: formatCurrency(f.ggrTotal) },
   ] : [];
 
   // Chart data from all loaded settlements
@@ -458,7 +468,7 @@ export default function DashboardPage() {
             <KpiCard
               label="GGR Rodeio"
               value={formatCurrency(f?.ggrTotal ?? 0)}
-              accent={(f?.ggrTotal ?? 0) >= 0 ? 'green' : 'red'}
+              accent="purple"
               delta={deltaGGR || undefined}
             />
             <KpiCard
@@ -467,13 +477,69 @@ export default function DashboardPage() {
               accent="red"
               breakdown={despesasBreakdown}
             />
-            <KpiCard
-              label="Resultado Final"
-              value={formatCurrency(f?.resultadoFinal ?? 0)}
-              accent={(f?.resultadoFinal ?? 0) >= 0 ? 'green' : 'red'}
-              delta={deltaResultado || undefined}
-              breakdown={resultadoBreakdown}
-            />
+
+            {/* Card especial: Fechamento Semana */}
+            {(() => {
+              const acerto = f?.acertoLiga ?? 0;
+              return (
+                <div className={`relative rounded-xl bg-dark-900 overflow-hidden ${
+                  acerto < 0
+                    ? 'border-2 border-danger-500 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
+                    : acerto > 0
+                    ? 'border-2 border-poker-500 shadow-[0_0_20px_rgba(34,197,94,0.15)]'
+                    : 'border border-dark-700'
+                }`}>
+                  <div className="p-5">
+                    <div className="text-[10px] font-bold text-dark-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span>{'\u{1F3C6}'}</span> Fechamento Semana
+                    </div>
+
+                    <div className={`font-mono text-2xl font-semibold mb-1 ${
+                      acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
+                    }`}>
+                      {formatCurrency(acerto)}
+                    </div>
+
+                    <div className={`text-xs mt-1 ${
+                      acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
+                    }`}>
+                      {acerto < 0 ? 'clube deve pagar a liga' : acerto > 0 ? 'clube tem a receber' : 'zerado'}
+                    </div>
+
+                    {deltaAcerto && !deltaAcerto.isZero && (
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          deltaAcerto.isUp ? 'bg-poker-900 text-poker-500' : 'bg-red-900/50 text-red-400'
+                        }`}>
+                          {deltaAcerto.isUp ? '\u25B2' : '\u25BC'} {deltaAcerto.pct}% vs sem. anterior
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="mt-3 pt-3 border-t border-dark-800 space-y-1">
+                      <div className="flex justify-between text-xs text-dark-400">
+                        <span>Resultado</span>
+                        <span className="font-mono text-dark-100">
+                          {formatCurrency(f?.resultadoFinal ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-dark-400">
+                        <span>Taxas</span>
+                        <span className="font-mono text-danger-500">
+                          {formatCurrency(f?.totalTaxasSigned ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-dark-400">
+                        <span>Lancamentos</span>
+                        <span className={`font-mono ${(f?.totalLancamentos ?? 0) < 0 ? 'text-danger-500' : 'text-poker-500'}`}>
+                          {formatCurrency(f?.totalLancamentos ?? 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Filter indicator */}

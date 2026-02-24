@@ -42,5 +42,12 @@ export interface DashboardData {
   despesas: DespesasData;
   resultadoFinal: number;
   resultadoAnterior: number;
+  acertoLiga?: number;
+  acertoLigaAnterior?: number;
+  resultado?: number;
+  totalTaxasSigned?: number;
+  totalLancamentos?: number;
+  ggrRodeio?: number;
+  ggrRodeioAnterior?: number;
   clubes: ClubeData[];
 }

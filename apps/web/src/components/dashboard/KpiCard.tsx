@@ -4,7 +4,7 @@ interface KpiCardProps {
   label: string;
   subtitle?: string;
   value: string;
-  accent: 'green' | 'blue' | 'red' | 'yellow';
+  accent: 'green' | 'blue' | 'red' | 'yellow' | 'purple';
   delta?: { pct: string; isUp: boolean; isZero: boolean; invert?: boolean };
   breakdown?: { label: string; value: string }[];
 }
@@ -14,6 +14,7 @@ const ACCENT_BAR: Record<string, string> = {
   blue: 'bg-blue-500',
   red: 'bg-red-500',
   yellow: 'bg-warning-500',
+  purple: 'bg-purple-500',
 };
 
 const ACCENT_VALUE: Record<string, string> = {
@@ -21,6 +22,7 @@ const ACCENT_VALUE: Record<string, string> = {
   blue: 'text-blue-400',
   red: 'text-red-400',
   yellow: 'text-dark-100',
+  purple: 'text-purple-400',
 };
 
 export default function KpiCard({ label, subtitle, value, accent, delta, breakdown }: KpiCardProps) {

@@ -19,6 +19,13 @@ export const dashboardMock: DashboardData = {
   },
   resultadoFinal: 8134.81,
   resultadoAnterior: 6200.00,
+  acertoLiga: -76235.94,
+  acertoLigaAnterior: -15300.00,
+  resultado: -76286.94,
+  totalTaxasSigned: -11343.81,
+  totalLancamentos: -968.22,
+  ggrRodeio: 119.25,
+  ggrRodeioAnterior: 203.50,
   clubes: [
     { nome: '3BET', agentes: 6, jogadores: 12, rake: 2930.70, ganhos: -5200.00, ggr: 0, resultado: -4106.55, acertoLiga: -4634.08, taxas: 527.53, rakeback: 0, lancamentos: 0, status: 'Em Aberto' },
     { nome: 'CH', agentes: 6, jogadores: 18, rake: 4100.20, ganhos: -1500.00, ggr: 0, resultado: 3196.70, acertoLiga: 2669.00, taxas: 527.70, rakeback: 0, lancamentos: 0, status: 'Em Aberto' },
