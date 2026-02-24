@@ -9,9 +9,12 @@ import {
   createPrefixRule,
   updatePrefixRule,
   deletePrefixRule,
+  uploadClubLogo,
+  deleteClubLogo,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
+import ClubLogo from '@/components/ClubLogo';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -22,6 +25,7 @@ interface Org {
   type: string;
   parent_id: string | null;
   is_active: boolean;
+  metadata?: { logo_url?: string; [key: string]: any };
   agents?: Org[];
 }
 
@@ -135,6 +139,48 @@ export default function EstruturaPage() {
       loadData();
     } catch {
       toast('Erro na operacao de estrutura', 'error');
+    }
+  }
+
+  // ── Logo handlers ─────────────────────────────────────────────
+  const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
+
+  async function handleLogoUpload(sub: Org, file: File) {
+    if (file.size > 2 * 1024 * 1024) {
+      toast('Imagem deve ter no maximo 2MB', 'error');
+      return;
+    }
+    setUploadingLogoId(sub.id);
+    try {
+      const res = await uploadClubLogo(sub.id, file);
+      if (res.success) {
+        toast('Logo atualizado com sucesso', 'success');
+        loadData();
+      } else {
+        toast(res.error || 'Erro ao fazer upload', 'error');
+      }
+    } catch {
+      toast('Erro ao fazer upload do logo', 'error');
+    } finally {
+      setUploadingLogoId(null);
+    }
+  }
+
+  async function handleLogoDelete(sub: Org) {
+    if (!confirm('Remover o logo deste subclube?')) return;
+    setUploadingLogoId(sub.id);
+    try {
+      const res = await deleteClubLogo(sub.id);
+      if (res.success) {
+        toast('Logo removido', 'success');
+        loadData();
+      } else {
+        toast(res.error || 'Erro ao remover logo', 'error');
+      }
+    } catch {
+      toast('Erro ao remover logo', 'error');
+    } finally {
+      setUploadingLogoId(null);
     }
   }
 
@@ -305,6 +351,7 @@ export default function EstruturaPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-700/40">
+                  <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium w-16">Logo</th>
                   <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">Nome</th>
                   <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">External ID</th>
                   <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium">Agentes</th>
@@ -315,6 +362,37 @@ export default function EstruturaPage() {
               <tbody>
                 {subclubes.map(sub => (
                   <tr key={sub.id} className="border-b border-dark-800/30 hover:bg-dark-800/20 transition-colors">
+                    <td className="py-2.5 px-2 text-center">
+                      <div className="relative group inline-flex items-center justify-center">
+                        <ClubLogo
+                          logoUrl={sub.metadata?.logo_url}
+                          name={sub.name}
+                          size="sm"
+                        />
+                        {/* Upload overlay */}
+                        <label
+                          className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
+                          title={sub.metadata?.logo_url ? 'Trocar logo' : 'Upload logo'}
+                        >
+                          {uploadingLogoId === sub.id ? (
+                            <Spinner size="sm" variant="white" />
+                          ) : (
+                            <span className="text-white text-xs">📷</span>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleLogoUpload(sub, f);
+                              e.target.value = '';
+                            }}
+                            disabled={uploadingLogoId === sub.id}
+                          />
+                        </label>
+                      </div>
+                    </td>
                     <td className="py-2.5 px-2 text-white font-medium">{sub.name}</td>
                     <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">
                       {sub.external_id || '—'}
@@ -333,6 +411,16 @@ export default function EstruturaPage() {
                     </td>
                     <td className="py-2.5 px-2 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {sub.metadata?.logo_url && (
+                          <button
+                            onClick={() => handleLogoDelete(sub)}
+                            className="text-dark-500 hover:text-red-400 text-xs transition-colors"
+                            aria-label={`Remover logo ${sub.name}`}
+                            disabled={uploadingLogoId === sub.id}
+                          >
+                            Rm Logo
+                          </button>
+                        )}
                         <button
                           onClick={() => openSubEdit(sub)}
                           className="text-dark-400 hover:text-poker-400 text-xs transition-colors"

@@ -153,42 +153,90 @@ class ImportConfirmService {
 
       const weekResult = calculateWeek(allPlayers, rates);
 
-      // ── 7) Create settlement (versioned) ──────────────────────────
+      // ── 7) Create or reuse settlement (merge mode) ────────────────
 
-      const version = await this.getNextVersion(tenantId, weekStart);
+      // Check for existing DRAFT settlement for this week
+      const { data: existingSettlements } = await supabaseAdmin
+        .from('settlements')
+        .select('id, version, status')
+        .eq('tenant_id', tenantId)
+        .eq('week_start', weekStart)
+        .eq('status', 'DRAFT')
+        .order('version', { ascending: false })
+        .limit(1);
 
-      // Se há versão anterior, marcar como VOID
-      if (version > 1) {
+      const existingDraft = existingSettlements?.[0] || null;
+
+      let settlementId: string;
+      let version: number;
+
+      if (existingDraft) {
+        // MERGE MODE: reuse existing settlement
+        settlementId = existingDraft.id;
+        version = existingDraft.version;
+
+        // Determine which subclubs are in the NEW file
+        const newSubclubNames = new Set<string>();
+        for (const p of allPlayers) {
+          if (p.clube) newSubclubNames.add(p.clube);
+        }
+
+        // ── Delete existing metrics ONLY for subclubs in the new file ──
+        //
+        // The unique constraints are per (settlement, entity, subclub_name),
+        // so we only need to clear the subclubs being replaced.
+        // Data from other subclubs (imported earlier) is preserved.
+        if (newSubclubNames.size > 0) {
+          const subclubArray = Array.from(newSubclubNames);
+          await supabaseAdmin
+            .from('player_week_metrics')
+            .delete()
+            .eq('settlement_id', settlementId)
+            .in('subclub_name', subclubArray);
+
+          await supabaseAdmin
+            .from('agent_week_metrics')
+            .delete()
+            .eq('settlement_id', settlementId)
+            .in('subclub_name', subclubArray);
+        }
+
+        // Update settlement metadata
         await supabaseAdmin
           .from('settlements')
-          .update({ status: 'VOID' })
-          .eq('tenant_id', tenantId)
-          .eq('week_start', weekStart)
-          .eq('status', 'DRAFT');
-      }
+          .update({ import_id: importId, inputs_hash: fileHash })
+          .eq('id', settlementId);
 
-      const { data: settlement, error: settlError } = await supabaseAdmin
-        .from('settlements')
-        .insert({
-          tenant_id: tenantId,
-          club_id: clubId,
-          week_start: weekStart,
-          version,
-          status: 'DRAFT',
-          import_id: importId,
-          inputs_hash: fileHash,
-        })
-        .select('id')
-        .single();
+        warnings.push(`Dados mesclados com settlement existente (v${version}). Subclubes atualizados: ${Array.from(newSubclubNames).join(', ')}`);
+      } else {
+        // NEW settlement
+        version = await this.getNextVersion(tenantId, weekStart);
 
-      if (settlError || !settlement) {
-        throw new Error(`Erro ao criar settlement: ${settlError?.message}`);
+        // Se ha versao anterior nao-DRAFT (FINAL/VOID), incrementa versao
+        const { data: settlement, error: settlError } = await supabaseAdmin
+          .from('settlements')
+          .insert({
+            tenant_id: tenantId,
+            club_id: clubId,
+            week_start: weekStart,
+            version,
+            status: 'DRAFT',
+            import_id: importId,
+            inputs_hash: fileHash,
+          })
+          .select('id')
+          .single();
+
+        if (settlError || !settlement) {
+          throw new Error(`Erro ao criar settlement: ${settlError?.message}`);
+        }
+        settlementId = settlement.id;
       }
 
       // ── 8) Persist metrics ────────────────────────────────────────
 
-      await this.persistPlayerMetrics(tenantId, settlement.id, weekStart, weekResult.allPlayers, playerUuidMap, orgNameMap);
-      const agentCount = await this.persistAgentMetrics(tenantId, settlement.id, weekStart, weekResult.clubs, orgNameMap);
+      await this.persistPlayerMetrics(tenantId, settlementId, weekStart, weekResult.allPlayers, playerUuidMap, orgNameMap);
+      const agentCount = await this.persistAgentMetrics(tenantId, settlementId, weekStart, weekResult.clubs, orgNameMap);
 
       // ── 9) Mark import as DONE ────────────────────────────────────
 
@@ -204,7 +252,7 @@ class ImportConfirmService {
 
       return {
         import_id: importId,
-        settlement_id: settlement.id,
+        settlement_id: settlementId,
         settlement_version: version,
         status: 'ok',
         player_count: allPlayers.length,
@@ -358,8 +406,23 @@ class ImportConfirmService {
       const batch = rows.slice(i, i + batchSize);
       const { error } = await supabaseAdmin.from('player_week_metrics').insert(batch);
       if (error) {
-        console.error(`[confirm] Erro insert player_metrics batch ${i}:`, error);
-        throw error;
+        // If unique constraint violation, clean up conflicting rows and retry
+        if (error.code === '23505') {
+          console.warn(`[confirm] Constraint conflict in player_metrics batch ${i}, cleaning up overlapping players...`);
+          const extIds = batch.map(r => r.external_player_id).filter(Boolean);
+          if (extIds.length > 0) {
+            await supabaseAdmin.from('player_week_metrics').delete()
+              .eq('settlement_id', settlementId).in('external_player_id', extIds);
+          }
+          const { error: retryErr } = await supabaseAdmin.from('player_week_metrics').insert(batch);
+          if (retryErr) {
+            console.error(`[confirm] Retry failed for player_metrics batch ${i}:`, retryErr);
+            throw retryErr;
+          }
+        } else {
+          console.error(`[confirm] Erro insert player_metrics batch ${i}:`, error);
+          throw error;
+        }
       }
     }
   }
@@ -398,8 +461,23 @@ class ImportConfirmService {
     if (rows.length > 0) {
       const { error } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
       if (error) {
-        console.error('[confirm] Erro insert agent_metrics:', error);
-        throw error;
+        // If unique constraint violation, clean up conflicting rows and retry
+        if (error.code === '23505') {
+          console.warn('[confirm] Constraint conflict in agent_metrics, cleaning up overlapping agents...');
+          const agentNames = rows.map(r => r.agent_name).filter(Boolean);
+          if (agentNames.length > 0) {
+            await supabaseAdmin.from('agent_week_metrics').delete()
+              .eq('settlement_id', settlementId).in('agent_name', agentNames);
+          }
+          const { error: retryErr } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
+          if (retryErr) {
+            console.error('[confirm] Retry failed for agent_metrics:', retryErr);
+            throw retryErr;
+          }
+        } else {
+          console.error('[confirm] Erro insert agent_metrics:', error);
+          throw error;
+        }
       }
     }
 

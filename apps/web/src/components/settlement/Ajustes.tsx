@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { saveClubAdjustments, formatBRL } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
 
 interface Props {
   subclub: {
@@ -24,6 +25,8 @@ const fields: { key: 'overlay' | 'compras' | 'security' | 'outros'; label: strin
 
 export default function Ajustes({ subclub, weekStart, settlementStatus, onDataChange }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
+  const { canAccess } = useAuth();
+  const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -108,7 +111,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
           </div>
         </div>
 
-        {isDraft && !editing && (
+        {isDraft && !editing && canEdit && (
           <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2">
             ✏️ Editar
           </button>

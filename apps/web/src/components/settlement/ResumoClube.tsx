@@ -4,15 +4,17 @@ import { useRef, useState } from 'react';
 import { formatBRL } from '@/lib/api';
 import { exportElementAsJpg } from '@/lib/exportJpg';
 import { useToast } from '@/components/Toast';
+import ClubLogo from '@/components/ClubLogo';
 
 interface Props {
   subclub: any;
   fees: Record<string, number>;
   weekStart?: string;
   weekEnd?: string;
+  logoUrl?: string | null;
 }
 
-export default function ResumoClube({ subclub, fees, weekStart, weekEnd }: Props) {
+export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl }: Props) {
   const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, acertoDirecao, name } = subclub;
   const resumoRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -58,9 +60,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd }: Props
       <div ref={resumoRef}>
       {/* ── Header do subclube ──────────────────────────────────── */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-poker-900/80 to-dark-800 flex items-center justify-center text-3xl shadow-lg shadow-poker-900/20">
-          <span>🏢</span>
-        </div>
+        <ClubLogo logoUrl={logoUrl} name={name} size="lg" className="shadow-lg shadow-poker-900/20" />
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">{name}</h2>
           {weekStart && (
@@ -152,7 +152,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd }: Props
             <div className="pt-3 mt-1 border-t border-dark-600 flex items-center justify-between">
               <span className="text-sm font-semibold text-red-400">Total Taxas</span>
               <span className="font-mono text-red-400 font-bold text-base">
-                - R$ {formatNumber(feesComputed.totalTaxas)}
+                {formatBRL(feesComputed.totalTaxasSigned)}
               </span>
             </div>
           </div>
@@ -229,7 +229,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd }: Props
           <div>
             <p className="text-[10px] text-dark-500 uppercase">Taxas</p>
             <p className="text-sm font-mono text-red-400">
-              - R$ {formatNumber(feesComputed.totalTaxas)}
+              {formatBRL(feesComputed.totalTaxasSigned)}
             </p>
           </div>
           <div>
@@ -286,7 +286,7 @@ function TaxaRow({ label, sublabel, value }: { label: string; sublabel: string; 
         <span className="text-[11px] text-dark-500">{sublabel}</span>
       </div>
       <span className="font-mono text-red-400 text-sm font-medium">
-        - R$ {formatNumber(value)}
+        {formatBRL(-value)}
       </span>
     </div>
   );
@@ -314,9 +314,3 @@ function LancRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function formatNumber(v: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(v);
-}

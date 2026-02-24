@@ -1,558 +1,540 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { listSettlements, getSettlementFull, listLedger, formatBRL, formatDate } from '@/lib/api';
-import { useToast } from '@/components/Toast';
+import { formatCurrency, calcDelta } from '@/lib/formatters';
+import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
+import KpiCard from '@/components/dashboard/KpiCard';
+import ClubCard from '@/components/dashboard/ClubCard';
+import ComparativeBarChart from '@/components/dashboard/ComparativeBarChart';
+import ComparativeLineChart from '@/components/dashboard/ComparativeLineChart';
+import WeekDatePicker from '@/components/WeekDatePicker';
 import Spinner from '@/components/Spinner';
+import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
+import type { ClubeData, ChartDataPoint } from '@/types/dashboard';
 
-// ─── Types ──────────────────────────────────────────────────────────
+// ─── helpers ──────────────────────────────────────────────────────
+function round2(v: number) { return Math.round((v + Number.EPSILON) * 100) / 100; }
 
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  resultado_brl: number;
-  is_direct?: boolean;
+function formatDDMM(iso: string) {
+  const [, m, dd] = iso.split('-');
+  return `${dd}/${m}`;
 }
 
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  dir: 'IN' | 'OUT';
-  amount: number;
+function formatWeekLabel(iso: string) {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
-interface SubclubStats {
-  id: string;
-  name: string;
-  totalEntities: number;
-  entitiesWithMov: number;
-  aPagar: number;
-  aReceber: number;
-  pago: number;
-  quitados: number;
-  emAberto: number;
-  status: string;
-  statusColor: string;
-  statusBg: string;
+// ─── types for loaded data ────────────────────────────────────────
+interface WeekData {
+  settlement: any;
+  subclubs: any[];
+  jogadoresAtivos: number;
+  rakeTotal: number;
+  ganhosTotal: number;
+  ggrTotal: number;
+  despesas: { taxas: number; rakeback: number; lancamentos: number; total: number };
+  resultadoFinal: number;
+  clubes: ClubeData[];
 }
 
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
-
-// ─── Component ──────────────────────────────────────────────────────
-
+// ─── Component ────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [settlements, setSettlements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [subclubs, setSubclubs] = useState<any[]>([]);
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
-  const [latestSettlement, setLatestSettlement] = useState<any>(null);
-  const [loadingKpis, setLoadingKpis] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
-  // 1. Load settlements list
+  // Data states
+  const [loading, setLoading] = useState(true);
+  const [currentWeek, setCurrentWeek] = useState<WeekData | null>(null);
+  const [previousWeek, setPreviousWeek] = useState<WeekData | null>(null);
+  const [allSettlements, setAllSettlements] = useState<any[]>([]);
+  const [allWeekData, setAllWeekData] = useState<WeekData[]>([]);
+  const [notFoundEmpty, setNotFoundEmpty] = useState(false);
+
+  // Week selector state
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [notFoundSearch, setNotFoundSearch] = useState(false);
+
+  // Logo map: subclub name -> logo_url
+  const logoMapRef = useRef<Record<string, string | null>>({});
+
+  // Load settlement full data and map to WeekData
+  const loadWeekData = useCallback(async (settlement: any): Promise<WeekData | null> => {
+    try {
+      const fullRes = await getSettlementFull(settlement.id);
+      if (!fullRes.success) return null;
+      const subclubs = fullRes.data.subclubs || [];
+      const dt = fullRes.data.dashboardTotals || {};
+
+      // Use actual API data from dashboardTotals
+      const rakeTotal = Number(dt.rake || 0);
+      const ganhosTotal = Number(dt.ganhos || 0);
+      const ggrTotal = Number(dt.ggr || 0);
+      const resultadoTotal = Number(dt.resultado || 0);
+      const totalPlayers = Number(dt.players || 0);
+      const rbTotal = Number(dt.rbTotal || 0);
+      const totalTaxas = Number(dt.totalTaxas || 0);
+
+      // Build per-club data (enables toggle filtering)
+      let totalLancamentos = 0;
+      const clubes: ClubeData[] = [];
+
+      for (const sc of subclubs) {
+        const agents = sc.agents || [];
+        let scRake = 0, scResultado = 0, scRakeback = 0, scJogadores = 0;
+
+        for (const ag of agents) {
+          scRake += Number(ag.rake_total_brl || 0);
+          scResultado += Number(ag.resultado_brl || 0);
+          scRakeback += Number(ag.commission_brl || 0);
+          scJogadores += Number(ag.player_count || 0);
+        }
+
+        const scGanhos = Number(sc.totals?.ganhos || 0);
+        const scGGR = Number(sc.totals?.ggr || 0);
+        const scTaxas = Number(sc.feesComputed?.totalTaxas || 0);
+        const scLancamentos = Number(sc.totalLancamentos || 0);
+        const scAcerto = Number(sc.acertoLiga || 0);
+
+        totalLancamentos += scLancamentos;
+
+        clubes.push({
+          nome: sc.name,
+          agentes: agents.length,
+          jogadores: scJogadores,
+          rake: round2(scRake),
+          ganhos: round2(scGanhos),
+          ggr: round2(scGGR),
+          resultado: round2(scResultado),
+          acertoLiga: round2(scAcerto),
+          taxas: round2(scTaxas),
+          rakeback: round2(scRakeback),
+          lancamentos: round2(scLancamentos),
+          status: 'Em Aberto',
+          logoUrl: logoMapRef.current[sc.name.toLowerCase()] || null,
+        });
+      }
+
+      const despesasTotal = round2(totalTaxas + totalLancamentos);
+
+      return {
+        settlement,
+        subclubs,
+        jogadoresAtivos: totalPlayers,
+        rakeTotal: round2(rakeTotal),
+        ganhosTotal: round2(ganhosTotal),
+        ggrTotal: round2(ggrTotal),
+        despesas: {
+          taxas: round2(totalTaxas),
+          rakeback: round2(rbTotal),
+          lancamentos: round2(totalLancamentos),
+          total: despesasTotal,
+        },
+        resultadoFinal: round2(resultadoTotal),
+        clubes,
+      };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Initial load: fetch latest 2 settlements + org tree for logos
   useEffect(() => {
-    async function load() {
+    async function init() {
       setLoading(true);
       try {
-        const res = await listSettlements();
-        if (res.success) setSettlements(res.data || []);
-        else toast(res.error || 'Erro ao carregar semanas', 'error');
+        // Load org tree in parallel to build logo map
+        const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
+        if (treeRes.success && treeRes.data) {
+          const map: Record<string, string | null> = {};
+          for (const club of treeRes.data) {
+            for (const sub of club.subclubes || []) {
+              map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+            }
+          }
+          logoMapRef.current = map;
+        }
+        if (!res.success || !res.data?.length) {
+          setNotFoundEmpty(true);
+          setLoading(false);
+          return;
+        }
+
+        setAllSettlements(res.data);
+        const latest = res.data[0];
+        const prev = res.data.length > 1 ? res.data[1] : null;
+
+        // Load current + previous in parallel first (fast render)
+        const [currentData, prevData] = await Promise.all([
+          loadWeekData(latest),
+          prev ? loadWeekData(prev) : Promise.resolve(null),
+        ]);
+
+        if (currentData) {
+          setCurrentWeek(currentData);
+          setPreviousWeek(prevData);
+          // Pre-fill date pickers with current settlement dates
+          const ws = currentData.settlement.week_start;
+          setStartDate(ws);
+          const dtEnd = new Date(ws + 'T00:00:00');
+          dtEnd.setDate(dtEnd.getDate() + 6);
+          setEndDate(dtEnd.toISOString().slice(0, 10));
+
+          // Load remaining settlements for charts (max 12 total, background)
+          const chartSettlements = res.data.slice(0, 12);
+          const already = [currentData, prevData].filter(Boolean) as WeekData[];
+          const alreadyIds = new Set(already.map(w => w.settlement.id));
+          const remaining = chartSettlements.filter((s: any) => !alreadyIds.has(s.id));
+
+          if (remaining.length > 0) {
+            Promise.all(remaining.map((s: any) => loadWeekData(s))).then(results => {
+              const all = [...already, ...results.filter(Boolean) as WeekData[]];
+              all.sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
+              setAllWeekData(all);
+            });
+          } else {
+            const sorted = [...already].sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
+            setAllWeekData(sorted);
+          }
+        } else {
+          setNotFoundEmpty(true);
+        }
       } catch {
-        toast('Erro de conexao com o servidor', 'error');
+        toast('Erro ao carregar dashboard', 'error');
+        setNotFoundEmpty(true);
       } finally {
         setLoading(false);
       }
     }
-    load();
+    init();
   }, []);
 
-  // 2. Load full data for latest settlement
-  useEffect(() => {
-    if (settlements.length === 0) return;
-    const latest = settlements[0];
+  // Week selector handlers
+  function handleStartChange(date: string) {
+    setStartDate(date);
+    setNotFoundSearch(false);
+    setNotFoundEmpty(false);
+    const dt = new Date(date + 'T00:00:00');
+    dt.setDate(dt.getDate() + 6);
+    setEndDate(dt.toISOString().slice(0, 10));
+  }
 
-    async function loadFull() {
-      setLoadingKpis(true);
-      try {
-        const [fullRes, ledgerRes] = await Promise.all([
-          getSettlementFull(latest.id),
-          listLedger(latest.week_start),
+  async function handleBuscar() {
+    if (!startDate) return;
+    setSearching(true);
+    setNotFoundSearch(false);
+    setNotFoundEmpty(false);
+    try {
+      const res = await listSettlements(undefined, startDate, endDate || undefined);
+      if (res.success && res.data && res.data.length > 0) {
+        const target = res.data[0];
+        setLoading(true);
+
+        // Find the previous settlement (the one right before the selected)
+        const allRes = await listSettlements();
+        const allList = allRes.success ? allRes.data || [] : allSettlements;
+        const targetIdx = allList.findIndex((s: any) => s.id === target.id);
+        const prev = targetIdx >= 0 && targetIdx < allList.length - 1 ? allList[targetIdx + 1] : null;
+
+        const [newData, prevData] = await Promise.all([
+          loadWeekData(target),
+          prev ? loadWeekData(prev) : Promise.resolve(null),
         ]);
-        if (fullRes.success) {
-          setSubclubs(fullRes.data.subclubs || []);
-          setLatestSettlement(fullRes.data.settlement || latest);
+
+        if (newData) {
+          setCurrentWeek(newData);
+          setPreviousWeek(prevData);
+          setNotFoundEmpty(false);
+        } else {
+          setNotFoundEmpty(true);
         }
-        if (ledgerRes.success) {
-          setEntries(ledgerRes.data || []);
-        }
-      } catch {
-        toast('Erro ao carregar dados do settlement', 'error');
-      } finally {
-        setLoadingKpis(false);
-      }
-    }
-    loadFull();
-  }, [settlements]);
-
-  // 3. Group ledger by entity
-  const ledgerByEntity = useMemo(() => {
-    const map = new Map<string, LedgerEntry[]>();
-    for (const e of entries) {
-      if (!map.has(e.entity_id)) map.set(e.entity_id, []);
-      map.get(e.entity_id)!.push(e);
-    }
-    return map;
-  }, [entries]);
-
-  // 4. Compute stats per subclub
-  const subclubStats: SubclubStats[] = useMemo(() => {
-    return subclubs.map((sc: any) => {
-      const agents: AgentMetric[] = sc.agents || [];
-      let aPagar = 0, aReceber = 0, pago = 0, quitados = 0, emAberto = 0, entitiesWithMov = 0;
-
-      agents.forEach(agent => {
-        const resultado = Number(agent.resultado_brl) || 0;
-        const totalDevido = round2(resultado);
-
-        // Resolve ledger entries (by agent_week_metrics.id and org id)
-        const seen = new Set<string>();
-        const agEntries: LedgerEntry[] = [];
-        function add(list: LedgerEntry[] | undefined) {
-          if (!list) return;
-          for (const e of list) {
-            if (!seen.has(e.id)) { seen.add(e.id); agEntries.push(e); }
-          }
-        }
-        add(ledgerByEntity.get(agent.id));
-        if (agent.agent_id) add(ledgerByEntity.get(agent.agent_id));
-
-        const totalIn = agEntries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-        const totalOut = agEntries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
-        const pagos = round2(totalIn - totalOut);
-        const pendente = round2(totalDevido + pagos);
-
-        const hasMov = Math.abs(totalDevido) > 0.01 || Math.abs(pagos) > 0.01;
-        if (hasMov) entitiesWithMov++;
-
-        if (pendente < -0.01) aPagar += Math.abs(pendente);
-        if (pendente > 0.01) aReceber += pendente;
-        pago += totalOut;
-
-        if (hasMov && Math.abs(pendente) < 0.01) quitados++;
-        else if (hasMov) emAberto++;
-      });
-
-      let status: string, statusColor: string, statusBg: string;
-      if (entitiesWithMov === 0) {
-        status = 'Sem Mov.'; statusColor = '#94a3b8'; statusBg = 'rgba(148,163,184,.08)';
-      } else if (quitados === entitiesWithMov) {
-        status = 'Quitado'; statusColor = '#10b981'; statusBg = 'rgba(16,185,129,.08)';
+        setLoading(false);
       } else {
-        status = 'Em Aberto'; statusColor = '#ef4444'; statusBg = 'rgba(239,68,68,.08)';
+        setNotFoundSearch(true);
+        setNotFoundEmpty(true);
       }
-
-      return {
-        id: sc.id, name: sc.name,
-        totalEntities: agents.length, entitiesWithMov,
-        aPagar: round2(aPagar), aReceber: round2(aReceber), pago: round2(pago),
-        quitados, emAberto, status, statusColor, statusBg,
-      };
-    });
-  }, [subclubs, ledgerByEntity]);
-
-  // 5. Global KPIs
-  const kpis = useMemo(() => {
-    const gPagar = subclubStats.reduce((s, d) => s + d.aPagar, 0);
-    const gReceber = subclubStats.reduce((s, d) => s + d.aReceber, 0);
-    const gNet = round2(gReceber - gPagar);
-    const gPago = subclubStats.reduce((s, d) => s + d.pago, 0);
-    const gTotal = subclubStats.reduce((s, d) => s + d.totalEntities, 0);
-    const gQuit = subclubStats.reduce((s, d) => s + d.quitados, 0);
-    const gComMov = subclubStats.reduce((s, d) => s + d.entitiesWithMov, 0);
-    return { gPagar, gReceber, gNet, gPago, gTotal, gQuit, gComMov };
-  }, [subclubStats]);
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return <span className="badge-draft">RASCUNHO</span>;
-      case 'FINAL': return <span className="badge-final">FINALIZADO</span>;
-      case 'VOID':  return <span className="badge-void">ANULADO</span>;
-      default: return <span className="badge-draft">{status}</span>;
+    } catch {
+      setNotFoundSearch(true);
+      setNotFoundEmpty(true);
+    } finally {
+      setSearching(false);
     }
-  };
+  }
 
-  const hasKpiData = subclubStats.length > 0;
+  // ─── Club toggle (filter KPIs) ──────────────────────────────────
+  const [disabledClubs, setDisabledClubs] = useState<Set<string>>(new Set());
 
+  const toggleClub = useCallback((nome: string) => {
+    setDisabledClubs(prev => {
+      const next = new Set(prev);
+      if (next.has(nome)) next.delete(nome);
+      else next.add(nome);
+      return next;
+    });
+  }, []);
+
+  function calcFiltered(week: WeekData | null) {
+    if (!week) return null;
+    if (disabledClubs.size === 0) {
+      return {
+        jogadoresAtivos: week.jogadoresAtivos,
+        rakeTotal: week.rakeTotal,
+        ganhosTotal: week.ganhosTotal,
+        ggrTotal: week.ggrTotal,
+        despesas: week.despesas,
+        resultadoFinal: week.resultadoFinal,
+      };
+    }
+    const enabled = week.clubes.filter(c => !disabledClubs.has(c.nome));
+    const jogadoresAtivos = enabled.reduce((s, c) => s + c.jogadores, 0);
+    const rakeTotal = round2(enabled.reduce((s, c) => s + c.rake, 0));
+    const ganhosTotal = round2(enabled.reduce((s, c) => s + c.ganhos, 0));
+    const ggrTotal = round2(enabled.reduce((s, c) => s + c.ggr, 0));
+    const taxas = round2(enabled.reduce((s, c) => s + c.taxas, 0));
+    const rakeback = round2(enabled.reduce((s, c) => s + c.rakeback, 0));
+    const lancamentos = round2(enabled.reduce((s, c) => s + c.lancamentos, 0));
+    const despesasTotal = round2(taxas + lancamentos);
+    const resultadoFinal = round2(ganhosTotal + rakeTotal + ggrTotal);
+    return {
+      jogadoresAtivos,
+      rakeTotal,
+      ganhosTotal,
+      ggrTotal,
+      despesas: { taxas, rakeback, lancamentos, total: despesasTotal },
+      resultadoFinal,
+    };
+  }
+
+  // ─── Derived data ───────────────────────────────────────────────
+  const d = currentWeek;
+  const p = previousWeek;
+  const f = useMemo(() => calcFiltered(d), [d, disabledClubs]);
+  const fp = useMemo(() => calcFiltered(p), [p, disabledClubs]);
+
+  const deltaJogadores = f && fp ? calcDelta(f.jogadoresAtivos, fp.jogadoresAtivos) : null;
+  const deltaRake = f && fp ? calcDelta(f.rakeTotal, fp.rakeTotal) : null;
+  const deltaGanhos = f && fp ? calcDelta(f.ganhosTotal, fp.ganhosTotal) : null;
+  const deltaGGR = f && fp ? calcDelta(f.ggrTotal, fp.ggrTotal) : null;
+  const deltaResultado = f && fp ? calcDelta(f.resultadoFinal, fp.resultadoFinal) : null;
+
+  const despesasBreakdown = f ? [
+    { label: 'Taxas', value: formatCurrency(-f.despesas.taxas) },
+    { label: 'Lancamentos', value: formatCurrency(f.despesas.lancamentos) },
+  ] : [];
+
+  const resultadoBreakdown = f ? [
+    { label: 'Profit/Loss', value: formatCurrency(f.ganhosTotal) },
+    { label: 'Rake', value: formatCurrency(f.rakeTotal) },
+    { label: 'GGR Rodeio', value: formatCurrency(f.ggrTotal) },
+  ] : [];
+
+  // Chart data from all loaded settlements
+  const chartData: ChartDataPoint[] = useMemo(() => {
+    if (!allWeekData.length) return [];
+    return allWeekData.map((w, i) => ({
+      semana: formatDDMM(w.settlement.week_start),
+      anterior: i > 0 ? allWeekData[i - 1].jogadoresAtivos : w.jogadoresAtivos,
+      atual: w.jogadoresAtivos,
+      rake: w.rakeTotal,
+    }));
+  }, [allWeekData]);
+
+
+  const status = d?.settlement?.status || 'DRAFT';
+  const statusLabel = status === 'FINAL' ? 'FECHADO' : status === 'DRAFT' ? 'RASCUNHO' : status;
+
+  // ─── Render ─────────────────────────────────────────────────────
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white mb-1">💼 Dashboard</h2>
-        <p className="text-dark-400">
-          Painel operacional
-          {hasKpiData && (
-            <span className="ml-2 text-dark-500">
-              · {kpis.gTotal} entidades · {kpis.gQuit} quitadas · {kpis.gComMov - kpis.gQuit} pendentes
-            </span>
-          )}
-        </p>
+    <div className="bg-dark-950 min-h-screen p-8">
+      {/* ── HEADER ── */}
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h1 className="text-2xl font-extrabold text-dark-100 mb-2">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            {/* Status badge */}
+            {d && !notFoundEmpty && (
+              <>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    status === 'DRAFT'
+                      ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
+                      : 'border-green-500/30 bg-green-500/10 text-green-400'
+                  }`}
+                >
+                  {statusLabel}
+                </span>
+                <div className="h-4 w-px bg-dark-700" />
+              </>
+            )}
+
+            {/* Date pickers */}
+            <div className="flex items-end gap-2">
+              <WeekDatePicker
+                value={startDate}
+                onChange={handleStartChange}
+                allowedDay={1}
+                label="Data Inicial"
+              />
+              <WeekDatePicker
+                value={endDate}
+                onChange={setEndDate}
+                allowedDay={0}
+                label="Data Final"
+              />
+              <button
+                onClick={handleBuscar}
+                disabled={searching || !startDate}
+                className="btn-primary px-4 py-2 text-sm font-semibold h-[38px] disabled:opacity-50"
+              >
+                {searching ? '...' : 'Buscar'}
+              </button>
+            </div>
+
+            {/* Not found badge */}
+            {notFoundSearch && startDate && endDate && (
+              <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                Nenhum fechamento para {formatDDMM(startDate)} → {formatDDMM(endDate)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {d && !notFoundEmpty && isAdmin && (
+          <button className="btn-primary">
+            Finalizar Semana {'\u2192'}
+          </button>
+        )}
       </div>
 
-      {/* KPIs (5 cards) */}
-      {loadingKpis ? (
-        <div className="flex justify-center py-8 mb-6">
+      {/* ── LOADING ── */}
+      {loading && (
+        <div className="flex justify-center py-32">
           <Spinner size="md" />
         </div>
-      ) : hasKpiData ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-          <KpiCard
-            icon="📤" label="A Pagar"
-            value={kpis.gPagar > 0.01 ? formatBRL(kpis.gPagar) : '—'}
-            color="text-red-400"
-            borderColor="border-t-red-500"
-            sub={`${kpis.gComMov - kpis.gQuit} pendentes`}
-          />
-          <KpiCard
-            icon="📥" label="A Receber"
-            value={kpis.gReceber > 0.01 ? formatBRL(kpis.gReceber) : '—'}
-            color="text-emerald-400"
-            borderColor="border-t-emerald-500"
-          />
-          <KpiCard
-            icon="📊" label="Net"
-            value={formatBRL(kpis.gNet)}
-            color={kpis.gNet > 0.01 ? 'text-emerald-400' : kpis.gNet < -0.01 ? 'text-red-400' : 'text-dark-400'}
-            borderColor={kpis.gNet > 0 ? 'border-t-emerald-500' : kpis.gNet < 0 ? 'border-t-red-500' : 'border-t-dark-600'}
-            sub={kpis.gNet > 0 ? 'saldo positivo' : kpis.gNet < 0 ? 'saldo negativo' : 'zerado'}
-          />
-          <KpiCard
-            icon="💰" label="Movimentado"
-            value={kpis.gPago > 0.01 ? formatBRL(kpis.gPago) : '—'}
-            color="text-blue-400"
-            borderColor="border-t-blue-500"
-          />
-          <KpiCard
-            icon="✅" label="Quitados"
-            value={`${kpis.gQuit}/${kpis.gComMov}`}
-            color="text-emerald-400"
-            borderColor="border-t-emerald-500"
-            sub={kpis.gComMov > 0 ? `${Math.round(kpis.gQuit / kpis.gComMov * 100)}%` : ''}
-          />
-        </div>
-      ) : hasKpiData ? (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-dark-400">Progresso de quitacao</span>
-            <span className="text-xs font-mono text-dark-300">
-              {kpis.gQuit}/{kpis.gComMov} entidades quitadas
-              {kpis.gComMov > 0 && ` (${Math.round(kpis.gQuit / kpis.gComMov * 100)}%)`}
-            </span>
-          </div>
-          <div className="w-full bg-dark-800 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                kpis.gQuit === kpis.gComMov && kpis.gComMov > 0
-                  ? 'bg-emerald-500'
-                  : 'bg-gradient-to-r from-poker-600 to-poker-400'
-              }`}
-              style={{ width: `${kpis.gComMov > 0 ? Math.round(kpis.gQuit / kpis.gComMov * 100) : 0}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
+      )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <Link href="/import" className="card hover:border-poker-600/50 transition-all cursor-pointer group p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-poker-900/30 flex items-center justify-center text-3xl group-hover:bg-poker-900/50 transition-colors">
-              📤
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white group-hover:text-poker-400 transition-colors">
-                Importar Semana
-              </h3>
-              <p className="text-sm text-dark-400">Upload de XLSX Suprema Poker</p>
-            </div>
-          </div>
-        </Link>
-
-        {settlements[0] ? (
-          <Link href={`/s/${settlements[0].id}`} className="card hover:border-poker-600/50 transition-all cursor-pointer group p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl group-hover:bg-poker-900/30 transition-colors">
-                📅
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-white group-hover:text-poker-400 transition-colors">
-                  Ultima Semana
-                </h3>
-                <p className="text-sm text-dark-400">
-                  {formatDate(settlements[0].week_start)} · v{settlements[0].version}
-                </p>
-              </div>
-              {statusBadge(settlements[0].status)}
-            </div>
+      {/* ── EMPTY STATE ── */}
+      {!loading && notFoundEmpty && (
+        <div className="flex flex-col items-center justify-center py-32">
+          <div className="text-6xl mb-6">📅</div>
+          <h2 className="text-xl font-bold text-dark-100 mb-2">Nenhum fechamento encontrado</h2>
+          <p className="text-dark-400 mb-6">
+            Nao existe fechamento importado para o periodo selecionado.
+          </p>
+          <Link href="/import" className="btn-primary inline-flex items-center gap-2 px-6 py-3">
+            Importar Semana
           </Link>
-        ) : (
-          <div className="card p-6 border-dashed">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">📅</div>
-              <div>
-                <h3 className="text-lg font-semibold text-dark-400">Nenhuma Semana</h3>
-                <p className="text-sm text-dark-500">Importe um XLSX para comecar</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Subclub Cards */}
-      {hasKpiData && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Clubes — Semana {latestSettlement ? formatDate(latestSettlement.week_start) : ''}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subclubStats.map(sc => (
-              <SubclubCard
-                key={sc.id}
-                sc={sc}
-                settlementId={latestSettlement?.id || settlements[0]?.id}
-              />
-            ))}
-          </div>
         </div>
       )}
 
-      {/* Summary Table */}
-      {hasKpiData && subclubStats.length > 1 && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-white mb-4">Resumo</h3>
-          <div className="card overflow-hidden p-0">
-            <table className="w-full text-sm" aria-label="Resumo por subclube">
-              <thead>
-                <tr className="bg-dark-800/50">
-                  <th className="px-4 py-3 text-left font-medium text-xs text-dark-400">Clube</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Entidades</th>
-                  <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">A Pagar</th>
-                  <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">A Receber</th>
-                  <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Pago</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Quitados</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Status</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Acao</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-800/50">
-                {subclubStats.map(sc => (
-                  <tr key={sc.id} className="hover:bg-dark-800/20 transition-colors">
-                    <td className="px-4 py-3 text-white font-semibold">{sc.name}</td>
-                    <td className="px-3 py-3 text-center text-dark-300 font-mono">{sc.totalEntities}</td>
-                    <td className="px-3 py-3 text-right font-mono text-red-400">
-                      {sc.aPagar > 0.01 ? formatBRL(sc.aPagar) : '—'}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono text-emerald-400">
-                      {sc.aReceber > 0.01 ? formatBRL(sc.aReceber) : '—'}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono text-blue-400">
-                      {sc.pago > 0.01 ? formatBRL(sc.pago) : '—'}
-                    </td>
-                    <td className="px-3 py-3 text-center text-dark-300 font-mono">
-                      {sc.quitados}/{sc.entitiesWithMov}
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span
-                        className="text-[10px] font-bold px-2 py-1 rounded"
-                        style={{ background: sc.statusBg, color: sc.statusColor }}
-                      >
-                        {sc.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <Link
-                        href={`/s/${latestSettlement?.id || settlements[0]?.id}/club/${sc.id}`}
-                        className="text-poker-400 hover:text-poker-300 text-xs font-bold"
-                        aria-label={`Abrir ${sc.name}`}
-                      >
-                        Abrir →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {/* Total row */}
-                <tr className="bg-dark-800/30 font-bold">
-                  <td className="px-4 py-3 text-white">TOTAL</td>
-                  <td className="px-3 py-3 text-center text-dark-200 font-mono">{kpis.gTotal}</td>
-                  <td className="px-3 py-3 text-right font-mono text-red-400">
-                    {kpis.gPagar > 0.01 ? formatBRL(kpis.gPagar) : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono text-emerald-400">
-                    {kpis.gReceber > 0.01 ? formatBRL(kpis.gReceber) : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono text-blue-400">
-                    {kpis.gPago > 0.01 ? formatBRL(kpis.gPago) : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-center text-dark-200 font-mono">
-                    {kpis.gQuit}/{kpis.gComMov}
-                  </td>
-                  <td className="px-3 py-3 text-center text-dark-500 text-xs" colSpan={2}>
-                    {subclubStats.length} clubes
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Settlements */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Fechamentos Recentes</h3>
-          {settlements.length > 0 && (
-            <Link href="/s" className="text-sm text-poker-400 hover:text-poker-300 transition-colors">
-              Ver todos →
-            </Link>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
-          </div>
-        ) : settlements.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="text-4xl mb-3">📊</div>
-            <p className="text-dark-400 mb-4">Nenhum fechamento ainda</p>
-            <Link href="/import" className="btn-primary inline-flex items-center gap-2">
-              <span>📤</span> Fazer primeiro upload
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {settlements.slice(0, 5).map((s: any) => (
-              <Link
-                key={s.id}
-                href={`/s/${s.id}`}
-                className="card hover:border-poker-600/50 transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-dark-800 flex items-center justify-center text-xl group-hover:bg-poker-900/30 transition-colors">
-                      📅
-                    </div>
-                    <div>
-                      <h4 className="text-base font-semibold text-white group-hover:text-poker-400 transition-colors">
-                        Semana {formatDate(s.week_start)}
-                      </h4>
-                      <p className="text-sm text-dark-400">
-                        {s.organizations?.name || 'Suprema Poker'} · v{s.version}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {statusBadge(s.status)}
-                    <span className="text-dark-500 group-hover:text-dark-300 transition-colors">→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Subclub Card ────────────────────────────────────────────────────
-
-function SubclubCard({ sc, settlementId }: { sc: SubclubStats; settlementId: string }) {
-  const pctQuit = sc.entitiesWithMov > 0 ? Math.round(sc.quitados / sc.entitiesWithMov * 100) : 0;
-
-  return (
-    <Link
-      href={`/s/${settlementId}/club/${sc.id}`}
-      className="card hover:border-poker-600/50 transition-colors cursor-pointer group overflow-hidden"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">{sc.name}</h4>
-          <p className="text-xs text-dark-500">{sc.totalEntities} entidades · {sc.entitiesWithMov} com movimento</p>
-        </div>
-        <span
-          className="text-[10px] font-bold px-2 py-1 rounded"
-          style={{ background: sc.statusBg, color: sc.statusColor }}
-        >
-          {sc.status}
-        </span>
-      </div>
-
-      {/* Financial row */}
-      <div className="grid grid-cols-3 gap-3 mb-3">
-        <div>
-          <p className="text-[9px] text-dark-500 uppercase font-bold">A Pagar</p>
-          <p className="font-mono text-sm font-bold text-red-400">
-            {sc.aPagar > 0.01 ? formatBRL(sc.aPagar) : '—'}
-          </p>
-        </div>
-        <div>
-          <p className="text-[9px] text-dark-500 uppercase font-bold">A Receber</p>
-          <p className="font-mono text-sm font-bold text-emerald-400">
-            {sc.aReceber > 0.01 ? formatBRL(sc.aReceber) : '—'}
-          </p>
-        </div>
-        <div>
-          <p className="text-[9px] text-dark-500 uppercase font-bold">Pago</p>
-          <p className="font-mono text-sm font-bold text-blue-400">
-            {sc.pago > 0.01 ? formatBRL(sc.pago) : '—'}
-          </p>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      {sc.entitiesWithMov > 0 && (
-        <div>
-          <div className="flex justify-between mb-1">
-            <span className="text-[10px] text-dark-500">Progresso</span>
-            <span className="text-[10px] text-dark-300 font-mono font-bold">
-              {sc.quitados}/{sc.entitiesWithMov} ({pctQuit}%)
-            </span>
-          </div>
-          <div className="bg-dark-800 rounded-full h-1.5">
-            <div
-              className={`h-1.5 rounded-full transition-all duration-500 ${
-                pctQuit === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-              }`}
-              style={{ width: `${pctQuit}%` }}
+      {/* ── DASHBOARD CONTENT ── */}
+      {!loading && d && !notFoundEmpty && (
+        <>
+          {/* KPI Grid */}
+          <div className="grid grid-cols-6 gap-4 mb-7">
+            <KpiCard
+              label="Jogadores Ativos"
+              value={String(f?.jogadoresAtivos ?? 0)}
+              accent="blue"
+              delta={deltaJogadores || undefined}
+            />
+            <KpiCard
+              label="Rake Total"
+              value={formatCurrency(f?.rakeTotal ?? 0)}
+              accent="green"
+              delta={deltaRake || undefined}
+            />
+            <KpiCard
+              label="Profit / Loss"
+              subtitle="Ganhos e Perdas"
+              value={formatCurrency(f?.ganhosTotal ?? 0)}
+              accent={(f?.ganhosTotal ?? 0) >= 0 ? 'green' : 'red'}
+              delta={deltaGanhos || undefined}
+            />
+            <KpiCard
+              label="GGR Rodeio"
+              value={formatCurrency(f?.ggrTotal ?? 0)}
+              accent={(f?.ggrTotal ?? 0) >= 0 ? 'green' : 'red'}
+              delta={deltaGGR || undefined}
+            />
+            <KpiCard
+              label="Total Despesas"
+              value={formatCurrency(-(f?.despesas.total ?? 0))}
+              accent="red"
+              breakdown={despesasBreakdown}
+            />
+            <KpiCard
+              label="Resultado Final"
+              value={formatCurrency(f?.resultadoFinal ?? 0)}
+              accent={(f?.resultadoFinal ?? 0) >= 0 ? 'green' : 'red'}
+              delta={deltaResultado || undefined}
+              breakdown={resultadoBreakdown}
             />
           </div>
-        </div>
+
+          {/* Filter indicator */}
+          {disabledClubs.size > 0 && (
+            <div className="flex items-center gap-2 mb-4 -mt-3">
+              <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-1.5">
+                Filtro ativo: {d.clubes.length - disabledClubs.size} de {d.clubes.length} clubes
+              </span>
+              <button
+                onClick={() => setDisabledClubs(new Set())}
+                className="text-xs text-dark-400 hover:text-dark-100 underline transition-colors"
+              >
+                Mostrar todos
+              </button>
+            </div>
+          )}
+
+          {/* Charts */}
+          {chartData.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 mb-7">
+              <div className="card">
+                <div className="mb-4">
+                  <h3 className="text-sm font-bold text-dark-100">Jogadores Ativos</h3>
+                  <p className="text-xs text-dark-400">Comparativo semanal</p>
+                </div>
+                <ComparativeBarChart data={chartData} />
+              </div>
+              <div className="card">
+                <div className="mb-4">
+                  <h3 className="text-sm font-bold text-dark-100">Rake Semanal</h3>
+                  <p className="text-xs text-dark-400">Comparativo semanal</p>
+                </div>
+                <ComparativeLineChart data={chartData} />
+              </div>
+            </div>
+          )}
+
+          {/* Clubes */}
+          {d.clubes.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-bold text-dark-100">Clubes</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-dark-800 text-dark-400 border border-dark-700">
+                  {d.clubes.length} clubes
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {d.clubes.map((clube) => (
+                  <ClubCard
+                    key={clube.nome}
+                    clube={clube}
+                    enabled={!disabledClubs.has(clube.nome)}
+                    onToggle={() => toggleClub(clube.nome)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
-    </Link>
-  );
-}
-
-// ─── KPI Card ────────────────────────────────────────────────────────
-
-function KpiCard({ icon, label, value, color, borderColor, sub }: {
-  icon: string;
-  label: string;
-  value: string;
-  color: string;
-  borderColor: string;
-  sub?: string;
-}) {
-  return (
-    <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${borderColor} rounded-lg p-4`}>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">{icon} {label}</p>
-      <p className={`font-mono text-lg font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-[10px] text-dark-500 mt-1">{sub}</p>}
     </div>
   );
 }

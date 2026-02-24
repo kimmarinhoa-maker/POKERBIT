@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { getSettlementFull, formatDate, isAdmin } from '@/lib/api';
+import { getSettlementFull, formatDate, isAdmin, getOrgTree } from '@/lib/api';
 import Spinner from '@/components/Spinner';
 
 import SubNavTabs from '@/components/settlement/SubNavTabs';
@@ -34,12 +34,22 @@ export default function SubclubPanelPage() {
   const [error, setError] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [weekNotFound, setWeekNotFound] = useState(false);
+  const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getSettlementFull(settlementId);
+      const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
+      if (treeRes.success && treeRes.data) {
+        const map: Record<string, string | null> = {};
+        for (const club of treeRes.data) {
+          for (const sub of club.subclubes || []) {
+            map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+          }
+        }
+        setLogoMap(map);
+      }
       if (res.success && res.data) {
         setData(res.data);
       } else {
@@ -130,6 +140,7 @@ export default function SubclubPanelPage() {
             fees={fees}
             weekStart={settlement.week_start}
             weekEnd={weekEnd}
+            logoUrl={logoMap[subclubId.toLowerCase()] || null}
           />
         );
       case 'detalhamento':
@@ -150,7 +161,7 @@ export default function SubclubPanelPage() {
       case 'dre':
         return <DRE subclub={currentSubclub} fees={fees} />;
       case 'liga':
-        return <Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} />;
+        return <Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} logoMap={logoMap} />;
       case 'extrato':
         return (
           <Extrato

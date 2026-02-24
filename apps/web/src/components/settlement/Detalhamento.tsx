@@ -2,16 +2,17 @@
 
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
+import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
 
 interface Props {
-  subclub: any;
+  subclub: SubclubData;
 }
 
 interface AgentGroup {
   agentName: string;
   agentId: string | null;
   externalAgentId: string | null;
-  players: any[];
+  players: PlayerMetric[];
   totals: {
     ganhos: number;
     rake: number;
@@ -27,7 +28,7 @@ export default function Detalhamento({ subclub }: Props) {
 
   // Group players by agent
   const agentGroups: AgentGroup[] = useMemo(() => {
-    const map = new Map<string, any[]>();
+    const map = new Map<string, PlayerMetric[]>();
 
     for (const p of players) {
       const key = p.agent_name || 'SEM AGENTE';
@@ -37,11 +38,11 @@ export default function Detalhamento({ subclub }: Props) {
 
     const groups: AgentGroup[] = [];
     for (const [agentName, pls] of map) {
-      const agentMetric = agents.find((a: any) => a.agent_name === agentName);
+      const agentMetric = agents.find((a) => a.agent_name === agentName);
 
-      const ganhos = pls.reduce((s: number, p: any) => s + Number(p.winnings_brl || 0), 0);
-      const rake = pls.reduce((s: number, p: any) => s + Number(p.rake_total_brl || 0), 0);
-      const ggr = pls.reduce((s: number, p: any) => s + Number(p.ggr_brl || 0), 0);
+      const ganhos = pls.reduce((s, p) => s + Number(p.winnings_brl || 0), 0);
+      const rake = pls.reduce((s, p) => s + Number(p.rake_total_brl || 0), 0);
+      const ggr = pls.reduce((s, p) => s + Number(p.ggr_brl || 0), 0);
       const resultado = ganhos + rake + ggr;
 
       // Get the external_agent_id from the first player in this group
@@ -51,7 +52,7 @@ export default function Detalhamento({ subclub }: Props) {
         agentName,
         agentId: agentMetric?.agent_id || null,
         externalAgentId: extAgentId,
-        players: pls.sort((a: any, b: any) =>
+        players: pls.sort((a, b) =>
           (a.nickname || '').localeCompare(b.nickname || '')
         ),
         totals: {
@@ -75,7 +76,7 @@ export default function Detalhamento({ subclub }: Props) {
       .map(g => ({
         ...g,
         players: g.players.filter(
-          (p: any) =>
+          (p) =>
             (p.nickname || '').toLowerCase().includes(q) ||
             (p.agent_name || '').toLowerCase().includes(q) ||
             (p.external_player_id || '').includes(q)
@@ -86,11 +87,11 @@ export default function Detalhamento({ subclub }: Props) {
 
   // Grand totals (always from ALL players, not filtered)
   const grandTotals = useMemo(() => {
-    const ganhos = players.reduce((s: number, p: any) => s + Number(p.winnings_brl || 0), 0);
-    const rake = players.reduce((s: number, p: any) => s + Number(p.rake_total_brl || 0), 0);
-    const ggr = players.reduce((s: number, p: any) => s + Number(p.ggr_brl || 0), 0);
+    const ganhos = players.reduce((s, p) => s + Number(p.winnings_brl || 0), 0);
+    const rake = players.reduce((s, p) => s + Number(p.rake_total_brl || 0), 0);
+    const ggr = players.reduce((s, p) => s + Number(p.ggr_brl || 0), 0);
     const resultado = ganhos + rake + ggr;
-    const ativos = players.filter((p: any) => Math.abs(Number(p.winnings_brl || 0)) > 0.01).length;
+    const ativos = players.filter((p) => Math.abs(Number(p.winnings_brl || 0)) > 0.01).length;
     return {
       ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
       rake: Math.round((rake + Number.EPSILON) * 100) / 100,
@@ -103,9 +104,9 @@ export default function Detalhamento({ subclub }: Props) {
   // Filtered totals (for table footer)
   const filteredTotals = useMemo(() => {
     const allFilteredPlayers = filteredGroups.flatMap(g => g.players);
-    const ganhos = allFilteredPlayers.reduce((s: number, p: any) => s + Number(p.winnings_brl || 0), 0);
-    const rake = allFilteredPlayers.reduce((s: number, p: any) => s + Number(p.rake_total_brl || 0), 0);
-    const ggr = allFilteredPlayers.reduce((s: number, p: any) => s + Number(p.ggr_brl || 0), 0);
+    const ganhos = allFilteredPlayers.reduce((s, p) => s + Number(p.winnings_brl || 0), 0);
+    const rake = allFilteredPlayers.reduce((s, p) => s + Number(p.rake_total_brl || 0), 0);
+    const ggr = allFilteredPlayers.reduce((s, p) => s + Number(p.ggr_brl || 0), 0);
     const resultado = ganhos + rake + ggr;
     return {
       ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
@@ -378,7 +379,7 @@ function AgentSection({ group, isExpanded, onToggle, valColor }: AgentSectionPro
 
       {/* Player sub-rows (visible when expanded) */}
       {isExpanded &&
-        group.players.map((p: any, i: number) => {
+        group.players.map((p, i) => {
           const pGanhos = Number(p.winnings_brl || 0);
           const pRake = Number(p.rake_total_brl || 0);
           const pGGR = Number(p.ggr_brl || 0);

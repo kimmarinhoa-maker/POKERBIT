@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
 import Spinner from '@/components/Spinner';
 
 interface LedgerEntry {
@@ -25,6 +26,8 @@ interface Props {
 export default function Extrato({ weekStart, settlementStatus, onDataChange }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const { toast } = useToast();
+  const { canAccess } = useAuth();
+  const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,7 +161,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           </div>
         </div>
 
-        {isDraft && !showForm && (
+        {isDraft && !showForm && canEdit && (
           <button
             onClick={() => { setShowForm(true); resetForm(); }}
             aria-label="Adicionar lancamento"

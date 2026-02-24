@@ -7,6 +7,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 
 // Rotas
@@ -26,14 +27,38 @@ import usersRoutes from './routes/users.routes';
 const app = express();
 
 // ─── Middleware global ─────────────────────────────────────────────
+
+// CORS: read ALLOWED_ORIGINS from env, fallback to pokermanager.com.br in production
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : ['https://pokermanager.com.br', 'https://www.pokermanager.com.br'];
+
 app.use(cors({
-  origin: env.NODE_ENV === 'production'
-    ? ['https://pokermanager.com.br', 'https://www.pokermanager.com.br']
-    : '*',
+  origin: env.NODE_ENV === 'production' ? allowedOrigins : '*',
   credentials: true,
 }));
 
 app.use(express.json({ limit: '1mb' }));
+
+// ─── Rate Limiting ──────────────────────────────────────────────────
+
+// Auth endpoints: 20 requests per 15 minutes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+});
+
+// Import endpoints: 5 requests per minute
+const importLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas importacoes em pouco tempo. Aguarde 1 minuto.' },
+});
 
 // ─── Health check ──────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -46,8 +71,8 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── Rotas da API ──────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes);
-app.use('/api/imports',       importRoutes);
+app.use('/api/auth',          authLimiter, authRoutes);
+app.use('/api/imports',       importLimiter, importRoutes);
 app.use('/api/settlements',   settlementRoutes);
 app.use('/api/ledger',        ledgerRoutes);
 app.use('/api/players',       playersRoutes);

@@ -1,5 +1,7 @@
 'use client';
 
+import ClubLogo from '@/components/ClubLogo';
+
 interface SubclubInfo {
   id: string;
   name: string;
@@ -12,9 +14,10 @@ interface Props {
   onSelect: (id: string | null) => void;
   weekStart: string;
   status: string;
+  logoMap?: Record<string, string | null>;
 }
 
-export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart, status }: Props) {
+export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart, status, logoMap = {} }: Props) {
   return (
     <div className="w-[180px] min-w-[180px] bg-dark-900 border-r border-dark-700 flex flex-col overflow-y-auto">
       {/* Header */}
@@ -62,7 +65,10 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
                   : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
               }`}
             >
-              <span className="font-medium truncate">{sc.name}</span>
+              <span className="flex items-center gap-2 min-w-0">
+                <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="sm" className="!w-6 !h-6 !text-[10px]" />
+                <span className="font-medium truncate">{sc.name}</span>
+              </span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                 selected === sc.name
                   ? 'bg-poker-700/30 text-poker-300'

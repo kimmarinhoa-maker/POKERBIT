@@ -81,6 +81,33 @@ export interface ImportPreviewResponse {
 
   // Warnings (não bloqueantes)
   warnings: string[];
+
+  // All players (for preview table)
+  players: Array<{
+    id: string;
+    nick: string;
+    aname: string;
+    clube: string;
+    ganhos: number;
+    rake: number;
+    ggr: number;
+    _status: string;
+  }>;
+
+  // Existing settlement for this week (reimport/merge awareness)
+  existing_settlement?: {
+    id: string;
+    version: number;
+    status: string;
+    mode: 'reimport' | 'merge';
+    summary: {
+      total_players: number;
+      total_agents: number;
+      total_rake_brl: number;
+      total_ggr_brl: number;
+    };
+    agents: string[];
+  };
 }
 
 // ─── Service ────────────────────────────────────────────────────────
@@ -104,6 +131,50 @@ class ImportPreviewService {
     // 2) Detectar semana automaticamente
     const week = detectWeekStart(workbook, fileName, weekStartOverride);
 
+    // 2.5) Check for existing settlement on same week
+    let existingSettlement: ImportPreviewResponse['existing_settlement'] = undefined;
+    const { data: existingRows } = await supabaseAdmin
+      .from('settlements')
+      .select('id, version, status')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', week.week_start)
+      .order('version', { ascending: false })
+      .limit(1);
+
+    if (existingRows && existingRows.length > 0) {
+      const existing = existingRows[0];
+      // Get summary from player_week_metrics
+      const { data: metrics } = await supabaseAdmin
+        .from('player_week_metrics')
+        .select('id, rake_total_brl, ggr_brl')
+        .eq('settlement_id', existing.id);
+
+      // Get agent names for diff
+      const { data: agentMetrics } = await supabaseAdmin
+        .from('agent_week_metrics')
+        .select('id, agent_name, subclub_name, rake_total_brl, ggr_total_brl')
+        .eq('settlement_id', existing.id);
+
+      const existingAgentNames = new Set((agentMetrics || []).map((a: any) => a.agent_name));
+
+      existingSettlement = {
+        id: existing.id,
+        version: existing.version,
+        status: existing.status,
+        mode: 'reimport', // will be updated below after parse
+        summary: {
+          total_players: metrics?.length || 0,
+          total_agents: agentMetrics?.length || 0,
+          total_rake_brl: round2((metrics || []).reduce((sum: number, m: any) => sum + (Number(m.rake_total_brl) || 0), 0)),
+          total_ggr_brl: round2((metrics || []).reduce((sum: number, m: any) => sum + (Number(m.ggr_brl) || 0), 0)),
+        },
+        agents: (agentMetrics || []).map((a: any) => a.agent_name),
+      };
+
+      // Store for later mode detection (after parse)
+      (existingSettlement as any)._existingAgentNames = existingAgentNames;
+    }
+
     // 3) Carregar config do tenant (prefix_map, overrides, player_links, etc)
     const config = await this.loadTenantConfig(tenantId);
 
@@ -123,6 +194,8 @@ class ImportPreviewService {
         duplicate_players: [],
         available_agents: [],
         warnings: [`Erro no parse: ${parseResult.error}`],
+        players: [],
+        existing_settlement: existingSettlement,
       };
     }
 
@@ -171,6 +244,40 @@ class ImportPreviewService {
       total_ggr_brl: round2(allPlayers.reduce((sum: number, p: any) => sum + (p.ggr || 0), 0)),
     };
 
+    // 9.5) Players list for frontend table
+    const playersList = allPlayers
+      .filter((p: any) => p._status !== 'ignored')
+      .map((p: any) => ({
+        id: p.id || '',
+        nick: p.nick || '',
+        aname: p.aname || '',
+        clube: p.clube || '',
+        ganhos: round2(p.ganhos || 0),
+        rake: round2(p.rake || 0),
+        ggr: round2(p.ggr || 0),
+        _status: p._status || 'ok',
+      }));
+
+    // Detect merge vs reimport mode
+    if (existingSettlement) {
+      const existingAgentSet: Set<string> = (existingSettlement as any)._existingAgentNames || new Set();
+      const newAgentNames = new Set(allPlayers
+        .filter((p: any) => p.aname && p.aname !== 'None')
+        .map((p: any) => p.aname));
+
+      // If most new agents don't exist in current settlement, it's a merge (different club)
+      let newAgentsNotInExisting = 0;
+      for (const a of newAgentNames) {
+        if (!existingAgentSet.has(a)) newAgentsNotInExisting++;
+      }
+      const overlapRatio = newAgentNames.size > 0
+        ? (newAgentNames.size - newAgentsNotInExisting) / newAgentNames.size
+        : 1;
+
+      existingSettlement.mode = overlapRatio < 0.5 ? 'merge' : 'reimport';
+      delete (existingSettlement as any)._existingAgentNames;
+    }
+
     return {
       week,
       summary,
@@ -186,6 +293,8 @@ class ImportPreviewService {
       duplicate_players: duplicatePlayers,
       available_agents: availableAgents,
       warnings,
+      players: playersList,
+      existing_settlement: existingSettlement,
     };
   }
 
@@ -369,12 +478,21 @@ class ImportPreviewService {
       };
     });
 
+    // Buscar GU_TO_BRL do fee_config (se existir)
+    const { data: guRow } = await supabaseAdmin
+      .from('fee_config')
+      .select('rate')
+      .eq('tenant_id', tenantId)
+      .eq('name', 'GU_TO_BRL')
+      .maybeSingle();
+
     return {
       agentOverrides,
       manualLinks,
       prefixRules,
       playerLinks,
       ignoredAgents: {},
+      guToBrl: guRow ? Number(guRow.rate) : undefined,  // undefined = use default (5)
     };
   }
 }

@@ -90,6 +90,7 @@ function parseWorkbook(workbook, config = {}) {
     ignoredAgents  = {},
     manualLinks    = {},
     prefixRules    = [],
+    guToBrl        = GU_TO_BRL,
   } = config;
 
   // 1) Ler aba Resume
@@ -150,9 +151,9 @@ function parseWorkbook(workbook, config = {}) {
       said:   String(r[C.subAgentId] || '').trim(),
       saname: String(r[C.subAgentName] || '').trim(),
       clube:  '?',
-      ganhos: parseNum(r[C.winnings])     * GU_TO_BRL,
-      rake:   parseNum(r[C.totalFee])     * GU_TO_BRL,
-      ggr:    C.rodeioProfit !== undefined ? parseNum(r[C.rodeioProfit]) * GU_TO_BRL : 0,
+      ganhos: parseNum(r[C.winnings])     * guToBrl,
+      rake:   parseNum(r[C.totalFee])     * guToBrl,
+      ggr:    C.rodeioProfit !== undefined ? parseNum(r[C.rodeioProfit]) * guToBrl : 0,
       games:  parseNum(r[C.games]),
       hands:  parseNum(r[C.hands]),
       // Flags de validação

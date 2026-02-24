@@ -25,15 +25,17 @@ interface Subclub {
   name: string;
 }
 
-const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' | 'ggr' }> = {
+const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' | 'ggr' | 'conversion' }> = {
   taxaApp:       { label: 'Taxa Aplicativo',  sublabel: 'Percentual cobrado pelo aplicativo',  base: 'rake' },
   taxaLiga:      { label: 'Taxa Liga',         sublabel: 'Percentual destinado a liga',          base: 'rake' },
   taxaRodeoGGR:  { label: 'Taxa Rodeo GGR',    sublabel: 'Percentual sobre GGR rodeo',           base: 'ggr'  },
   taxaRodeoApp:  { label: 'Taxa Rodeo App',     sublabel: 'Percentual app sobre GGR rodeo',       base: 'ggr'  },
+  GU_TO_BRL:     { label: 'Conversao GU \u2192 BRL', sublabel: 'Multiplicador da unidade Grand Union para Real', base: 'conversion' },
 };
 
 const rakeKeys = ['taxaApp', 'taxaLiga'];
 const ggrKeys = ['taxaRodeoGGR', 'taxaRodeoApp'];
+const conversionKeys = ['GU_TO_BRL'];
 
 export default function TaxasPage() {
   const [fees, setFees] = useState<FeeConfig[]>([]);
@@ -82,8 +84,9 @@ export default function TaxasPage() {
 
   function handleStartEdit() {
     const formData: Record<string, string> = {};
-    for (const key of [...rakeKeys, ...ggrKeys]) {
-      formData[key] = String(getRateByName(key));
+    for (const key of [...rakeKeys, ...ggrKeys, ...conversionKeys]) {
+      const val = getRateByName(key);
+      formData[key] = key === 'GU_TO_BRL' ? String(val || 5) : String(val);
     }
     setForm(formData);
     setError(null);
@@ -101,7 +104,7 @@ export default function TaxasPage() {
     setError(null);
     setSuccess(false);
     try {
-      const feesPayload = [...rakeKeys, ...ggrKeys].map(key => ({
+      const feesPayload = [...rakeKeys, ...ggrKeys, ...conversionKeys].map(key => ({
         name: key,
         rate: parseFloat(form[key]) || 0,
         base: feesMeta[key].base,
@@ -269,7 +272,7 @@ export default function TaxasPage() {
           </h3>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 mb-6">
           {ggrKeys.map(key => (
             <FeeRow
               key={key}
@@ -279,6 +282,29 @@ export default function TaxasPage() {
               editing={editing}
               formValue={form[key] || ''}
               onChange={(val) => setForm(prev => ({ ...prev, [key]: val }))}
+            />
+          ))}
+        </div>
+
+        {/* Conversion section */}
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
+          <span className="text-base">{'\u{1F4B1}'}</span>
+          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
+            Conversao de Moeda
+          </h3>
+        </div>
+
+        <div className="space-y-4">
+          {conversionKeys.map(key => (
+            <FeeRow
+              key={key}
+              name={key}
+              meta={feesMeta[key]}
+              rate={getRateByName(key) || 5}
+              editing={editing}
+              formValue={form[key] || '5'}
+              onChange={(val) => setForm(prev => ({ ...prev, [key]: val }))}
+              unit="x"
             />
           ))}
         </div>
@@ -466,6 +492,7 @@ function FeeRow({
   editing,
   formValue,
   onChange,
+  unit = '%',
 }: {
   name: string;
   meta: { label: string; sublabel: string; base: string };
@@ -473,6 +500,7 @@ function FeeRow({
   editing: boolean;
   formValue: string;
   onChange: (val: string) => void;
+  unit?: string;
 }) {
   return (
     <div className="flex items-center justify-between py-1">
@@ -487,18 +515,18 @@ function FeeRow({
         <div className="flex items-center gap-1.5">
           <input
             type="number"
-            step="0.01"
-            min="0"
-            max="100"
+            step={unit === 'x' ? '1' : '0.01'}
+            min={unit === 'x' ? '1' : '0'}
+            max={unit === 'x' ? '999' : '100'}
             value={formValue}
             onChange={(e) => onChange(e.target.value)}
             className="input w-24 text-right font-mono text-sm"
           />
-          <span className="text-dark-500 text-sm">%</span>
+          <span className="text-dark-500 text-sm">{unit}</span>
         </div>
       ) : (
         <span className="font-mono text-sm font-medium text-poker-400">
-          {Number(rate).toFixed(2).replace('.', ',')}%
+          {unit === 'x' ? `${Number(rate)}x` : `${Number(rate).toFixed(2).replace('.', ',')}%`}
         </span>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
+import ClubLogo from '@/components/ClubLogo';
 
 interface SubclubSummary {
   id: string;
@@ -16,12 +17,13 @@ interface SubclubSummary {
 interface Props {
   subclubs: SubclubSummary[];
   currentSubclubName: string;
+  logoMap?: Record<string, string | null>;
 }
 
-export default function Liga({ subclubs, currentSubclubName }: Props) {
+export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Props) {
   const grandTotal = useMemo(() => ({
     resultado: round2(subclubs.reduce((s, sc) => s + sc.totals.resultado, 0)),
-    taxas: round2(subclubs.reduce((s, sc) => s + sc.feesComputed.totalTaxas, 0)),
+    taxasSigned: round2(subclubs.reduce((s, sc) => s + sc.feesComputed.totalTaxasSigned, 0)),
     lancamentos: round2(subclubs.reduce((s, sc) => s + sc.totalLancamentos, 0)),
     acertoLiga: round2(subclubs.reduce((s, sc) => s + sc.acertoLiga, 0)),
   }), [subclubs]);
@@ -57,7 +59,7 @@ export default function Liga({ subclubs, currentSubclubName }: Props) {
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Taxas</p>
             <p className="text-xl font-bold mt-2 font-mono text-red-400">
-              {formatBRL(-grandTotal.taxas)}
+              {formatBRL(grandTotal.taxasSigned)}
             </p>
           </div>
         </div>
@@ -108,7 +110,8 @@ export default function Liga({ subclubs, currentSubclubName }: Props) {
                     }`}
                   >
                     <td className="px-5 py-3">
-                      <span className={`font-medium ${isCurrent ? 'text-poker-400' : 'text-white'}`}>
+                      <span className={`font-medium flex items-center gap-2 ${isCurrent ? 'text-poker-400' : 'text-white'}`}>
+                        <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="sm" className="!w-6 !h-6 !text-[10px]" />
                         {sc.name}
                       </span>
                     </td>
@@ -150,7 +153,7 @@ export default function Liga({ subclubs, currentSubclubName }: Props) {
                   {formatBRL(grandTotal.resultado)}
                 </td>
                 <td className="px-3 py-3 text-right font-mono text-red-400">
-                  {formatBRL(-grandTotal.taxas)}
+                  {formatBRL(grandTotal.taxasSigned)}
                 </td>
                 <td className={`px-3 py-3 text-right font-mono ${
                   grandTotal.lancamentos !== 0 ? 'text-dark-200' : 'text-dark-500'

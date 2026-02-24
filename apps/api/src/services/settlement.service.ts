@@ -334,6 +334,16 @@ export class SettlementService {
     const sumField = (k: string) =>
       round2(subclubs.reduce((acc, s) => acc + Number(s.totals[k] || 0), 0));
 
+    const totalTaxas = round2(
+      subclubs.reduce((acc, s) => acc + Number(s.feesComputed.totalTaxas || 0), 0)
+    );
+    const totalTaxasSigned = round2(-totalTaxas);
+    const totalLancamentos = round2(
+      subclubs.reduce((acc, s) => acc + Number(s.totalLancamentos || 0), 0)
+    );
+    const resultado = sumField('resultado');
+    const acertoLiga = round2(resultado + totalTaxasSigned + totalLancamentos);
+
     return {
       players: subclubs.reduce((acc, s) => acc + (s.totals.players || 0), 0),
       agents: subclubs.reduce((acc, s) => acc + (s.totals.agents || 0), 0),
@@ -341,10 +351,11 @@ export class SettlementService {
       rake: sumField('rake'),
       ggr: sumField('ggr'),
       rbTotal: sumField('rbTotal'),
-      resultado: sumField('resultado'),
-      totalTaxas: round2(
-        subclubs.reduce((acc, s) => acc + Number(s.feesComputed.totalTaxas || 0), 0)
-      ),
+      resultado,
+      totalTaxas,
+      totalTaxasSigned,
+      totalLancamentos,
+      acertoLiga,
     };
   }
 

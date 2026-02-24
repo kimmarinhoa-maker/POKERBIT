@@ -4,6 +4,12 @@
 
 const API_BASE = '/api';
 
+// Direct backend URL for file uploads (bypasses Next.js proxy which can fail on large multipart bodies)
+const API_DIRECT =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3001/api'
+    : '/api';
+
 interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -46,7 +52,8 @@ function getTenantId(): string | null {
 
 async function apiFetch<T = any>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  useDirectUrl = false,
 ): Promise<ApiResponse<T>> {
   const token = getToken();
   const tenantId = getTenantId();
@@ -63,11 +70,14 @@ async function apiFetch<T = any>(
     headers['Content-Type'] = 'application/json';
   }
 
+  // Use direct backend URL for file uploads to avoid Next.js proxy issues
+  const base = useDirectUrl ? API_DIRECT : API_BASE;
+
   let res: Response;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(`${base}${path}`, {
       ...options,
       headers,
       signal: controller.signal,
@@ -146,7 +156,7 @@ export async function uploadXLSX(file: File, clubId: string, weekStart: string) 
   return apiFetch('/imports', {
     method: 'POST',
     body: form,
-  });
+  }, true);
 }
 
 // Import Wizard — Preview (não toca no banco)
@@ -158,7 +168,7 @@ export async function importPreview(file: File, weekStartOverride?: string) {
   return apiFetch('/imports/preview', {
     method: 'POST',
     body: form,
-  });
+  }, true);
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
@@ -171,7 +181,7 @@ export async function importConfirm(file: File, clubId: string, weekStart: strin
   return apiFetch('/imports/confirm', {
     method: 'POST',
     body: form,
-  });
+  }, true);
 }
 
 export async function listImports() {
@@ -278,6 +288,19 @@ export async function updateOrganization(id: string, data: {
 
 export async function deleteOrganization(id: string) {
   return apiFetch(`/organizations/${id}`, { method: 'DELETE' });
+}
+
+export async function uploadClubLogo(orgId: string, file: File) {
+  const formData = new FormData();
+  formData.append('logo', file);
+  return apiFetch(`/organizations/${orgId}/logo`, {
+    method: 'POST',
+    body: formData,
+  }, true);
+}
+
+export async function deleteClubLogo(orgId: string) {
+  return apiFetch(`/organizations/${orgId}/logo`, { method: 'DELETE' });
 }
 
 export async function getPrefixRules() {
@@ -515,7 +538,7 @@ export async function uploadOFX(file: File, weekStart?: string) {
   const form = new FormData();
   form.append('file', file);
   if (weekStart) form.append('week_start', weekStart);
-  return apiFetch('/ofx/upload', { method: 'POST', body: form });
+  return apiFetch('/ofx/upload', { method: 'POST', body: form }, true);
 }
 
 export async function listOFXTransactions(weekStart?: string, status?: string) {
@@ -582,7 +605,7 @@ export async function uploadChipPix(file: File, weekStart?: string, clubId?: str
   form.append('file', file);
   if (weekStart) form.append('week_start', weekStart);
   if (clubId) form.append('club_id', clubId);
-  return apiFetch('/chippix/upload', { method: 'POST', body: form });
+  return apiFetch('/chippix/upload', { method: 'POST', body: form }, true);
 }
 
 export async function listChipPixTransactions(weekStart?: string, status?: string) {
@@ -662,6 +685,17 @@ export async function inviteUser(email: string, role: string): Promise<ApiRespon
   return apiFetch('/users/invite', {
     method: 'POST',
     body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function getUserOrgAccess(userTenantId: string): Promise<ApiResponse<{ full_access: boolean; org_ids: string[] }>> {
+  return apiFetch(`/users/${userTenantId}/org-access`);
+}
+
+export async function setUserOrgAccess(userTenantId: string, orgIds: string[]): Promise<ApiResponse> {
+  return apiFetch(`/users/${userTenantId}/org-access`, {
+    method: 'PUT',
+    body: JSON.stringify({ org_ids: orgIds }),
   });
 }
 

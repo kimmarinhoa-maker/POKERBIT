@@ -7,7 +7,7 @@
 
 const XLSX = require('xlsx');
 
-const GU_TO_BRL = 5;
+const GU_TO_BRL_DEFAULT = 5;
 
 // ─── CLASSIFICAÇÃO DE CLUBE ─────────────────────────────────────────
 
@@ -134,9 +134,9 @@ function adapterImportResume(resumeRows) {
       said:         String(r[C.subAgentId] || '').trim(),
       saname:       String(r[C.subAgentName] || '').trim(),
       clubeInterno: resolveClubeInterno(agentName),
-      ganhos:       parseNum(r[C.winnings])      * GU_TO_BRL,
-      rakeGerado:   parseNum(r[C.totalFee])      * GU_TO_BRL,
-      ggr:          parseNum(r[C.rodeioProfit])   * GU_TO_BRL,
+      ganhos:       parseNum(r[C.winnings])      * GU_TO_BRL_DEFAULT,
+      rakeGerado:   parseNum(r[C.totalFee])      * GU_TO_BRL_DEFAULT,
+      ggr:          parseNum(r[C.rodeioProfit])   * GU_TO_BRL_DEFAULT,
       games:        parseNum(r[C.games]),
       hands:        parseNum(r[C.hands]),
     });
@@ -240,5 +240,5 @@ module.exports = {
   parseNum,
   findHeaderRow,
   mapCols,
-  GU_TO_BRL,
+  GU_TO_BRL: GU_TO_BRL_DEFAULT,
 };

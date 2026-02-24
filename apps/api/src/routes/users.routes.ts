@@ -60,8 +60,8 @@ router.get(
             try {
               const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(ut.user_id);
               email = authUser?.user?.email || null;
-            } catch {
-              // silent
+            } catch (authErr: any) {
+              console.warn(`[users] Failed to fetch email for user ${ut.user_id}:`, authErr?.message);
             }
             return {
               ...ut,
@@ -261,6 +261,120 @@ router.post(
         success: true,
         data,
         message: 'Membro adicionado com sucesso',
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
+// ─── GET /api/users/:id/org-access — Listar subclubes permitidos ─────
+router.get(
+  '/:id/org-access',
+  ...adminOnly,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+
+      // Verify user belongs to tenant
+      const { data: ut, error: utErr } = await supabaseAdmin
+        .from('user_tenants')
+        .select('id, user_id, role')
+        .eq('id', id)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (utErr || !ut) {
+        res.status(404).json({ success: false, error: 'Membro nao encontrado' });
+        return;
+      }
+
+      // OWNER/ADMIN have full access — no need for org_access entries
+      if (ut.role === 'OWNER' || ut.role === 'ADMIN') {
+        res.json({ success: true, data: { full_access: true, org_ids: [] } });
+        return;
+      }
+
+      const { data: rows, error } = await supabaseAdmin
+        .from('user_org_access')
+        .select('org_id')
+        .eq('user_tenant_id', id);
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        data: {
+          full_access: false,
+          org_ids: (rows || []).map((r: any) => r.org_id),
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
+// ─── PUT /api/users/:id/org-access — Setar subclubes permitidos ─────
+router.put(
+  '/:id/org-access',
+  ...adminOnly,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const { id } = req.params;
+      const { org_ids } = req.body;
+
+      if (!Array.isArray(org_ids)) {
+        res.status(400).json({ success: false, error: 'org_ids deve ser um array de UUIDs' });
+        return;
+      }
+
+      // Verify user belongs to tenant
+      const { data: ut, error: utErr } = await supabaseAdmin
+        .from('user_tenants')
+        .select('id, user_id, role')
+        .eq('id', id)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (utErr || !ut) {
+        res.status(404).json({ success: false, error: 'Membro nao encontrado' });
+        return;
+      }
+
+      // OWNER/ADMIN don't need org_access
+      if (ut.role === 'OWNER' || ut.role === 'ADMIN') {
+        res.status(400).json({ success: false, error: 'OWNER e ADMIN tem acesso total, nao precisam de escopo.' });
+        return;
+      }
+
+      // Delete existing entries and insert new ones (replace-all strategy)
+      const { error: delError } = await supabaseAdmin
+        .from('user_org_access')
+        .delete()
+        .eq('user_tenant_id', id);
+
+      if (delError) throw delError;
+
+      if (org_ids.length > 0) {
+        const rows = org_ids.map((orgId: string) => ({
+          user_tenant_id: id,
+          org_id: orgId,
+          tenant_id: tenantId,
+        }));
+
+        const { error: insError } = await supabaseAdmin
+          .from('user_org_access')
+          .insert(rows);
+
+        if (insError) throw insError;
+      }
+
+      res.json({
+        success: true,
+        data: { org_ids },
       });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });

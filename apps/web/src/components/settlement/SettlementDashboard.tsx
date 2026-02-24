@@ -1,14 +1,16 @@
 'use client';
 
 import { formatBRL } from '@/lib/api';
+import ClubLogo from '@/components/ClubLogo';
 
 interface Props {
   subclubs: any[];
   dashboardTotals: any;
   onSelectSubclub: (name: string) => void;
+  logoMap?: Record<string, string | null>;
 }
 
-export default function SettlementDashboard({ subclubs, dashboardTotals, onSelectSubclub }: Props) {
+export default function SettlementDashboard({ subclubs, dashboardTotals, onSelectSubclub, logoMap = {} }: Props) {
   const t = dashboardTotals;
 
   return (
@@ -66,9 +68,7 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center text-xl group-hover:bg-poker-900/30 transition-colors">
-                    🏢
-                  </div>
+                  <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="md" className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all" />
                   <div>
                     <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
                       {sc.name}

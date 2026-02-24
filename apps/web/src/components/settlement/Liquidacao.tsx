@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { listLedger, createLedgerEntry, deleteLedgerEntry, getCarryForward, updateAgentPaymentType, formatBRL } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
 import Spinner from '@/components/Spinner';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -57,6 +58,8 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
   const isDraft = settlementStatus === 'DRAFT';
   const agents = subclub.agents || [];
   const { toast } = useToast();
+  const { canAccess } = useAuth();
+  const canPay = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [allEntries, setAllEntries] = useState<LedgerEntry[]>([]);
   const [carryMap, setCarryMap] = useState<Record<string, number>>({});
@@ -509,7 +512,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                       </p>
                     </div>
 
-                    {isDraft && status !== 'quitado' && status !== 'sem-mov' && (
+                    {isDraft && canPay && status !== 'quitado' && status !== 'sem-mov' && (
                       <button
                         onClick={(e) => { e.stopPropagation(); openQuickPay(agent); }}
                         aria-label={`Registrar pagamento para ${agent.agent_name}`}

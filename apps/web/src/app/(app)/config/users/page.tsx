@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { getUsers, updateUserRole, removeUser, inviteUser, getStoredAuth } from '@/lib/api';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  getUsers, updateUserRole, removeUser, inviteUser, getStoredAuth,
+  listOrganizations, getUserOrgAccess, setUserOrgAccess,
+} from '@/lib/api';
 import type { TenantUser } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
@@ -51,6 +54,13 @@ export default function UsersPage() {
   // Role change
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
 
+  // Scope management
+  const [scopeUserId, setScopeUserId] = useState<string | null>(null);
+  const [scopeOrgIds, setScopeOrgIds] = useState<string[]>([]);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const [scopeSaving, setScopeSaving] = useState(false);
+  const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -71,7 +81,15 @@ export default function UsersPage() {
     const auth = getStoredAuth();
     setCurrentUserId(auth?.user?.id || null);
     loadUsers();
+    loadSubclubs();
   }, [loadUsers]);
+
+  async function loadSubclubs() {
+    try {
+      const res = await listOrganizations('SUBCLUB');
+      if (res.success) setSubclubs(res.data || []);
+    } catch {}
+  }
 
   // ── Invite ──────────────────────────────────────────────────────
 
@@ -146,6 +164,47 @@ export default function UsersPage() {
       }
     } catch {
       toast('Erro de conexao', 'error');
+    }
+  }
+
+  // ── Scope management ──────────────────────────────────────────
+
+  async function openScope(userTenantId: string) {
+    setScopeUserId(userTenantId);
+    setScopeLoading(true);
+    try {
+      const res = await getUserOrgAccess(userTenantId);
+      if (res.success && res.data) {
+        setScopeOrgIds(res.data.org_ids || []);
+      }
+    } catch {
+      toast('Erro ao carregar escopo', 'error');
+    } finally {
+      setScopeLoading(false);
+    }
+  }
+
+  function toggleScopeOrg(orgId: string) {
+    setScopeOrgIds(prev =>
+      prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
+    );
+  }
+
+  async function handleSaveScope() {
+    if (!scopeUserId) return;
+    setScopeSaving(true);
+    try {
+      const res = await setUserOrgAccess(scopeUserId, scopeOrgIds);
+      if (res.success) {
+        toast('Escopo atualizado com sucesso', 'success');
+        setScopeUserId(null);
+      } else {
+        toast(res.error || 'Erro ao salvar escopo', 'error');
+      }
+    } catch {
+      toast('Erro de conexao', 'error');
+    } finally {
+      setScopeSaving(false);
     }
   }
 
@@ -266,8 +325,8 @@ export default function UsersPage() {
                   const badge = getRoleBadge(user.role);
 
                   return (
+                    <React.Fragment key={user.id}>
                     <tr
-                      key={user.id}
                       className="border-b border-dark-800/30 hover:bg-dark-800/20 transition-colors"
                     >
                       {/* Nome + Avatar */}
@@ -331,6 +390,22 @@ export default function UsersPage() {
                       <td className="py-2.5 px-2 text-right">
                         {!isCurrentUser && (
                           <div className="flex items-center justify-end gap-2">
+                            {['FINANCEIRO', 'AUDITOR', 'AGENTE'].includes(user.role) && (
+                              <button
+                                onClick={() => scopeUserId === user.id ? setScopeUserId(null) : openScope(user.id)}
+                                className={`text-xs transition-colors ${
+                                  scopeUserId === user.id ? 'text-poker-400' : 'text-dark-400 hover:text-poker-400'
+                                }`}
+                                aria-label="Gerenciar escopo"
+                              >
+                                Escopo
+                              </button>
+                            )}
+                            {(user.role === 'OWNER' || user.role === 'ADMIN') && (
+                              <span className="text-[10px] text-dark-500 px-1.5 py-0.5 bg-dark-700/40 rounded">
+                                Acesso Total
+                              </span>
+                            )}
                             <button
                               onClick={() => setEditingRoleId(user.id)}
                               className="text-dark-400 hover:text-poker-400 text-xs transition-colors"
@@ -349,6 +424,70 @@ export default function UsersPage() {
                         )}
                       </td>
                     </tr>
+                    {/* Scope inline card */}
+                    {scopeUserId === user.id && (
+                      <tr>
+                        <td colSpan={5} className="p-0">
+                          <div className="bg-dark-800/60 border-t border-b border-dark-700/40 p-4">
+                            <p className="text-xs text-dark-400 mb-2">
+                              Subclubes que <strong className="text-dark-200">{user.full_name || user.email}</strong> pode acessar:
+                            </p>
+                            {scopeLoading ? (
+                              <div className="flex justify-center py-4"><Spinner size="sm" /></div>
+                            ) : subclubs.length === 0 ? (
+                              <p className="text-dark-500 text-xs">Nenhum subclube cadastrado.</p>
+                            ) : (
+                              <>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                  {subclubs.map(sc => {
+                                    const checked = scopeOrgIds.includes(sc.id);
+                                    return (
+                                      <label
+                                        key={sc.id}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                                          checked
+                                            ? 'bg-poker-600/20 border-poker-600/40 text-poker-400'
+                                            : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-dark-600'
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() => toggleScopeOrg(sc.id)}
+                                          className="w-3.5 h-3.5 rounded border-dark-600 text-poker-500 focus:ring-poker-500/30"
+                                        />
+                                        {sc.name}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={handleSaveScope}
+                                    disabled={scopeSaving}
+                                    className="btn-primary text-xs px-4 py-1.5"
+                                  >
+                                    {scopeSaving ? 'Salvando...' : 'Salvar Escopo'}
+                                  </button>
+                                  <button
+                                    onClick={() => setScopeUserId(null)}
+                                    className="text-dark-500 hover:text-dark-300 text-xs transition-colors"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  {scopeOrgIds.length === 0 && (
+                                    <span className="text-yellow-400 text-[10px]">
+                                      Sem subclubes = sem acesso a nenhum fechamento
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

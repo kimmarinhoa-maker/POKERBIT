@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { listSettlements, getSettlementFull, formatBRL } from '@/lib/api';
+import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
+import ClubLogo from '@/components/ClubLogo';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -35,14 +36,24 @@ export default function LigaGlobalPage() {
   const [subclubs, setSubclubs] = useState<SubclubData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingFull, setLoadingFull] = useState(false);
+  const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const { toast } = useToast();
 
-  // Load settlements
+  // Load settlements + org tree for logos
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const res = await listSettlements();
+        const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
+        if (treeRes.success && treeRes.data) {
+          const map: Record<string, string | null> = {};
+          for (const club of treeRes.data) {
+            for (const sub of club.subclubes || []) {
+              map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+            }
+          }
+          setLogoMap(map);
+        }
         if (res.success) {
           const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
             b.week_start.localeCompare(a.week_start)
@@ -194,7 +205,12 @@ export default function LigaGlobalPage() {
                 <tbody className="divide-y divide-dark-800/50">
                   {subclubs.map((sc, i) => (
                     <tr key={sc.name || i} className="hover:bg-dark-800/20 transition-colors">
-                      <td className="px-5 py-3 text-white font-medium">{sc.name}</td>
+                      <td className="px-5 py-3 text-white font-medium">
+                        <span className="flex items-center gap-2">
+                          <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="sm" className="!w-6 !h-6 !text-[10px]" />
+                          {sc.name}
+                        </span>
+                      </td>
                       <td className="px-3 py-3 text-center text-dark-300">{sc.totals?.players || 0}</td>
                       <td className={`px-3 py-3 text-right font-mono ${
                         (sc.totals?.resultado || 0) < 0 ? 'text-red-400' : 'text-poker-400'

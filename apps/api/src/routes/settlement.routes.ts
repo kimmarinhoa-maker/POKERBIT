@@ -85,6 +85,7 @@ router.patch(
   '/:id/notes',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;

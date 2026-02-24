@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, formatDate, formatBRL, isAdmin } from '@/lib/api';
+import { getSettlementFull, voidSettlement, formatDate, formatBRL, isAdmin, getOrgTree } from '@/lib/api';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
+import ClubLogo from '@/components/ClubLogo';
 
 export default function SettlementOverviewPage() {
   const params = useParams();
@@ -22,12 +23,22 @@ export default function SettlementOverviewPage() {
   const [voidReason, setVoidReason] = useState('');
   const [voidLoading, setVoidLoading] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
+  const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getSettlementFull(settlementId);
+      const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
+      if (treeRes.success && treeRes.data) {
+        const map: Record<string, string | null> = {};
+        for (const club of treeRes.data) {
+          for (const sub of club.subclubes || []) {
+            map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+          }
+        }
+        setLogoMap(map);
+      }
       if (res.success && res.data) {
         setData(res.data);
       } else {
@@ -189,9 +200,7 @@ export default function SettlementOverviewPage() {
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center text-xl group-hover:bg-poker-900/30 transition-colors">
-                      🏢
-                    </div>
+                    <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="md" className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all" />
                     <div>
                       <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
                         {sc.name}

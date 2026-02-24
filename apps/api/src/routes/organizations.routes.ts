@@ -4,10 +4,24 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 
 const router = Router();
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo nao permitido. Use PNG, JPEG, WebP ou SVG.'));
+    }
+  },
+});
 
 // ─── GET /api/organizations — Listar todas ─────────────────────────
 router.get(
@@ -153,6 +167,130 @@ router.post(
       }
 
       res.status(201).json({ success: true, data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
+// ─── POST /api/organizations/:id/logo — Upload logo ─────────────
+router.post(
+  '/:id/logo',
+  requireAuth,
+  requireTenant,
+  logoUpload.single('logo'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const orgId = req.params.id;
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
+        return;
+      }
+
+      // Validar que org pertence ao tenant
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('id, type, metadata')
+        .eq('id', orgId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (!org) {
+        res.status(404).json({ success: false, error: 'Organizacao nao encontrada' });
+        return;
+      }
+
+      // Determinar extensao
+      const extMap: Record<string, string> = {
+        'image/png': '.png',
+        'image/jpeg': '.jpg',
+        'image/webp': '.webp',
+        'image/svg+xml': '.svg',
+      };
+      const ext = extMap[file.mimetype] || '.png';
+      const storagePath = `${tenantId}/${orgId}${ext}`;
+
+      // Upload para Supabase Storage (upsert)
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('club-logos')
+        .upload(storagePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Gerar public URL com cache-buster para evitar cache do browser/CDN
+      const { data: urlData } = supabaseAdmin.storage
+        .from('club-logos')
+        .getPublicUrl(storagePath);
+
+      const logoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+      // Atualizar metadata da org
+      const newMetadata = { ...(org.metadata || {}), logo_url: logoUrl };
+
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('organizations')
+        .update({ metadata: newMetadata })
+        .eq('id', orgId)
+        .eq('tenant_id', tenantId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      res.json({ success: true, logo_url: logoUrl, data: updated });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
+// ─── DELETE /api/organizations/:id/logo — Remover logo ──────────
+router.delete(
+  '/:id/logo',
+  requireAuth,
+  requireTenant,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const orgId = req.params.id;
+
+      // Buscar org
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('id, metadata')
+        .eq('id', orgId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (!org) {
+        res.status(404).json({ success: false, error: 'Organizacao nao encontrada' });
+        return;
+      }
+
+      // Tentar remover arquivos do storage (todas extensoes possiveis)
+      const extensions = ['.png', '.jpg', '.webp', '.svg'];
+      const paths = extensions.map(ext => `${tenantId}/${orgId}${ext}`);
+      await supabaseAdmin.storage.from('club-logos').remove(paths);
+
+      // Remover logo_url do metadata
+      const newMetadata = { ...(org.metadata || {}) };
+      delete newMetadata.logo_url;
+
+      const { error: updateError } = await supabaseAdmin
+        .from('organizations')
+        .update({ metadata: newMetadata })
+        .eq('id', orgId)
+        .eq('tenant_id', tenantId);
+
+      if (updateError) throw updateError;
+
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

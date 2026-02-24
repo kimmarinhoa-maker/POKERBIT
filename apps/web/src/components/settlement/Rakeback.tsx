@@ -11,6 +11,7 @@ import {
   formatBRL,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const agents = subclub.agents || [];
   const players = subclub.players || [];
   const { toast } = useToast();
+  const { canAccess } = useAuth();
+  const canEditRates = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [activeSubTab, setActiveSubTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [search, setSearch] = useState('');
@@ -144,16 +147,28 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   // Tax rate on rake
   const taxRate = ((fees.taxaApp || 0) + (fees.taxaLiga || 0)) / 100;
 
-  // Group players by agent
+  // Group players by agent name (keep original value as key)
   const playersByAgent = useMemo(() => {
     const map = new Map<string, PlayerMetric[]>();
     for (const p of players) {
-      const key = p.agent_name || 'SEM AGENTE';
+      const key = p.agent_name || '';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
     return map;
   }, [players]);
+
+  /** Lookup players for a given agent_name, with fallback for "(sem agente)" */
+  function getPlayersForAgent(agentName: string): PlayerMetric[] {
+    const direct = playersByAgent.get(agentName);
+    if (direct && direct.length > 0) return direct;
+    // Fallback only for "sem agente" variants
+    const isSemAgente = !agentName || /sem.agente|^\(sem.agente\)$|^none$/i.test(agentName);
+    if (isSemAgente) {
+      return playersByAgent.get('') || playersByAgent.get('(sem agente)') || playersByAgent.get('SEM AGENTE') || playersByAgent.get('None') || [];
+    }
+    return [];
+  }
 
   // Resolve org ID for an agent (by agent_id or name fallback)
   function resolveOrgId(agent: AgentMetric): string | null {
@@ -185,7 +200,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     const q = search.toLowerCase();
     return nonDirectAgents.filter(a => {
       if (a.agent_name.toLowerCase().includes(q)) return true;
-      const agentPlayers = playersByAgent.get(a.agent_name) || [];
+      const agentPlayers = getPlayersForAgent(a.agent_name);
       return agentPlayers.some(p =>
         (p.nickname || '').toLowerCase().includes(q) ||
         (p.external_player_id || '').includes(q)
@@ -198,7 +213,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     const q = search.toLowerCase();
     return directAgents.filter(a => {
       if (a.agent_name.toLowerCase().includes(q)) return true;
-      const agentPlayers = playersByAgent.get(a.agent_name) || [];
+      const agentPlayers = getPlayersForAgent(a.agent_name);
       return agentPlayers.some(p =>
         (p.nickname || '').toLowerCase().includes(q) ||
         (p.external_player_id || '').includes(q)
@@ -215,7 +230,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       totalRB += Number(a.commission_brl || 0);
     }
     for (const a of directAgents) {
-      const agentPlayers = playersByAgent.get(a.agent_name) || [];
+      const agentPlayers = getPlayersForAgent(a.agent_name);
       for (const p of agentPlayers) {
         totalRB += Number(p.rb_value_brl || 0);
       }
@@ -323,7 +338,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   async function handleApplyAll(agentName: string) {
     const rate = parseFloat(applyAllRate);
     if (isNaN(rate) || rate < 0 || rate > 100) return;
-    const agentPlayers = playersByAgent.get(agentName) || [];
+    const agentPlayers = getPlayersForAgent(agentName);
     setApplyingAll(true);
     try {
       for (const p of agentPlayers) {
@@ -444,6 +459,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         <AgenciasTab
           agents={filteredNonDirect}
           playersByAgent={playersByAgent}
+          getPlayersForAgent={getPlayersForAgent}
           expandedAgents={expandedAgents}
           toggleAgent={toggleAgent}
           getAgentStatus={getAgentStatus}
@@ -456,6 +472,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           startEditRate={startEditRate}
           saveAgentRate={saveAgentRate}
           setEditingRate={setEditingRate}
+          canEditRates={canEditRates}
         />
       ) : (
         <JogadoresTab
@@ -465,6 +482,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           directMap={directMap}
           orgByName={orgByName}
           playersByAgent={playersByAgent}
+          getPlayersForAgent={getPlayersForAgent}
           expandedAgents={expandedAgents}
           toggleAgent={toggleAgent}
           taxRate={taxRate}
@@ -487,6 +505,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           applyingAll={applyingAll}
           handleApplyAll={handleApplyAll}
           resolveOrgId={resolveOrgId}
+          canEditRates={canEditRates}
         />
       )}
     </div>
@@ -496,12 +515,14 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 // ─── Sub-tab: Agencias ──────────────────────────────────────────────
 
 function AgenciasTab({
-  agents, playersByAgent, expandedAgents, toggleAgent, getAgentStatus,
+  agents, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent, getAgentStatus,
   taxRate, isDraft,
   editingRate, rateInput, setRateInput, savingRate, startEditRate, saveAgentRate, setEditingRate,
+  canEditRates,
 }: {
   agents: AgentMetric[];
   playersByAgent: Map<string, PlayerMetric[]>;
+  getPlayersForAgent: (agentName: string) => PlayerMetric[];
   expandedAgents: Set<string>;
   toggleAgent: (id: string) => void;
   getAgentStatus: (a: AgentMetric) => string;
@@ -514,6 +535,7 @@ function AgenciasTab({
   startEditRate: (id: string, rate: number) => void;
   saveAgentRate: (agent: AgentMetric) => void;
   setEditingRate: (v: string | null) => void;
+  canEditRates: boolean;
 }) {
   if (agents.length === 0) {
     return (
@@ -547,7 +569,7 @@ function AgenciasTab({
 
         {agents.map(agent => {
           const isExpanded = expandedAgents.has(agent.id);
-          const agentPlayers = playersByAgent.get(agent.agent_name) || [];
+          const agentPlayers = getPlayersForAgent(agent.agent_name);
           const rake = Number(agent.rake_total_brl) || 0;
           const rbRate = Number(agent.rb_rate) || 0;
           const rbValue = Number(agent.commission_brl) || 0;
@@ -609,7 +631,7 @@ function AgenciasTab({
                       <span className={`font-mono text-sm ${rbRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
                         {rbRate}%
                       </span>
-                      {isDraft && (
+                      {isDraft && canEditRates && (
                         <button
                           onClick={() => startEditRate(`agent-${agent.id}`, rbRate)}
                           aria-label={`Editar taxa de rakeback do agente ${agent.agent_name}`}
@@ -689,12 +711,12 @@ function AgenciasTab({
 // ─── Sub-tab: Jogadores (Diretos) ───────────────────────────────────
 
 function JogadoresTab({
-  agents, allAgents, orgs, directMap, orgByName, playersByAgent, expandedAgents, toggleAgent,
+  agents, allAgents, orgs, directMap, orgByName, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent,
   taxRate, isDraft,
   editingRate, rateInput, setRateInput, savingRate, startEditRate, savePlayerRate, setEditingRate,
   directDropdown, setDirectDropdown, handleMarkDirect, handleRemoveDirect,
   applyAllAgent, setApplyAllAgent, applyAllRate, setApplyAllRate, applyingAll, handleApplyAll,
-  resolveOrgId,
+  resolveOrgId, canEditRates,
 }: {
   agents: AgentMetric[];
   allAgents: AgentMetric[];
@@ -702,6 +724,7 @@ function JogadoresTab({
   directMap: Map<string, boolean>;
   orgByName: Map<string, OrgData>;
   playersByAgent: Map<string, PlayerMetric[]>;
+  getPlayersForAgent: (agentName: string) => PlayerMetric[];
   expandedAgents: Set<string>;
   toggleAgent: (id: string) => void;
   taxRate: number;
@@ -724,6 +747,7 @@ function JogadoresTab({
   applyingAll: boolean;
   handleApplyAll: (agentName: string) => void;
   resolveOrgId: (agent: AgentMetric) => string | null;
+  canEditRates: boolean;
 }) {
   // Available agents to mark as direct — resolve org ID by agent_id OR name
   const availableForDirect = useMemo(() => {
@@ -797,7 +821,7 @@ function JogadoresTab({
 
           {agents.map(agent => {
             const isExpanded = expandedAgents.has(agent.id);
-            const agentPlayers = playersByAgent.get(agent.agent_name) || [];
+            const agentPlayers = getPlayersForAgent(agent.agent_name);
             const rake = Number(agent.rake_total_brl) || 0;
             const totalPlayerRB = round2(agentPlayers.reduce((s, p) => s + Number(p.rb_value_brl || 0), 0));
             const lucro = round2(rake - totalPlayerRB - rake * taxRate);
@@ -944,7 +968,7 @@ function JogadoresTab({
                                       <span className={`font-mono text-sm ${pRBRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
                                         {pRBRate}%
                                       </span>
-                                      {isDraft && (
+                                      {isDraft && canEditRates && (
                                         <button
                                           onClick={() => startEditRate(`player-${p.player_id}`, pRBRate)}
                                           aria-label={`Editar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
@@ -978,7 +1002,7 @@ function JogadoresTab({
             let totalRake = 0, totalRB = 0, totalLucro = 0;
             for (const a of agents) {
               const rake = Number(a.rake_total_brl) || 0;
-              const agentPlayers = playersByAgent.get(a.agent_name) || [];
+              const agentPlayers = getPlayersForAgent(a.agent_name);
               const playerRB = agentPlayers.reduce((s, p) => s + Number(p.rb_value_brl || 0), 0);
               totalRake += rake;
               totalRB += playerRB;
