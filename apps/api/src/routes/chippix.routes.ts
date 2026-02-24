@@ -45,6 +45,37 @@ router.post(
   }
 );
 
+// ─── POST /api/chippix/import-extrato — Import direto → ledger ───
+router.post(
+  '/import-extrato',
+  requireAuth,
+  requireTenant,
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const userId = (req as any).userId;
+      const file = (req as any).file;
+
+      if (!file) {
+        res.status(400).json({ success: false, error: 'Arquivo XLSX obrigatório' });
+        return;
+      }
+
+      const result = await chipPixService.importExtrato(
+        tenantId,
+        file.buffer,
+        userId,
+      );
+
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      const status = err.message?.includes('Semana incorreta') ? 400 : 500;
+      res.status(status).json({ success: false, error: err.message });
+    }
+  }
+);
+
 // ─── GET /api/chippix — Listar transações ChipPix ────────────────
 router.get(
   '/',

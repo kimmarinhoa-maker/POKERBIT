@@ -1,13 +1,18 @@
 // ══════════════════════════════════════════════════════════════════════
-//  ChipPix Service — Parse XLSX ChipPix + stage in bank_transactions
+//  ChipPix Service — Parse XLSX ChipPix + insert ledger_entries
 //
 //  Fluxo: Upload XLSX → Parse → Agrupar por jogador → Auto-match
-//         → Staging (bank_transactions source='chippix')
-//         → Vincular entidade → Aplicar (cria ledger_entries)
+//         → Insert ledger_entries (source='chippix')
 // ══════════════════════════════════════════════════════════════════════
 
 import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
+import { round2 } from '../utils/round2';
+import type {
+  ChipPixExtratoRow,
+  ChipPixImportResult,
+  NaoVinculado,
+} from '../types/chippix';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -182,7 +187,7 @@ export class ChipPixService {
     };
   }
 
-  // ─── Upload: parse + auto-match + insert bank_transactions ───────
+  // ─── Upload: parse + auto-match + insert ledger_entries ──────────
   async uploadChipPix(
     tenantId: string,
     buffer: Buffer,
@@ -214,7 +219,7 @@ export class ChipPixService {
     // Check existing FITIDs to avoid duplicates
     const fitids = parsed.map(p => `cp_${p.idJog}`);
     const { data: existing } = await supabaseAdmin
-      .from('bank_transactions')
+      .from('ledger_entries')
       .select('fitid')
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
@@ -253,7 +258,7 @@ export class ChipPixService {
     let inserted: ChipPixRow[] = [];
     if (toInsert.length > 0) {
       const { data, error } = await supabaseAdmin
-        .from('bank_transactions')
+        .from('ledger_entries')
         .insert(toInsert)
         .select();
 
@@ -277,7 +282,7 @@ export class ChipPixService {
     status?: string
   ): Promise<ChipPixRow[]> {
     let query = supabaseAdmin
-      .from('bank_transactions')
+      .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
@@ -291,6 +296,281 @@ export class ChipPixService {
     return data || [];
   }
 
+  // ─── Import Extrato → parse + link + insert direto em ledger ────
+  async importExtrato(
+    tenantId: string,
+    buffer: Buffer,
+    userId: string,
+  ): Promise<ChipPixImportResult> {
+    // 1. Parse XLSX row-by-row
+    const rows = this.parseExtrato(buffer);
+    if (rows.length === 0) {
+      throw new Error('Planilha vazia — nenhuma operação encontrada');
+    }
+
+    // 2. Detect week_start from date range
+    const semana = this.detectWeekFromRows(rows);
+
+    // 2b. Validate week against active settlement
+    const { data: activeSettlement } = await supabaseAdmin
+      .from('settlements')
+      .select('week_start')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'DRAFT')
+      .order('week_start', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (activeSettlement && activeSettlement.week_start !== semana) {
+      throw new Error(
+        `Semana incorreta. O arquivo é da semana ${semana} mas o fechamento ativo é ${activeSettlement.week_start}. Importe o extrato da semana correta.`
+      );
+    }
+
+    // 3. Fetch players for auto-linking (external_id = Id Jogador)
+    const { data: players } = await supabaseAdmin
+      .from('players')
+      .select('id, external_id, nickname, full_name')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true);
+
+    const playerMap = new Map<string, { id: string; name: string }>();
+    for (const p of players || []) {
+      if (p.external_id) {
+        playerMap.set(String(p.external_id).trim(), {
+          id: p.id,
+          name: p.nickname || p.full_name || p.external_id,
+        });
+      }
+    }
+
+    // 4. Collect all external_refs to check for dupes
+    const allRefs = rows.flatMap(r => {
+      const refs = [r.idOperacao];
+      if (r.taxaOperacao > 0) refs.push(`${r.idOperacao}_fee`);
+      return refs;
+    });
+
+    const { data: existingEntries } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('external_ref')
+      .eq('tenant_id', tenantId)
+      .eq('source', 'chippix')
+      .in('external_ref', allRefs);
+
+    const existingRefs = new Set((existingEntries || []).map(e => e.external_ref));
+
+    // 5. Build inserts + track stats
+    let vinculados = 0;
+    let duplicados = 0;
+    const naoVinculadosMap = new Map<string, NaoVinculado>();
+    const toInsert: Record<string, any>[] = [];
+
+    for (const row of rows) {
+      // Skip dupes
+      if (existingRefs.has(row.idOperacao)) {
+        duplicados++;
+        continue;
+      }
+
+      // Link player
+      const player = playerMap.get(String(row.idJogador).trim());
+      if (player) {
+        vinculados++;
+      } else {
+        const key = String(row.idJogador).trim();
+        if (key && !naoVinculadosMap.has(key)) {
+          naoVinculadosMap.set(key, {
+            chippix_id: key,
+            nome: row.integrante || key,
+          });
+        }
+      }
+
+      // Determine dir + amount
+      const isEntrada = row.tipo.toLowerCase().startsWith('entrada');
+      const dir = isEntrada ? 'IN' : 'OUT';
+      const amount = round2(isEntrada ? row.entradaBruta : row.saidaBruta);
+
+      if (amount > 0) {
+        toInsert.push({
+          tenant_id: tenantId,
+          entity_id: player?.id || null,
+          entity_name: player?.name || row.integrante || null,
+          week_start: semana,
+          dir,
+          amount,
+          method: 'chippix',
+          description: `ChipPix ${row.tipo} · ${row.integrante || row.idJogador}${row.finalidade ? ` · ${row.finalidade}` : ''}`,
+          source: 'chippix',
+          external_ref: row.idOperacao,
+          is_reconciled: false,
+          created_by: userId,
+        });
+      }
+
+      // Fee entry (separate, always OUT)
+      if (row.taxaOperacao > 0 && !existingRefs.has(`${row.idOperacao}_fee`)) {
+        toInsert.push({
+          tenant_id: tenantId,
+          entity_id: player?.id || null,
+          entity_name: player?.name || row.integrante || null,
+          week_start: semana,
+          dir: 'OUT',
+          amount: round2(row.taxaOperacao),
+          method: 'chippix',
+          description: 'Taxa operacional Chippix',
+          source: 'chippix_fee',
+          external_ref: `${row.idOperacao}_fee`,
+          is_reconciled: false,
+          created_by: userId,
+        });
+      }
+    }
+
+    // 6. Bulk insert
+    let inseridos = 0;
+    if (toInsert.length > 0) {
+      const { data: inserted, error } = await supabaseAdmin
+        .from('ledger_entries')
+        .insert(toInsert)
+        .select('id');
+
+      if (error) throw new Error(`Erro ao inserir ledger_entries: ${error.message}`);
+      inseridos = inserted?.length || 0;
+    }
+
+    // 7. Audit
+    await supabaseAdmin.from('audit_log').insert({
+      tenant_id: tenantId,
+      user_id: userId,
+      action: 'IMPORT_CHIPPIX_EXTRATO',
+      entity_type: 'ledger_entry',
+      new_data: { semana, total: rows.length, inseridos, duplicados, vinculados },
+    });
+
+    return {
+      total: rows.length,
+      vinculados,
+      nao_vinculados: Array.from(naoVinculadosMap.values()),
+      duplicados,
+      inseridos,
+      semana,
+    };
+  }
+
+  // ─── Parse extrato XLSX row-by-row ─────────────────────────────────
+  private parseExtrato(buffer: Buffer): ChipPixExtratoRow[] {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames.find(n =>
+      n.toLowerCase().includes('opera')
+    ) || workbook.SheetNames[0];
+
+    if (!sheetName) throw new Error('Arquivo XLSX vazio — nenhuma aba encontrada');
+
+    const sheet = workbook.Sheets[sheetName];
+    const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    if (data.length < 2) throw new Error('Planilha vazia ou sem dados');
+
+    const header = (data[0] || []).map((h: any) => String(h).trim().toLowerCase());
+
+    // Map columns
+    const col = (patterns: string[]) =>
+      header.findIndex(h => patterns.some(p => h.includes(p)));
+
+    const iData        = col(['data']);
+    const iTipo        = col(['tipo']);
+    const iFinalidade  = col(['finalidade']);
+    const iEntBruta    = col(['entrada bruta']);
+    const iSaiBruta    = col(['saida bruta', 'saída bruta']);
+    const iEntLiq      = col(['entrada liquida', 'entrada líquida']);
+    const iSaiLiq      = col(['saida liquida', 'saída líquida']);
+    const iIntegrante  = col(['integrante']);
+    const iTaxa        = col(['taxa da opera', 'taxa']);
+    const iIdJogador   = col(['id jogador']);
+    const iIdOperacao  = col(['id da opera']);
+    const iIdPagamento = col(['id do pagamento']);
+
+    if (iIdJogador < 0) throw new Error('Coluna "Id Jogador" não encontrada');
+    if (iIdOperacao < 0) throw new Error('Coluna "Id da operação" não encontrada');
+    if (iTipo < 0)       throw new Error('Coluna "Tipo" não encontrada');
+
+    const parseNum = (val: any): number => {
+      if (val === '' || val === null || val === undefined) return 0;
+      return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+    };
+
+    const parseDate = (val: any): string => {
+      if (!val) return '';
+      if (typeof val === 'number') {
+        const d = XLSX.SSF.parse_date_code(val);
+        if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+      }
+      const s = String(val).trim();
+      // DD/MM/YYYY
+      const brMatch = s.match(/^(\d{2})[/\-](\d{2})[/\-](\d{4})/);
+      if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+      // YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+      return '';
+    };
+
+    const rows: ChipPixExtratoRow[] = [];
+
+    for (let r = 1; r < data.length; r++) {
+      const row = data[r];
+      if (!row || row.length === 0) continue;
+
+      const idOperacao = String(row[iIdOperacao] || '').trim();
+      const idJogador = String(row[iIdJogador] || '').trim();
+      const tipo = String(row[iTipo] || '').trim();
+
+      // Skip empty rows
+      if (!idOperacao || !tipo) continue;
+
+      rows.push({
+        data:           iData >= 0       ? parseDate(row[iData]) : '',
+        tipo,
+        finalidade:     iFinalidade >= 0 ? String(row[iFinalidade] || '').trim() : '',
+        entradaBruta:   iEntBruta >= 0   ? parseNum(row[iEntBruta]) : 0,
+        saidaBruta:     iSaiBruta >= 0   ? parseNum(row[iSaiBruta]) : 0,
+        entradaLiquida: iEntLiq >= 0     ? parseNum(row[iEntLiq]) : 0,
+        saidaLiquida:   iSaiLiq >= 0     ? parseNum(row[iSaiLiq]) : 0,
+        integrante:     iIntegrante >= 0 ? String(row[iIntegrante] || '').trim() : '',
+        taxaOperacao:   iTaxa >= 0       ? parseNum(row[iTaxa]) : 0,
+        idJogador,
+        idOperacao,
+        idPagamento:    iIdPagamento >= 0 ? String(row[iIdPagamento] || '').trim() : '',
+      });
+    }
+
+    return rows;
+  }
+
+  // ─── Detect week_start from row dates ──────────────────────────────
+  private detectWeekFromRows(rows: ChipPixExtratoRow[]): string {
+    const dates = rows
+      .map(r => r.data)
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort();
+
+    if (dates.length === 0) {
+      throw new Error('Nenhuma data válida encontrada no arquivo');
+    }
+
+    // Use earliest date to find its Monday
+    const earliest = new Date(dates[0] + 'T00:00:00');
+    const day = earliest.getDay(); // 0=dom, 1=seg
+    const diff = day === 0 ? -6 : 1 - day;
+    earliest.setDate(earliest.getDate() + diff);
+
+    const y = earliest.getFullYear();
+    const m = String(earliest.getMonth() + 1).padStart(2, '0');
+    const d = String(earliest.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   // ─── Aplicar vinculadas → criar ledger_entries ───────────────────
   async applyLinked(
     tenantId: string,
@@ -298,7 +578,7 @@ export class ChipPixService {
     userId: string
   ) {
     const { data: linked, error: fetchErr } = await supabaseAdmin
-      .from('bank_transactions')
+      .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
@@ -339,7 +619,7 @@ export class ChipPixService {
       }
 
       await supabaseAdmin
-        .from('bank_transactions')
+        .from('ledger_entries')
         .update({
           status: 'applied',
           applied_ledger_id: entry.id,
