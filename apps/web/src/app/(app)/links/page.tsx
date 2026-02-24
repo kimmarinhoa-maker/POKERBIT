@@ -35,7 +35,7 @@ const CLUB_COLORS: Record<string, string> = {
 };
 
 const CLUB_ICONS: Record<string, string> = {
-  IMPERIO: '👑', TGP: '🎯', CONFRARIA: '🍷', '3BET': '🎲', CH: '♣️',
+  IMPERIO: 'IM', TGP: 'TG', CONFRARIA: 'CF', '3BET': '3B', CH: 'CH',
 };
 
 function getClubStyle(name: string) {
@@ -72,13 +72,6 @@ export default function LinksPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  function showToast(msg: string) {
-    const isError = msg.startsWith('❌');
-    const isSuccess = msg.startsWith('✅');
-    const clean = msg.replace(/^[❌✅]\s*/, '');
-    toast(clean, isError ? 'error' : isSuccess ? 'success' : 'info');
-  }
-
   async function handleLinkAgent(agentName: string, subclub: Subclub) {
     const key = `agent:${agentName}`;
     setSaving(prev => ({ ...prev, [key]: true }));
@@ -92,12 +85,12 @@ export default function LinksPage() {
         });
         newLinked[key] = subclub.name;
         setLinked(newLinked);
-        showToast(`✅ ${agentName} → ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`);
+        toast(`${agentName} → ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`, 'success');
       } else {
-        showToast(`❌ Erro: ${res.error}`);
+        toast(`Erro: ${res.error}`, 'error');
       }
     } catch (err: any) {
-      showToast(`❌ ${err.message}`);
+      toast(err.message, 'error');
     } finally {
       setSaving(prev => ({ ...prev, [key]: false }));
     }
@@ -110,12 +103,12 @@ export default function LinksPage() {
       const res = await linkPlayer(player.externalId, subclub.id);
       if (res.success) {
         setLinked(prev => ({ ...prev, [key]: subclub.name }));
-        showToast(`✅ ${player.nickname} → ${subclub.name}`);
+        toast(`${player.nickname} → ${subclub.name}`, 'success');
       } else {
-        showToast(`❌ Erro: ${res.error}`);
+        toast(`Erro: ${res.error}`, 'error');
       }
     } catch (err: any) {
-      showToast(`❌ ${err.message}`);
+      toast(err.message, 'error');
     } finally {
       setSaving(prev => ({ ...prev, [key]: false }));
     }
@@ -140,12 +133,12 @@ export default function LinksPage() {
           newLinked[p.externalId] = subclub.name;
         });
         setLinked(newLinked);
-        showToast(`✅ ${players.length} jogadores sem agente → ${subclub.name}`);
+        toast(`${players.length} jogadores sem agente → ${subclub.name}`, 'success');
       } else {
-        showToast(`❌ Erro: ${res.error}`);
+        toast(`Erro: ${res.error}`, 'error');
       }
     } catch (err: any) {
-      showToast(`❌ ${err.message}`);
+      toast(err.message, 'error');
     } finally {
       setSaving(prev => ({ ...prev, [key]: false }));
     }
@@ -170,7 +163,7 @@ export default function LinksPage() {
     return (
       <div className="p-8 max-w-3xl mx-auto">
         <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">
-          ❌ {error}
+          {error}
         </div>
       </div>
     );
@@ -179,7 +172,6 @@ export default function LinksPage() {
   if (!data || totalUnlinked === 0) {
     return (
       <div className="p-8 max-w-3xl mx-auto text-center py-16">
-        <div className="text-5xl mb-4">✅</div>
         <h2 className="text-2xl font-bold text-white mb-2">Todos vinculados!</h2>
         <p className="text-dark-400 mb-6">Nenhum jogador pendente de vinculacao.</p>
         <button
@@ -200,7 +192,7 @@ export default function LinksPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            ⚠️ Vincular Jogadores
+            Vincular Jogadores
           </h2>
           <p className="text-dark-400 mt-1">
             {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido.
@@ -234,7 +226,7 @@ export default function LinksPage() {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                   isNoneAgent ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'
                 }`}>
-                  {isNoneAgent ? '?' : '🔗'}
+                  {isNoneAgent ? '?' : 'AG'}
                 </div>
                 <div>
                   <h3 className="text-white font-semibold">
@@ -259,7 +251,7 @@ export default function LinksPage() {
                         isSavingAgent ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                       }`}
                     >
-                      {CLUB_ICONS[sc.name] || '🏠'} {sc.name}
+                      {CLUB_ICONS[sc.name] || sc.name.substring(0, 2)} {sc.name}
                     </button>
                   ))}
                 </div>
@@ -290,7 +282,7 @@ export default function LinksPage() {
                         saving['bulk-none'] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                       }`}
                     >
-                      {CLUB_ICONS[sc.name] || '🏠'} {sc.name}
+                      {CLUB_ICONS[sc.name] || sc.name.substring(0, 2)} {sc.name}
                     </button>
                   ))}
                 </div>
@@ -363,11 +355,11 @@ export default function LinksPage() {
           <div className="text-sm">
             {remaining > 0 ? (
               <span className="text-yellow-400">
-                ⚠️ {remaining} jogador{remaining !== 1 ? 'es' : ''} ainda sem vinculo
+                {remaining} jogador{remaining !== 1 ? 'es' : ''} ainda sem vinculo
               </span>
             ) : (
               <span className="text-green-400">
-                ✅ Todos vinculados! Reimporte para aplicar.
+                Todos vinculados! Reimporte para aplicar.
               </span>
             )}
           </div>
@@ -382,7 +374,7 @@ export default function LinksPage() {
               onClick={() => router.push('/import')}
               className={`btn-primary px-6 py-2 ${remaining > 0 ? 'opacity-70' : ''}`}
             >
-              {remaining > 0 ? '🔄 Reimportar (com pendencias)' : '🚀 Reimportar Agora'}
+              {remaining > 0 ? 'Reimportar (com pendencias)' : 'Reimportar Agora'}
             </button>
           </div>
         </div>

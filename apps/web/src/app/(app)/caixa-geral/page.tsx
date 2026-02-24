@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { listSettlements, listLedger, formatBRL } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 
@@ -29,10 +30,6 @@ interface LedgerEntry {
 
 type FilterDir = 'all' | 'IN' | 'OUT';
 type GroupBy = 'none' | 'entity' | 'method' | 'source';
-
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
 
 // ─── Page ───────────────────────────────────────────────────────────
 
@@ -152,16 +149,11 @@ export default function CaixaGeralPage() {
     <div className="p-8 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            💰
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Caixa Geral</h2>
-            <p className="text-dark-400 text-sm">
-              Cash flow consolidado — todas as movimentacoes
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Caixa Geral</h2>
+          <p className="text-dark-400 text-sm">
+            Cash flow consolidado — todas as movimentacoes
+          </p>
         </div>
 
         {/* Week selector */}
@@ -352,7 +344,6 @@ export default function CaixaGeralPage() {
           {/* Detail table */}
           {entries.length === 0 ? (
             <div className="card text-center py-16">
-              <div className="text-5xl mb-4">💰</div>
               <h3 className="text-xl font-bold text-white mb-2">Nenhuma movimentacao</h3>
               <p className="text-dark-400 text-sm">Nao ha movimentacoes registradas nesta semana</p>
             </div>

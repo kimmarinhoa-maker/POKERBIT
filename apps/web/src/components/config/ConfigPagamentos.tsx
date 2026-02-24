@@ -30,9 +30,9 @@ interface BankAccount {
 
 type ActiveSection = 'methods' | 'banks';
 
-// ─── Page ───────────────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────────
 
-export default function PagamentosPage() {
+export default function ConfigPagamentos() {
   const [section, setSection] = useState<ActiveSection>('methods');
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [banks, setBanks] = useState<BankAccount[]>([]);
@@ -66,38 +66,25 @@ export default function PagamentosPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-          💳
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Pagamentos</h2>
-          <p className="text-dark-400 text-sm">
-            Metodos de pagamento e contas bancarias
-          </p>
-        </div>
-      </div>
-
-      {/* Section tabs */}
-      <div className="flex gap-1 mb-6 border-b border-dark-700/50 pb-3">
+    <div>
+      {/* Section tabs — pill style */}
+      <div className="flex gap-2 mb-6">
         <button
           onClick={() => setSection('methods')}
-          className={`px-4 py-2 rounded-t text-sm font-semibold transition-colors ${
+          className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
             section === 'methods'
-              ? 'bg-dark-800 text-white border-b-2 border-poker-500'
-              : 'text-dark-400 hover:text-dark-200'
+              ? 'bg-poker-600 border-poker-600 text-white'
+              : 'bg-transparent border-dark-600 text-dark-400 hover:border-dark-500 hover:text-dark-200'
           }`}
         >
           Metodos de Pagamento ({methods.length})
         </button>
         <button
           onClick={() => setSection('banks')}
-          className={`px-4 py-2 rounded-t text-sm font-semibold transition-colors ${
+          className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
             section === 'banks'
-              ? 'bg-dark-800 text-white border-b-2 border-poker-500'
-              : 'text-dark-400 hover:text-dark-200'
+              ? 'bg-poker-600 border-poker-600 text-white'
+              : 'bg-transparent border-dark-600 text-dark-400 hover:border-dark-500 hover:text-dark-200'
           }`}
         >
           Contas Bancarias ({banks.length})
@@ -172,13 +159,10 @@ function PaymentMethodsSection({ methods, onReload }: {
     <div>
       {/* Info */}
       <div className="card bg-dark-800/30 border-dark-700/40 mb-4">
-        <div className="flex items-start gap-3">
-          <span className="text-lg mt-0.5">ℹ️</span>
-          <p className="text-sm text-dark-400">
-            Metodos de pagamento aparecem ao registrar movimentacoes (PIX, Transferencia, ChipPix, etc).
-            O metodo padrao e pre-selecionado automaticamente.
-          </p>
-        </div>
+        <p className="text-sm text-dark-400">
+          Metodos de pagamento aparecem ao registrar movimentacoes (PIX, Transferencia, ChipPix, etc).
+          O metodo padrao e pre-selecionado automaticamente.
+        </p>
       </div>
 
       {/* List */}
@@ -348,12 +332,9 @@ function BankAccountsSection({ banks, onReload }: {
     <div>
       {/* Info */}
       <div className="card bg-dark-800/30 border-dark-700/40 mb-4">
-        <div className="flex items-start gap-3">
-          <span className="text-lg mt-0.5">ℹ️</span>
-          <p className="text-sm text-dark-400">
-            Contas bancarias sao usadas na conciliacao OFX e para identificar a origem/destino de pagamentos.
-          </p>
-        </div>
+        <p className="text-sm text-dark-400">
+          Contas bancarias sao usadas na conciliacao OFX e para identificar a origem/destino de pagamentos.
+        </p>
       </div>
 
       {/* List */}
@@ -365,8 +346,8 @@ function BankAccountsSection({ banks, onReload }: {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-dark-700/50 flex items-center justify-center text-lg flex-shrink-0">
-                  🏦
+                <div className="w-9 h-9 rounded-lg bg-dark-700/50 flex items-center justify-center text-xs font-bold text-dark-400 flex-shrink-0">
+                  BC
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

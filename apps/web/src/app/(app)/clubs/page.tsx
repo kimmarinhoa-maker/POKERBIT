@@ -63,14 +63,9 @@ export default function ClubsPage() {
   return (
     <div className="p-8 max-w-5xl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-          🏢
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Clubes e Subclubes</h2>
-          <p className="text-dark-400 text-sm">Hierarquia de organizacoes</p>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">Clubes e Subclubes</h2>
+        <p className="text-dark-400 text-sm">Hierarquia de organizacoes</p>
       </div>
 
       {/* KPIs */}
@@ -91,7 +86,6 @@ export default function ClubsPage() {
 
       {tree.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-5xl mb-4">🏢</div>
           <h3 className="text-xl font-bold text-white mb-2">Nenhum clube</h3>
           <p className="text-dark-400 text-sm">Configure a estrutura em Configuracoes → Estrutura</p>
         </div>
@@ -101,9 +95,6 @@ export default function ClubsPage() {
             <div key={club.id} className="card">
               {/* Club header */}
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-dark-700">
-                <div className="w-12 h-12 rounded-xl bg-poker-900/30 flex items-center justify-center text-2xl">
-                  🏢
-                </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white">{club.name}</h3>
                   <p className="text-xs text-dark-400">
@@ -126,7 +117,6 @@ export default function ClubsPage() {
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">🃏</span>
                             <span className="font-semibold text-dark-100">{sub.name}</span>
                           </div>
                           <span className="text-[10px] font-bold text-dark-500 bg-dark-700/50 px-2 py-0.5 rounded">

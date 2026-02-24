@@ -222,16 +222,11 @@ export default function UsersPage() {
     <div className="p-8 max-w-4xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            👤
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Equipe</h2>
-            <p className="text-dark-400 text-sm">
-              Gerencie os membros da sua organizacao
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Equipe</h2>
+          <p className="text-dark-400 text-sm">
+            Gerencie os membros da sua organizacao
+          </p>
         </div>
 
         <button onClick={openInvite} className="btn-primary text-sm px-4 py-2" aria-label="Convidar novo membro">
@@ -296,7 +291,6 @@ export default function UsersPage() {
       {/* Users table */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <span className="text-base">👥</span>
           <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
             Membros
           </h3>
@@ -498,9 +492,7 @@ export default function UsersPage() {
 
       {/* Info card */}
       <div className="mt-6 card bg-dark-800/30 border-dark-700/40">
-        <div className="flex items-start gap-3">
-          <span className="text-lg mt-0.5">ℹ️</span>
-          <div className="text-sm text-dark-400 space-y-1">
+        <div className="text-sm text-dark-400 space-y-1">
             <p>
               <strong className="text-dark-300">OWNER</strong> e <strong className="text-dark-300">ADMIN</strong> tem acesso total a operacao.
             </p>
@@ -509,7 +501,6 @@ export default function UsersPage() {
               <strong className="text-dark-300 ml-2">AUDITOR</strong> tem acesso somente leitura.
               <strong className="text-dark-300 ml-2">AGENTE</strong> visualiza apenas seus subclubes vinculados.
             </p>
-          </div>
         </div>
       </div>
     </div>

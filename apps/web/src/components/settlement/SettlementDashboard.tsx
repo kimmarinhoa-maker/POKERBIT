@@ -20,31 +20,31 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
         <DashKpiCard
           label="Jogadores"
           value={String(t.players)}
-          icon="👥"
+          icon="users"
           borderColor="bg-blue-500"
         />
         <DashKpiCard
           label="Agentes"
           value={String(t.agents)}
-          icon="🏢"
+          icon="building"
           borderColor="bg-purple-500"
         />
         <DashKpiCard
           label="Rake Total"
           value={formatBRL(t.rake)}
-          icon="🎰"
+          icon="game"
           borderColor="bg-poker-500"
         />
         <DashKpiCard
           label="GGR Total"
           value={formatBRL(t.ggr)}
-          icon="🎯"
+          icon="target"
           borderColor="bg-purple-500"
         />
         <DashKpiCard
           label="Resultado Total"
           value={formatBRL(t.resultado)}
-          icon="📈"
+          icon="trend"
           borderColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
           textColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
         />
@@ -52,7 +52,7 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
 
       {/* Cards por subclube */}
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span>🏢</span> Subclubes
+        Subclubes
         <span className="text-sm font-normal text-dark-400">({subclubs.length})</span>
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -63,7 +63,7 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
             className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 transition-all duration-200 cursor-pointer text-left group"
           >
             {/* Borda superior colorida */}
-            <div className={`h-1 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+            <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
@@ -115,11 +115,8 @@ function DashKpiCard({ label, value, icon, borderColor, textColor }: {
 }) {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-      <div className={`h-1 ${borderColor}`} />
-      <div className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center text-xl shrink-0">
-          {icon}
-        </div>
+      <div className={`h-0.5 ${borderColor}`} />
+      <div className="p-4">
         <div className="min-w-0">
           <p className="text-[10px] text-dark-400 uppercase tracking-wider">{label}</p>
           <p className={`text-lg font-bold font-mono truncate ${textColor || 'text-white'}`}>{value}</p>

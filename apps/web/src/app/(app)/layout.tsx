@@ -5,13 +5,31 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider, useAuth } from '@/lib/useAuth';
+import {
+  LayoutDashboard,
+  Upload,
+  Clock,
+  Receipt,
+  Building2,
+  Eye,
+  Trophy,
+  Wallet,
+  Users,
+  Link as LinkIcon,
+  Settings,
+  UserCog,
+  Spade,
+  Menu,
+  LogOut,
+  type LucideIcon,
+} from 'lucide-react';
 
 // ─── Sidebar structure ──────────────────────────────────────────────
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   disabled?: boolean;
   roles?: string[];
 }
@@ -26,37 +44,35 @@ const navSections: NavSection[] = [
   {
     label: 'OPERACAO',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: '\u{1F4CA}' },
-      { href: '/import',    label: 'Importar',  icon: '\u{1F4E4}', roles: ['OWNER', 'ADMIN'] },
-      { href: '/import/history', label: 'Historico', icon: '\u{1F4CB}', roles: ['OWNER', 'ADMIN'] },
-      { href: '/lancamentos', label: 'Lancamentos', icon: '\u{1F4CB}', roles: ['OWNER', 'ADMIN'] },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/import',    label: 'Importar',  icon: Upload, roles: ['OWNER', 'ADMIN'] },
+      { href: '/import/history', label: 'Historico', icon: Clock, roles: ['OWNER', 'ADMIN'] },
+      { href: '/lancamentos', label: 'Lancamentos', icon: Receipt, roles: ['OWNER', 'ADMIN'] },
     ],
   },
   {
     label: 'FECHAMENTOS',
     items: [
-      { href: '/s', label: 'Clubes', icon: '\u{1F3E2}' },
-      { href: '/overview', label: 'Visao Geral', icon: '\u{1F465}' },
-      { href: '/liga-global', label: 'Liga Global', icon: '\u{1F3C6}' },
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: '\u{1F4B0}' },
+      { href: '/s', label: 'Clubes', icon: Building2 },
+      { href: '/overview', label: 'Visao Geral', icon: Eye },
+      { href: '/liga-global', label: 'Liga Global', icon: Trophy },
+      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet },
     ],
   },
   {
     label: 'CADASTRO',
     items: [
-      { href: '/players', label: 'Jogadores', icon: '\u{1F465}', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { href: '/clubs',   label: 'Clubes',    icon: '\u{1F3E2}', roles: ['OWNER', 'ADMIN'] },
-      { href: '/links',   label: 'Vincular',  icon: '\u{1F517}', roles: ['OWNER', 'ADMIN'] },
+      { href: '/players', label: 'Jogadores', icon: Users, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { href: '/clubs',   label: 'Clubes',    icon: Building2, roles: ['OWNER', 'ADMIN'] },
+      { href: '/links',   label: 'Vincular',  icon: LinkIcon, roles: ['OWNER', 'ADMIN'] },
     ],
   },
   {
     label: 'CONFIGURACOES',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { href: '/config/estrutura', label: 'Estrutura', icon: '\u{1F3D7}\uFE0F' },
-      { href: '/config/pagamentos', label: 'Pagamentos', icon: '\u{1F4B3}' },
-      { href: '/config/taxas', label: 'Taxas', icon: '\u{1F4B2}' },
-      { href: '/config/users', label: 'Equipe', icon: '\u{1F464}' },
+      { href: '/config', label: 'Configuracao', icon: Settings },
+      { href: '/config/users', label: 'Equipe', icon: UserCog },
     ],
   },
 ];
@@ -68,6 +84,7 @@ function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   if (href === '/s') return pathname.startsWith('/s');
   if (href === '/import') return pathname === '/import';
+  if (href === '/config') return pathname === '/config';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
@@ -83,7 +100,16 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  if (loading || !user) return null;
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark-950">
+        <div className="animate-pulse flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-dark-800" />
+          <div className="h-2 w-24 bg-dark-800 rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -94,13 +120,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           className="text-dark-300 hover:text-white p-1.5 -ml-1 transition-colors"
           aria-label="Abrir menu"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="w-6 h-6" />
         </button>
         <Link href="/dashboard" className="flex items-center gap-2 ml-3">
           <div className="w-7 h-7 rounded-lg bg-poker-600 flex items-center justify-center">
-            <span className="text-sm">{'\u{1F0CF}'}</span>
+            <Spade className="w-4 h-4 text-white" />
           </div>
           <span className="font-bold text-white text-sm">Poker Manager</span>
         </Link>
@@ -126,7 +150,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="p-6 border-b border-dark-700">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-poker-600 flex items-center justify-center">
-              <span className="text-xl">{'\u{1F0CF}'}</span>
+              <Spade className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-bold text-white text-lg leading-tight">Poker Manager</h1>
@@ -151,13 +175,15 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                   </p>
                   <div className="space-y-0.5">
                     {visibleItems.map((item) => {
+                      const Icon = item.icon;
+
                       if (item.disabled) {
                         return (
                           <span
                             key={item.label}
                             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-dark-600 cursor-not-allowed"
                           >
-                            <span className="text-lg w-5 text-center">{item.icon}</span>
+                            <Icon className="w-4 h-4 flex-shrink-0" />
                             {item.label}
                             <span className="ml-auto text-[9px] text-dark-600 uppercase">Em breve</span>
                           </span>
@@ -175,7 +201,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                               : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
                           }`}
                         >
-                          <span className="text-lg w-5 text-center">{item.icon}</span>
+                          <Icon className="w-4 h-4 flex-shrink-0" />
                           {item.label}
                         </Link>
                       );
@@ -197,11 +223,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
             <button
               onClick={logout}
-              className="text-dark-400 hover:text-red-400 transition-colors text-sm"
+              className="text-dark-400 hover:text-red-400 transition-colors"
               title="Sair"
               aria-label="Sair da conta"
             >
-              {'\u23FB'}
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>

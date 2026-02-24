@@ -144,7 +144,7 @@ export default function CrossClubPage() {
         case 'name': cmp = a.agent_name.localeCompare(b.agent_name); break;
         case 'players': cmp = a.player_count - b.player_count; break;
         case 'rake': cmp = a.rake_total - b.rake_total; break;
-        case 'resultado': cmp = Math.abs(a.resultado) - Math.abs(b.resultado); break;
+        case 'resultado': cmp = a.resultado - b.resultado; break;
         case 'commission': cmp = a.commission - b.commission; break;
         case 'subclubs': cmp = a.subclubs.length - b.subclubs.length; break;
       }
@@ -238,7 +238,6 @@ export default function CrossClubPage() {
       <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
         {weekNotFound ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl mb-4">📅</div>
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
             <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
           </div>
@@ -305,7 +304,6 @@ export default function CrossClubPage() {
         {/* Agent table */}
         {sortedAgents.length === 0 ? (
           <div className="card text-center py-16">
-            <div className="text-5xl mb-4">🤝</div>
             <h3 className="text-xl font-bold text-white mb-2">Nenhum agente encontrado</h3>
             <p className="text-dark-400 text-sm">Ajuste os filtros ou importe dados</p>
           </div>
@@ -460,7 +458,7 @@ function KpiCard({ label, value, borderColor, textColor }: {
 }) {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-      <div className={`h-1 ${borderColor}`} />
+      <div className={`h-0.5 ${borderColor}`} />
       <div className="p-3 text-center">
         <p className="text-[10px] text-dark-400 uppercase tracking-wider mb-1">{label}</p>
         <p className={`text-lg font-bold font-mono ${textColor || 'text-white'}`}>{value}</p>

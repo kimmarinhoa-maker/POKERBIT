@@ -71,7 +71,8 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     try {
       const res = await listLedger(weekStart);
       if (res.success) setEntries(res.data || []);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao carregar movimentacoes do ledger', 'error');
     } finally {
       setLoading(false);
@@ -109,7 +110,8 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           prev.map(e => e.id === entryId ? { ...e, is_reconciled: !currentValue } : e)
         );
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao alterar conciliacao', 'error');
     } finally {
       setToggling(null);
@@ -123,16 +125,16 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
   }
 
   // Sub-tab config
-  const subTabs: { key: SubTab; icon: string; label: string; count?: number }[] = [
-    { key: 'chippix', icon: '🎰', label: 'ChipPix' },
-    { key: 'ofx', icon: '🏦', label: 'OFX (Bancos)' },
-    { key: 'ledger', icon: '📒', label: 'Ledger', count: kpis.total },
+  const subTabs: { key: SubTab; label: string; count?: number }[] = [
+    { key: 'chippix', label: 'ChipPix' },
+    { key: 'ofx', label: 'OFX (Bancos)' },
+    { key: 'ledger', label: 'Ledger', count: kpis.total },
   ];
 
   return (
     <div>
       {/* Sub-tabs */}
-      <div className="flex gap-1 mb-5 border-b border-dark-700/50 pb-3" role="tablist" aria-label="Sub-abas de conciliacao">
+      <div className="flex gap-1 mb-5" role="tablist" aria-label="Sub-abas de conciliacao">
         {subTabs.map(tab => (
           <button
             key={tab.key}
@@ -140,13 +142,13 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
             aria-selected={activeSubTab === tab.key}
             aria-label={tab.label}
             onClick={() => setActiveSubTab(tab.key)}
-            className={`px-4 py-2 rounded-t text-sm font-semibold transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all duration-200 ${
               activeSubTab === tab.key
-                ? 'bg-dark-800 text-white border-b-2 border-poker-500'
-                : 'text-dark-400 hover:text-dark-200'
+                ? 'bg-poker-900/20 border-poker-500 text-poker-400'
+                : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
             }`}
           >
-            {tab.icon} {tab.label}
+            {tab.label}
             {tab.count !== undefined && (
               <span className="ml-1.5 text-xs text-dark-500">({tab.count})</span>
             )}
@@ -416,7 +418,10 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
     try {
       const res = await getChipPixLedgerSummary(weekStart);
       if (res.success && res.data) setLedgerStats(res.data);
-    } catch { /* silent — verificador just won't show */ }
+    } catch (err) {
+      console.error(err);
+      /* silent — verificador just won't show */
+    }
   }, [weekStart]);
 
   const loadTxns = useCallback(async () => {
@@ -424,7 +429,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
     try {
       const res = await listChipPixTransactions(weekStart);
       if (res.success) setTxns(res.data || []);
-    } catch { toast('Erro ao carregar transações ChipPix', 'error'); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao carregar transações ChipPix', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [weekStart]);
 
   useEffect(() => { loadTxns(); }, [loadTxns]);
@@ -565,7 +575,10 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
               match.nickname || match.external_player_id
             );
             if (res.success) count++;
-          } catch { /* continue */ }
+          } catch (err) {
+            console.error(err);
+            /* continue */
+          }
         }
       }
       if (count > 0) {
@@ -575,7 +588,8 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
       } else {
         toast('Nenhum jogador encontrado para vincular', 'info');
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao auto-vincular', 'error');
     } finally {
       setAutoLinking(false);
@@ -591,7 +605,10 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
         setLinkForm({ entity_id: '', entity_name: '' });
         loadTxns();
       }
-    } catch { toast('Erro ao vincular', 'error'); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao vincular', 'error');
+    }
   }
 
   async function handleUnlink(txId: string) {
@@ -615,7 +632,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
         loadLedgerSummary();
         onDataChange();
       }
-    } catch { toast('Erro ao aplicar', 'error'); } finally { setApplying(false); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao aplicar', 'error');
+    } finally {
+      setApplying(false);
+    }
   }
 
   async function handleClear() {
@@ -623,19 +645,24 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
     if (deletable.length === 0) return;
     if (!confirm(`Limpar ${deletable.length} registros não aplicados?`)) return;
     for (const tx of deletable) {
-      try { await deleteChipPixTransaction(tx.id); } catch { /* continue */ }
+      try {
+        await deleteChipPixTransaction(tx.id);
+      } catch (err) {
+        console.error(err);
+        /* continue */
+      }
     }
     toast(`${deletable.length} registros removidos`, 'success');
     loadTxns();
   }
 
-  const filterBtns: { key: ChipPixFilter; label: string; count: number; icon: string }[] = [
-    { key: 'all', label: 'Todos', count: txns.length, icon: '📋' },
-    { key: 'linked', label: 'Vinculados', count: kpis.linked, icon: '✅' },
-    { key: 'locked', label: 'Lockados', count: kpis.linked + kpis.applied, icon: '🔒' },
-    { key: 'applied', label: 'Aplicados', count: kpis.applied, icon: '📌' },
-    { key: 'pending', label: 'Pendentes', count: kpis.pending, icon: '⏳' },
-    { key: 'ignored', label: 'Ignorados', count: kpis.ignored, icon: '🔴' },
+  const filterBtns: { key: ChipPixFilter; label: string; count: number }[] = [
+    { key: 'all', label: 'Todos', count: txns.length },
+    { key: 'linked', label: 'Vinculados', count: kpis.linked },
+    { key: 'locked', label: 'Lockados', count: kpis.linked + kpis.applied },
+    { key: 'applied', label: 'Aplicados', count: kpis.applied },
+    { key: 'pending', label: 'Pendentes', count: kpis.pending },
+    { key: 'ignored', label: 'Ignorados', count: kpis.ignored },
   ];
 
   if (loading) {
@@ -741,13 +768,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
       {/* ── Search + Filters ─────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="relative">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-500 text-[10px] pointer-events-none">🔍</span>
           <input
             type="text"
             placeholder="Buscar por ID ou nome..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="bg-dark-800 border border-dark-700 text-dark-100 rounded-lg pl-7 pr-3 py-1.5 text-xs w-52 focus:border-poker-500 focus:outline-none"
+            className="bg-dark-800 border border-dark-700 text-dark-100 rounded-lg px-3 py-1.5 text-xs w-52 focus:border-poker-500 focus:outline-none"
           />
         </div>
         <div className="flex gap-1">
@@ -761,7 +787,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
                   : 'bg-dark-800 border-dark-700 text-dark-500 hover:text-dark-300'
               }`}
             >
-              {fb.icon} {fb.label} <span className="opacity-50 text-[10px]">{fb.count}</span>
+              {fb.label} <span className="opacity-50 text-[10px]">{fb.count}</span>
             </button>
           ))}
         </div>
@@ -770,7 +796,6 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
       {/* ── Content ─────────────────────────────────────────────── */}
       {txns.length === 0 ? (
         <div className="text-center py-12 text-dark-500">
-          <div className="text-4xl mb-3">🎰</div>
           <h3 className="text-sm font-bold text-dark-300 mb-1">Nenhum extrato ChipPix carregado</h3>
           <p className="text-xs leading-relaxed">
             Clique em <strong className="text-emerald-500">Importar</strong> para carregar o extrato.
@@ -780,7 +805,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
         <>
           {/* ── Table ──────────────────────────────────────────── */}
           <div className="border border-dark-700 rounded-lg overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto">
+            <div>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-dark-800/50">
@@ -839,7 +864,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
                           ) : tx.entity_name && tx.status === 'linked' ? (
                             <div className="flex items-center gap-1.5">
                               <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
-                                ✅ {tx.entity_name}
+                                {tx.entity_name}
                               </span>
                               {isDraft && (
                                 <button onClick={() => handleUnlink(tx.id)} className="text-[10px] text-dark-600 hover:text-yellow-400">✕</button>
@@ -847,7 +872,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
                             </div>
                           ) : tx.status === 'applied' ? (
                             <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
-                              🔒 {tx.entity_name || 'Lockado'}
+                              {tx.entity_name || 'Lockado'}
                             </span>
                           ) : tx.status === 'ignored' ? (
                             <div className="flex items-center gap-1.5">
@@ -944,7 +969,12 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
     try {
       const res = await listOFXTransactions(weekStart);
       if (res.success) setTxns(res.data || []);
-    } catch { toast('Erro ao carregar transacoes OFX', 'error'); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao carregar transacoes OFX', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, [weekStart]);
 
   useEffect(() => { loadTxns(); }, [loadTxns]);
@@ -995,7 +1025,10 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
         setLinkForm({ entity_id: '', entity_name: '' });
         loadTxns();
       }
-    } catch { toast('Erro ao vincular transacao OFX', 'error'); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao vincular transacao OFX', 'error');
+    }
   }
 
   async function handleUnlink(txId: string) {
@@ -1024,7 +1057,12 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
         loadTxns();
         onDataChange();
       }
-    } catch { toast('Erro ao aplicar transacoes OFX', 'error'); } finally { setApplying(false); }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao aplicar transacoes OFX', 'error');
+    } finally {
+      setApplying(false);
+    }
   }
 
   // ─── Auto-match handlers ────────────────────────────────────────
@@ -1061,7 +1099,10 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
         setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
         loadTxns();
       }
-    } catch { toast('Erro ao aceitar sugestao', 'error'); } finally {
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao aceitar sugestao', 'error');
+    } finally {
       setAcceptingId(null);
     }
   }
@@ -1086,7 +1127,10 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
           accepted++;
           setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
         }
-      } catch { /* continue on error */ }
+      } catch (err) {
+        console.error(err);
+        /* continue on error */
+      }
     }
     setBulkAccepting(false);
     setFeedback({ type: 'success', msg: `${accepted} transacoes vinculadas automaticamente` });
@@ -1126,7 +1170,7 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
             uploading ? 'border-poker-500/50 bg-poker-900/10' : 'border-dark-600/50 hover:border-dark-500'
           }`}>
             <input type="file" accept=".ofx,.OFX" onChange={handleUpload} className="hidden" disabled={uploading} aria-label="Importar arquivo OFX" />
-            <span className="text-3xl mb-2">{uploading ? '⏳' : '📥'}</span>
+            <span className="text-sm mb-2 text-dark-400">{uploading ? 'Aguarde...' : ''}</span>
             <span className="text-sm text-dark-300 font-medium">
               {uploading ? 'Importando...' : 'Importar OFX'}
             </span>
@@ -1351,7 +1395,6 @@ function OFXTab({ weekStart, isDraft, onDataChange, agents, players }: {
         </div>
       ) : txns.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-5xl mb-4">🏦</div>
           <h3 className="text-xl font-bold text-white mb-2">Nenhuma transacao OFX</h3>
           <p className="text-dark-400 text-sm max-w-md mx-auto">
             Importe um arquivo OFX do seu banco para comecar a conciliacao
@@ -1573,7 +1616,7 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, togglin
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4">
         {(['all', 'reconciled', 'pending'] as FilterMode[]).map(mode => {
-          const labels: Record<FilterMode, string> = { all: 'Todas', reconciled: '✅ Conciliadas', pending: '⚠️ Pendentes' };
+          const labels: Record<FilterMode, string> = { all: 'Todas', reconciled: 'Conciliadas', pending: 'Pendentes' };
           const counts: Record<FilterMode, number> = { all: kpis.total, reconciled: kpis.reconciled, pending: kpis.pending };
           return (
             <button
@@ -1598,7 +1641,6 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, togglin
         </div>
       ) : entries.length === 0 ? (
         <div className="card text-center py-12">
-          <div className="text-4xl mb-3">📒</div>
           <p className="text-dark-400 mb-2">
             Nenhuma movimentacao {filter !== 'all' ? `${filter === 'reconciled' ? 'conciliada' : 'pendente'}` : ''}
           </p>

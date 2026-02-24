@@ -81,16 +81,11 @@ export default function PlayersPage() {
     <div className="p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            👥
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Jogadores</h2>
-            <p className="text-dark-400 text-sm">
-              {meta.total || 0} jogadores cadastrados
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Jogadores</h2>
+          <p className="text-dark-400 text-sm">
+            {meta.total || 0} jogadores cadastrados
+          </p>
         </div>
       </div>
 
@@ -153,7 +148,6 @@ export default function PlayersPage() {
         </div>
       ) : players.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-5xl mb-4">👥</div>
           <h3 className="text-xl font-bold text-white mb-2">
             {search ? 'Nenhum resultado' : 'Nenhum jogador'}
           </h3>

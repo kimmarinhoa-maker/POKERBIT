@@ -1,3 +1,8 @@
+/** Round to 2 decimal places (financial precision) */
+export function round2(v: number): number {
+  return Math.round((v + Number.EPSILON) * 100) / 100;
+}
+
 export function formatCurrency(value: number): string {
   const abs = Math.abs(value);
   const formatted = abs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

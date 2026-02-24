@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { formatCurrency, calcDelta } from '@/lib/formatters';
+import { formatCurrency, calcDelta, round2 } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ClubCard from '@/components/dashboard/ClubCard';
@@ -15,8 +15,6 @@ import { useAuth } from '@/lib/useAuth';
 import type { ClubeData, ChartDataPoint } from '@/types/dashboard';
 
 // ─── helpers ──────────────────────────────────────────────────────
-function round2(v: number) { return Math.round((v + Number.EPSILON) * 100) / 100; }
-
 function formatDDMM(iso: string) {
   const [, m, dd] = iso.split('-');
   return `${dd}/${m}`;
@@ -449,10 +447,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {d && !notFoundEmpty && isAdmin && (
-          <button className="btn-primary">
+        {d && !notFoundEmpty && isAdmin && d.settlement?.status === 'DRAFT' && (
+          <Link
+            href={`/s/${d.settlement?.id}`}
+            className="btn-primary flex items-center gap-2"
+          >
             Finalizar Semana {'\u2192'}
-          </button>
+          </Link>
         )}
       </div>
 
@@ -466,7 +467,6 @@ export default function DashboardPage() {
       {/* ── EMPTY STATE ── */}
       {!loading && notFoundEmpty && (
         <div className="flex flex-col items-center justify-center py-32">
-          <div className="text-6xl mb-6">📅</div>
           <h2 className="text-xl font-bold text-dark-100 mb-2">Nenhum fechamento encontrado</h2>
           <p className="text-dark-400 mb-6">
             Nao existe fechamento importado para o periodo selecionado.
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                 }`}>
                   <div className="p-5">
                     <div className="text-[10px] font-bold text-dark-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <span>{'\u{1F3C6}'}</span> Fechamento Semana
+                      Fechamento Semana
                     </div>
 
                     <div className={`font-mono text-2xl font-semibold mb-1 ${

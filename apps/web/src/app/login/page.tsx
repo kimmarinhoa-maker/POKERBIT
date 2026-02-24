@@ -44,7 +44,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-poker-500 to-poker-700 mb-5 shadow-lg shadow-poker-900/30">
-            <span className="text-4xl">🃏</span>
+            <span className="text-2xl font-bold text-white">PM</span>
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Poker Manager</h1>
           <p className="text-dark-400 mt-2 text-sm">Sistema de Gestao Financeira</p>
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors text-sm"
                 tabIndex={-1}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
           </div>

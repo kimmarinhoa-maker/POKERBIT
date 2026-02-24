@@ -15,6 +15,11 @@
 import { supabaseAdmin } from '../config/supabase';
 import type { SettlementStatus } from '../types';
 
+// ─── normName: lowercase + remove acentos para matching robusto ──────
+function normName(s: string): string {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 // ─── round2: REGRA DE OURO ──────────────────────────────────────────
 function round2(v: number): number {
   return Math.round((v + Number.EPSILON) * 100) / 100;
@@ -127,8 +132,8 @@ export class SettlementService {
 
     if (sErr || !settlement) return null;
 
-    // ── Fetch paralelo: players + agents + fees + adjustments + carry + ledger
-    const [playersRes, agentsRes, feesRes, adjRes, carryRes, ledgerRes] = await Promise.all([
+    // ── Fetch paralelo: players + agents + fees + adjustments + carry + ledger + agent orgs
+    const [playersRes, agentsRes, feesRes, adjRes, carryRes, ledgerRes, agentOrgsRes] = await Promise.all([
       supabaseAdmin
         .from('player_week_metrics')
         .select('*')
@@ -165,12 +170,44 @@ export class SettlementService {
         .select('entity_id, dir, amount, method, source, description, created_at')
         .eq('tenant_id', tenantId)
         .eq('week_start', settlement.week_start),
+      // Agent orgs para is_direct flag
+      supabaseAdmin
+        .from('organizations')
+        .select('id, name, metadata')
+        .eq('tenant_id', tenantId)
+        .eq('type', 'AGENT')
+        .eq('is_active', true),
     ]);
 
     const players = playersRes.data || [];
     const agents = agentsRes.data || [];
     const feeRows = feesRes.data || [];
     const adjRows = adjRes.data || [];
+
+    // ── Build is_direct map: org_id + normalized name ──────────────────
+    const directByOrgId = new Map<string, boolean>();
+    const directByName = new Map<string, boolean>();
+    for (const org of (agentOrgsRes.data || [])) {
+      const isDirect = org.metadata?.is_direct === true;
+      if (isDirect) {
+        directByOrgId.set(org.id, true);
+        directByName.set(normName(org.name), true);
+      }
+    }
+    // Annotate each agent metric with is_direct
+    for (const a of agents) {
+      (a as any).is_direct =
+        (a.agent_id && directByOrgId.has(a.agent_id)) ||
+        directByName.has(normName(a.agent_name || '')) ||
+        false;
+    }
+    // Annotate each player with agent's is_direct
+    for (const p of players) {
+      (p as any).agent_is_direct =
+        (p.agent_id && directByOrgId.has(p.agent_id)) ||
+        directByName.has(normName(p.agent_name || '')) ||
+        false;
+    }
 
     // ── Build carry-forward map: entity_id → amount ──────────────────
     const carryMap = new Map<string, number>();
@@ -218,6 +255,20 @@ export class SettlementService {
     }
 
     // ── Passo B: group by subclub ──────────────────────────────────
+    // Pre-build name→id mapping so rows with/without subclub_id merge correctly
+    const subclubNameToId = new Map<string, string>();
+    for (const p of players) {
+      if (p.subclub_id && p.subclub_name) subclubNameToId.set(p.subclub_name, p.subclub_id);
+    }
+    for (const a of agents) {
+      if (a.subclub_id && a.subclub_name) subclubNameToId.set(a.subclub_name, a.subclub_id);
+    }
+    const subKey = (row: any): string => {
+      if (row.subclub_id) return row.subclub_id;
+      const name = row.subclub_name || 'OUTROS';
+      return subclubNameToId.get(name) || `name:${name}`;
+    };
+
     const bySub = new Map<string, {
       id: string;
       name: string;
@@ -226,10 +277,10 @@ export class SettlementService {
     }>();
 
     for (const p of players) {
-      const key = p.subclub_id || `name:${p.subclub_name || 'OUTROS'}`;
+      const key = subKey(p);
       if (!bySub.has(key)) {
         bySub.set(key, {
-          id: p.subclub_id || '',
+          id: p.subclub_id || subclubNameToId.get(p.subclub_name || '') || '',
           name: p.subclub_name || 'OUTROS',
           players: [],
           agents: [],
@@ -239,10 +290,10 @@ export class SettlementService {
     }
 
     for (const a of agents) {
-      const key = a.subclub_id || `name:${a.subclub_name || 'OUTROS'}`;
+      const key = subKey(a);
       if (!bySub.has(key)) {
         bySub.set(key, {
-          id: a.subclub_id || '',
+          id: a.subclub_id || subclubNameToId.get(a.subclub_name || '') || '',
           name: a.subclub_name || 'OUTROS',
           players: [],
           agents: [],
@@ -304,12 +355,48 @@ export class SettlementService {
         'Neutro';
 
       // ── Enriquecer cada jogador com carry + pagamentos ────────────
+      // Build agent lookup: agent_name → IDs from agent_week_metrics
+      // Needed because ledger entries store entity_id as agent_week_metrics.id
+      // and carry_forward stores entity_id as organizations.id
+      const agentIdLookup = new Map<string, { orgId: string | null; metricId: string }>();
+      for (const a of sc.agents) {
+        if (!agentIdLookup.has(a.agent_name)) {
+          agentIdLookup.set(a.agent_name, {
+            orgId: a.agent_id || null,
+            metricId: a.id,
+          });
+        }
+      }
+
+      // Track assigned agents: carry/ledger are per-agent, so only assign
+      // to the FIRST player of each agent to avoid duplication in sumTotals
+      const agentCarryAssigned = new Set<string>();
+
       for (const p of sc.players) {
-        // Chaves possíveis para match carry/ledger
+        // Player-specific keys (ChipPix per-player, etc.)
         const keys: string[] = [];
         if (p.player_id) keys.push(p.player_id);
-        if (p.external_player_id) keys.push(String(p.external_player_id));
+        if (p.external_player_id) {
+          const eid = String(p.external_player_id);
+          keys.push(eid);
+          keys.push(`cp_${eid}`);
+        }
         if (p.id) keys.push(p.id);
+
+        // Agent-level keys: only for the FIRST player of each agent
+        // to prevent carry/ledger duplication across all players of same agent
+        const agentKey = p.agent_name || '_NO_AGENT_';
+        if (!agentCarryAssigned.has(agentKey)) {
+          agentCarryAssigned.add(agentKey);
+          const agentInfo = agentIdLookup.get(p.agent_name || '');
+          if (agentInfo) {
+            if (agentInfo.orgId) keys.push(agentInfo.orgId);
+            keys.push(agentInfo.metricId);
+          }
+          if (p.agent_id && !keys.includes(p.agent_id)) {
+            keys.push(p.agent_id);
+          }
+        }
 
         // Saldo anterior (carry-forward)
         let saldoAnterior = 0;

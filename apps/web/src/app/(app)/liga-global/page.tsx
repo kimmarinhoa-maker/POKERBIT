@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 import ClubLogo from '@/components/ClubLogo';
@@ -22,10 +23,6 @@ interface SubclubData {
   totalLancamentos: number;
   acertoLiga: number;
   acertoDirecao: string;
-}
-
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
 }
 
 // ─── Page ───────────────────────────────────────────────────────────
@@ -111,16 +108,11 @@ export default function LigaGlobalPage() {
     <div className="p-8 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            🏆
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Liga Global</h2>
-            <p className="text-dark-400 text-sm">
-              Acerto consolidado de todos os subclubes
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Liga Global</h2>
+          <p className="text-dark-400 text-sm">
+            Acerto consolidado de todos os subclubes
+          </p>
         </div>
 
         {/* Week selector */}
@@ -144,7 +136,6 @@ export default function LigaGlobalPage() {
         </div>
       ) : subclubs.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-5xl mb-4">🏆</div>
           <h3 className="text-xl font-bold text-white mb-2">Nenhum subclube</h3>
           <p className="text-dark-400 text-sm">Selecione uma semana com dados importados</p>
         </div>

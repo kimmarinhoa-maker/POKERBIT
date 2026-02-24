@@ -147,6 +147,7 @@ router.patch(
   '/:id/agents/:agentId/payment-type',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
@@ -205,6 +206,11 @@ router.patch(
   }
 );
 
+// Helper: normalize name (lowercase + remove accents)
+function normName(s: string): string {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 // ─── POST /api/settlements/:id/sync-agents ──────────────────────────
 // Auto-cria organizacoes AGENT a partir dos agentes do settlement
 router.post(
@@ -230,37 +236,66 @@ router.post(
         return;
       }
 
-      // Buscar todos agent_week_metrics sem agent_id
-      const { data: metrics, error: mErr } = await supabaseAdmin
+      // Buscar TODOS agent_week_metrics deste settlement (inclui subclub_name)
+      const { data: allMetrics, error: mErr } = await supabaseAdmin
         .from('agent_week_metrics')
-        .select('id, agent_name, agent_id')
-        .eq('settlement_id', settlementId)
-        .is('agent_id', null);
+        .select('id, agent_name, agent_id, subclub_name')
+        .eq('settlement_id', settlementId);
 
       if (mErr) throw mErr;
-      if (!metrics || metrics.length === 0) {
-        res.json({ success: true, data: { created: 0, message: 'Todos agentes ja vinculados' } });
+      if (!allMetrics || allMetrics.length === 0) {
+        res.json({ success: true, data: { created: 0, fixed: 0, linked: 0, message: 'Nenhum metric encontrado' } });
         return;
+      }
+
+      // Buscar orgs SUBCLUB do tenant para mapear nome -> id
+      const { data: subclubOrgs } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name')
+        .eq('tenant_id', tenantId)
+        .eq('type', 'SUBCLUB')
+        .eq('is_active', true);
+
+      const subclubNameMap = new Map<string, string>();
+      for (const sc of (subclubOrgs || [])) {
+        subclubNameMap.set(normName(sc.name), sc.id);
       }
 
       // Buscar orgs AGENT existentes do tenant
       const { data: existingOrgs } = await supabaseAdmin
         .from('organizations')
-        .select('id, name')
+        .select('id, name, parent_id')
         .eq('tenant_id', tenantId)
         .eq('type', 'AGENT')
         .eq('is_active', true);
 
       const orgNameMap = new Map<string, string>();
+      const orgParentMap = new Map<string, string>(); // orgId -> current parent_id
       for (const org of (existingOrgs || [])) {
-        orgNameMap.set(org.name.toLowerCase(), org.id);
+        orgNameMap.set(normName(org.name), org.id);
+        orgParentMap.set(org.id, org.parent_id);
+      }
+
+      // Mapear agente -> subclub_name (pegar do primeiro metric encontrado)
+      const agentSubclubMap = new Map<string, string>();
+      for (const m of allMetrics) {
+        if (m.subclub_name && !agentSubclubMap.has(m.agent_name)) {
+          agentSubclubMap.set(m.agent_name, m.subclub_name);
+        }
       }
 
       let created = 0;
-      const uniqueNames = [...new Set(metrics.map(m => m.agent_name))];
+      let fixed = 0;
+      let linked = 0;
+      const uniqueNames = [...new Set(allMetrics.map(m => m.agent_name))];
 
       for (const agentName of uniqueNames) {
-        let orgId = orgNameMap.get(agentName.toLowerCase());
+        let orgId = orgNameMap.get(normName(agentName));
+
+        // Determinar parent_id correto (SUBCLUB, fallback CLUB)
+        const subclubName = agentSubclubMap.get(agentName);
+        const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName)))
+          || settlement.club_id;
 
         // Criar org AGENT se nao existe
         if (!orgId) {
@@ -268,7 +303,7 @@ router.post(
             .from('organizations')
             .insert({
               tenant_id: tenantId,
-              parent_id: settlement.club_id,
+              parent_id: correctParentId,
               type: 'AGENT',
               name: agentName,
             })
@@ -289,20 +324,51 @@ router.post(
             orgId = newOrg.id;
             created++;
           }
+        } else {
+          // Agente ja existe — corrigir parent_id se estiver apontando errado
+          const currentParent = orgParentMap.get(orgId);
+          if (currentParent && currentParent !== correctParentId && correctParentId !== settlement.club_id) {
+            await supabaseAdmin
+              .from('organizations')
+              .update({ parent_id: correctParentId })
+              .eq('id', orgId);
+            fixed++;
+          }
         }
 
-        // Vincular metrics ao org
+        // Vincular metrics sem agent_id
         if (orgId) {
-          await supabaseAdmin
+          const { count } = await supabaseAdmin
             .from('agent_week_metrics')
             .update({ agent_id: orgId })
             .eq('settlement_id', settlementId)
             .eq('agent_name', agentName)
-            .is('agent_id', null);
+            .is('agent_id', null)
+            .select('id', { count: 'exact', head: true });
+          linked += (count || 0);
+        }
+
+        // Corrigir subclub_id em agent_week_metrics que tem subclub_name mas nao tem subclub_id
+        if (correctParentId !== settlement.club_id) {
+          await supabaseAdmin
+            .from('agent_week_metrics')
+            .update({ subclub_id: correctParentId })
+            .eq('settlement_id', settlementId)
+            .eq('agent_name', agentName)
+            .is('subclub_id', null);
+          // Tambem corrigir player_week_metrics com mesmo subclub_name
+          if (subclubName) {
+            await supabaseAdmin
+              .from('player_week_metrics')
+              .update({ subclub_id: correctParentId })
+              .eq('settlement_id', settlementId)
+              .eq('subclub_name', subclubName)
+              .is('subclub_id', null);
+          }
         }
       }
 
-      res.json({ success: true, data: { created, linked: uniqueNames.length } });
+      res.json({ success: true, data: { created, fixed, linked } });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -315,6 +381,7 @@ router.patch(
   '/:id/agents/:agentId/rb-rate',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;

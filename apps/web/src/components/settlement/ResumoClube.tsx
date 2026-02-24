@@ -30,7 +30,8 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         `resumo_${safeName}_${weekStart || 'semana'}`,
         { backgroundColor: '#0f0f13' }
       );
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao exportar JPG', 'error');
     } finally {
       setExporting(false);
@@ -53,7 +54,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           disabled={exporting}
           className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
         >
-          {exporting ? '⏳ Exportando...' : '📷 Exportar JPG'}
+          {exporting ? 'Exportando...' : 'Exportar JPG'}
         </button>
       </div>
 
@@ -182,7 +183,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
       }`}>
         <div>
           <div className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-1">
-            🏆 ACERTO TOTAL LIGA
+            ACERTO TOTAL LIGA
           </div>
           <div className="text-xs text-dark-400">
             Resultado + Taxas + Lançamentos
@@ -219,7 +220,7 @@ function KpiCard({ label, sublabel, value, borderColor, textColor, highlight }: 
   highlight?: boolean;
 }) {
   return (
-    <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default ${
+    <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default ${
       highlight ? 'ring-1 ring-amber-700/30' : ''
     }`}>
       <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />

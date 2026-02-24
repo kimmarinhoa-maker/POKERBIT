@@ -50,7 +50,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     try {
       const res = await listLedger(weekStart);
       if (res.success) setEntries(res.data || []);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao carregar extrato', 'error');
     } finally {
       setLoading(false);
@@ -134,7 +135,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
         onDataChange();
         toast('Movimentacao excluida', 'success');
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao excluir movimentacao', 'error');
     }
   }
@@ -149,16 +151,11 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            📜
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Extrato Financeiro</h2>
-            <p className="text-dark-400 text-sm">
-              {entries.length} movimentacao{entries.length !== 1 ? 'es' : ''} na semana
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Extrato Financeiro</h2>
+          <p className="text-dark-400 text-sm">
+            {entries.length} movimentacao{entries.length !== 1 ? 'es' : ''} na semana
+          </p>
         </div>
 
         {isDraft && !showForm && canEdit && (
@@ -262,32 +259,32 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       {/* KPI Cards */}
       {!loading && entries.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-            <div className="h-1 bg-blue-500" />
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5bg-blue-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Movimentacoes</p>
               <p className="text-xl font-bold mt-1 font-mono text-blue-400">{entries.length}</p>
               <p className="text-[10px] text-dark-500">{totals.inCount} IN / {totals.outCount} OUT</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-            <div className="h-1 bg-poker-500" />
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5bg-poker-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Entradas (IN)</p>
               <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(totals.totalIn)}</p>
               <p className="text-[10px] text-dark-500">{totals.inCount} movimentacoes</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-            <div className="h-1 bg-red-500" />
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5bg-red-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saidas (OUT)</p>
               <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(totals.totalOut)}</p>
               <p className="text-[10px] text-dark-500">{totals.outCount} movimentacoes</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30">
-            <div className={`h-1 ${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className={`h-0.5${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo Liquido</p>
               <p className={`text-xl font-bold mt-1 font-mono ${totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}`}>{formatBRL(totals.net)}</p>
@@ -336,7 +333,6 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
         </div>
       ) : entries.length === 0 ? (
         <div className="card text-center py-12">
-          <div className="text-4xl mb-3">📜</div>
           <p className="text-dark-400 mb-2">Nenhuma movimentacao registrada</p>
           <p className="text-dark-500 text-sm">
             {isDraft ? 'Clique em "Nova Movimentacao" para adicionar' : 'Nenhum pagamento nesta semana'}

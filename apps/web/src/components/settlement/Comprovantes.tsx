@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { listLedger, getCarryForward, formatBRL } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 
@@ -77,10 +78,6 @@ interface AgentFinancials {
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
-
 function fmtDate(dt: string): string {
   return new Date(dt + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
@@ -129,7 +126,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       ]);
       if (ledgerRes.success) setEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao carregar comprovantes', 'error');
     } finally {
       setLoading(false);
@@ -137,6 +135,21 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   }, [weekStart, clubId]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
+
+  // Build direct set from backend-annotated is_direct flag (single source of truth)
+  // Same logic as Jogadores.tsx: agent.is_direct + player.agent_is_direct + SEM AGENTE
+  const directNameSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of agents) {
+      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+    }
+    for (const p of players) {
+      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+    }
+    set.add('sem agente');
+    set.add('(sem agente)');
+    return set;
+  }, [agents, players]);
 
   // Group players by agent name
   const playersByAgent = useMemo(() => {
@@ -168,11 +181,14 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
   // Compute financial data for each agent
   const agentFinancials: AgentFinancials[] = useMemo(() => {
-    return agents.map(agent => {
+    return agents.map(rawAgent => {
+      // Use backend-annotated is_direct (already set by settlement service)
+      const agent = { ...rawAgent, is_direct: directNameSet.has(rawAgent.agent_name.toLowerCase()) };
       const agPlayers = (playersByAgent.get(agent.agent_name) || [])
         .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
 
-      // Resolve ledger entries — try by agent_week_metrics.id and org id
+      // Resolve ledger entries — match by agent IDs + all player-level keys
+      // (mirrors backend settlement.service.ts broad-matching logic)
       const seen = new Set<string>();
       const agEntries: LedgerEntry[] = [];
       function add(list: LedgerEntry[] | undefined) {
@@ -181,8 +197,19 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           if (!seen.has(e.id)) { seen.add(e.id); agEntries.push(e); }
         }
       }
+      // Agent-level keys
       add(ledgerByEntity.get(agent.id));
       if (agent.agent_id) add(ledgerByEntity.get(agent.agent_id));
+      // Player-level keys (ChipPix stores as cp_<id>, OFX by player_id, etc.)
+      for (const p of agPlayers) {
+        if ((p as any).id) add(ledgerByEntity.get((p as any).id));
+        if ((p as any).player_id) add(ledgerByEntity.get((p as any).player_id));
+        if (p.external_player_id) {
+          const eid = String(p.external_player_id);
+          add(ledgerByEntity.get(eid));
+          add(ledgerByEntity.get(`cp_${eid}`));
+        }
+      }
 
       const ganhos = Number(agent.ganhos_total_brl) || 0;
       const rakeTotal = Number(agent.rake_total_brl) || 0;
@@ -202,15 +229,93 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         saldoAnterior, totalDevido, totalIn, totalOut, pago, pendente,
       };
     });
-  }, [agents, playersByAgent, ledgerByEntity]);
+  }, [agents, playersByAgent, ledgerByEntity, directNameSet]);
+
+  // Helper: check if agent is "direct" (same logic as Jogadores tab)
+  const isDirectAgent = useCallback((name: string) => {
+    return directNameSet.has(name.toLowerCase());
+  }, [directNameSet]);
 
   // Split by direct / normal
   const normalAgents = useMemo(() =>
-    agentFinancials.filter(d => !d.agent.is_direct), [agentFinancials]);
-  const directAgents = useMemo(() =>
-    agentFinancials.filter(d => d.agent.is_direct), [agentFinancials]);
+    agentFinancials.filter(d => !isDirectAgent(d.agent.agent_name)), [agentFinancials, isDirectAgent]);
 
-  const activeData = activeTab === 'agencias' ? normalAgents : directAgents;
+  // "Jogadores" tab: build individual player rows from ALL direct players
+  // Uses players array directly (same source as Jogadores.tsx) to avoid missing
+  // players whose agent_name has no matching agent_week_metrics entry
+  const directPlayerRows: AgentFinancials[] = useMemo(() => {
+    const rows: AgentFinancials[] = [];
+
+    for (const p of players) {
+      const agentName = p.agent_name || 'SEM AGENTE';
+      if (!directNameSet.has(agentName.toLowerCase())) continue;
+
+      const ganhos = Number(p.winnings_brl || 0);
+      const rakeTotal = Number(p.rake_total_brl || 0);
+      const rbJogador = Number(p.rb_value_brl || 0);
+      const resultado = Number(p.resultado_brl || 0);
+
+      // Match ledger entries for this specific player
+      const seen = new Set<string>();
+      const playerEntries: LedgerEntry[] = [];
+      function addP(list: LedgerEntry[] | undefined) {
+        if (!list) return;
+        for (const e of list) {
+          if (!seen.has(e.id)) { seen.add(e.id); playerEntries.push(e); }
+        }
+      }
+      if ((p as any).id) addP(ledgerByEntity.get((p as any).id));
+      if ((p as any).player_id) addP(ledgerByEntity.get((p as any).player_id));
+      if (p.external_player_id) {
+        const eid = String(p.external_player_id);
+        addP(ledgerByEntity.get(eid));
+        addP(ledgerByEntity.get(`cp_${eid}`));
+      }
+
+      // Carry-forward for this player
+      let saldoAnterior = 0;
+      const carryKeys = [(p as any).player_id, (p as any).id, p.external_player_id].filter(Boolean);
+      for (const k of carryKeys) {
+        if (carryMap[k]) { saldoAnterior = carryMap[k]; break; }
+      }
+
+      const totalDevido = round2(resultado + saldoAnterior);
+      const totalIn = playerEntries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = playerEntries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      const pago = round2(totalIn - totalOut);
+      const pendente = round2(totalDevido + pago);
+
+      // Lookup parent agent for payment_type
+      const parentAgent = agents.find(a => a.agent_name === agentName);
+
+      // Build a synthetic "agent" object representing this player
+      const playerAsAgent: AgentMetric = {
+        id: (p as any).id || `p_${p.external_player_id}`,
+        agent_id: (p as any).player_id || null,
+        agent_name: p.nickname || p.external_player_id || '???',
+        player_count: 1,
+        rake_total_brl: rakeTotal,
+        ganhos_total_brl: ganhos,
+        rb_rate: Number(p.rb_rate || 0),
+        commission_brl: rbJogador,
+        resultado_brl: resultado,
+        is_direct: true,
+        payment_type: parentAgent?.payment_type,
+      };
+
+      rows.push({
+        agent: playerAsAgent,
+        players: [p],
+        entries: playerEntries,
+        ganhos, rakeTotal, rbAgente: rbJogador, resultado,
+        saldoAnterior, totalDevido, totalIn, totalOut, pago, pendente,
+      });
+    }
+
+    return rows;
+  }, [players, agents, directNameSet, ledgerByEntity, carryMap]);
+
+  const activeData = activeTab === 'agencias' ? normalAgents : directPlayerRows;
 
   // Sort by absolute pendente (biggest first)
   const sortedData = useMemo(() =>
@@ -278,30 +383,45 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-          📄
-        </div>
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Comprovantes — {subclub.name}</h2>
           <p className="text-dark-400 text-sm">
             Demonstrativos por agente — Semana {fmtDate(weekStart)} a {fmtDate(weekEnd)}
           </p>
         </div>
+        <button
+          onClick={() => {
+            const withMov = filteredData.filter(d => Math.abs(d.pendente) > 0.01 || Math.abs(d.totalDevido) > 0.01);
+            if (withMov.length === 0) { toast('Nenhum agente com movimentacao', 'info'); return; }
+            toast(`Exportando ${withMov.length} comprovantes...`, 'info');
+            // Sequential export
+            let idx = 0;
+            function next() {
+              if (idx >= withMov.length) { toast('Todos exportados!', 'success'); return; }
+              setSelectedAgent(withMov[idx]);
+              idx++;
+            }
+            next();
+          }}
+          className="text-sm text-dark-400 hover:text-white border border-dark-700 hover:border-dark-600 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+        >
+          Exportar Todos
+        </button>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-blue-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-blue-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Agentes</p>
             <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.total}</p>
             <p className="text-[10px] text-dark-500">{activeTab === 'agencias' ? 'Agencias' : 'Diretos'}</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-red-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Pagar</p>
             <p className="text-xl font-bold mt-1 font-mono text-red-400">
@@ -309,8 +429,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             </p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-emerald-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-emerald-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Receber</p>
             <p className="text-xl font-bold mt-1 font-mono text-emerald-400">
@@ -318,8 +438,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             </p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className={`h-1 ${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
             <p className="text-sm font-bold mt-1 font-mono text-dark-200">
@@ -330,26 +450,32 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 mb-4 border-b border-dark-700/50 pb-3">
+      <div className="flex gap-1 mb-4">
         <button
           onClick={() => setActiveTab('agencias')}
-          className={`px-4 py-2 rounded-t text-sm font-semibold transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
             activeTab === 'agencias'
-              ? 'bg-dark-800 text-white border-b-2 border-poker-500'
-              : 'text-dark-400 hover:text-dark-200'
+              ? 'bg-poker-900/20 border-poker-500 text-poker-400'
+              : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          🤝 Agencias ({normalAgents.length})
+          Agências
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
+            {normalAgents.length}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab('diretos')}
-          className={`px-4 py-2 rounded-t text-sm font-semibold transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
             activeTab === 'diretos'
-              ? 'bg-dark-800 text-white border-b-2 border-poker-500'
-              : 'text-dark-400 hover:text-dark-200'
+              ? 'bg-poker-900/20 border-poker-500 text-poker-400'
+              : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          👤 Jogadores Diretos ({directAgents.length})
+          Jogadores
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
+            {directPlayerRows.length}
+          </span>
         </button>
       </div>
 
@@ -425,85 +551,102 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
         : null;
 
   return (
-    <div className={`card overflow-hidden transition-all ${!hasMov ? 'opacity-50' : ''}`}>
+    <div className={`card overflow-hidden transition-all border-l-4 ${
+      (agent.payment_type || 'fiado') === 'avista' ? 'border-l-emerald-500' : 'border-l-yellow-500'
+    } ${!hasMov ? 'opacity-50' : ''}`}>
       {/* Main row */}
-      <div className="flex items-center gap-3">
-        {/* Left: Avatar + Name */}
-        <div className="flex items-center gap-3 flex-shrink-0" style={{ minWidth: '200px' }}>
-          <div className="w-10 h-10 rounded-lg bg-dark-700/50 flex items-center justify-center text-xl flex-shrink-0">
-            {isDirect ? '👤' : '🤝'}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-white font-semibold text-sm">{agent.agent_name}</span>
-              {isDirect && (
-                <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">
-                  DIRETO
-                </span>
-              )}
-              {/* Payment Type Badge (read-only) */}
-              <span
-                className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
-                  (agent.payment_type || 'fiado') === 'avista'
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                    : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40'
-                }`}
-              >
-                {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
+      <div className="flex items-center gap-2">
+        {/* Col 1: Name + ID + jog count — fixed width */}
+        <div className="flex-shrink-0 min-w-0" style={{ width: '180px' }}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(agent.id);
+              }}
+              title="Clique para copiar ID"
+              className="text-[10px] font-mono text-dark-600 hover:text-dark-400 transition-colors cursor-pointer flex-shrink-0"
+            >
+              {agent.id.slice(0, 6)}
+            </button>
+            {isDirect && (
+              <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-bold flex-shrink-0">
+                DIR
               </span>
-              {statusBadge && (
-                <span className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}>
-                  {statusBadge.label}
-                </span>
-              )}
-            </div>
-            <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
+            )}
+          </div>
+          <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
+        </div>
+
+        {/* Col 2: Tipo de Fechamento — fixed width */}
+        <div className="flex-shrink-0" style={{ width: '130px' }}>
+          <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">Tipo de Fechamento</p>
+          <div className="flex items-center gap-1">
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
+                (agent.payment_type || 'fiado') === 'avista'
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-red-500/20 text-red-400 border-red-500/40'
+              }`}
+            >
+              {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
+            </span>
+            {statusBadge && (
+              <span className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}>
+                {statusBadge.label}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Center: Data columns */}
-        <div className="flex items-center gap-1 flex-1 justify-end">
-          <DataCol label="GANHOS" value={ganhos} />
+        {/* Col 3: Data columns — fixed equal widths */}
+        <div className="flex items-center flex-1 justify-end">
+          <DataCol label="GANHOS" value={ganhos} w={100} />
           <DataCol
             label={isDirect ? 'RB (Ind.)' : `RB AG. (${agent.rb_rate}%)`}
             value={rbAgente}
             customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
+            w={100}
           />
           <DataCol
             label="SALDO ANT."
             value={saldoAnterior}
             customColor="text-yellow-400"
             showZero
+            w={100}
           />
           <DataCol
             label="PAGO"
             value={pago}
             customColor="text-sky-400"
+            w={100}
           />
           <DataCol
             label="SALDO"
             value={pendente}
             isFinal
+            w={100}
           />
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Col 4: Actions — fixed */}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-1">
           {hasMov && (
             <button
               onClick={(e) => { e.stopPropagation(); onGenerateStatement(); }}
-              className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
+              className="text-xs px-3 py-1.5 whitespace-nowrap border border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
             >
-              📄 Comprovante
+              {Math.abs(pendente) < 0.01 && hasMov ? 'Comprovante Gerado' : 'Gerar Comprovante'}
             </button>
           )}
           <button
             onClick={onToggleExpand}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
-            className="btn-secondary text-xs px-3 py-1.5 whitespace-nowrap"
+            className="text-xs text-dark-400 hover:text-dark-200 whitespace-nowrap transition-colors"
           >
-            {isExpanded ? '▲ Recolher' : '▶ Detalhes'}
+            ▶ Detalhes
           </button>
         </div>
       </div>
@@ -515,7 +658,7 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
             {/* Financial summary */}
             <div>
               <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
-                🧮 Resumo Financeiro
+                Resumo Financeiro
               </h4>
               <div className="space-y-1.5 text-sm">
                 <FinRow label="Ganhos/Perdas" value={data.ganhos} />
@@ -536,7 +679,7 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
                 </div>
                 {hasPago && (
                   <>
-                    <FinRow label="💳 Pagamentos" value={data.pago} customColor="text-sky-400" />
+                    <FinRow label="Pagamentos" value={data.pago} customColor="text-sky-400" />
                     <div className="border-t-2 border-dark-700/30 pt-1.5">
                       <FinRow label="Saldo Final" value={data.pendente} bold large />
                     </div>
@@ -548,7 +691,7 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
             {/* Player table */}
             <div>
               <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
-                👥 Jogadores ({players.length})
+                Jogadores ({players.length})
               </h4>
               {players.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -594,21 +737,22 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
 
 // ─── Data Column (card row) ──────────────────────────────────────────
 
-function DataCol({ label, value, customColor, isFinal, tooltip, showZero }: {
+function DataCol({ label, value, customColor, isFinal, tooltip, showZero, w }: {
   label: string;
   value: number;
   customColor?: string;
   isFinal?: boolean;
   tooltip?: string;
   showZero?: boolean;
+  w?: number;
 }) {
   const hasValue = Math.abs(value) > 0.01 || showZero;
   const color = customColor || clr(value);
 
   return (
     <div
-      className={`text-center px-2 ${isFinal ? 'bg-dark-700/20 rounded-lg py-1' : ''}`}
-      style={{ minWidth: '80px' }}
+      className={`text-right flex-shrink-0 ${isFinal ? 'bg-dark-700/20 rounded-lg py-1 px-2' : 'px-1'}`}
+      style={{ width: w ? `${w}px` : undefined, minWidth: w ? undefined : '60px' }}
       title={tooltip}
     >
       <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">{label}</p>
@@ -670,7 +814,8 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
       link.download = `comprovante_${safeName}_${weekStart}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro ao exportar JPG', 'error');
     } finally {
       setExporting(false);
@@ -694,14 +839,14 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
             aria-label="Exportar como JPG"
             className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
           >
-            {exporting ? '⏳ Exportando...' : '📷 Exportar JPG'}
+            {exporting ? 'Exportando...' : 'Exportar JPG'}
           </button>
           <button
             onClick={() => window.print()}
             aria-label="Imprimir comprovante"
             className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
           >
-            🖨️ Imprimir
+            Imprimir
           </button>
         </div>
       </div>
@@ -742,7 +887,7 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
         {/* Financial summary */}
         <div className="bg-dark-800/30 print:bg-gray-50 rounded-lg p-4 mb-6">
           <h4 className="text-xs font-bold text-dark-400 print:text-gray-600 uppercase tracking-wider mb-3">
-            🧮 Resumo Financeiro
+            Resumo Financeiro
           </h4>
           <div className="space-y-2 text-sm">
             <PrintFinRow label="Ganhos/Perdas" value={data.ganhos} />
@@ -762,7 +907,7 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
             </div>
             {Math.abs(data.pago) > 0.01 && (
               <>
-                <PrintFinRow label="💳 Pagamentos" value={data.pago} />
+                <PrintFinRow label="Pagamentos" value={data.pago} />
                 <div className="border-t-2 border-dark-700/30 print:border-gray-400 pt-2">
                   <PrintFinRow label="Saldo Final" value={data.pendente} bold large />
                 </div>
@@ -879,7 +1024,7 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
             </div>
             <div>
               <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">
-                {Math.abs(data.pendente) < 0.01 ? '✅ Quitado' : Math.abs(data.pago) > 0.01 ? '◑ Parcial' : '⏳ Pendente'}
+                {Math.abs(data.pendente) < 0.01 ? 'Quitado' : Math.abs(data.pago) > 0.01 ? 'Parcial' : 'Pendente'}
               </p>
               <p className={`font-mono font-bold ${
                 Math.abs(data.pendente) < 0.01 ? 'text-green-400 print:text-green-700' : 'text-yellow-400 print:text-orange-600'

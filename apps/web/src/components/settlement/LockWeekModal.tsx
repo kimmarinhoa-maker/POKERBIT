@@ -190,7 +190,6 @@ export default function LockWeekModal({
 
           {step === 'done' && (
             <div className="py-8 text-center">
-              <div className="text-5xl mb-4">✅</div>
               <h4 className="text-lg font-bold text-white mb-2">Semana Finalizada!</h4>
               <div className="space-y-1 text-sm text-dark-300">
                 <p>Status alterado para <span className="text-emerald-400 font-bold">FINAL</span></p>

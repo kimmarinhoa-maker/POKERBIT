@@ -156,7 +156,6 @@ export default function SettlementOverviewPage() {
       <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
         {weekNotFound && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl mb-4">📅</div>
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
             <p className="text-dark-400 mb-6">Nao existe fechamento importado para o periodo selecionado.</p>
             <button
@@ -170,14 +169,13 @@ export default function SettlementOverviewPage() {
         {!weekNotFound && <>
         {/* Global KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <KpiCard label="Jogadores" value={String(t.players)} icon="👥" borderColor="bg-blue-500" />
-          <KpiCard label="Agentes" value={String(t.agents)} icon="🏢" borderColor="bg-purple-500" />
-          <KpiCard label="Rake Total" value={formatBRL(t.rake)} icon="🎰" borderColor="bg-poker-500" />
-          <KpiCard label="GGR Total" value={formatBRL(t.ggr)} icon="🎯" borderColor="bg-purple-500" />
+          <KpiCard label="Jogadores" value={String(t.players)} borderColor="bg-blue-500" />
+          <KpiCard label="Agentes" value={String(t.agents)} borderColor="bg-purple-500" />
+          <KpiCard label="Rake Total" value={formatBRL(t.rake)} borderColor="bg-poker-500" />
+          <KpiCard label="GGR Total" value={formatBRL(t.ggr)} borderColor="bg-purple-500" />
           <KpiCard
             label="Resultado Total"
             value={formatBRL(t.resultado)}
-            icon="📈"
             borderColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
             textColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
           />
@@ -185,7 +183,7 @@ export default function SettlementOverviewPage() {
 
         {/* Subclub cards */}
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <span>🏢</span> Subclubes
+          Subclubes
           <span className="text-sm font-normal text-dark-400">({subclubs.length})</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -195,7 +193,7 @@ export default function SettlementOverviewPage() {
               href={`/s/${settlementId}/club/${sc.name}`}
               className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 transition-all duration-200 cursor-pointer text-left group block"
             >
-              <div className={`h-1 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+              <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -319,20 +317,15 @@ export default function SettlementOverviewPage() {
   );
 }
 
-function KpiCard({ label, value, icon, borderColor, textColor }: {
-  label: string; value: string; icon: string; borderColor: string; textColor?: string;
+function KpiCard({ label, value, borderColor, textColor }: {
+  label: string; value: string; borderColor: string; textColor?: string;
 }) {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-      <div className={`h-1 ${borderColor}`} />
-      <div className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center text-xl shrink-0">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-dark-400 uppercase tracking-wider">{label}</p>
-          <p className={`text-lg font-bold font-mono truncate ${textColor || 'text-white'}`}>{value}</p>
-        </div>
+      <div className={`h-0.5 ${borderColor}`} />
+      <div className="p-4">
+        <p className="text-[10px] text-dark-400 uppercase tracking-wider">{label}</p>
+        <p className={`text-lg font-bold font-mono truncate ${textColor || 'text-white'}`}>{value}</p>
       </div>
     </div>
   );

@@ -43,7 +43,6 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
               : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
           }`}
         >
-          <span className="text-base">📊</span>
           Dashboard
           {selected === null && <span className="ml-auto text-xs text-poker-500">✓</span>}
         </button>

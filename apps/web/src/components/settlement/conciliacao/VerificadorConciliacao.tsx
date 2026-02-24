@@ -49,7 +49,7 @@ export default function VerificadorConciliacao({ extrato, ledger, onVerificado }
       <div className={`px-4 py-2 flex items-center gap-2 ${
         allOk ? 'bg-emerald-500/10' : 'bg-red-500/10'
       }`}>
-        <span className="text-sm">{allOk ? '✅' : '⚠️'}</span>
+        <span className="text-sm font-bold">{allOk ? 'OK' : '!'}</span>
         <span className={`text-xs font-bold ${allOk ? 'text-emerald-400' : 'text-red-400'}`}>
           {allOk ? 'Verificacao OK — Extrato e Ledger conferem' : 'Divergencia encontrada — Extrato vs Ledger'}
         </span>

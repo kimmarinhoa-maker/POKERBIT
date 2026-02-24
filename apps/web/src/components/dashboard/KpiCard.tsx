@@ -39,7 +39,7 @@ export default function KpiCard({ label, subtitle, value, accent, delta, breakdo
   );
 
   return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-dark-600 hover:scale-[1.02] transition-all duration-200 cursor-pointer">
+    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-dark-600 transition-all duration-200 cursor-pointer">
       {/* Accent bar */}
       <div className={`h-[2px] ${ACCENT_BAR[accent]}`} />
 

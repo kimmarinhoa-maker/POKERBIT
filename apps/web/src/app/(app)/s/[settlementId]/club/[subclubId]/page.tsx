@@ -20,6 +20,7 @@ import DRE from '@/components/settlement/DRE';
 import Liga from '@/components/settlement/Liga';
 import Extrato from '@/components/settlement/Extrato';
 import Liquidacao from '@/components/settlement/Liquidacao';
+import DashboardClube from '@/components/settlement/DashboardClube';
 
 // ─── Tabs pesadas (code-split com dynamic import) ────────────────────
 const Rakeback = dynamic(
@@ -166,6 +167,8 @@ export default function SubclubPanelPage() {
         );
       case 'detalhamento':
         return <Detalhamento subclub={currentSubclub} />;
+      case 'dashboard':
+        return <DashboardClube subclub={currentSubclub} fees={fees} />;
       case 'jogadores':
         return (
           <Jogadores
@@ -311,7 +314,6 @@ export default function SubclubPanelPage() {
       {/* 2-column layout */}
       {weekNotFound ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center bg-dark-950/30">
-          <div className="text-5xl mb-4">📅</div>
           <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
           <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
         </div>

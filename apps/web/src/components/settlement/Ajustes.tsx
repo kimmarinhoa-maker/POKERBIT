@@ -17,10 +17,10 @@ interface Props {
 }
 
 const fields: { key: 'overlay' | 'compras' | 'security' | 'outros'; label: string; sublabel: string; icon: string }[] = [
-  { key: 'overlay',  label: 'Overlay',  sublabel: 'Parte do clube',     icon: '🎯' },
-  { key: 'compras',  label: 'Compras',  sublabel: 'Fichas / buy-ins',   icon: '💰' },
-  { key: 'security', label: 'Security', sublabel: 'Seguranca',          icon: '🛡️' },
-  { key: 'outros',   label: 'Outros',   sublabel: 'Lancamentos avulsos', icon: '📝' },
+  { key: 'overlay',  label: 'Overlay',  sublabel: 'Parte do clube',     icon: 'target' },
+  { key: 'compras',  label: 'Compras',  sublabel: 'Fichas / buy-ins',   icon: 'money' },
+  { key: 'security', label: 'Security', sublabel: 'Seguranca',          icon: 'shield' },
+  { key: 'outros',   label: 'Outros',   sublabel: 'Lancamentos avulsos', icon: 'note' },
 ];
 
 export default function Ajustes({ subclub, weekStart, settlementStatus, onDataChange }: Props) {
@@ -101,19 +101,14 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            ⚙️
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Ajustes — {subclub.name}</h2>
-            <p className="text-dark-400 text-sm">Lancamentos manuais do subclube</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Ajustes — {subclub.name}</h2>
+          <p className="text-dark-400 text-sm">Lancamentos manuais do subclube</p>
         </div>
 
         {isDraft && !editing && canEdit && (
           <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2">
-            ✏️ Editar
+            Editar
           </button>
         )}
         {!isDraft && (
@@ -123,30 +118,30 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-blue-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-blue-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lancamentos</p>
             <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.nonZero}</p>
             <p className="text-[10px] text-dark-500">de {fields.length} campos</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-poker-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Positivos</p>
             <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(kpis.positive)}</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-red-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Negativos</p>
             <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(kpis.negative)}</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30">
-          <div className={`h-1 ${kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5${kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total</p>
             <p className={`text-xl font-bold mt-1 font-mono ${kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}`}>
@@ -164,7 +159,6 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
 
       <div className="card max-w-xl">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <span className="text-base">📝</span>
           <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
             Lancamentos
           </h3>
@@ -179,7 +173,6 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
               editing ? 'bg-dark-800/30' : ''
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-sm">{icon}</span>
                 <div>
                   <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>
                     {label}
@@ -251,7 +244,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
               aria-label="Salvar ajustes"
               className="btn-primary text-sm px-6 py-2"
             >
-              {saving ? 'Salvando...' : '✓ Salvar'}
+              {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
         )}

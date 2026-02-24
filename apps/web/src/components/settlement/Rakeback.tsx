@@ -12,6 +12,7 @@ import {
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
+import { round2 } from '@/lib/formatters';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -107,7 +108,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       ]);
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     }
   }, [weekStart, settlementId, isDraft]);
@@ -116,14 +118,19 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     loadExtras();
   }, [loadExtras]);
 
-  // Map org.id → is_direct
-  const directMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    for (const org of orgs) {
-      map.set(org.id, org.metadata?.is_direct === true);
+  // Unified direct logic: backend annotations (agent.is_direct, player.agent_is_direct) + "SEM AGENTE"
+  const directNameSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of agents) {
+      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
     }
-    return map;
-  }, [orgs]);
+    for (const p of players) {
+      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+    }
+    set.add('sem agente');
+    set.add('(sem agente)');
+    return set;
+  }, [agents, players]);
 
   // Map org.name (lowercase) → org (for fallback when agent_id is null)
   const orgByName = useMemo(() => {
@@ -177,22 +184,39 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     return org?.id || null;
   }
 
-  // Split agents into non-direct and direct
+  // Split agents into non-direct and direct (using backend annotations)
+  // Also add synthetic agent entries for orphan direct player groups
   const { nonDirectAgents, directAgents } = useMemo(() => {
+    const agentNames = new Set(agents.map(a => a.agent_name));
     const nonDirect: AgentMetric[] = [];
     const direct: AgentMetric[] = [];
     for (const a of agents) {
-      const orgId = a.agent_id || orgByName.get(a.agent_name.toLowerCase())?.id;
-      if (orgId && directMap.get(orgId)) {
+      if ((a as any).is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
         direct.push(a);
       } else {
         nonDirect.push(a);
       }
     }
+    // Add orphan direct player groups (players whose agent_name has no agent_week_metrics entry)
+    for (const [agName, agPlayers] of playersByAgent) {
+      if (agentNames.has(agName)) continue;
+      if (!directNameSet.has(agName.toLowerCase())) continue;
+      direct.push({
+        id: `orphan_${agName}`,
+        agent_id: null,
+        agent_name: agName,
+        player_count: agPlayers.length,
+        rake_total_brl: agPlayers.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0),
+        ganhos_total_brl: agPlayers.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0),
+        rb_rate: 0,
+        commission_brl: agPlayers.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0),
+        resultado_brl: agPlayers.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0),
+      });
+    }
     nonDirect.sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     direct.sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     return { nonDirectAgents: nonDirect, directAgents: direct };
-  }, [agents, directMap, orgByName]);
+  }, [agents, directNameSet, playersByAgent]);
 
   // Filter by search
   const filteredNonDirect = useMemo(() => {
@@ -283,7 +307,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         setEditingRate(null);
         onDataChange();
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setSavingRate(false);
@@ -300,7 +325,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         setEditingRate(null);
         onDataChange();
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setSavingRate(false);
@@ -316,7 +342,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         await loadExtras();
         onDataChange();
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     }
   }
@@ -330,7 +357,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         await loadExtras();
         onDataChange();
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     }
   }
@@ -349,7 +377,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       setApplyAllAgent(null);
       setApplyAllRate('');
       onDataChange();
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setApplyingAll(false);
@@ -363,46 +392,41 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-          💰
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Rakeback — {subclub.name}</h2>
-          <p className="text-dark-400 text-sm">
-            Distribuicao de rakeback por agente e jogador
-          </p>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">Rakeback — {subclub.name}</h2>
+        <p className="text-dark-400 text-sm">
+          Distribuicao de rakeback por agente e jogador
+        </p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-poker-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Rake Total</p>
             <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(kpis.rakeTotal)}</p>
             <p className="text-[10px] text-dark-500">{players.length} jogadores</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-yellow-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-yellow-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Rakeback</p>
             <p className="text-xl font-bold mt-1 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
             <p className="text-[10px] text-dark-500">Agentes + Diretos</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-red-500" />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Taxas Liga</p>
             <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(kpis.taxesOnRake)}</p>
             <p className="text-[10px] text-dark-500">{taxLabel} sobre rake</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30">
-          <div className={`h-1 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lucro Liquido</p>
             <p className={`text-xl font-bold mt-1 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -431,26 +455,26 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           role="tab"
           aria-selected={activeSubTab === 'agencias'}
           aria-label="Agencias"
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
             activeSubTab === 'agencias'
-              ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-700/40'
-              : 'text-dark-300 hover:bg-dark-800'
+              ? 'bg-poker-900/20 border-poker-500 text-poker-400'
+              : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          <span>💛</span> Agencias ({filteredNonDirect.length})
+          Agencias ({filteredNonDirect.length})
         </button>
         <button
           onClick={() => setActiveSubTab('jogadores')}
           role="tab"
           aria-selected={activeSubTab === 'jogadores'}
           aria-label="Jogadores diretos"
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
             activeSubTab === 'jogadores'
-              ? 'bg-blue-600/20 text-blue-400 border border-blue-700/40'
-              : 'text-dark-300 hover:bg-dark-800'
+              ? 'bg-poker-900/20 border-poker-500 text-poker-400'
+              : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          <span>👤</span> Jogadores ({filteredDirect.length})
+          Jogadores ({filteredDirect.length})
         </button>
       </div>
 
@@ -479,7 +503,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           agents={filteredDirect}
           allAgents={agents}
           orgs={orgs}
-          directMap={directMap}
+          directNameSet={directNameSet}
           orgByName={orgByName}
           playersByAgent={playersByAgent}
           getPlayersForAgent={getPlayersForAgent}
@@ -711,7 +735,7 @@ function AgenciasTab({
 // ─── Sub-tab: Jogadores (Diretos) ───────────────────────────────────
 
 function JogadoresTab({
-  agents, allAgents, orgs, directMap, orgByName, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent,
+  agents, allAgents, orgs, directNameSet, orgByName, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent,
   taxRate, isDraft,
   editingRate, rateInput, setRateInput, savingRate, startEditRate, savePlayerRate, setEditingRate,
   directDropdown, setDirectDropdown, handleMarkDirect, handleRemoveDirect,
@@ -721,7 +745,7 @@ function JogadoresTab({
   agents: AgentMetric[];
   allAgents: AgentMetric[];
   orgs: OrgData[];
-  directMap: Map<string, boolean>;
+  directNameSet: Set<string>;
   orgByName: Map<string, OrgData>;
   playersByAgent: Map<string, PlayerMetric[]>;
   getPlayersForAgent: (agentName: string) => PlayerMetric[];
@@ -754,19 +778,18 @@ function JogadoresTab({
     const result: { agent: AgentMetric; orgId: string }[] = [];
     for (const a of allAgents) {
       const orgId = a.agent_id || orgByName.get(a.agent_name.toLowerCase())?.id;
-      if (orgId && !directMap.get(orgId)) {
+      if (orgId && !directNameSet.has(a.agent_name.toLowerCase())) {
         result.push({ agent: a, orgId });
       }
     }
     return result;
-  }, [allAgents, orgByName, directMap]);
+  }, [allAgents, orgByName, directNameSet]);
 
   return (
     <div>
       {/* Define direct agencies */}
       <div className="card mb-6 border-dark-700/50">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-base">🏷️</span>
           <h4 className="text-sm font-semibold text-dark-200 uppercase tracking-wider">Definir Agencias Diretas</h4>
         </div>
         {availableForDirect.length > 0 ? (
@@ -974,7 +997,7 @@ function JogadoresTab({
                                           aria-label={`Editar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
                                           className="text-dark-600 hover:text-dark-300 text-xs ml-0.5"
                                         >
-                                          ✏️
+                                          Editar
                                         </button>
                                       )}
                                     </span>
@@ -1046,6 +1069,3 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}

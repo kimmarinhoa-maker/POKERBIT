@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { formatBRL } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 
 interface Props {
   subclub: {
@@ -64,14 +65,9 @@ export default function DRE({ subclub, fees }: Props) {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-            📈
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">DRE — {name}</h2>
-            <p className="text-dark-400 text-sm">Demonstracao de Resultado do Exercicio</p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-white">DRE — {name}</h2>
+          <p className="text-dark-400 text-sm">Demonstracao de Resultado do Exercicio</p>
         </div>
 
         {/* Expandir / Colapsar Todos */}
@@ -86,7 +82,7 @@ export default function DRE({ subclub, fees }: Props) {
       {/* ── KPI Strip ── 5 cards ─────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <DreKpiCard
-          icon="📈"
+          icon="up"
           label="Receita Bruta"
           sublabel={totals.rake > 0 ? `Rake ${formatBRL(totals.rake)}` : undefined}
           value={formatBRL(receita)}
@@ -94,29 +90,29 @@ export default function DRE({ subclub, fees }: Props) {
           textColor="text-blue-400"
         />
         <DreKpiCard
-          icon="📉"
+          icon="down"
           label="Custos (RB)"
-          sublabel={custos > 0 ? `${((custos / receita) * 100 || 0).toFixed(1)}% da receita` : undefined}
+          sublabel={custos > 0 && receita > 0.01 ? `${((custos / receita) * 100).toFixed(1)}% da receita` : undefined}
           value={formatBRL(-custos)}
           borderColor="border-red-500"
           textColor="text-red-400"
         />
         <DreKpiCard
-          icon="💰"
+          icon="money"
           label="Res. Operacional"
           value={formatBRL(resOperacional)}
           borderColor={resOperacional >= 0 ? 'border-poker-500' : 'border-red-500'}
           textColor={resOperacional >= 0 ? 'text-poker-400' : 'text-red-400'}
         />
         <DreKpiCard
-          icon="✅"
+          icon="check"
           label="Res. Líquido"
           value={formatBRL(resLiquido)}
           borderColor={resLiquido >= 0 ? 'border-poker-500' : 'border-red-500'}
           textColor={resLiquido >= 0 ? 'text-poker-400' : 'text-red-400'}
         />
         <DreKpiCard
-          icon="🏆"
+          icon="trophy"
           label="Acerto Liga"
           sublabel={acertoDirecao || undefined}
           value={formatBRL(acertoLiga)}
@@ -342,16 +338,13 @@ function DreKpiCard({ icon, label, sublabel, value, borderColor, textColor }: {
   textColor: string;
 }) {
   return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
       {/* Colored top border */}
-      <div className={`h-1 ${borderColor.replace('border-', 'bg-')}`} />
+      <div className={`h-0.5${borderColor.replace('border-', 'bg-')}`} />
       <div className="p-4">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-sm">{icon}</span>
-          <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">{label}</p>
-        </div>
+        <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium mb-1">{label}</p>
         {sublabel && (
-          <p className="text-[9px] text-dark-600 ml-6 -mt-0.5">{sublabel}</p>
+          <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>
         )}
         <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>
           {value}
@@ -361,6 +354,4 @@ function DreKpiCard({ icon, label, sublabel, value, borderColor, textColor }: {
   );
 }
 
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
+// round2 imported from @/lib/formatters
