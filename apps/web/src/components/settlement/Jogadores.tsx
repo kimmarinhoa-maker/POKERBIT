@@ -2,27 +2,38 @@
 
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
-import { SubclubData, PlayerMetric } from '@/types/settlement';
+import { SubclubData, PlayerMetric, PagamentoDetalhe } from '@/types/settlement';
 
 interface Props {
   subclub: SubclubData;
+  weekStart?: string;
+  clubId?: string;
 }
 
 interface AgentGroup {
   agentName: string;
+  externalAgentId: string | null;
   players: PlayerMetric[];
   totals: {
     ganhos: number;
     rake: number;
     rbValue: number;
     resultado: number;
+    saldoAnterior: number;
+    totalPagamentos: number;
+    saldoAtual: number;
   };
 }
 
 export default function Jogadores({ subclub }: Props) {
-  const { players, agents, name } = subclub;
+  const { players, agents } = subclub;
   const [search, setSearch] = useState('');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
+  const [paymentModal, setPaymentModal] = useState<{
+    entityName: string;
+    detalhe: PagamentoDetalhe[];
+    total: number;
+  } | null>(null);
 
   // ── Group players by agent ──
   const agentGroups: AgentGroup[] = useMemo(() => {
@@ -39,17 +50,27 @@ export default function Jogadores({ subclub }: Props) {
       const rake = pls.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0);
       const rbValue = pls.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0);
       const resultado = pls.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0);
+      const saldoAnterior = pls.reduce((s, p) => s + (Number(p.saldo_anterior) || 0), 0);
+      const totalPagamentos = pls.reduce((s, p) => s + (Number(p.total_pagamentos) || 0), 0);
+      const saldoAtual = pls.reduce((s, p) => s + (Number(p.saldo_atual) || 0), 0);
+
+      // Find external agent ID from agents array
+      const agentMeta = agents.find((a) => a.agent_name === agentName);
 
       groups.push({
         agentName,
+        externalAgentId: agentMeta?.external_agent_id || null,
         players: pls.sort((a, b) =>
           (a.nickname || '').localeCompare(b.nickname || '')
         ),
         totals: {
-          ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
-          rake: Math.round((rake + Number.EPSILON) * 100) / 100,
-          rbValue: Math.round((rbValue + Number.EPSILON) * 100) / 100,
-          resultado: Math.round((resultado + Number.EPSILON) * 100) / 100,
+          ganhos: r2(ganhos),
+          rake: r2(rake),
+          rbValue: r2(rbValue),
+          resultado: r2(resultado),
+          saldoAnterior: r2(saldoAnterior),
+          totalPagamentos: r2(totalPagamentos),
+          saldoAtual: r2(saldoAtual),
         },
       });
     }
@@ -74,18 +95,19 @@ export default function Jogadores({ subclub }: Props) {
       }))
       .filter((g) => g.players.length > 0)
       .map((g) => {
-        // Recalculate totals for filtered players
         const ganhos = g.players.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0);
         const rake = g.players.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0);
         const rbValue = g.players.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0);
         const resultado = g.players.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0);
+        const saldoAnterior = g.players.reduce((s, p) => s + (Number(p.saldo_anterior) || 0), 0);
+        const totalPagamentos = g.players.reduce((s, p) => s + (Number(p.total_pagamentos) || 0), 0);
+        const saldoAtual = g.players.reduce((s, p) => s + (Number(p.saldo_atual) || 0), 0);
         return {
           ...g,
           totals: {
-            ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
-            rake: Math.round((rake + Number.EPSILON) * 100) / 100,
-            rbValue: Math.round((rbValue + Number.EPSILON) * 100) / 100,
-            resultado: Math.round((resultado + Number.EPSILON) * 100) / 100,
+            ganhos: r2(ganhos), rake: r2(rake), rbValue: r2(rbValue),
+            resultado: r2(resultado), saldoAnterior: r2(saldoAnterior),
+            totalPagamentos: r2(totalPagamentos), saldoAtual: r2(saldoAtual),
           },
         };
       });
@@ -93,20 +115,18 @@ export default function Jogadores({ subclub }: Props) {
 
   // ── Grand totals ──
   const grandTotals = useMemo(() => {
-    const allFiltered = filteredGroups.flatMap((g) => g.players);
-    const ganhos = allFiltered.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0);
-    const rake = allFiltered.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0);
-    const rbValue = allFiltered.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0);
-    const resultado = allFiltered.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0);
+    const all = filteredGroups.flatMap((g) => g.players);
     return {
-      ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
-      rake: Math.round((rake + Number.EPSILON) * 100) / 100,
-      rbValue: Math.round((rbValue + Number.EPSILON) * 100) / 100,
-      resultado: Math.round((resultado + Number.EPSILON) * 100) / 100,
+      ganhos: r2(all.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0)),
+      rake: r2(all.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0)),
+      rbValue: r2(all.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0)),
+      resultado: r2(all.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0)),
+      saldoAnterior: r2(all.reduce((s, p) => s + (Number(p.saldo_anterior) || 0), 0)),
+      totalPagamentos: r2(all.reduce((s, p) => s + (Number(p.total_pagamentos) || 0), 0)),
+      saldoAtual: r2(all.reduce((s, p) => s + (Number(p.saldo_atual) || 0), 0)),
     };
   }, [filteredGroups]);
 
-  // ── KPI: active players (|ganhos| > 0.01) ──
   const activeCount = useMemo(() => {
     return players.filter((p) => Math.abs(Number(p.winnings_brl) || 0) > 0.01).length;
   }, [players]);
@@ -115,7 +135,6 @@ export default function Jogadores({ subclub }: Props) {
     return filteredGroups.reduce((s, g) => s + g.players.length, 0);
   }, [filteredGroups]);
 
-  // ── Toggle agent expand/collapse ──
   function toggleAgent(agentName: string) {
     setExpandedAgents((prev) => {
       const next = new Set(prev);
@@ -125,17 +144,11 @@ export default function Jogadores({ subclub }: Props) {
     });
   }
 
-  // ── Color helper ──
-  function colorClass(val: number, posColor = 'text-emerald-400', negColor = 'text-red-400') {
-    return val < -0.01 ? negColor : val > 0.01 ? posColor : 'text-dark-400';
-  }
-
   return (
     <div>
       {/* ═══ 5 KPI MINI CARDS ═══ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        {/* Jogadores Ativos */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500 transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Jogadores Ativos
           </div>
@@ -143,12 +156,11 @@ export default function Jogadores({ subclub }: Props) {
           <div className="text-[10px] text-dark-500 mt-0.5">de {players.length} total</div>
         </div>
 
-        {/* Profit/Loss */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Profit / Loss
           </div>
-          <div className={`text-lg font-extrabold font-mono ${colorClass(grandTotals.ganhos)}`}>
+          <div className={`text-lg font-extrabold font-mono ${cc(grandTotals.ganhos)}`}>
             {formatBRL(grandTotals.ganhos)}
           </div>
           <div className="text-[10px] text-dark-500 mt-0.5">
@@ -156,8 +168,7 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        {/* Rake Gerado */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-emerald-500">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-emerald-500 transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Rake Gerado
           </div>
@@ -166,8 +177,7 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        {/* Rakeback Total */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-lime-500">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-lime-500 transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Rakeback Total
           </div>
@@ -176,15 +186,13 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        {/* Resultado Semana */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 ring-1 ring-amber-700/30 transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Resultado Semana
           </div>
-          <div className={`text-lg font-extrabold font-mono ${colorClass(grandTotals.resultado)}`}>
+          <div className={`text-lg font-extrabold font-mono ${cc(grandTotals.resultado)}`}>
             {formatBRL(grandTotals.resultado)}
           </div>
-          <div className="text-[10px] text-dark-500 mt-0.5">ganhos + rakeback</div>
         </div>
       </div>
 
@@ -200,85 +208,78 @@ export default function Jogadores({ subclub }: Props) {
       </div>
 
       {/* ═══ AGENT-GROUPED TABLE ═══ */}
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: 900 }}>
-            <thead>
-              <tr className="bg-dark-800/50">
-                <th className="px-4 py-3 text-left font-medium text-xs text-dark-400">
-                  Jogador / Agencia
+      <div className="border border-dark-700 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+          <table className="w-full text-xs" style={{ minWidth: 950 }}>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-dark-800/80 backdrop-blur-sm">
+                <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">
+                  Agencia / Jogador
                 </th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Ganhos</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Rake</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Rakeback</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Ganhos</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rakeback</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">
                   Resultado Semana
                 </th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">
                   Saldo Ant.
                 </th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">
                   Pagamento
                 </th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">
                   Saldo Atual
                 </th>
-                <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">
+                <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">
                   Situacao
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {filteredGroups.map((group) => {
-                const isExpanded = expandedAgents.has(group.agentName);
-
-                return (
-                  <AgentSection
-                    key={group.agentName}
-                    group={group}
-                    isExpanded={isExpanded}
-                    onToggle={() => toggleAgent(group.agentName)}
-                    colorClass={colorClass}
-                  />
-                );
-              })}
+            <tbody className="divide-y divide-dark-800/30">
+              {filteredGroups.map((group) => (
+                <AgentSection
+                  key={group.agentName}
+                  group={group}
+                  isExpanded={expandedAgents.has(group.agentName)}
+                  onToggle={() => toggleAgent(group.agentName)}
+                  onPaymentClick={(name, detalhe, total) =>
+                    setPaymentModal({ entityName: name, detalhe, total })
+                  }
+                />
+              ))}
 
               {/* ═══ TOTAL FOOTER ROW ═══ */}
               {totalPlayerCount > 0 && (
-                <tr className="bg-amber-500/5 border-t-2 border-amber-500/20">
-                  <td className="px-4 py-3 font-extrabold text-amber-400">
+                <tr className="border-t-2 border-dark-700 bg-dark-900">
+                  <td className="px-3 py-2 font-extrabold text-xs text-amber-400">
                     TOTAL
                     <span className="text-dark-500 text-[10px] font-normal ml-2">
                       {filteredGroups.length} agencias · {totalPlayerCount} jogadores
                     </span>
                   </td>
-                  <td
-                    className={`px-3 py-3 text-right font-mono font-extrabold ${colorClass(
-                      grandTotals.ganhos
-                    )}`}
-                  >
+                  <td className={`px-3 py-2 text-right font-mono font-extrabold ${cc(grandTotals.ganhos)}`}>
                     {formatBRL(grandTotals.ganhos)}
                   </td>
-                  <td className="px-3 py-3 text-right font-mono font-extrabold text-emerald-400">
+                  <td className="px-3 py-2 text-right font-mono font-extrabold text-emerald-400">
                     {formatBRL(grandTotals.rake)}
                   </td>
-                  <td className="px-3 py-3 text-right font-mono font-extrabold text-lime-400">
+                  <td className="px-3 py-2 text-right font-mono font-extrabold text-lime-400">
                     {grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
                   </td>
-                  <td
-                    className={`px-3 py-3 text-right font-mono font-extrabold ${colorClass(
-                      grandTotals.resultado
-                    )}`}
-                  >
+                  <td className={`px-3 py-2 text-right font-mono font-extrabold ${cc(grandTotals.resultado)}`}>
                     {formatBRL(grandTotals.resultado)}
                   </td>
-                  {/* Saldo Ant. / Pagamento / Saldo Atual / Situacao — no data yet */}
-                  <td className="px-3 py-3 text-right font-mono text-dark-500 text-xs">—</td>
-                  <td className="px-3 py-3 text-right font-mono text-dark-500 text-xs">—</td>
-                  <td className="px-3 py-3 text-right font-mono text-dark-500 text-xs">—</td>
-                  <td className="px-3 py-3 text-dark-500 text-[10px]">
-                    {filteredGroups.length} agencias · {totalPlayerCount} jogadores
+                  <td className={`px-3 py-2 text-right font-mono font-extrabold ${cc(grandTotals.saldoAnterior)}`}>
+                    {grandTotals.saldoAnterior !== 0 ? formatBRL(grandTotals.saldoAnterior) : '—'}
                   </td>
+                  <td className={`px-3 py-2 text-right font-mono font-extrabold ${cc(grandTotals.totalPagamentos)}`}>
+                    {grandTotals.totalPagamentos !== 0 ? formatBRL(grandTotals.totalPagamentos) : '—'}
+                  </td>
+                  <td className={`px-3 py-2 text-right font-mono font-extrabold ${cc(grandTotals.saldoAtual)}`}>
+                    {formatBRL(grandTotals.saldoAtual)}
+                  </td>
+                  <td className="px-3 py-2" />
                 </tr>
               )}
             </tbody>
@@ -288,9 +289,19 @@ export default function Jogadores({ subclub }: Props) {
 
       {/* Empty state */}
       {totalPlayerCount === 0 && (
-        <div className="card text-center py-10 text-dark-400 mt-4">
+        <div className="text-center py-10 text-dark-400 mt-4">
           {search ? 'Nenhum jogador encontrado' : 'Nenhum jogador neste subclube'}
         </div>
+      )}
+
+      {/* ═══ PAYMENT DETAIL MODAL ═══ */}
+      {paymentModal && (
+        <PaymentModal
+          entityName={paymentModal.entityName}
+          detalhe={paymentModal.detalhe}
+          total={paymentModal.total}
+          onClose={() => setPaymentModal(null)}
+        />
       )}
     </div>
   );
@@ -304,13 +315,16 @@ function AgentSection({
   group,
   isExpanded,
   onToggle,
-  colorClass,
+  onPaymentClick,
 }: {
   group: AgentGroup;
   isExpanded: boolean;
   onToggle: () => void;
-  colorClass: (val: number, pos?: string, neg?: string) => string;
+  onPaymentClick: (name: string, detalhe: PagamentoDetalhe[], total: number) => void;
 }) {
+  // Collect all detalhe from players for agent-level click
+  const agentDetalhe = group.players.flatMap((p) => p.pagamentos_detalhe || []);
+
   return (
     <>
       {/* ── AGENT ROW ── */}
@@ -318,46 +332,40 @@ function AgentSection({
         className="bg-dark-800/30 hover:bg-dark-800/50 cursor-pointer transition-colors border-b border-dark-700/50"
         onClick={onToggle}
       >
-        {/* Agent name + count */}
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
+        <td className="px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
             <span
-              className={`text-dark-400 text-[10px] transition-transform inline-block ${
+              className={`text-dark-500 text-[10px] transition-transform inline-block ${
                 isExpanded ? 'rotate-90' : ''
               }`}
             >
               ▶
             </span>
-            <span className="text-white font-semibold">
-              {group.agentName}
-            </span>
-            <span className="bg-dark-700 text-dark-300 rounded-full text-[10px] font-bold px-2 py-0.5">
-              {group.players.length}
-            </span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-dark-100 text-xs font-semibold">{group.agentName}</span>
+                {group.externalAgentId && (
+                  <span className="text-dark-600 text-[10px] font-mono">{group.externalAgentId}</span>
+                )}
+              </div>
+              <div className="text-dark-600 text-[10px]">{group.players.length} jogadores</div>
+            </div>
           </div>
         </td>
 
-        {/* Agent totals — Ganhos */}
-        <td
-          className={`px-3 py-3 text-right font-mono font-semibold ${colorClass(
-            group.totals.ganhos
-          )}`}
-        >
+        <td className={`px-3 py-1.5 text-right font-mono font-semibold ${cc(group.totals.ganhos)}`}>
           {formatBRL(group.totals.ganhos)}
         </td>
 
-        {/* Rake */}
-        <td className="px-3 py-3 text-right font-mono text-dark-200">
+        <td className="px-3 py-1.5 text-right font-mono text-dark-200">
           {formatBRL(group.totals.rake)}
         </td>
 
-        {/* Rakeback */}
-        <td className="px-3 py-3 text-right font-mono text-lime-400 font-semibold">
+        <td className="px-3 py-1.5 text-right font-mono text-lime-400 font-semibold">
           {group.totals.rbValue > 0 ? formatBRL(group.totals.rbValue) : '—'}
         </td>
 
-        {/* Resultado Semana */}
-        <td className="px-3 py-3 text-right">
+        <td className="px-3 py-1.5 text-right">
           <span
             className={`font-mono font-bold px-2 py-0.5 rounded ${
               group.totals.resultado > 0.01
@@ -371,18 +379,33 @@ function AgentSection({
           </span>
         </td>
 
-        {/* Saldo Ant. — no data */}
-        <td className="px-3 py-3 text-right text-dark-500 text-xs">—</td>
+        <td className={`px-3 py-1.5 text-right font-mono font-semibold ${cc(group.totals.saldoAnterior)}`}>
+          {group.totals.saldoAnterior !== 0 ? formatBRL(group.totals.saldoAnterior) : '—'}
+        </td>
 
-        {/* Pagamento — no data */}
-        <td className="px-3 py-3 text-right text-dark-500 text-xs">—</td>
+        {/* Pagamento — clickable */}
+        <td className="px-3 py-1.5 text-right">
+          {group.totals.totalPagamentos !== 0 ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPaymentClick(group.agentName, agentDetalhe, group.totals.totalPagamentos);
+              }}
+              className={`font-mono font-semibold underline decoration-dotted underline-offset-2 hover:opacity-80 ${cc(group.totals.totalPagamentos)}`}
+            >
+              {formatBRL(group.totals.totalPagamentos)}
+            </button>
+          ) : (
+            <span className="text-dark-500">—</span>
+          )}
+        </td>
 
-        {/* Saldo Atual — no data */}
-        <td className="px-3 py-3 text-right font-mono text-dark-500 text-xs">—</td>
+        <td className={`px-3 py-1.5 text-right font-mono font-bold ${cc(group.totals.saldoAtual)}`}>
+          {formatBRL(group.totals.saldoAtual)}
+        </td>
 
-        {/* Situacao — no data */}
-        <td className="px-3 py-3">
-          <span className="text-dark-500 text-[10px]">—</span>
+        <td className="px-3 py-1.5">
+          <SituacaoBadge saldoAtual={group.totals.saldoAtual} />
         </td>
       </tr>
 
@@ -394,39 +417,34 @@ function AgentSection({
           const rbRate = Number(p.rb_rate) || 0;
           const rbValue = Number(p.rb_value_brl) || 0;
           const resultado = Number(p.resultado_brl) || 0;
+          const saldoAnt = Number(p.saldo_anterior) || 0;
+          const totalPag = Number(p.total_pagamentos) || 0;
+          const saldoAtual = Number(p.saldo_atual) || 0;
+          const detalhe = p.pagamentos_detalhe || [];
 
           return (
             <tr
               key={`${group.agentName}-${i}`}
               className="hover:bg-dark-800/20 transition-colors border-b border-dark-800/30"
             >
-              {/* Player nick + ID (indented) */}
-              <td className="px-4 py-2 pl-10">
+              <td className="pl-8 pr-3 py-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-dark-300 text-xs">&#x1F464;</span>
-                  <span className="text-dark-100 font-medium">{p.nickname || '—'}</span>
-                  <span className="text-dark-600 text-[10px] ml-1">
+                  <span className="text-dark-100 text-xs">{p.nickname || '—'}</span>
+                  <span className="text-dark-600 text-[10px] font-mono">
                     #{p.external_player_id || '—'}
                   </span>
                 </div>
               </td>
 
-              {/* Ganhos */}
-              <td
-                className={`px-3 py-2 text-right font-mono ${
-                  ganhos < -0.01 ? 'text-red-400' : ganhos > 0.01 ? 'text-emerald-400' : 'text-dark-400'
-                }`}
-              >
+              <td className={`px-3 py-1 text-right font-mono text-xs ${cc(ganhos)}`}>
                 {formatBRL(ganhos)}
               </td>
 
-              {/* Rake */}
-              <td className="px-3 py-2 text-right font-mono text-dark-200">
+              <td className="px-3 py-1 text-right font-mono text-xs text-dark-200">
                 {formatBRL(rake)}
               </td>
 
-              {/* Rakeback — show "5% · R$ 123" */}
-              <td className="px-3 py-2 text-right">
+              <td className="px-3 py-1 text-right text-xs">
                 {rbValue > 0.01 ? (
                   <span className="font-mono text-lime-400">
                     {rbRate > 0 && (
@@ -435,14 +453,13 @@ function AgentSection({
                     {formatBRL(rbValue)}
                   </span>
                 ) : (
-                  <span className="text-dark-500 text-xs">—</span>
+                  <span className="text-dark-500">—</span>
                 )}
               </td>
 
-              {/* Resultado Semana */}
-              <td className="px-3 py-2 text-right">
+              <td className="px-3 py-1 text-right">
                 <span
-                  className={`font-mono font-medium ${
+                  className={`font-mono text-xs font-medium ${
                     resultado > 0.01
                       ? 'text-emerald-400'
                       : resultado < -0.01
@@ -454,22 +471,160 @@ function AgentSection({
                 </span>
               </td>
 
-              {/* Saldo Ant. — no data */}
-              <td className="px-3 py-2 text-right text-dark-500 text-xs">—</td>
+              <td className={`px-3 py-1 text-right font-mono text-xs ${cc(saldoAnt)}`}>
+                {saldoAnt !== 0 ? formatBRL(saldoAnt) : '—'}
+              </td>
 
-              {/* Pagamento — no data */}
-              <td className="px-3 py-2 text-right text-dark-500 text-xs">—</td>
+              {/* Pagamento — clickable */}
+              <td className="px-3 py-1 text-right text-xs">
+                {totalPag !== 0 ? (
+                  <button
+                    onClick={() =>
+                      onPaymentClick(p.nickname || p.external_player_id || '—', detalhe, totalPag)
+                    }
+                    className={`font-mono underline decoration-dotted underline-offset-2 hover:opacity-80 ${cc(totalPag)}`}
+                  >
+                    {formatBRL(totalPag)}
+                  </button>
+                ) : (
+                  <span className="text-dark-500">—</span>
+                )}
+              </td>
 
-              {/* Saldo Atual — no data */}
-              <td className="px-3 py-2 text-right font-mono text-dark-500 text-xs">—</td>
+              <td className={`px-3 py-1 text-right font-mono text-xs font-medium ${cc(saldoAtual)}`}>
+                {formatBRL(saldoAtual)}
+              </td>
 
-              {/* Situacao — no data */}
-              <td className="px-3 py-2">
-                <span className="text-dark-500 text-[10px]">—</span>
+              <td className="px-3 py-1">
+                <SituacaoBadge saldoAtual={saldoAtual} />
               </td>
             </tr>
           );
         })}
     </>
   );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SituacaoBadge — badge colorido para situação do jogador
+   ════════════════════════════════════════════════════════════════════ */
+
+function SituacaoBadge({ saldoAtual }: { saldoAtual: number }) {
+  if (saldoAtual > 0.01) {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/10 border-emerald-500/25 text-emerald-400">
+        A Receber
+      </span>
+    );
+  }
+  if (saldoAtual < -0.01) {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-red-500/10 border-red-500/25 text-red-400">
+        A Pagar
+      </span>
+    );
+  }
+  return (
+    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-dark-700/30 border-dark-600/40 text-dark-400">
+      Quitado
+    </span>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PaymentModal — detalhe de pagamentos ao clicar na coluna Pagamento
+   ════════════════════════════════════════════════════════════════════ */
+
+function PaymentModal({
+  entityName,
+  detalhe,
+  total,
+  onClose,
+}: {
+  entityName: string;
+  detalhe: PagamentoDetalhe[];
+  total: number;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="bg-dark-900 border border-dark-700 rounded-xl p-5 w-96 max-h-[80vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-bold text-white">Pagamentos</h3>
+            <p className="text-[10px] text-dark-400 mt-0.5">{entityName}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-white text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* List */}
+        {detalhe.length > 0 ? (
+          <div className="space-y-2">
+            {detalhe.map((d, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between py-2 px-3 bg-dark-800/50 rounded-lg border border-dark-700/50"
+              >
+                <div>
+                  <div className="text-xs text-dark-200">
+                    {d.description || d.source || 'Pagamento'}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {d.method && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-dark-700 text-dark-300 border border-dark-600">
+                        {d.method}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-dark-500">
+                      {d.created_at
+                        ? new Date(d.created_at).toLocaleDateString('pt-BR')
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+                <span
+                  className={`font-mono font-bold text-xs ${cc(d.amount)}`}
+                >
+                  {formatBRL(d.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-dark-500 text-xs">
+            Nenhum pagamento registrado
+          </div>
+        )}
+
+        {/* Total */}
+        <div className="mt-4 pt-3 border-t border-dark-700 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase text-dark-400">Total</span>
+          <span className={`font-mono font-extrabold text-sm ${cc(total)}`}>
+            {formatBRL(total)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Helpers
+   ════════════════════════════════════════════════════════════════════ */
+
+function r2(v: number) {
+  return Math.round((v + Number.EPSILON) * 100) / 100;
+}
+
+function cc(val: number, pos = 'text-emerald-400', neg = 'text-red-400') {
+  return val < -0.01 ? neg : val > 0.01 ? pos : 'text-dark-400';
 }

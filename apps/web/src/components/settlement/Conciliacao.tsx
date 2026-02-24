@@ -9,7 +9,10 @@ import {
   uploadChipPix, listChipPixTransactions, linkChipPixTransaction,
   unlinkChipPixTransaction, ignoreChipPixTransaction, applyChipPixTransactions,
   deleteChipPixTransaction,
+  getChipPixLedgerSummary,
 } from '@/lib/api';
+import VerificadorConciliacao from './conciliacao/VerificadorConciliacao';
+import type { VerificadorStats } from './conciliacao/VerificadorConciliacao';
 import type { AutoMatchSuggestion } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
@@ -128,24 +131,6 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
-          🔄
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Conciliacao Financeira</h2>
-          <p className="text-dark-400 text-sm">
-            Cruzamento de pagamentos registrados com movimentacoes bancarias reais
-          </p>
-        </div>
-      </div>
-
-      {/* Info banner */}
-      <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-4 py-3 mb-5 text-sm text-dark-300">
-        ℹ️ Importe ChipPix ou OFX para cruzar com os pagamentos registrados na Liquidacao. Se bater → ✅. Se nao → ⚠️.
-      </div>
-
       {/* Sub-tabs */}
       <div className="flex gap-1 mb-5 border-b border-dark-700/50 pb-3" role="tablist" aria-label="Sub-abas de conciliacao">
         {subTabs.map(tab => (
@@ -403,7 +388,7 @@ interface BankTx {
   category: string | null;
 }
 
-type TxFilter = 'all' | 'pending' | 'linked' | 'applied' | 'ignored';
+type ChipPixFilter = 'all' | 'pending' | 'linked' | 'locked' | 'applied' | 'ignored';
 
 function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players }: {
   weekStart: string;
@@ -417,61 +402,183 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [filter, setFilter] = useState<TxFilter>('all');
+  const [autoLinking, setAutoLinking] = useState(false);
+  const [filter, setFilter] = useState<ChipPixFilter>('all');
+  const [search, setSearch] = useState('');
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
   const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [verificadoOk, setVerificadoOk] = useState(false);
+  const [ledgerStats, setLedgerStats] = useState<VerificadorStats | null>(null);
+
+  const loadLedgerSummary = useCallback(async () => {
+    try {
+      const res = await getChipPixLedgerSummary(weekStart);
+      if (res.success && res.data) setLedgerStats(res.data);
+    } catch { /* silent — verificador just won't show */ }
+  }, [weekStart]);
 
   const loadTxns = useCallback(async () => {
     setLoading(true);
     try {
       const res = await listChipPixTransactions(weekStart);
       if (res.success) setTxns(res.data || []);
-    } catch { toast('Erro ao carregar transacoes ChipPix', 'error'); } finally { setLoading(false); }
+    } catch { toast('Erro ao carregar transações ChipPix', 'error'); } finally { setLoading(false); }
   }, [weekStart]);
 
   useEffect(() => { loadTxns(); }, [loadTxns]);
+  useEffect(() => { if (txns.length > 0) loadLedgerSummary(); }, [txns.length, loadLedgerSummary]);
+
+  // Parse memo: "ChipPix · Nome · ent X.XX − saí Y.YY · taxa Z.ZZ · N txns"
+  function parseMemo(memo: string | null) {
+    if (!memo) return { entrada: 0, saida: 0, taxa: 0, ops: 0, nome: '' };
+    const entMatch = memo.match(/ent\s+([\d.]+)/);
+    const saiMatch = memo.match(/sa[íi]\s+([\d.]+)/);
+    const taxMatch = memo.match(/taxa\s+([\d.]+)/);
+    const opsMatch = memo.match(/(\d+)\s+txns?/);
+    const nomeMatch = memo.match(/ChipPix\s*·\s*(.+?)\s*·/);
+    return {
+      entrada: entMatch ? parseFloat(entMatch[1]) : 0,
+      saida: saiMatch ? parseFloat(saiMatch[1]) : 0,
+      taxa: taxMatch ? parseFloat(taxMatch[1]) : 0,
+      ops: opsMatch ? parseInt(opsMatch[1]) : 0,
+      nome: nomeMatch ? nomeMatch[1].trim() : '',
+    };
+  }
+
+  function cpId(fitid: string) {
+    return fitid.startsWith('cp_') ? fitid.substring(3) : fitid;
+  }
 
   // KPIs
   const kpis = useMemo(() => {
-    const total = txns.length;
+    let totalEntrada = 0;
+    let totalSaida = 0;
+    for (const tx of txns) {
+      const p = parseMemo(tx.memo);
+      totalEntrada += p.entrada;
+      totalSaida += p.saida;
+    }
+    const impacto = totalEntrada - totalSaida;
     const pending = txns.filter(t => t.status === 'pending').length;
     const linked = txns.filter(t => t.status === 'linked').length;
     const applied = txns.filter(t => t.status === 'applied').length;
+    const appliedAmount = txns.filter(t => t.status === 'applied')
+      .reduce((s, t) => s + Number(t.amount), 0);
     const ignored = txns.filter(t => t.status === 'ignored').length;
-    const totalIn = txns.filter(t => t.dir === 'in').reduce((s, t) => s + Number(t.amount), 0);
-    const totalOut = txns.filter(t => t.dir === 'out').reduce((s, t) => s + Number(t.amount), 0);
-    return { total, pending, linked, applied, ignored, totalIn, totalOut };
+    const unlinked = txns.filter(t => !t.entity_id && t.status === 'pending').length;
+    const unlinkedAmount = txns.filter(t => !t.entity_id && t.status === 'pending')
+      .reduce((s, t) => s + Number(t.amount), 0);
+    // Also sum taxas from chippix_fee entries (parsed from description)
+    let totalTaxas = 0;
+    for (const tx of txns) {
+      const p = parseMemo(tx.memo);
+      totalTaxas += p.taxa;
+    }
+
+    return {
+      jogadores: txns.length,
+      totalEntrada,
+      totalSaida,
+      impacto,
+      totalTaxas,
+      pending,
+      linked,
+      applied,
+      appliedAmount,
+      ignored,
+      unlinked,
+      unlinkedAmount,
+    };
   }, [txns]);
 
+  // Extrato stats for verificador (derived from parsed memo data)
+  const extratoStats = useMemo<VerificadorStats>(() => ({
+    jogadores: txns.filter(t => t.status !== 'ignored').length,
+    entradas: kpis.totalEntrada,
+    saidas: kpis.totalSaida,
+    impacto: kpis.impacto,
+    taxas: kpis.totalTaxas,
+  }), [txns, kpis]);
+
+  // Filter + search
   const filtered = useMemo(() => {
-    if (filter === 'all') return txns;
-    return txns.filter(t => t.status === filter);
-  }, [txns, filter]);
+    let result = txns;
+    if (filter === 'locked') {
+      result = result.filter(t => t.status === 'linked' || t.status === 'applied');
+    } else if (filter !== 'all') {
+      result = result.filter(t => t.status === filter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(t => {
+        const id = cpId(t.fitid).toLowerCase();
+        const name = (t.entity_name || '').toLowerCase();
+        const memo = (t.memo || '').toLowerCase();
+        return id.includes(q) || name.includes(q) || memo.includes(q);
+      });
+    }
+    return result;
+  }, [txns, filter, search]);
+
+  // ── Handlers ──────────────────────────────────────────────────────
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    setFeedback(null);
     try {
       const res = await uploadChipPix(file, weekStart, clubId);
       if (res.success) {
         const d = res.data;
-        setFeedback({
-          type: 'success',
-          msg: `${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados, ${d?.skipped || 0} duplicatas)`,
-        });
+        toast(`${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados)`, 'success');
         loadTxns();
+        loadLedgerSummary();
       } else {
-        setFeedback({ type: 'error', msg: res.error || 'Erro ao importar' });
+        toast(res.error || 'Erro ao importar', 'error');
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', msg: err.message });
+      toast(err.message, 'error');
     } finally {
       setUploading(false);
       e.target.value = '';
+    }
+  }
+
+  async function handleAutoLink() {
+    setAutoLinking(true);
+    let count = 0;
+    try {
+      const pendingTxns = txns.filter(t => t.status === 'pending' && !t.entity_id);
+      for (const tx of pendingTxns) {
+        const playerId = cpId(tx.fitid);
+        const match = players.find(p =>
+          p.external_player_id === playerId ||
+          p.external_player_id === tx.fitid
+        );
+        if (match && match.external_player_id) {
+          try {
+            const res = await linkChipPixTransaction(
+              tx.id,
+              match.external_player_id,
+              match.nickname || match.external_player_id
+            );
+            if (res.success) count++;
+          } catch { /* continue */ }
+        }
+      }
+      if (count > 0) {
+        toast(`${count} jogadores vinculados`, 'success');
+        loadTxns();
+        loadLedgerSummary();
+      } else {
+        toast('Nenhum jogador encontrado para vincular', 'info');
+      }
+    } catch {
+      toast('Erro ao auto-vincular', 'error');
+    } finally {
+      setAutoLinking(false);
     }
   }
 
@@ -484,7 +591,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
         setLinkForm({ entity_id: '', entity_name: '' });
         loadTxns();
       }
-    } catch { toast('Erro ao vincular transacao', 'error'); }
+    } catch { toast('Erro ao vincular', 'error'); }
   }
 
   async function handleUnlink(txId: string) {
@@ -497,261 +604,308 @@ function ChipPixTab({ weekStart, clubId, isDraft, onDataChange, agents, players 
     loadTxns();
   }
 
-  async function handleDelete(txId: string) {
-    if (!confirm('Excluir este registro?')) return;
-    await deleteChipPixTransaction(txId);
-    loadTxns();
-  }
-
   async function handleApply() {
-    if (!confirm(`Aplicar ${kpis.linked} jogadores vinculados? Serao criadas movimentacoes no Ledger.`)) return;
+    if (!confirm(`Lockar ${kpis.linked} registros? Isso vai aplicar o impacto no ledger de cada jogador.`)) return;
     setApplying(true);
     try {
       const res = await applyChipPixTransactions(weekStart);
       if (res.success) {
-        setFeedback({ type: 'success', msg: `${res.data?.applied || 0} movimentacoes aplicadas ao Ledger` });
+        toast(`${res.data?.applied || 0} movimentações aplicadas ao Ledger`, 'success');
         loadTxns();
+        loadLedgerSummary();
         onDataChange();
       }
-    } catch { toast('Erro ao aplicar transacoes ChipPix', 'error'); } finally { setApplying(false); }
+    } catch { toast('Erro ao aplicar', 'error'); } finally { setApplying(false); }
   }
 
-  // Extract ChipPix ID from fitid (cp_XXXX → XXXX)
-  function cpId(fitid: string) {
-    return fitid.startsWith('cp_') ? fitid.substring(3) : fitid;
+  async function handleClear() {
+    const deletable = txns.filter(t => t.status !== 'applied');
+    if (deletable.length === 0) return;
+    if (!confirm(`Limpar ${deletable.length} registros não aplicados?`)) return;
+    for (const tx of deletable) {
+      try { await deleteChipPixTransaction(tx.id); } catch { /* continue */ }
+    }
+    toast(`${deletable.length} registros removidos`, 'success');
+    loadTxns();
   }
 
-  const statusCfg: Record<string, { label: string; cls: string }> = {
-    pending:  { label: 'Pendente', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    linked:   { label: 'Vinculado', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
-    applied:  { label: 'Aplicado', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
-    ignored:  { label: 'Ignorado', cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
-  };
+  const filterBtns: { key: ChipPixFilter; label: string; count: number; icon: string }[] = [
+    { key: 'all', label: 'Todos', count: txns.length, icon: '📋' },
+    { key: 'linked', label: 'Vinculados', count: kpis.linked, icon: '✅' },
+    { key: 'locked', label: 'Lockados', count: kpis.linked + kpis.applied, icon: '🔒' },
+    { key: 'applied', label: 'Aplicados', count: kpis.applied, icon: '📌' },
+    { key: 'pending', label: 'Pendentes', count: kpis.pending, icon: '⏳' },
+    { key: 'ignored', label: 'Ignorados', count: kpis.ignored, icon: '🔴' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Upload + KPIs row */}
-      <div className="flex items-start gap-4 mb-5">
-        {/* Upload */}
-        <div className="card flex-shrink-0 w-64">
-          <label className={`flex flex-col items-center justify-center py-6 cursor-pointer border-2 border-dashed rounded-lg transition-colors ${
-            uploading ? 'border-poker-500/50 bg-poker-900/10' : 'border-dark-600/50 hover:border-dark-500'
-          }`}>
-            <input type="file" accept=".xlsx,.xls,.XLSX,.XLS" onChange={handleUpload} className="hidden" disabled={uploading} aria-label="Importar arquivo ChipPix" />
-            <span className="text-3xl mb-2">{uploading ? '⏳' : '📥'}</span>
-            <span className="text-sm text-dark-300 font-medium">
-              {uploading ? 'Importando...' : 'Importar ChipPix'}
-            </span>
-            <span className="text-xs text-dark-500 mt-1">Planilha XLSX da plataforma</span>
-          </label>
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="text-sm font-bold text-white">Conciliação ChipPix</div>
+        <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.XLSX,.XLS" onChange={handleUpload} className="hidden" />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || !isDraft}
+            className="px-3 py-1 rounded-md text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {uploading ? 'Importando...' : 'Importar'}
+          </button>
+          <button
+            onClick={handleAutoLink}
+            disabled={autoLinking || !isDraft || kpis.pending === 0}
+            className="px-3 py-1 rounded-md text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {autoLinking ? 'Vinculando...' : 'Auto-vincular'}
+          </button>
+          {kpis.linked > 0 && isDraft && (
+            <button
+              onClick={handleApply}
+              disabled={applying || !verificadoOk}
+              title={!verificadoOk ? 'Resolva as divergencias antes de Lockar' : ''}
+              className="px-3 py-1 rounded-md text-[11px] font-bold bg-yellow-400/10 border border-yellow-400/25 text-yellow-400 hover:bg-yellow-400/20 transition-all disabled:opacity-40"
+            >
+              {applying ? 'Lockando...' : `Lockar (${kpis.linked})`}
+            </button>
+          )}
+          {txns.length > 0 && isDraft && (
+            <button
+              onClick={handleClear}
+              className="px-2 py-1 rounded-md text-[10px] text-dark-500 border border-dark-700 hover:text-dark-300 transition-all"
+            >
+              Limpar
+            </button>
+          )}
         </div>
+      </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-1">
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Jogadores</p>
-            <p className="font-mono text-lg font-bold text-dark-200">{kpis.total}</p>
+      {/* ── KPIs (conc-summary style — matches HTML reference) ── */}
+      <div className="flex flex-wrap gap-4 py-3 mb-3 border-b border-dark-700">
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Jogadores</div>
+          <div className="font-extrabold text-sm text-dark-100">{kpis.jogadores}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Entradas</div>
+          <div className="font-extrabold text-sm text-emerald-500">{formatBRL(kpis.totalEntrada)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Saídas</div>
+          <div className="font-extrabold text-sm text-red-500">{formatBRL(kpis.totalSaida)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Impacto Líquido</div>
+          <div className={`font-extrabold text-sm ${kpis.impacto >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            {formatBRL(kpis.impacto)}
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pendentes</p>
-            <p className="font-mono text-lg font-bold text-yellow-400">{kpis.pending}</p>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Staged</div>
+          <div className="font-extrabold text-sm text-yellow-400">
+            {kpis.pending} <span className="text-[9px] font-normal opacity-60">pendente{kpis.pending !== 1 ? 's' : ''}</span>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Vinculados</p>
-            <p className="font-mono text-lg font-bold text-blue-400">{kpis.linked}</p>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Aplicado</div>
+          <div className="font-extrabold text-sm text-emerald-500">
+            {kpis.applied} <span className="text-[9px] font-normal opacity-60">({formatBRL(kpis.appliedAmount)})</span>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Aplicados</p>
-            <p className="font-mono text-lg font-bold text-emerald-400">{kpis.applied}</p>
-          </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Entradas</p>
-            <p className="font-mono text-sm font-bold text-poker-400">{formatBRL(kpis.totalIn)}</p>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Não Vinculado</div>
+          <div className={`font-extrabold text-sm ${kpis.unlinked > 0 ? 'text-orange-400' : 'text-dark-400'}`}>
+            {kpis.unlinked}
+            {kpis.unlinked > 0 && <span className="text-[9px] font-normal opacity-60"> ({formatBRL(kpis.unlinkedAmount)})</span>}
           </div>
         </div>
       </div>
 
-      {/* Feedback */}
-      {feedback && (
-        <div className={`mb-4 rounded-lg p-3 text-sm ${
-          feedback.type === 'success'
-            ? 'bg-green-900/30 border border-green-700/50 text-green-300'
-            : 'bg-red-900/30 border border-red-700/50 text-red-300'
-        }`}>
-          {feedback.msg}
-          <button onClick={() => setFeedback(null)} className="float-right text-dark-500 hover:text-dark-300">✕</button>
-        </div>
+      {/* ── Verificador de Conciliação ───────────────────────────── */}
+      {txns.length > 0 && ledgerStats && (
+        <VerificadorConciliacao
+          extrato={extratoStats}
+          ledger={ledgerStats}
+          onVerificado={setVerificadoOk}
+        />
       )}
 
-      {/* Actions bar */}
-      {kpis.linked > 0 && isDraft && (
-        <div className="card bg-blue-500/5 border-blue-500/10 mb-4 flex items-center justify-between">
-          <p className="text-sm text-dark-300">
-            <span className="text-blue-400 font-bold">{kpis.linked}</span> jogadores vinculados prontos para aplicar
-          </p>
-          <button
-            onClick={handleApply}
-            disabled={applying}
-            aria-label="Aplicar transacoes ChipPix vinculadas ao Ledger"
-            className="btn-primary text-xs px-4 py-2"
-          >
-            {applying ? 'Aplicando...' : 'Aplicar Vinculados'}
-          </button>
+      {/* ── Search + Filters ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dark-500 text-[10px] pointer-events-none">🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por ID ou nome..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="bg-dark-800 border border-dark-700 text-dark-100 rounded-lg pl-7 pr-3 py-1.5 text-xs w-52 focus:border-poker-500 focus:outline-none"
+          />
         </div>
-      )}
+        <div className="flex gap-1">
+          {filterBtns.map(fb => (
+            <button
+              key={fb.key}
+              onClick={() => setFilter(fb.key)}
+              className={`px-3 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                filter === fb.key
+                  ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400'
+                  : 'bg-dark-800 border-dark-700 text-dark-500 hover:text-dark-300'
+              }`}
+            >
+              {fb.icon} {fb.label} <span className="opacity-50 text-[10px]">{fb.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Filter */}
-      {kpis.total > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          {(['all', 'pending', 'linked', 'applied', 'ignored'] as TxFilter[]).map(mode => {
-            const labels: Record<TxFilter, string> = { all: 'Todos', pending: 'Pendentes', linked: 'Vinculados', applied: 'Aplicados', ignored: 'Ignorados' };
-            const counts: Record<TxFilter, number> = { all: kpis.total, pending: kpis.pending, linked: kpis.linked, applied: kpis.applied, ignored: kpis.ignored };
-            if (counts[mode] === 0 && mode !== 'all') return null;
-            return (
-              <button
-                key={mode}
-                onClick={() => setFilter(mode)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  filter === mode
-                    ? 'bg-poker-600/20 text-poker-400 border border-poker-700/40'
-                    : 'text-dark-300 hover:bg-dark-800'
-                }`}
-              >
-                {labels[mode]} ({counts[mode]})
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Player list */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner />
-        </div>
-      ) : txns.length === 0 ? (
-        <div className="card text-center py-16">
-          <div className="text-5xl mb-4">🎰</div>
-          <h3 className="text-xl font-bold text-white mb-2">Nenhum registro ChipPix</h3>
-          <p className="text-dark-400 text-sm max-w-md mx-auto">
-            Importe a planilha XLSX de ChipPix da plataforma para cruzar com os jogadores
+      {/* ── Content ─────────────────────────────────────────────── */}
+      {txns.length === 0 ? (
+        <div className="text-center py-12 text-dark-500">
+          <div className="text-4xl mb-3">🎰</div>
+          <h3 className="text-sm font-bold text-dark-300 mb-1">Nenhum extrato ChipPix carregado</h3>
+          <p className="text-xs leading-relaxed">
+            Clique em <strong className="text-emerald-500">Importar</strong> para carregar o extrato.
           </p>
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {filtered.map(tx => {
-            const sc = statusCfg[tx.status] || statusCfg.pending;
-            const isLinking = linkingId === tx.id;
+        <>
+          {/* ── Table ──────────────────────────────────────────── */}
+          <div className="border border-dark-700 rounded-lg overflow-hidden">
+            <div className="max-h-[500px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-dark-800/50">
+                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">ID / Nome</th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Entrada</th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Saída</th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Impacto</th>
+                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(tx => {
+                    const parsed = parseMemo(tx.memo);
+                    const impacto = parsed.entrada - parsed.saida;
+                    const isLinking = linkingId === tx.id;
 
-            return (
-              <div key={tx.id} className={`card py-3 ${tx.status === 'ignored' ? 'opacity-50' : ''}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {/* Player ID */}
-                    <span className="text-xs text-dark-500 font-mono w-20 flex-shrink-0 truncate" title={cpId(tx.fitid)}>
-                      ID: {cpId(tx.fitid)}
-                    </span>
-
-                    {/* Direction */}
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${
-                      tx.dir === 'in' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
-                    }`}>
-                      {tx.dir === 'in' ? '↓ IN' : '↑ OUT'}
-                    </span>
-
-                    {/* Amount (net saldo) */}
-                    <span className={`font-mono text-sm font-bold w-24 text-right flex-shrink-0 ${
-                      tx.dir === 'in' ? 'text-poker-400' : 'text-red-400'
-                    }`}>
-                      {formatBRL(Number(tx.amount))}
-                    </span>
-
-                    {/* Memo (contains breakdown) */}
-                    <span className="text-dark-300 text-xs truncate flex-1" title={tx.memo || ''}>
-                      {tx.memo || '—'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    {/* Entity link */}
-                    {tx.entity_name && (
-                      <span className="text-xs text-blue-400 font-medium max-w-[120px] truncate" title={tx.entity_name}>
-                        {tx.entity_name}
-                      </span>
-                    )}
-
-                    {/* Status badge */}
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sc.cls}`}>
-                      {sc.label}
-                    </span>
-
-                    {/* Actions */}
-                    {isDraft && tx.status === 'pending' && (
-                      <>
-                        <button onClick={() => { setLinkingId(tx.id); setLinkForm({ entity_id: '', entity_name: '' }); }}
-                          aria-label="Vincular transacao ChipPix"
-                          className="text-xs text-dark-500 hover:text-blue-400 transition-colors">Vincular</button>
-                        <button onClick={() => handleIgnore(tx.id, true)}
-                          aria-label="Ignorar transacao ChipPix"
-                          className="text-xs text-dark-600 hover:text-dark-300 transition-colors">Ignorar</button>
-                      </>
-                    )}
-                    {isDraft && tx.status === 'linked' && (
-                      <button onClick={() => handleUnlink(tx.id)}
-                        aria-label="Desvincular transacao ChipPix"
-                        className="text-xs text-dark-500 hover:text-yellow-400 transition-colors">Desvincular</button>
-                    )}
-                    {isDraft && tx.status === 'ignored' && (
-                      <button onClick={() => handleIgnore(tx.id, false)}
-                        aria-label="Restaurar transacao ChipPix"
-                        className="text-xs text-dark-500 hover:text-emerald-400 transition-colors">Restaurar</button>
-                    )}
-                    {isDraft && tx.status !== 'applied' && (
-                      <button onClick={() => handleDelete(tx.id)}
-                        aria-label="Excluir transacao ChipPix"
-                        className="text-xs text-dark-600 hover:text-red-400 transition-colors">✕</button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Link form (inline) */}
-                {isLinking && (
-                  <div className="mt-3 pt-3 border-t border-dark-700/30 flex items-center gap-2">
-                    <EntityPicker
-                      agents={agents}
-                      players={players}
-                      value={linkForm.entity_name}
-                      onChange={(entityId, entityName) => setLinkForm({ entity_id: entityId, entity_name: entityName })}
-                      autoFocus
-                    />
-                    <button onClick={() => handleLink(tx.id)} aria-label="Confirmar vinculacao ChipPix" className="btn-primary text-xs px-3 py-1.5">Vincular</button>
-                    <button onClick={() => setLinkingId(null)} aria-label="Cancelar vinculacao" className="text-xs text-dark-500 hover:text-dark-300">Cancelar</button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Progress bar */}
-      {kpis.total > 0 && (
-        <div className="mt-4 card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-dark-400">Progresso de vinculacao</span>
-            <span className="text-xs font-mono text-dark-300">
-              {kpis.linked + kpis.applied}/{kpis.total} ({kpis.total > 0 ? Math.round((kpis.linked + kpis.applied) / kpis.total * 100) : 0}%)
-            </span>
+                    return (
+                      <tr key={tx.id} className={`border-b border-dark-800 transition-colors hover:bg-white/[.02] ${tx.status === 'ignored' ? 'opacity-50' : ''}`}>
+                        {/* ID / Nome */}
+                        <td className="px-3 py-2.5 align-middle">
+                          <span className="text-blue-400 font-mono font-bold">{cpId(tx.fitid)}</span>
+                          <div className="text-dark-500 text-[10px]">{parsed.nome || tx.entity_name || '—'} · {parsed.ops} ops</div>
+                        </td>
+                        {/* Entrada */}
+                        <td className="px-3 py-2.5 text-right align-middle font-mono">
+                          <span className="text-emerald-500">
+                            {parsed.entrada > 0 ? `+${formatBRL(parsed.entrada)}` : '—'}
+                          </span>
+                        </td>
+                        {/* Saída */}
+                        <td className="px-3 py-2.5 text-right align-middle font-mono">
+                          <span className="text-red-500">
+                            {parsed.saida > 0 ? `-${formatBRL(parsed.saida)}` : '—'}
+                          </span>
+                        </td>
+                        {/* Impacto */}
+                        <td className="px-3 py-2.5 text-right align-middle font-mono font-bold">
+                          <span className={impacto >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+                            {formatBRL(impacto)}
+                          </span>
+                        </td>
+                        {/* Status */}
+                        <td className="px-3 py-2.5 align-middle">
+                          {isLinking ? (
+                            <div className="flex items-center gap-1.5">
+                              <EntityPicker
+                                agents={agents}
+                                players={players}
+                                value={linkForm.entity_name}
+                                onChange={(entityId, entityName) => setLinkForm({ entity_id: entityId, entity_name: entityName })}
+                                autoFocus
+                              />
+                              <button onClick={() => handleLink(tx.id)} className="btn-primary text-[10px] px-2 py-0.5">OK</button>
+                              <button onClick={() => setLinkingId(null)} className="text-[10px] text-dark-500 hover:text-dark-300">✕</button>
+                            </div>
+                          ) : tx.entity_name && tx.status === 'linked' ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
+                                ✅ {tx.entity_name}
+                              </span>
+                              {isDraft && (
+                                <button onClick={() => handleUnlink(tx.id)} className="text-[10px] text-dark-600 hover:text-yellow-400">✕</button>
+                              )}
+                            </div>
+                          ) : tx.status === 'applied' ? (
+                            <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
+                              🔒 {tx.entity_name || 'Lockado'}
+                            </span>
+                          ) : tx.status === 'ignored' ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-dark-500 text-[10px]">Ignorado</span>
+                              {isDraft && (
+                                <button onClick={() => handleIgnore(tx.id, false)} className="text-[10px] text-dark-600 hover:text-emerald-400">Restaurar</button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {isDraft ? (
+                                <>
+                                  <button
+                                    onClick={() => { setLinkingId(tx.id); setLinkForm({ entity_id: '', entity_name: '' }); }}
+                                    className="text-[10px] text-dark-500 hover:text-blue-400 transition-colors"
+                                  >
+                                    Vincular...
+                                  </button>
+                                  <button
+                                    onClick={() => handleIgnore(tx.id, true)}
+                                    className="w-5 h-5 bg-red-500/10 border border-red-500/25 rounded text-red-500 hover:bg-red-500/20 transition-colors text-[10px] flex items-center justify-center"
+                                    title="Ignorar"
+                                  >
+                                    ✕
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-yellow-400 text-[10px]">Pendente</span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="w-full bg-dark-800 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                kpis.linked + kpis.applied === kpis.total ? 'bg-green-500' : 'bg-poker-500'
-              }`}
-              style={{ width: `${kpis.total > 0 ? ((kpis.linked + kpis.applied) / kpis.total) * 100 : 0}%` }}
-            />
+
+          {/* ── Progress bar ───────────────────────────────────── */}
+          <div className="mt-3 pt-3 border-t border-dark-700">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-dark-500">Progresso de vinculação</span>
+              <span className="text-[10px] font-mono text-dark-400">
+                {kpis.linked + kpis.applied}/{kpis.jogadores} ({kpis.jogadores > 0 ? Math.round((kpis.linked + kpis.applied) / kpis.jogadores * 100) : 0}%)
+              </span>
+            </div>
+            <div className="w-full bg-dark-800 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  kpis.linked + kpis.applied === kpis.jogadores ? 'bg-green-500' : 'bg-poker-500'
+                }`}
+                style={{ width: `${kpis.jogadores > 0 ? ((kpis.linked + kpis.applied) / kpis.jogadores) * 100 : 0}%` }}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { getSettlementFull, formatDate, isAdmin, getOrgTree } from '@/lib/api';
-import Spinner from '@/components/Spinner';
+import dynamic from 'next/dynamic';
+import { getSettlementFull, isAdmin, getOrgTree } from '@/lib/api';
+import CardSkeleton from '@/components/ui/CardSkeleton';
+import TabSkeleton from '@/components/ui/TabSkeleton';
 
 import SubNavTabs from '@/components/settlement/SubNavTabs';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import WeekSelector from '@/components/WeekSelector';
+
+// ─── Tabs leves (import estático) ────────────────────────────────────
 import ResumoClube from '@/components/settlement/ResumoClube';
 import Detalhamento from '@/components/settlement/Detalhamento';
 import Jogadores from '@/components/settlement/Jogadores';
@@ -16,9 +20,20 @@ import DRE from '@/components/settlement/DRE';
 import Liga from '@/components/settlement/Liga';
 import Extrato from '@/components/settlement/Extrato';
 import Liquidacao from '@/components/settlement/Liquidacao';
-import Rakeback from '@/components/settlement/Rakeback';
-import Comprovantes from '@/components/settlement/Comprovantes';
-import Conciliacao from '@/components/settlement/Conciliacao';
+
+// ─── Tabs pesadas (code-split com dynamic import) ────────────────────
+const Rakeback = dynamic(
+  () => import('@/components/settlement/Rakeback'),
+  { loading: () => <TabSkeleton />, ssr: false }
+);
+const Comprovantes = dynamic(
+  () => import('@/components/settlement/Comprovantes'),
+  { loading: () => <TabSkeleton />, ssr: false }
+);
+const Conciliacao = dynamic(
+  () => import('@/components/settlement/Conciliacao'),
+  { loading: () => <TabSkeleton />, ssr: false }
+);
 
 export default function SubclubPanelPage() {
   const params = useParams();
@@ -35,6 +50,7 @@ export default function SubclubPanelPage() {
   const [showLockModal, setShowLockModal] = useState(false);
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
+  const fetchedTabs = useRef(new Set([activeTab]));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -71,17 +87,22 @@ export default function SubclubPanelPage() {
   }
 
   function handleTabChange(tab: string) {
+    if (!fetchedTabs.current.has(tab)) {
+      fetchedTabs.current.add(tab);
+    }
     router.push(`/s/${settlementId}/club/${encodeURIComponent(subclubId)}?tab=${tab}`);
   }
 
-  // ─── Loading ─────────────────────────────────────────────────────
+  // ─── Loading (skeleton em vez de spinner) ────────────────────────
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20 min-h-[60vh]">
-        <div className="text-center">
-          <Spinner size="xl" className="mx-auto mb-4" />
-          <p className="text-dark-400 text-sm">Carregando settlement...</p>
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
+        <TabSkeleton />
       </div>
     );
   }
@@ -146,7 +167,13 @@ export default function SubclubPanelPage() {
       case 'detalhamento':
         return <Detalhamento subclub={currentSubclub} />;
       case 'jogadores':
-        return <Jogadores subclub={currentSubclub} />;
+        return (
+          <Jogadores
+            subclub={currentSubclub}
+            weekStart={settlement.week_start}
+            clubId={settlement.club_id}
+          />
+        );
 
       // Tabs funcionais
       case 'ajustes':

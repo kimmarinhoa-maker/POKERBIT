@@ -3,6 +3,15 @@
 //  Espelham as tabelas player_week_metrics / agent_week_metrics
 // ══════════════════════════════════════════════════════════════════════
 
+/** Detalhe de um pagamento individual (do ledger_entries) */
+export interface PagamentoDetalhe {
+  method: string | null;
+  source: string | null;
+  amount: number;
+  description: string | null;
+  created_at: string;
+}
+
 /** Row da tabela player_week_metrics (retornada pelo backend no subclub panel) */
 export interface PlayerMetric {
   id: string;
@@ -23,6 +32,12 @@ export interface PlayerMetric {
   games: number;
   hands: number;
   rake_breakdown?: Record<string, number>;
+  // ── Carry + Pagamentos (enriched by backend) ──
+  saldo_anterior?: number;
+  total_pagamentos?: number;
+  pagamentos_detalhe?: PagamentoDetalhe[];
+  saldo_atual?: number;
+  situacao?: 'a_receber' | 'a_pagar' | 'quitado';
 }
 
 /** Row da tabela agent_week_metrics */

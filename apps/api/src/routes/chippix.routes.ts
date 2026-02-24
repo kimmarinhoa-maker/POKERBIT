@@ -6,7 +6,6 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { requireAuth, requireTenant } from '../middleware/auth';
 import { chipPixService } from '../services/chippix.service';
-import { ofxService } from '../services/ofx.service';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -76,6 +75,29 @@ router.post(
   }
 );
 
+// ─── GET /api/chippix/summary — Ledger summary para verificador ──
+router.get(
+  '/summary',
+  requireAuth,
+  requireTenant,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId;
+      const weekStart = req.query.week_start as string | undefined;
+
+      if (!weekStart) {
+        res.status(400).json({ success: false, error: 'week_start obrigatório' });
+        return;
+      }
+
+      const data = await chipPixService.getLedgerSummary(tenantId, weekStart);
+      res.json({ success: true, data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
 // ─── GET /api/chippix — Listar transações ChipPix ────────────────
 router.get(
   '/',
@@ -104,16 +126,15 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).tenantId;
-      const { entity_id, entity_name, category } = req.body;
+      const { entity_id, entity_name } = req.body;
 
       if (!entity_id || !entity_name) {
         res.status(400).json({ success: false, error: 'entity_id e entity_name obrigatórios' });
         return;
       }
 
-      // Reuse OFX service for link (same bank_transactions table)
-      const data = await ofxService.linkTransaction(
-        tenantId, req.params.id, entity_id, entity_name, category
+      const data = await chipPixService.linkTransaction(
+        tenantId, req.params.id, entity_id, entity_name
       );
 
       res.json({ success: true, data });
@@ -131,7 +152,7 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).tenantId;
-      const data = await ofxService.unlinkTransaction(tenantId, req.params.id);
+      const data = await chipPixService.unlinkTransaction(tenantId, req.params.id);
       res.json({ success: true, data });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -148,7 +169,7 @@ router.patch(
     try {
       const tenantId = (req as any).tenantId;
       const { ignore } = req.body;
-      const data = await ofxService.ignoreTransaction(tenantId, req.params.id, ignore !== false);
+      const data = await chipPixService.ignoreTransaction(tenantId, req.params.id, ignore !== false);
       res.json({ success: true, data });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -187,7 +208,7 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).tenantId;
-      const data = await ofxService.deleteTransaction(tenantId, req.params.id);
+      const data = await chipPixService.deleteTransaction(tenantId, req.params.id);
       res.json({ success: true, data });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });

@@ -27,23 +27,28 @@ interface ParsedPlayer {
   saldo: number;         // entrada - saida
 }
 
+// Ledger-compatible row returned to frontend (with virtual fields for compat)
 interface ChipPixRow {
   id: string;
   tenant_id: string;
-  source: string;
-  fitid: string;
-  tx_date: string;
-  amount: number;
-  memo: string | null;
-  bank_name: string | null;
-  dir: string;
-  status: string;
-  category: string | null;
   entity_id: string | null;
   entity_name: string | null;
   week_start: string | null;
-  applied_ledger_id: string | null;
+  dir: string;
+  amount: number;
+  method: string | null;
+  description: string | null;
+  source: string;
+  is_reconciled: boolean;
+  external_ref: string | null;
+  created_by: string | null;
   created_at: string;
+  // Virtual fields (computed, for frontend compat)
+  fitid: string;
+  memo: string | null;
+  status: string;
+  bank_name: null;
+  category: null;
 }
 
 export class ChipPixService {
@@ -216,16 +221,16 @@ export class ChipPixService {
       players = (data || []).filter(p => p.sup_id);
     }
 
-    // Check existing FITIDs to avoid duplicates
-    const fitids = parsed.map(p => `cp_${p.idJog}`);
+    // Check existing external_refs to avoid duplicates
+    const refs = parsed.map(p => `cp_${p.idJog}`);
     const { data: existing } = await supabaseAdmin
       .from('ledger_entries')
-      .select('fitid')
+      .select('external_ref')
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
-      .in('fitid', fitids);
+      .in('external_ref', refs);
 
-    const existingSet = new Set((existing || []).map(e => e.fitid));
+    const existingSet = new Set((existing || []).map(e => e.external_ref));
 
     let matched = 0;
     const toInsert = parsed
@@ -236,22 +241,19 @@ export class ChipPixService {
         if (matchResult) matched++;
 
         const saldoLiq = p.entrada - p.saida;
-        const dir = saldoLiq >= 0 ? 'in' : 'out';
 
         return {
           tenant_id: tenantId,
           source: 'chippix',
-          fitid: `cp_${p.idJog}`,
-          tx_date: p.datas[0] || weekStart || new Date().toISOString().substring(0, 10),
+          external_ref: `cp_${p.idJog}`,
           amount: Math.abs(saldoLiq),
-          memo: `ChipPix · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
-          bank_name: fileName.replace(/\.(xlsx|xls)$/i, ''),
-          dir,
-          status: matchResult ? 'linked' : 'pending',
-          category: null,
-          entity_id: matchResult?.entityId || null,
-          entity_name: matchResult?.entityName || null,
+          description: `ChipPix · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
+          dir: saldoLiq >= 0 ? 'IN' : 'OUT',
+          method: 'chippix',
+          entity_id: matchResult?.entityId || `cp_${p.idJog}`,
+          entity_name: matchResult?.entityName || p.nome || p.idJog,
           week_start: weekStart || null,
+          is_reconciled: false,
         };
       });
 
@@ -263,7 +265,7 @@ export class ChipPixService {
         .select();
 
       if (error) throw new Error(`Erro ao salvar transações ChipPix: ${error.message}`);
-      inserted = data || [];
+      inserted = (data || []).map(r => this.enrichRow(r));
     }
 
     return {
@@ -272,6 +274,26 @@ export class ChipPixService {
       matched,
       total_players: parsed.length,
       transactions: inserted,
+    };
+  }
+
+  // ─── Derive virtual status from ledger_entries fields ────────────
+  private deriveStatus(row: any): string {
+    if (row.source === 'chippix_ignored') return 'ignored';
+    if (row.is_reconciled) return 'applied';
+    if (row.entity_id) return 'linked';
+    return 'pending';
+  }
+
+  // ─── Enrich ledger row with virtual fields for frontend compat ──
+  private enrichRow(row: any): ChipPixRow {
+    return {
+      ...row,
+      fitid: row.external_ref || row.id,
+      memo: row.description,
+      status: this.deriveStatus(row),
+      bank_name: null,
+      category: null,
     };
   }
 
@@ -285,15 +307,20 @@ export class ChipPixService {
       .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
-      .eq('source', 'chippix')
+      .in('source', ['chippix', 'chippix_ignored'])
       .order('amount', { ascending: false });
 
     if (weekStart) query = query.eq('week_start', weekStart);
-    if (status) query = query.eq('status', status);
 
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
-    return data || [];
+
+    let rows = (data || []).map(r => this.enrichRow(r));
+
+    // Filter by virtual status if requested
+    if (status) rows = rows.filter(r => r.status === status);
+
+    return rows;
   }
 
   // ─── Import Extrato → parse + link + insert direto em ledger ────
@@ -571,74 +598,144 @@ export class ChipPixService {
     return `${y}-${m}-${d}`;
   }
 
-  // ─── Aplicar vinculadas → criar ledger_entries ───────────────────
+  // ─── Aplicar vinculadas → marcar is_reconciled = true ───────────
   async applyLinked(
     tenantId: string,
     weekStart: string,
     userId: string
   ) {
-    const { data: linked, error: fetchErr } = await supabaseAdmin
+    // Records already live in ledger_entries; "apply" = mark reconciled
+    const { data, error } = await supabaseAdmin
       .from('ledger_entries')
-      .select('*')
+      .update({ is_reconciled: true })
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
       .eq('week_start', weekStart)
-      .eq('status', 'linked');
+      .eq('is_reconciled', false)
+      .not('entity_id', 'is', null)
+      .select('id');
 
-    if (fetchErr) throw new Error(`Erro ao buscar vinculadas: ${fetchErr.message}`);
-    if (!linked || linked.length === 0) {
-      return { applied: 0 };
-    }
-
-    let applied = 0;
-
-    for (const tx of linked) {
-      if (!tx.entity_id) continue;
-
-      const { data: entry, error: ledgerErr } = await supabaseAdmin
-        .from('ledger_entries')
-        .insert({
-          tenant_id: tenantId,
-          entity_id: tx.entity_id,
-          entity_name: tx.entity_name || null,
-          week_start: weekStart,
-          dir: tx.dir === 'in' ? 'IN' : 'OUT',
-          amount: Math.abs(Number(tx.amount)),
-          method: 'chippix',
-          description: tx.memo || `ChipPix: ${tx.fitid}`,
-          source: 'chippix',
-          external_ref: tx.fitid,
-          created_by: userId,
-        })
-        .select()
-        .single();
-
-      if (ledgerErr) {
-        console.error(`Erro ao criar ledger para ${tx.fitid}:`, ledgerErr);
-        continue;
-      }
-
-      await supabaseAdmin
-        .from('ledger_entries')
-        .update({
-          status: 'applied',
-          applied_ledger_id: entry.id,
-        })
-        .eq('id', tx.id);
-
-      applied++;
-    }
+    if (error) throw new Error(`Erro ao aplicar vinculadas: ${error.message}`);
+    const applied = data?.length || 0;
 
     // Audit
     await supabaseAdmin.from('audit_log').insert({
       tenant_id: tenantId,
       user_id: userId,
       action: 'APPLY_CHIPPIX',
-      entity_type: 'bank_transaction',
+      entity_type: 'ledger_entry',
       new_data: { week_start: weekStart, applied },
     });
 
     return { applied };
+  }
+
+  // ─── Vincular entidade ─────────────────────────────────────────────
+  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string) {
+    const { data, error } = await supabaseAdmin
+      .from('ledger_entries')
+      .update({ entity_id: entityId, entity_name: entityName })
+      .eq('id', txId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Erro ao vincular: ${error.message}`);
+    return this.enrichRow(data);
+  }
+
+  // ─── Desvincular entidade ──────────────────────────────────────────
+  async unlinkTransaction(tenantId: string, txId: string) {
+    const { data, error } = await supabaseAdmin
+      .from('ledger_entries')
+      .update({ entity_id: null, entity_name: null })
+      .eq('id', txId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Erro ao desvincular: ${error.message}`);
+    return this.enrichRow(data);
+  }
+
+  // ─── Ignorar / restaurar ──────────────────────────────────────────
+  async ignoreTransaction(tenantId: string, txId: string, ignore: boolean) {
+    const newSource = ignore ? 'chippix_ignored' : 'chippix';
+    const { data, error } = await supabaseAdmin
+      .from('ledger_entries')
+      .update({ source: newSource })
+      .eq('id', txId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Erro ao atualizar: ${error.message}`);
+    return this.enrichRow(data);
+  }
+
+  // ─── Ledger Summary (para verificador de conciliação) ─────────────
+  async getLedgerSummary(tenantId: string, weekStart: string) {
+    const { data, error } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('entity_id, dir, amount, source')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .in('source', ['chippix', 'chippix_fee', 'chippix_ignored']);
+
+    if (error) throw new Error(`Erro ao buscar ledger summary: ${error.message}`);
+
+    const rows = data || [];
+    const playerIds = new Set<string>();
+    let entradas = 0;
+    let saidas = 0;
+    let taxas = 0;
+
+    for (const r of rows) {
+      if (r.source === 'chippix_fee') {
+        taxas += Number(r.amount);
+        continue;
+      }
+      if (r.source === 'chippix_ignored') continue;
+      // source === 'chippix'
+      if (r.entity_id) playerIds.add(r.entity_id);
+      if (r.dir === 'IN') {
+        entradas += Number(r.amount);
+      } else {
+        saidas += Number(r.amount);
+      }
+    }
+
+    return {
+      jogadores: playerIds.size,
+      entradas: round2(entradas),
+      saidas: round2(saidas),
+      impacto: round2(entradas - saidas),
+      taxas: round2(taxas),
+    };
+  }
+
+  // ─── Deletar transação ─────────────────────────────────────────────
+  async deleteTransaction(tenantId: string, txId: string) {
+    const { data: existing } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('is_reconciled')
+      .eq('id', txId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (!existing) throw new Error('Transação não encontrada');
+    if (existing.is_reconciled) {
+      throw new Error('Não é possível excluir transação já aplicada');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('ledger_entries')
+      .delete()
+      .eq('id', txId)
+      .eq('tenant_id', tenantId);
+
+    if (error) throw new Error(`Erro ao excluir: ${error.message}`);
+    return { id: txId };
   }
 }
 

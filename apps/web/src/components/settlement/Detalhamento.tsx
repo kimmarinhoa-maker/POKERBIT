@@ -169,66 +169,69 @@ export default function Detalhamento({ subclub }: Props) {
     return 'text-dark-400';
   }
 
-  /** Dynamic border-top color for resultado KPI */
-  function resultadoBorderColor(v: number): string {
-    if (v > 0.01) return 'bg-emerald-500';
-    if (v < -0.01) return 'bg-red-500';
-    return 'bg-dark-500';
+  /** GGR column color: 0 = dash dark-600, >0 = poker-500, <0 = danger-500 */
+  function ggrColor(v: number): string {
+    if (v > 0.01) return 'text-poker-500';
+    if (v < -0.01) return 'text-danger-500';
+    return 'text-dark-600';
   }
 
   return (
     <div>
-      {/* ── 4 KPI Cards ── */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      {/* ── 5 KPI Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         {/* Jogadores Ativos */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-blue-500" />
-          <div className="px-3 py-2.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
-              👥 Jogadores Ativos
-            </div>
-            <div className="font-mono text-lg font-extrabold text-white">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores Ativos</p>
+            <p className="text-xl font-bold mt-2 font-mono text-blue-400">
               {grandTotals.ativos}
-            </div>
+            </p>
           </div>
         </div>
 
         {/* Profit / Loss */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-amber-500" />
-          <div className="px-3 py-2.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
-              📈 Profit / Loss
-            </div>
-            <div className={`font-mono text-lg font-extrabold ${valColor(grandTotals.ganhos)}`}>
+        <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default`}>
+          <div className={`h-0.5 ${grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Profit/Loss</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}>
               {formatBRL(grandTotals.ganhos)}
-            </div>
+            </p>
           </div>
         </div>
 
         {/* Rake Gerado */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-1 bg-emerald-500" />
-          <div className="px-3 py-2.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
-              💎 Rake Gerado
-            </div>
-            <div className="font-mono text-lg font-extrabold text-emerald-400">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-poker-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Gerado</p>
+            <p className="text-xl font-bold mt-2 font-mono text-poker-400">
               {formatBRL(grandTotals.rake)}
-            </div>
+            </p>
+          </div>
+        </div>
+
+        {/* GGR Rodeio */}
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-purple-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">GGR Rodeio</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${ggrColor(grandTotals.ggr)}`}>
+              {Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
+            </p>
           </div>
         </div>
 
         {/* Resultado Final */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className={`h-1 ${resultadoBorderColor(grandTotals.resultado)}`} />
-          <div className="px-3 py-2.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
-              📊 Resultado Final
-            </div>
-            <div className={`font-mono text-lg font-extrabold ${valColor(grandTotals.resultado)}`}>
+        <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default ring-1 ring-amber-700/30`}>
+          <div className={`h-0.5 ${grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Final</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
               {formatBRL(grandTotals.resultado)}
-            </div>
+            </p>
           </div>
         </div>
       </div>
@@ -258,29 +261,16 @@ export default function Detalhamento({ subclub }: Props) {
         </div>
       </div>
 
-      {/* ── Single Unified Table ── */}
+      {/* ── Table ── */}
       <div className="card overflow-hidden p-0">
-        <table className="w-full text-sm" style={{ minWidth: 960 }}>
+        <table className="w-full text-sm">
           <thead>
-            <tr className="bg-dark-800/50 text-dark-400 text-left border-b border-dark-700">
-              <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider">
-                Agencia / Jogador
-              </th>
-              <th className="px-3 py-2.5 font-semibold text-xs uppercase tracking-wider">
-                ID Agente
-              </th>
-              <th className="px-3 py-2.5 font-semibold text-xs uppercase tracking-wider text-right">
-                Ganhos
-              </th>
-              <th className="px-3 py-2.5 font-semibold text-xs uppercase tracking-wider text-right">
-                Rake
-              </th>
-              <th className="px-3 py-2.5 font-semibold text-xs uppercase tracking-wider text-right">
-                Rodeo GGR
-              </th>
-              <th className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-right">
-                Resultado Final
-              </th>
+            <tr className="bg-dark-800/50 text-dark-500 text-left border-b border-dark-700">
+              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest">Agente</th>
+              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Rake</th>
+              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Ganhos</th>
+              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Rodeio GGR</th>
+              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Resultado Final</th>
             </tr>
           </thead>
           <tbody>
@@ -294,26 +284,27 @@ export default function Detalhamento({ subclub }: Props) {
                   isExpanded={isExpanded}
                   onToggle={() => toggleAgent(group.agentName)}
                   valColor={valColor}
+                  ggrColor={ggrColor}
                 />
               );
             })}
 
             {/* ── TOTAL footer row ── */}
             {filteredGroups.length > 0 && (
-              <tr className="bg-amber-500/5 border-t-2 border-amber-500/20">
-                <td className="px-4 py-3 font-extrabold text-amber-400" colSpan={2}>
+              <tr className="border-t-2 border-dark-700 bg-dark-900">
+                <td className="px-3 py-2 font-bold text-dark-100 uppercase tracking-widest text-[10px]">
                   TOTAL
                 </td>
-                <td className={`px-3 py-3 text-right font-mono font-extrabold ${valColor(filteredTotals.ganhos)}`}>
-                  {formatBRL(filteredTotals.ganhos)}
-                </td>
-                <td className="px-3 py-3 text-right font-mono font-extrabold text-emerald-400">
+                <td className="px-3 py-2 text-right font-mono text-xs font-bold text-emerald-400">
                   {formatBRL(filteredTotals.rake)}
                 </td>
-                <td className="px-3 py-3 text-right font-mono font-extrabold text-purple-400">
+                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.ganhos)}`}>
+                  {formatBRL(filteredTotals.ganhos)}
+                </td>
+                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${ggrColor(filteredTotals.ggr)}`}>
                   {Math.abs(filteredTotals.ggr) > 0.001 ? formatBRL(filteredTotals.ggr) : '\u2014'}
                 </td>
-                <td className={`px-4 py-3 text-right font-mono font-extrabold ${valColor(filteredTotals.resultado)}`}>
+                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.resultado)}`}>
                   {formatBRL(filteredTotals.resultado)}
                 </td>
               </tr>
@@ -339,40 +330,43 @@ interface AgentSectionProps {
   isExpanded: boolean;
   onToggle: () => void;
   valColor: (v: number) => string;
+  ggrColor: (v: number) => string;
 }
 
-function AgentSection({ group, isExpanded, onToggle, valColor }: AgentSectionProps) {
+function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: AgentSectionProps) {
   return (
     <>
       {/* Agent row */}
       <tr
-        className="bg-dark-800/30 hover:bg-dark-800/50 cursor-pointer border-b border-dark-700/50 transition-colors"
+        className="hover:bg-dark-800/40 cursor-pointer border-b border-dark-800 transition-colors"
         onClick={onToggle}
       >
-        <td className="px-4 py-2.5 font-bold text-white">
-          <span className="inline-flex items-center gap-2">
-            <span className="text-[10px] text-dark-500 transition-transform">
-              {isExpanded ? '\u25B2' : '\u25B6'}
+        <td className="px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-dark-500 text-[10px]">
+              {isExpanded ? '\u25BC' : '\u25B6'}
             </span>
-            <span>{'🤝'} {group.agentName}</span>
-            <span className="text-[10px] text-dark-500 font-normal">
-              ({group.players.length} jog.)
-            </span>
-          </span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-dark-100 text-xs font-semibold">{group.agentName}</span>
+                {group.externalAgentId && (
+                  <span className="text-dark-600 text-[10px] font-mono">{group.externalAgentId}</span>
+                )}
+              </div>
+              <div className="text-dark-600 text-[10px]">{group.players.length} jogadores</div>
+            </div>
+          </div>
         </td>
-        <td className="px-3 py-2.5 font-mono text-dark-400 text-xs">
-          {group.externalAgentId || '\u2014'}
-        </td>
-        <td className={`px-3 py-2.5 text-right font-mono font-semibold ${valColor(group.totals.ganhos)}`}>
-          {formatBRL(group.totals.ganhos)}
-        </td>
-        <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-400">
+        <td className="px-3 py-1.5 text-right font-mono text-xs font-semibold text-emerald-400">
           {group.totals.rake > 0.001 ? formatBRL(group.totals.rake) : '\u2014'}
         </td>
-        <td className="px-3 py-2.5 text-right font-mono font-semibold text-purple-400">
+        <td className={`px-3 py-1.5 text-right font-mono text-xs font-semibold ${valColor(group.totals.ganhos)}`}>
+          {formatBRL(group.totals.ganhos)}
+        </td>
+        <td className={`px-3 py-1.5 text-right font-mono text-xs font-semibold ${ggrColor(group.totals.ggr)}`}>
           {Math.abs(group.totals.ggr) > 0.001 ? formatBRL(group.totals.ggr) : '\u2014'}
         </td>
-        <td className={`px-4 py-2.5 text-right font-mono font-extrabold ${valColor(group.totals.resultado)}`}>
+        <td className={`px-3 py-1.5 text-right font-mono text-xs font-bold ${valColor(group.totals.resultado)}`}>
           {formatBRL(group.totals.resultado)}
         </td>
       </tr>
@@ -384,29 +378,25 @@ function AgentSection({ group, isExpanded, onToggle, valColor }: AgentSectionPro
           const pRake = Number(p.rake_total_brl || 0);
           const pGGR = Number(p.ggr_brl || 0);
           const pRes = pGanhos + pRake + pGGR;
-          const altBg = i % 2 === 1 ? 'bg-white/[0.015]' : '';
 
           return (
             <tr
               key={p.external_player_id || i}
-              className={`hover:bg-dark-800/20 transition-colors border-b border-white/[0.04] ${altBg}`}
+              className="hover:bg-dark-800/20 transition-colors border-b border-white/[0.04]"
             >
-              <td className="py-2 text-dark-200" style={{ paddingLeft: 28 }}>
-                {'👤'} {p.nickname || p.external_player_id || '\u2014'}
+              <td className="pl-8 pr-3 py-1 text-dark-400 text-xs">
+                {p.nickname || p.external_player_id || '\u2014'}
               </td>
-              <td className="px-3 py-2 font-mono text-dark-400 text-xs">
-                {p.external_player_id || '\u2014'}
-              </td>
-              <td className={`px-3 py-2 text-right font-mono font-semibold ${valColor(pGanhos)}`}>
-                {formatBRL(pGanhos)}
-              </td>
-              <td className="px-3 py-2 text-right font-mono font-semibold text-emerald-400">
+              <td className="px-3 py-1 text-right font-mono text-xs text-emerald-400">
                 {pRake > 0.001 ? formatBRL(pRake) : '\u2014'}
               </td>
-              <td className="px-3 py-2 text-right font-mono font-semibold text-purple-400">
+              <td className={`px-3 py-1 text-right font-mono text-xs ${valColor(pGanhos)}`}>
+                {formatBRL(pGanhos)}
+              </td>
+              <td className={`px-3 py-1 text-right font-mono text-xs ${ggrColor(pGGR)}`}>
                 {Math.abs(pGGR) > 0.001 ? formatBRL(pGGR) : '\u2014'}
               </td>
-              <td className={`px-4 py-2 text-right font-mono font-semibold ${valColor(pRes)}`}>
+              <td className={`px-3 py-1 text-right font-mono text-xs font-semibold ${valColor(pRes)}`}>
                 {formatBRL(pRes)}
               </td>
             </tr>

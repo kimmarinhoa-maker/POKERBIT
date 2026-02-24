@@ -127,8 +127,8 @@ export class SettlementService {
 
     if (sErr || !settlement) return null;
 
-    // ── Fetch paralelo: players + agents + fees + adjustments ──────
-    const [playersRes, agentsRes, feesRes, adjRes] = await Promise.all([
+    // ── Fetch paralelo: players + agents + fees + adjustments + carry + ledger
+    const [playersRes, agentsRes, feesRes, adjRes, carryRes, ledgerRes] = await Promise.all([
       supabaseAdmin
         .from('player_week_metrics')
         .select('*')
@@ -152,12 +152,56 @@ export class SettlementService {
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('week_start', settlement.week_start),
+      // Carry-forward para saldo anterior por entidade
+      supabaseAdmin
+        .from('carry_forward')
+        .select('entity_id, amount')
+        .eq('tenant_id', tenantId)
+        .eq('club_id', settlement.club_id)
+        .eq('week_start', settlement.week_start),
+      // Ledger entries para pagamentos por jogador
+      supabaseAdmin
+        .from('ledger_entries')
+        .select('entity_id, dir, amount, method, source, description, created_at')
+        .eq('tenant_id', tenantId)
+        .eq('week_start', settlement.week_start),
     ]);
 
     const players = playersRes.data || [];
     const agents = agentsRes.data || [];
     const feeRows = feesRes.data || [];
     const adjRows = adjRes.data || [];
+
+    // ── Build carry-forward map: entity_id → amount ──────────────────
+    const carryMap = new Map<string, number>();
+    for (const cf of (carryRes.data || [])) {
+      carryMap.set(cf.entity_id, Number(cf.amount) || 0);
+    }
+
+    // ── Build ledger map: entity_id → { total, detalhe[] } ──────────
+    const ledgerMap = new Map<string, { total: number; detalhe: any[] }>();
+    for (const le of (ledgerRes.data || [])) {
+      if (le.source === 'system' || le.source === 'import') continue;
+      const key = le.entity_id;
+      if (!key) continue;
+      if (!ledgerMap.has(key)) ledgerMap.set(key, { total: 0, detalhe: [] });
+      const entry = ledgerMap.get(key)!;
+      const signed = le.dir === 'IN' ? Number(le.amount) : -Number(le.amount);
+      entry.total += signed;
+      entry.detalhe.push({
+        method: le.method,
+        source: le.source,
+        amount: round2(signed),
+        description: le.description,
+        created_at: le.created_at,
+      });
+    }
+    // Sort each detalhe array by created_at DESC
+    for (const [, v] of ledgerMap) {
+      v.detalhe.sort((a: any, b: any) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    }
 
     // ── Normalizar fees ────────────────────────────────────────────
     const fees: Record<string, number> = {
@@ -259,6 +303,49 @@ export class SettlementService {
         acertoLiga < -0.01 ? `${sc.name} deve pagar à Liga` :
         'Neutro';
 
+      // ── Enriquecer cada jogador com carry + pagamentos ────────────
+      for (const p of sc.players) {
+        // Chaves possíveis para match carry/ledger
+        const keys: string[] = [];
+        if (p.player_id) keys.push(p.player_id);
+        if (p.external_player_id) keys.push(String(p.external_player_id));
+        if (p.id) keys.push(p.id);
+
+        // Saldo anterior (carry-forward)
+        let saldoAnterior = 0;
+        for (const k of keys) {
+          if (carryMap.has(k)) { saldoAnterior = carryMap.get(k)!; break; }
+        }
+
+        // Pagamentos (ledger entries) — collect from all matching keys
+        let totalPagamentos = 0;
+        let pagamentosDetalhe: any[] = [];
+        const usedKeys = new Set<string>();
+        for (const k of keys) {
+          if (ledgerMap.has(k) && !usedKeys.has(k)) {
+            usedKeys.add(k);
+            const entry = ledgerMap.get(k)!;
+            totalPagamentos += entry.total;
+            pagamentosDetalhe.push(...entry.detalhe);
+          }
+        }
+        // Re-sort detalhe combined
+        pagamentosDetalhe.sort((a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        const resultadoSemana = Number(p.resultado_brl) || 0;
+        const saldoAtual = round2(resultadoSemana + saldoAnterior + round2(totalPagamentos));
+
+        p.saldo_anterior = round2(saldoAnterior);
+        p.total_pagamentos = round2(totalPagamentos);
+        p.pagamentos_detalhe = pagamentosDetalhe;
+        p.saldo_atual = saldoAtual;
+        p.situacao = saldoAtual > 0.01 ? 'a_receber'
+                   : saldoAtual < -0.01 ? 'a_pagar'
+                   : 'quitado';
+      }
+
       return {
         id: sc.id,
         name: sc.name,
@@ -330,10 +417,19 @@ export class SettlementService {
   }
 
   // ─── Rollup dashboard totals ─────────────────────────────────────
+  // Soma direto dos players para evitar cascata de arredondamento
+  // (round2 por jogador → round2 por subclub → round2 dashboard)
   private rollupDashboard(subclubs: any[]) {
-    const sumField = (k: string) =>
-      round2(subclubs.reduce((acc, s) => acc + Number(s.totals[k] || 0), 0));
+    // Soma direta dos dados de jogadores — apenas 1 round2 no final
+    const allPlayers = subclubs.flatMap(s => s.players || []);
 
+    const ganhos = round2(sumArr(allPlayers, 'winnings_brl'));
+    const rake = round2(sumArr(allPlayers, 'rake_total_brl'));
+    const ggr = round2(sumArr(allPlayers, 'ggr_brl'));
+    const rbTotal = round2(sumArr(allPlayers, 'rb_value_brl'));
+    const resultado = round2(ganhos + rake + ggr);
+
+    // Fees e lançamentos continuam somados por subclub (são per-subclub por natureza)
     const totalTaxas = round2(
       subclubs.reduce((acc, s) => acc + Number(s.feesComputed.totalTaxas || 0), 0)
     );
@@ -341,16 +437,15 @@ export class SettlementService {
     const totalLancamentos = round2(
       subclubs.reduce((acc, s) => acc + Number(s.totalLancamentos || 0), 0)
     );
-    const resultado = sumField('resultado');
     const acertoLiga = round2(resultado + totalTaxasSigned + totalLancamentos);
 
     return {
       players: subclubs.reduce((acc, s) => acc + (s.totals.players || 0), 0),
       agents: subclubs.reduce((acc, s) => acc + (s.totals.agents || 0), 0),
-      ganhos: sumField('ganhos'),
-      rake: sumField('rake'),
-      ggr: sumField('ggr'),
-      rbTotal: sumField('rbTotal'),
+      ganhos,
+      rake,
+      ggr,
+      rbTotal,
       resultado,
       totalTaxas,
       totalTaxasSigned,

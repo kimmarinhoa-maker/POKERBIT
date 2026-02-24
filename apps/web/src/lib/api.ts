@@ -644,6 +644,10 @@ export async function deleteChipPixTransaction(txId: string) {
   return apiFetch(`/chippix/${txId}`, { method: 'DELETE' });
 }
 
+export async function getChipPixLedgerSummary(weekStart: string) {
+  return apiFetch(`/chippix/summary?week_start=${weekStart}`);
+}
+
 // ─── Conciliacao ──────────────────────────────────────────────────
 
 export async function toggleReconciled(entryId: string, value: boolean) {

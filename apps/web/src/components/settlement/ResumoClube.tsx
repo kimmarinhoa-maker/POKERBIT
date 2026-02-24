@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl }: Props) {
-  const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, acertoDirecao, name } = subclub;
+  const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, name } = subclub;
   const resumoRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
@@ -65,7 +65,6 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           <h2 className="text-2xl font-bold text-white tracking-tight">{name}</h2>
           {weekStart && (
             <p className="text-dark-400 text-sm flex items-center gap-1">
-              <span className="text-dark-500">📅</span>
               {fmtDate(weekStart)}
               <span className="text-dark-600 mx-1">&rarr;</span>
               {fmtDate(weekEnd)}
@@ -81,7 +80,6 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           value={String(totals.players)}
           borderColor="border-blue-500"
           textColor="text-blue-400"
-          icon="👥"
         />
         <KpiCard
           label="Profit/Loss"
@@ -89,21 +87,18 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           value={formatBRL(totals.ganhos)}
           borderColor={totals.ganhos < 0 ? 'border-red-500' : 'border-poker-500'}
           textColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
-          icon="📉"
         />
         <KpiCard
           label="Rake Gerado"
           value={formatBRL(totals.rake)}
           borderColor="border-poker-500"
           textColor="text-poker-400"
-          icon="🎰"
         />
         <KpiCard
           label="GGR Rodeo P/L"
           value={formatBRL(totals.ggr)}
           borderColor="border-purple-500"
           textColor="text-purple-400"
-          icon="🎯"
         />
         <KpiCard
           label="Resultado do Clube"
@@ -111,23 +106,19 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           value={formatBRL(totals.resultado)}
           borderColor={totals.resultado >= 0 ? 'border-amber-500' : 'border-red-500'}
           textColor={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
-          icon="🏆"
           highlight
         />
       </div>
 
       {/* ── Taxas + Lancamentos (side by side) ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
 
         {/* TAXAS AUTOMATICAS */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-            <span className="text-base">📋</span>
-            <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-              Taxas Automaticas
-            </h3>
-          </div>
-          <div className="space-y-3">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-5">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">
+            Taxas Automáticas
+          </h3>
+          <div>
             <TaxaRow
               label="Taxa Aplicativo"
               sublabel={`${fees.taxaApp}% do Rake`}
@@ -147,11 +138,12 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
               label="Taxa Rodeo App"
               sublabel={`${fees.taxaRodeoApp}% do GGR`}
               value={feesComputed.taxaRodeoApp}
+              isLast
             />
             {/* Total */}
-            <div className="pt-3 mt-1 border-t border-dark-600 flex items-center justify-between">
-              <span className="text-sm font-semibold text-red-400">Total Taxas</span>
-              <span className="font-mono text-red-400 font-bold text-base">
+            <div className="border-t-2 border-danger-500/30 mt-1 pt-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-dark-100">Total Taxas</span>
+              <span className="font-mono text-danger-500 font-bold text-sm">
                 {formatBRL(feesComputed.totalTaxasSigned)}
               </span>
             </div>
@@ -159,23 +151,22 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         </div>
 
         {/* LANCAMENTOS */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-            <span className="text-base">📝</span>
-            <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-              Lancamentos
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-5">
+          <div className="mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400">
+              Lançamentos
             </h3>
-            <span className="text-[10px] text-dark-500 ml-1">(editaveis em Config)</span>
+            <span className="text-xs text-dark-600">(editáveis em Lançamentos)</span>
           </div>
-          <div className="space-y-3">
+          <div>
             <LancRow label="Overlay (parte do clube)" value={adjustments.overlay} />
             <LancRow label="Compras" value={adjustments.compras} />
             <LancRow label="Security" value={adjustments.security} />
-            <LancRow label="Outros" value={adjustments.outros} />
+            <LancRow label="Outros" value={adjustments.outros} isLast />
             {/* Total */}
-            <div className="pt-3 mt-1 border-t border-dark-600 flex items-center justify-between">
-              <span className="text-sm font-semibold text-dark-300">Total Lanc.</span>
-              <span className={`font-mono font-bold text-base ${totalLancamentos < 0 ? 'text-red-400' : totalLancamentos > 0 ? 'text-poker-400' : 'text-dark-500'}`}>
+            <div className="border-t border-dark-700 mt-1 pt-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-dark-100">Total Lanc.</span>
+              <span className={`font-mono font-bold text-sm ${totalLancamentos < 0 ? 'text-danger-500' : totalLancamentos > 0 ? 'text-poker-500' : 'text-dark-500'}`}>
                 {formatBRL(totalLancamentos)}
               </span>
             </div>
@@ -184,59 +175,31 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
       </div>
 
       {/* ── Acerto Total Liga ── card destacado ────────────────── */}
-      <div className={`rounded-xl p-6 border-2 ${
-        acertoLiga > 0
-          ? 'bg-poker-950/40 border-poker-700/60'
-          : acertoLiga < 0
-            ? 'bg-red-950/30 border-red-700/50'
-            : 'bg-dark-800/50 border-dark-600/50'
+      <div className={`rounded-xl p-6 flex justify-between items-center ${
+        acertoLiga < 0
+          ? 'bg-danger-900/20 border-2 border-danger-500'
+          : 'bg-poker-900/20 border-2 border-poker-500'
       }`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">🏆</span>
-              <h3 className="text-lg font-bold text-white uppercase tracking-wide">
-                Acerto Total Liga
-              </h3>
-            </div>
-            <p className="text-xs text-dark-400 ml-8">
-              Resultado + Taxas + Lancamentos
-            </p>
+        <div>
+          <div className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-1">
+            🏆 ACERTO TOTAL LIGA
           </div>
-          <div className="text-right">
-            <p className={`text-3xl font-bold font-mono ${
-              acertoLiga > 0 ? 'text-poker-400' : acertoLiga < 0 ? 'text-red-400' : 'text-dark-300'
-            }`}>
-              {formatBRL(acertoLiga)}
-            </p>
-            <p className={`text-sm mt-1 font-medium ${
-              acertoLiga > 0 ? 'text-poker-400' : acertoLiga < 0 ? 'text-red-400' : 'text-dark-400'
-            }`}>
-              {acertoLiga > 0 ? '🟢 ' : acertoLiga < 0 ? '🔴 ' : '⚪ '}
-              {acertoDirecao}
-            </p>
+          <div className="text-xs text-dark-400">
+            Resultado + Taxas + Lançamentos
           </div>
         </div>
-
-        {/* Mini breakdown */}
-        <div className="mt-4 pt-3 border-t border-dark-700/50 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-[10px] text-dark-500 uppercase">Resultado</p>
-            <p className={`text-sm font-mono ${totals.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-              {formatBRL(totals.resultado)}
-            </p>
+        <div className="text-right">
+          <div className={`font-mono text-3xl font-bold ${
+            acertoLiga < 0 ? 'text-danger-500' : 'text-poker-500'
+          }`}>
+            {formatBRL(acertoLiga)}
           </div>
-          <div>
-            <p className="text-[10px] text-dark-500 uppercase">Taxas</p>
-            <p className="text-sm font-mono text-red-400">
-              {formatBRL(feesComputed.totalTaxasSigned)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-dark-500 uppercase">Lancamentos</p>
-            <p className={`text-sm font-mono ${totalLancamentos >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-              {formatBRL(totalLancamentos)}
-            </p>
+          <div className={`text-xs mt-1 ${
+            acertoLiga < 0 ? 'text-danger-500' : 'text-poker-500'
+          }`}>
+            {acertoLiga < 0
+              ? `${name} deve pagar à Liga`
+              : `Liga deve pagar ao ${name}`}
           </div>
         </div>
       </div>
@@ -247,28 +210,23 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
 // ─── Sub-components ──────────────────────────────────────────────
 
-function KpiCard({ label, sublabel, value, borderColor, textColor, icon, highlight }: {
+function KpiCard({ label, sublabel, value, borderColor, textColor, highlight }: {
   label: string;
   sublabel?: string;
   value: string;
   borderColor: string;
   textColor: string;
-  icon: string;
   highlight?: boolean;
 }) {
   return (
-    <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ${
+    <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:border-dark-600 cursor-default ${
       highlight ? 'ring-1 ring-amber-700/30' : ''
     }`}>
-      {/* Borda colorida no topo */}
-      <div className={`h-1 ${borderColor.replace('border-', 'bg-')}`} />
+      <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
       <div className="p-4">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-sm">{icon}</span>
-          <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">{label}</p>
-        </div>
+        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">{label}</p>
         {sublabel && (
-          <p className="text-[9px] text-dark-600 ml-6 -mt-0.5">{sublabel}</p>
+          <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>
         )}
         <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>
           {value}
@@ -278,37 +236,37 @@ function KpiCard({ label, sublabel, value, borderColor, textColor, icon, highlig
   );
 }
 
-function TaxaRow({ label, sublabel, value }: { label: string; sublabel: string; value: number }) {
+function TaxaRow({ label, sublabel, value, isLast }: { label: string; sublabel: string; value: number; isLast?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-1">
-      <div className="flex items-baseline gap-2">
-        <span className="text-sm text-dark-200">{label}</span>
-        <span className="text-[11px] text-dark-500">{sublabel}</span>
+    <div className={`flex justify-between items-center py-3 ${isLast ? '' : 'border-b border-dark-800'}`}>
+      <div>
+        <span className="text-sm text-dark-100">{label}</span>
+        <span className="text-xs text-dark-400 ml-2">{sublabel}</span>
       </div>
-      <span className="font-mono text-red-400 text-sm font-medium">
+      <span className="font-mono text-sm text-danger-500">
         {formatBRL(-value)}
       </span>
     </div>
   );
 }
 
-function LancRow({ label, value }: { label: string; value: number }) {
+function LancRow({ label, value, isLast }: { label: string; value: number; isLast?: boolean }) {
   if (value === undefined || value === null) return (
-    <div className="flex items-center justify-between py-1">
+    <div className={`flex justify-between items-center py-3 ${isLast ? '' : 'border-b border-dark-800'}`}>
       <span className="text-sm text-dark-400">{label}</span>
-      <span className="text-dark-600 text-sm">--</span>
+      <span className="text-dark-600 text-sm">—</span>
     </div>
   );
 
   return (
-    <div className="flex items-center justify-between py-1">
-      <span className={`text-sm ${value !== 0 ? 'text-dark-100 font-medium' : 'text-dark-400'}`}>
+    <div className={`flex justify-between items-center py-3 ${isLast ? '' : 'border-b border-dark-800'}`}>
+      <span className={`text-sm ${value !== 0 ? 'text-dark-100' : 'text-dark-400'}`}>
         {label}
       </span>
-      <span className={`font-mono text-sm font-medium ${
-        value > 0 ? 'text-poker-400' : value < 0 ? 'text-red-400' : 'text-dark-500'
+      <span className={`font-mono text-sm ${
+        value > 0 ? 'text-poker-500' : value < 0 ? 'text-danger-500' : 'text-dark-600'
       }`}>
-        {formatBRL(value)}
+        {value === 0 ? '—' : formatBRL(value)}
       </span>
     </div>
   );
