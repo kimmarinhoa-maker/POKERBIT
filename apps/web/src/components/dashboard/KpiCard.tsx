@@ -1,12 +1,20 @@
 'use client';
 
+import { formatCurrency } from '@/lib/formatters';
+
+interface BreakdownItem {
+  label: string;
+  value: string;
+  rawValue?: number;
+}
+
 interface KpiCardProps {
   label: string;
   subtitle?: string;
   value: string;
   accent: 'green' | 'blue' | 'red' | 'yellow' | 'purple';
   delta?: { pct: string; isUp: boolean; isZero: boolean; invert?: boolean };
-  breakdown?: { label: string; value: string }[];
+  breakdown?: BreakdownItem[];
 }
 
 const ACCENT_BAR: Record<string, string> = {
@@ -26,6 +34,10 @@ const ACCENT_VALUE: Record<string, string> = {
 };
 
 export default function KpiCard({ label, subtitle, value, accent, delta, breakdown }: KpiCardProps) {
+  const filteredBreakdown = breakdown?.filter(item =>
+    item.rawValue !== undefined ? item.rawValue !== 0 : true
+  );
+
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-dark-600 hover:scale-[1.02] transition-all duration-200 cursor-pointer">
       {/* Accent bar */}
@@ -69,16 +81,23 @@ export default function KpiCard({ label, subtitle, value, accent, delta, breakdo
         )}
 
         {/* Breakdown */}
-        {breakdown && breakdown.length > 0 && (
+        {filteredBreakdown && filteredBreakdown.length > 0 && (
           <div className="mt-3 pt-3 border-t border-dark-800 space-y-1.5">
-            {breakdown.map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <span className="text-xs text-dark-400">{item.label}</span>
-                <span className={`font-mono text-xs ${item.value.startsWith('-') ? 'text-red-400' : 'text-dark-100'}`}>
-                  {item.value}
-                </span>
-              </div>
-            ))}
+            {filteredBreakdown.map((item) => {
+              const raw = item.rawValue;
+              const colorClass = raw !== undefined
+                ? (raw < 0 ? 'text-danger-500' : raw > 0 ? 'text-poker-500' : 'text-dark-400')
+                : (item.value.startsWith('-') ? 'text-red-400' : 'text-dark-100');
+
+              return (
+                <div key={item.label} className="flex items-center justify-between">
+                  <span className="text-xs text-dark-400">{item.label}</span>
+                  <span className={`font-mono text-xs ${colorClass}`}>
+                    {raw !== undefined ? formatCurrency(raw) : item.value}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

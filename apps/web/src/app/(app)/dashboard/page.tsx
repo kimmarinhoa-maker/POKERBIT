@@ -28,6 +28,18 @@ function formatWeekLabel(iso: string) {
 }
 
 // ─── types for loaded data ────────────────────────────────────────
+interface DespesasDetail {
+  taxas: number;
+  rakeback: number;
+  lancamentos: number;
+  total: number;
+  // Granular
+  overlay: number;
+  compras: number;
+  security: number;
+  outros: number;
+}
+
 interface WeekData {
   settlement: any;
   subclubs: any[];
@@ -35,7 +47,7 @@ interface WeekData {
   rakeTotal: number;
   ganhosTotal: number;
   ggrTotal: number;
-  despesas: { taxas: number; rakeback: number; lancamentos: number; total: number };
+  despesas: DespesasDetail;
   resultadoFinal: number;
   acertoLiga: number;
   totalTaxasSigned: number;
@@ -86,25 +98,28 @@ export default function DashboardPage() {
 
       // Build per-club data (enables toggle filtering)
       let totalLancamentos = 0;
+      let totalOverlay = 0, totalCompras = 0, totalSecurity = 0, totalOutros = 0;
       const clubes: ClubeData[] = [];
 
       for (const sc of subclubs) {
         const agents = sc.agents || [];
-        let scRake = 0, scResultado = 0, scRakeback = 0, scJogadores = 0;
 
-        for (const ag of agents) {
-          scRake += Number(ag.rake_total_brl || 0);
-          scResultado += Number(ag.resultado_brl || 0);
-          scRakeback += Number(ag.commission_brl || 0);
-          scJogadores += Number(ag.player_count || 0);
-        }
-
+        // Use sc.totals (source of truth from backend/player_week_metrics)
         const scGanhos = Number(sc.totals?.ganhos || 0);
+        const scRake = Number(sc.totals?.rake || 0);
         const scGGR = Number(sc.totals?.ggr || 0);
+        const scResultado = Number(sc.totals?.resultado || 0);
+        const scJogadores = Number(sc.totals?.players || 0);
+        const scRakeback = Number(sc.totals?.rbTotal || 0);
         const scTaxas = Number(sc.feesComputed?.totalTaxas || 0);
         const scLancamentos = Number(sc.totalLancamentos || 0);
         const scAcerto = Number(sc.acertoLiga || 0);
 
+        const adj = sc.adjustments || {};
+        totalOverlay += Number(adj.overlay || 0);
+        totalCompras += Number(adj.compras || 0);
+        totalSecurity += Number(adj.security || 0);
+        totalOutros += Number(adj.outros || 0);
         totalLancamentos += scLancamentos;
 
         clubes.push({
@@ -138,6 +153,10 @@ export default function DashboardPage() {
           rakeback: round2(rbTotal),
           lancamentos: round2(totalLancamentos),
           total: despesasTotal,
+          overlay: round2(totalOverlay),
+          compras: round2(totalCompras),
+          security: round2(totalSecurity),
+          outros: round2(totalOutros),
         },
         resultadoFinal: round2(resultadoTotal),
         acertoLiga: round2(dtAcertoLiga),
@@ -317,7 +336,13 @@ export default function DashboardPage() {
       rakeTotal,
       ganhosTotal,
       ggrTotal,
-      despesas: { taxas, rakeback, lancamentos, total: despesasTotal },
+      despesas: {
+        taxas, rakeback, lancamentos, total: despesasTotal,
+        overlay: week.despesas.overlay,
+        compras: week.despesas.compras,
+        security: week.despesas.security,
+        outros: week.despesas.outros,
+      },
       resultadoFinal,
       acertoLiga,
       totalTaxasSigned,
@@ -335,11 +360,22 @@ export default function DashboardPage() {
   const deltaRake = f && fp ? calcDelta(f.rakeTotal, fp.rakeTotal) : null;
   const deltaGanhos = f && fp ? calcDelta(f.ganhosTotal, fp.ganhosTotal) : null;
   const deltaGGR = f && fp ? calcDelta(f.ggrTotal, fp.ggrTotal) : null;
+  const deltaResultado = f && fp ? calcDelta(f.resultadoFinal, fp.resultadoFinal) : null;
   const deltaAcerto = f && fp ? calcDelta(f.acertoLiga, fp.acertoLiga) : null;
 
   const despesasBreakdown = f ? [
-    { label: 'Taxas', value: formatCurrency(-f.despesas.taxas) },
-    { label: 'Lancamentos', value: formatCurrency(f.despesas.lancamentos) },
+    { label: 'Taxas Liga + App', value: '', rawValue: -f.despesas.taxas },
+    { label: 'Rakeback', value: '', rawValue: -f.despesas.rakeback },
+    { label: 'Compras', value: '', rawValue: f.despesas.compras },
+    { label: 'Overlay', value: '', rawValue: f.despesas.overlay },
+    { label: 'Security', value: '', rawValue: f.despesas.security },
+    { label: 'Outros', value: '', rawValue: f.despesas.outros },
+  ] : [];
+
+  const resultadoBreakdown = f ? [
+    { label: 'Profit/Loss', value: '', rawValue: f.ganhosTotal },
+    { label: 'Rake', value: '', rawValue: f.rakeTotal },
+    { label: 'GGR Rodeio', value: '', rawValue: f.ggrTotal },
   ] : [];
 
   // Chart data from all loaded settlements
@@ -445,18 +481,12 @@ export default function DashboardPage() {
       {!loading && d && !notFoundEmpty && (
         <>
           {/* KPI Grid */}
-          <div className="grid grid-cols-6 gap-4 mb-7">
+          <div className="grid grid-cols-7 gap-4 mb-7">
             <KpiCard
               label="Jogadores Ativos"
               value={String(f?.jogadoresAtivos ?? 0)}
               accent="blue"
               delta={deltaJogadores || undefined}
-            />
-            <KpiCard
-              label="Rake Total"
-              value={formatCurrency(f?.rakeTotal ?? 0)}
-              accent="green"
-              delta={deltaRake || undefined}
             />
             <KpiCard
               label="Profit / Loss"
@@ -466,10 +496,23 @@ export default function DashboardPage() {
               delta={deltaGanhos || undefined}
             />
             <KpiCard
+              label="Rake Total"
+              value={formatCurrency(f?.rakeTotal ?? 0)}
+              accent="green"
+              delta={deltaRake || undefined}
+            />
+            <KpiCard
               label="GGR Rodeio"
               value={formatCurrency(f?.ggrTotal ?? 0)}
               accent="purple"
               delta={deltaGGR || undefined}
+            />
+            <KpiCard
+              label="Resultado Final"
+              value={formatCurrency(f?.resultadoFinal ?? 0)}
+              accent={(f?.resultadoFinal ?? 0) >= 0 ? 'green' : 'red'}
+              delta={deltaResultado || undefined}
+              breakdown={resultadoBreakdown}
             />
             <KpiCard
               label="Total Despesas"
