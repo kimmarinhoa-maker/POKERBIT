@@ -233,7 +233,7 @@ export default function ImportWizardPage() {
   // ─── Render ───────────────────────────────────────────────────────
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div>
       <StepIndicator
         currentStep={confirmResult ? 'confirm' : step}
         skipPendencies={!!preview?.readiness.ready}

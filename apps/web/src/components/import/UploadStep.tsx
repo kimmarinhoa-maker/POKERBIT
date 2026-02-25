@@ -39,6 +39,7 @@ export default function UploadStep({
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   function trySetFile(f: File | null) {
     setFileError(null);
@@ -50,28 +51,29 @@ export default function UploadStep({
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
+    setDragOver(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped) trySetFile(dropped);
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-2">Importar XLSX</h2>
-      <p className="text-dark-400 mb-6">A semana sera detectada automaticamente a partir da planilha</p>
-
       <div
         onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        onDragEnter={(e) => e.preventDefault()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
         onClick={() => fileRef.current?.click()}
         role="button"
         tabIndex={0}
         aria-label="Selecionar arquivo XLSX"
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
         className={`card border-2 border-dashed cursor-pointer text-center py-12 transition-all duration-200 ${
-          file
-            ? 'border-poker-600/50 bg-poker-900/10'
-            : 'border-dark-600 hover:border-poker-500/50 hover:bg-dark-800/30'
+          dragOver
+            ? 'border-poker-400 bg-poker-900/20 scale-[1.01]'
+            : file
+              ? 'border-poker-600/50 bg-poker-900/10'
+              : 'border-dark-600 hover:border-poker-500/50 hover:bg-dark-800/30'
         }`}
       >
         <input
@@ -82,7 +84,12 @@ export default function UploadStep({
           aria-label="Selecionar arquivo XLSX"
           onChange={(e) => trySetFile(e.target.files?.[0] || null)}
         />
-        {file ? (
+        {dragOver ? (
+          <div>
+            <div className="text-4xl mb-3 animate-bounce">{'\u{1F4E5}'}</div>
+            <p className="text-poker-400 font-medium">Solte o arquivo aqui</p>
+          </div>
+        ) : file ? (
           <div>
             <div className="text-4xl mb-3">{'\u{1F4C4}'}</div>
             <p className="text-poker-400 font-medium">{file.name}</p>

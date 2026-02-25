@@ -188,6 +188,10 @@ export async function listImports() {
   return apiFetch('/imports');
 }
 
+export async function deleteImport(importId: string) {
+  return apiFetch(`/imports/${importId}`, { method: 'DELETE' });
+}
+
 // ─── Settlements ───────────────────────────────────────────────────
 
 export async function listSettlements(clubId?: string, startDate?: string, endDate?: string) {

@@ -259,4 +259,45 @@ router.get(
   }
 );
 
+// ─── DELETE /api/imports/:id — Remover um import ────────────────────
+router.delete(
+  '/:id',
+  requireAuth,
+  requireTenant,
+  requireRole('OWNER', 'ADMIN'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.tenantId!;
+      const importId = req.params.id;
+
+      // Verify import exists and belongs to tenant
+      const { data: imp, error: fetchErr } = await supabaseAdmin
+        .from('imports')
+        .select('id, settlement_id')
+        .eq('id', importId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (fetchErr || !imp) {
+        res.status(404).json({ success: false, error: 'Import não encontrado' });
+        return;
+      }
+
+      // Delete import record (cascades handled by DB if configured)
+      const { error: delErr } = await supabaseAdmin
+        .from('imports')
+        .delete()
+        .eq('id', importId)
+        .eq('tenant_id', tenantId);
+
+      if (delErr) throw delErr;
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[DELETE /api/imports/:id]', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+);
+
 export default router;
