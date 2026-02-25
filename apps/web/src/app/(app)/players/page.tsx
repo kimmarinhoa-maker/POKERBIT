@@ -53,8 +53,8 @@ export default function PlayersPage() {
   // KPIs
   const kpis = useMemo(() => {
     const total = meta.total || 0;
-    const active = players.filter(p => p.is_active).length;
-    const inactive = players.filter(p => !p.is_active).length;
+    const active = players.filter((p) => p.is_active).length;
+    const inactive = players.filter((p) => !p.is_active).length;
     return { total, active, inactive, pageCount: players.length };
   }, [players, meta]);
 
@@ -71,11 +71,14 @@ export default function PlayersPage() {
   }, [players, sortKey, sortDir]);
 
   function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('asc'); }
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
   }
 
-  const sortIcon = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const sortIcon = (key: SortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   return (
     <div className="p-8">
@@ -83,9 +86,7 @@ export default function PlayersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Jogadores</h2>
-          <p className="text-dark-400 text-sm">
-            {meta.total || 0} jogadores cadastrados
-          </p>
+          <p className="text-dark-400 text-sm">{meta.total || 0} jogadores cadastrados</p>
         </div>
       </div>
 
@@ -133,7 +134,10 @@ export default function PlayersPage() {
         </div>
         {search && (
           <button
-            onClick={() => { setSearch(''); setPage(1); }}
+            onClick={() => {
+              setSearch('');
+              setPage(1);
+            }}
             className="text-xs text-dark-400 hover:text-dark-200 transition-colors"
             aria-label="Limpar busca"
           >
@@ -148,9 +152,7 @@ export default function PlayersPage() {
         </div>
       ) : players.length === 0 ? (
         <div className="card text-center py-16">
-          <h3 className="text-xl font-bold text-white mb-2">
-            {search ? 'Nenhum resultado' : 'Nenhum jogador'}
-          </h3>
+          <h3 className="text-xl font-bold text-white mb-2">{search ? 'Nenhum resultado' : 'Nenhum jogador'}</h3>
           <p className="text-dark-400 text-sm">
             {search ? `Nenhum jogador encontrado para "${search}"` : 'Importe um XLSX para cadastrar jogadores'}
           </p>
@@ -202,11 +204,13 @@ export default function PlayersPage() {
                       <td className="px-4 py-2.5 text-white font-medium">{p.nickname}</td>
                       <td className="px-4 py-2.5 text-dark-400 font-mono text-[10px]">{p.external_id}</td>
                       <td className="px-4 py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          p.is_active
-                            ? 'bg-poker-900/30 text-poker-400 border-poker-700/40'
-                            : 'bg-dark-700/50 text-dark-500 border-dark-600/50'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            p.is_active
+                              ? 'bg-poker-900/30 text-poker-400 border-poker-700/40'
+                              : 'bg-dark-700/50 text-dark-500 border-dark-600/50'
+                          }`}
+                        >
                           {p.is_active ? 'ATIVO' : 'INATIVO'}
                         </span>
                       </td>
@@ -224,7 +228,7 @@ export default function PlayersPage() {
           {meta.pages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 hover:bg-dark-800 disabled:opacity-30 disabled:cursor-not-allowed"
                 aria-label="Pagina anterior"
@@ -235,7 +239,7 @@ export default function PlayersPage() {
                 {meta.page || page} / {meta.pages}
               </span>
               <button
-                onClick={() => setPage(p => Math.min(meta.pages, p + 1))}
+                onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
                 disabled={page >= meta.pages}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 hover:bg-dark-800 disabled:opacity-30 disabled:cursor-not-allowed"
                 aria-label="Proxima pagina"

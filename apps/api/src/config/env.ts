@@ -11,13 +11,13 @@ dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const envSchema = z.object({
   // Supabase
-  SUPABASE_URL:              z.string().url(),
-  SUPABASE_ANON_KEY:         z.string().min(10),
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),
 
   // API
-  API_PORT:    z.string().default('3001').transform(Number),
-  NODE_ENV:    z.enum(['development', 'production', 'test']).default('development'),
+  API_PORT: z.string().default('3001').transform(Number),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // Storage
   STORAGE_BUCKET: z.string().default('imports'),

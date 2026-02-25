@@ -20,8 +20,10 @@ import { supabaseAdmin } from '../config/supabase';
 import { env } from '../config/env';
 import type { ImportProcessResult } from '../types';
 
-// Importa os pacotes core (CommonJS)
+// Importa os pacotes core (CommonJS) — eslint-disable necessário pois são módulos CJS sem typing
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { parseWorkbook, validateReadiness } = require('../../../../packages/importer/coreSuprema');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { calculateWeek } = require('../../../../packages/engine/calculateWeek');
 
 // ─── round2: REGRA DE OURO para valores monetários ──────────────────
@@ -32,7 +34,7 @@ function round2(v: number): number {
 interface ProcessOptions {
   tenantId: string;
   clubId: string;
-  weekStart: string;      // YYYY-MM-DD
+  weekStart: string; // YYYY-MM-DD
   fileName: string;
   fileBuffer: Buffer;
   uploadedBy: string;
@@ -42,7 +44,6 @@ interface ProcessOptions {
 type OrgNameMap = Record<string, string>;
 
 export class ImportService {
-
   // ─── Pipeline principal ──────────────────────────────────────────
   async processImport(opts: ProcessOptions): Promise<ImportProcessResult> {
     const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy } = opts;
@@ -169,10 +170,23 @@ export class ImportService {
       }
 
       // 10) Persistir métricas por player (com subclub_name + subclub_id + week_start + round2)
-      await this.persistPlayerMetrics(tenantId, settlement.id, weekStart, weekResult.allPlayers, playerUuidMap, orgNameMap);
+      await this.persistPlayerMetrics(
+        tenantId,
+        settlement.id,
+        weekStart,
+        weekResult.allPlayers,
+        playerUuidMap,
+        orgNameMap,
+      );
 
       // 11) Persistir métricas por agente (com agent_id + subclub_name + subclub_id + week_start + round2)
-      const agentCount = await this.persistAgentMetrics(tenantId, settlement.id, weekStart, weekResult.clubs, orgNameMap);
+      const agentCount = await this.persistAgentMetrics(
+        tenantId,
+        settlement.id,
+        weekStart,
+        weekResult.clubs,
+        orgNameMap,
+      );
 
       // 12) Marcar import como DONE
       await supabaseAdmin
@@ -186,18 +200,18 @@ export class ImportService {
         .eq('id', importId);
 
       // Contar jogadores sem vínculo
-      const unlinkedCount = parseResult.all.filter(
-        (p: any) => p.clube === '?' || !p.clube
-      ).length;
+      const unlinkedCount = parseResult.all.filter((p: any) => p.clube === '?' || !p.clube).length;
 
       if (unlinkedCount > 0) {
-        warnings.push(`${unlinkedCount} jogador${unlinkedCount !== 1 ? 'es' : ''} sem clube atribuído. Vincule na página "Vincular" e reimporte.`);
+        warnings.push(
+          `${unlinkedCount} jogador${unlinkedCount !== 1 ? 'es' : ''} sem clube atribuído. Vincule na página "Vincular" e reimporte.`,
+        );
       }
 
       return {
         import_id: importId,
         settlement_id: settlement.id,
-        status: readiness.blockers.length > 0 ? 'partial' : (unlinkedCount > 0 ? 'partial' : 'ok'),
+        status: readiness.blockers.length > 0 ? 'partial' : unlinkedCount > 0 ? 'partial' : 'ok',
         player_count: parseResult.all.length,
         agent_count: agentCount,
         club_count: weekResult.totals.clubs,
@@ -205,7 +219,6 @@ export class ImportService {
         warnings,
         blockers: readiness.blockers,
       };
-
     } catch (err: any) {
       await this.markImportError(importId, err.message);
       throw err;
@@ -226,7 +239,7 @@ export class ImportService {
       .eq('tenant_id', tenantId)
       .in('type', ['SUBCLUB', 'AGENT']);
 
-    (data || []).forEach(org => {
+    (data || []).forEach((org) => {
       // Normaliza: nome uppercase para matching com engine output
       map[org.name] = org.id;
       map[org.name.toUpperCase()] = org.id;
@@ -348,7 +361,7 @@ export class ImportService {
       }
     }
 
-    const rows = Array.from(uniquePlayers.values()).map(p => ({
+    const rows = Array.from(uniquePlayers.values()).map((p) => ({
       tenant_id: tenantId,
       external_id: p.external_id,
       nickname: p.nickname,
@@ -357,12 +370,10 @@ export class ImportService {
     const batchSize = 100;
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      const { error } = await supabaseAdmin
-        .from('players')
-        .upsert(batch, {
-          onConflict: 'tenant_id,external_id',
-          ignoreDuplicates: false,
-        });
+      const { error } = await supabaseAdmin.from('players').upsert(batch, {
+        onConflict: 'tenant_id,external_id',
+        ignoreDuplicates: false,
+      });
 
       if (error) {
         console.error(`[import] Erro upsert players batch ${i}:`, error);
@@ -372,12 +383,9 @@ export class ImportService {
 
   private async buildPlayerUuidMap(tenantId: string): Promise<Record<string, string>> {
     const map: Record<string, string> = {};
-    const { data } = await supabaseAdmin
-      .from('players')
-      .select('id, external_id')
-      .eq('tenant_id', tenantId);
+    const { data } = await supabaseAdmin.from('players').select('id, external_id').eq('tenant_id', tenantId);
 
-    (data || []).forEach(p => {
+    (data || []).forEach((p) => {
       map[p.external_id] = p.id;
     });
 
@@ -396,9 +404,9 @@ export class ImportService {
     weekStart: string,
     allPlayers: any[],
     playerUuidMap: Record<string, string>,
-    orgNameMap: OrgNameMap
+    orgNameMap: OrgNameMap,
   ) {
-    const rows = allPlayers.map(p => ({
+    const rows = allPlayers.map((p) => ({
       settlement_id: settlementId,
       tenant_id: tenantId,
       week_start: weekStart,
@@ -424,9 +432,7 @@ export class ImportService {
     const batchSize = 100;
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      const { error } = await supabaseAdmin
-        .from('player_week_metrics')
-        .insert(batch);
+      const { error } = await supabaseAdmin.from('player_week_metrics').insert(batch);
 
       if (error) {
         console.error(`[import] Erro insert player_metrics batch ${i}:`, error);
@@ -447,7 +453,7 @@ export class ImportService {
     settlementId: string,
     weekStart: string,
     clubs: Record<string, any>,
-    orgNameMap: OrgNameMap
+    orgNameMap: OrgNameMap,
   ): Promise<number> {
     const rows: any[] = [];
 
@@ -469,9 +475,7 @@ export class ImportService {
           // round2 em todos os valores monetários
           rake_total_brl: round2(agent.rakeTime || 0),
           ganhos_total_brl: round2(agent.ganhosTime || 0),
-          ggr_total_brl: round2(
-            (agent.players || []).reduce((s: number, p: any) => s + (Number(p.ggr) || 0), 0)
-          ),
+          ggr_total_brl: round2((agent.players || []).reduce((s: number, p: any) => s + (Number(p.ggr) || 0), 0)),
           rb_rate: agent.agentRate || 0,
           commission_brl: round2(agent.rbAgente || 0),
           resultado_brl: round2(agent.resultadoAgente || 0),
@@ -480,9 +484,7 @@ export class ImportService {
     }
 
     if (rows.length > 0) {
-      const { error } = await supabaseAdmin
-        .from('agent_week_metrics')
-        .insert(rows);
+      const { error } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
 
       if (error) {
         console.error('[import] Erro insert agent_metrics:', error);
@@ -494,10 +496,7 @@ export class ImportService {
   }
 
   private async markImportError(importId: string, message: string) {
-    await supabaseAdmin
-      .from('imports')
-      .update({ status: 'ERROR', error_message: message })
-      .eq('id', importId);
+    await supabaseAdmin.from('imports').update({ status: 'ERROR', error_message: message }).eq('id', importId);
   }
 }
 

@@ -55,15 +55,30 @@ export default function ConfigEstrutura() {
   const { toast } = useToast();
 
   // Subclub form
-  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string }>({
-    show: false, editingId: null, name: '', externalId: '',
-  });
+  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string }>(
+    {
+      show: false,
+      editingId: null,
+      name: '',
+      externalId: '',
+    },
+  );
   const [subSaving, setSubSaving] = useState(false);
   const [subError, setSubError] = useState<string | null>(null);
 
   // Prefix form
-  const [pfxForm, setPfxForm] = useState<{ show: boolean; editingId: string | null; prefix: string; subclubId: string; priority: string }>({
-    show: false, editingId: null, prefix: '', subclubId: '', priority: '0',
+  const [pfxForm, setPfxForm] = useState<{
+    show: boolean;
+    editingId: string | null;
+    prefix: string;
+    subclubId: string;
+    priority: string;
+  }>({
+    show: false,
+    editingId: null,
+    prefix: '',
+    subclubId: '',
+    priority: '0',
   });
   const [pfxSaving, setPfxSaving] = useState(false);
   const [pfxError, setPfxError] = useState<string | null>(null);
@@ -71,10 +86,7 @@ export default function ConfigEstrutura() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [treeRes, pfxRes] = await Promise.all([
-        getOrgTree(),
-        getPrefixRules(),
-      ]);
+      const [treeRes, pfxRes] = await Promise.all([getOrgTree(), getPrefixRules()]);
       if (treeRes.success) setTree(treeRes.data || []);
       if (pfxRes.success) setPrefixRules(pfxRes.data || []);
     } catch {
@@ -84,7 +96,9 @@ export default function ConfigEstrutura() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Derived
   const club = tree[0] || null;
@@ -108,7 +122,10 @@ export default function ConfigEstrutura() {
   }
 
   async function handleSubSave() {
-    if (!subForm.name.trim()) { setSubError('Nome obrigatorio'); return; }
+    if (!subForm.name.trim()) {
+      setSubError('Nome obrigatorio');
+      return;
+    }
     if (!club) return;
 
     setSubSaving(true);
@@ -216,8 +233,14 @@ export default function ConfigEstrutura() {
   }
 
   async function handlePfxSave() {
-    if (!pfxForm.prefix.trim()) { setPfxError('Prefixo obrigatorio'); return; }
-    if (!pfxForm.subclubId) { setPfxError('Selecione um subclube'); return; }
+    if (!pfxForm.prefix.trim()) {
+      setPfxError('Prefixo obrigatorio');
+      return;
+    }
+    if (!pfxForm.subclubId) {
+      setPfxError('Selecione um subclube');
+      return;
+    }
 
     setPfxSaving(true);
     setPfxError(null);
@@ -264,21 +287,21 @@ export default function ConfigEstrutura() {
   async function handleToggleDirect(agentId: string, agentName: string, currentIsDirect: boolean) {
     const action = currentIsDirect ? 'desmarcar' : 'marcar';
     if (!confirm(`Deseja ${action} "${agentName}" como acerto direto?`)) return;
-    setTogglingDirect(prev => new Set(prev).add(agentId));
+    setTogglingDirect((prev) => new Set(prev).add(agentId));
     try {
       const res = await toggleAgentDirect(agentId, !currentIsDirect);
       if (res.success) {
-        setTree(prev => prev.map(c => ({
-          ...c,
-          subclubes: c.subclubes.map(sub => ({
-            ...sub,
-            agents: sub.agents.map(ag =>
-              ag.id === agentId
-                ? { ...ag, metadata: { ...ag.metadata, is_direct: !currentIsDirect } }
-                : ag
-            ),
+        setTree((prev) =>
+          prev.map((c) => ({
+            ...c,
+            subclubes: c.subclubes.map((sub) => ({
+              ...sub,
+              agents: sub.agents.map((ag) =>
+                ag.id === agentId ? { ...ag, metadata: { ...ag.metadata, is_direct: !currentIsDirect } } : ag,
+              ),
+            })),
           })),
-        })));
+        );
         toast('Configuracao salva!', 'success');
       } else {
         toast(res.error || 'Erro ao alterar configuracao', 'error');
@@ -286,7 +309,7 @@ export default function ConfigEstrutura() {
     } catch {
       toast('Erro ao alterar configuracao', 'error');
     } finally {
-      setTogglingDirect(prev => {
+      setTogglingDirect((prev) => {
         const next = new Set(prev);
         next.delete(agentId);
         return next;
@@ -315,16 +338,14 @@ export default function ConfigEstrutura() {
         });
       }
     }
-    return list.filter((ag, idx, arr) =>
-      arr.findIndex(a => a.id === ag.id) === idx
-    );
+    return list.filter((ag, idx, arr) => arr.findIndex((a) => a.id === ag.id) === idx);
   }, [subclubes]);
 
   // Agents filtered by active subclub tab + search
   const filteredAgents = useMemo(() => {
     return allAgentsFromTree
-      .filter(ag => ag.subclub_id === agentSubclubTab)
-      .filter(ag => {
+      .filter((ag) => ag.subclub_id === agentSubclubTab)
+      .filter((ag) => {
         if (!agentSearch) return true;
         const q = agentSearch.toLowerCase();
         return ag.name.toLowerCase().includes(q) || (ag.external_id?.toLowerCase().includes(q) ?? false);
@@ -383,12 +404,14 @@ export default function ConfigEstrutura() {
           <div className="card mb-8">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-dark-700/60">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-                  Subclubes
-                </h3>
+                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Subclubes</h3>
                 <span className="text-xs text-dark-500">({subclubes.length})</span>
               </div>
-              <button onClick={openSubCreate} className="btn-primary text-xs px-3 py-1.5" aria-label="Criar novo subclube">
+              <button
+                onClick={openSubCreate}
+                className="btn-primary text-xs px-3 py-1.5"
+                aria-label="Criar novo subclube"
+              >
                 + Novo Subclube
               </button>
             </div>
@@ -410,7 +433,7 @@ export default function ConfigEstrutura() {
                     <input
                       type="text"
                       value={subForm.name}
-                      onChange={(e) => setSubForm(p => ({ ...p, name: e.target.value }))}
+                      onChange={(e) => setSubForm((p) => ({ ...p, name: e.target.value }))}
                       className="input w-full text-sm"
                       placeholder="Ex: IMPERIO"
                       autoFocus
@@ -421,21 +444,27 @@ export default function ConfigEstrutura() {
                     <input
                       type="text"
                       value={subForm.externalId}
-                      onChange={(e) => setSubForm(p => ({ ...p, externalId: e.target.value }))}
+                      onChange={(e) => setSubForm((p) => ({ ...p, externalId: e.target.value }))}
                       className="input w-full text-sm"
                       placeholder="Opcional"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-3">
-                  <button onClick={closeSubForm} disabled={subSaving}
+                  <button
+                    onClick={closeSubForm}
+                    disabled={subSaving}
                     className="px-3 py-1.5 text-dark-400 hover:text-white text-xs transition-colors"
-                    aria-label="Cancelar edicao de subclube">
+                    aria-label="Cancelar edicao de subclube"
+                  >
                     Cancelar
                   </button>
-                  <button onClick={handleSubSave} disabled={subSaving}
+                  <button
+                    onClick={handleSubSave}
+                    disabled={subSaving}
                     className="btn-primary text-xs px-4 py-1.5"
-                    aria-label="Salvar subclube">
+                    aria-label="Salvar subclube"
+                  >
                     {subSaving ? 'Salvando...' : 'Salvar'}
                   </button>
                 </div>
@@ -461,15 +490,11 @@ export default function ConfigEstrutura() {
                     </tr>
                   </thead>
                   <tbody>
-                    {subclubes.map(sub => (
+                    {subclubes.map((sub) => (
                       <tr key={sub.id} className="border-b border-dark-800/30 hover:bg-dark-800/20 transition-colors">
                         <td className="py-2.5 px-2 text-center">
                           <div className="relative group inline-flex items-center justify-center">
-                            <ClubLogo
-                              logoUrl={sub.metadata?.logo_url}
-                              name={sub.name}
-                              size="sm"
-                            />
+                            <ClubLogo logoUrl={sub.metadata?.logo_url} name={sub.name} size="sm" />
                             {/* Upload overlay */}
                             <label
                               className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
@@ -495,18 +520,16 @@ export default function ConfigEstrutura() {
                           </div>
                         </td>
                         <td className="py-2.5 px-2 text-white font-medium">{sub.name}</td>
-                        <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">
-                          {sub.external_id || '—'}
-                        </td>
-                        <td className="py-2.5 px-2 text-center text-dark-300">
-                          {sub.agents?.length || 0}
-                        </td>
+                        <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">{sub.external_id || '—'}</td>
+                        <td className="py-2.5 px-2 text-center text-dark-300">{sub.agents?.length || 0}</td>
                         <td className="py-2.5 px-2 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            sub.is_active
-                              ? 'bg-green-500/20 text-green-400 border-green-500/40'
-                              : 'bg-dark-700/30 text-dark-500 border-dark-600/40'
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              sub.is_active
+                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                                : 'bg-dark-700/30 text-dark-500 border-dark-600/40'
+                            }`}
+                          >
                             {sub.is_active ? 'Ativo' : 'Inativo'}
                           </span>
                         </td>
@@ -536,7 +559,9 @@ export default function ConfigEstrutura() {
                                   ? 'text-dark-500 hover:text-yellow-400'
                                   : 'text-dark-500 hover:text-green-400'
                               }`}
-                              aria-label={sub.is_active ? `Desativar subclube ${sub.name}` : `Ativar subclube ${sub.name}`}
+                              aria-label={
+                                sub.is_active ? `Desativar subclube ${sub.name}` : `Ativar subclube ${sub.name}`
+                              }
                             >
                               {sub.is_active ? 'Desativar' : 'Ativar'}
                             </button>
@@ -554,14 +579,15 @@ export default function ConfigEstrutura() {
           <div className="card mb-8">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-dark-700/60">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-                  Regras de Prefixo
-                </h3>
+                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Regras de Prefixo</h3>
                 <span className="text-xs text-dark-500">({prefixRules.length})</span>
               </div>
-              <button onClick={openPfxCreate} className="btn-primary text-xs px-3 py-1.5"
+              <button
+                onClick={openPfxCreate}
+                className="btn-primary text-xs px-3 py-1.5"
                 disabled={subclubes.length === 0}
-                aria-label="Criar nova regra de prefixo">
+                aria-label="Criar nova regra de prefixo"
+              >
                 + Nova Regra
               </button>
             </div>
@@ -583,7 +609,7 @@ export default function ConfigEstrutura() {
                     <input
                       type="text"
                       value={pfxForm.prefix}
-                      onChange={(e) => setPfxForm(p => ({ ...p, prefix: e.target.value }))}
+                      onChange={(e) => setPfxForm((p) => ({ ...p, prefix: e.target.value }))}
                       className="input w-full text-sm font-mono"
                       placeholder="Ex: AG, TGP"
                       autoFocus
@@ -593,13 +619,17 @@ export default function ConfigEstrutura() {
                     <label className="text-xs text-dark-400 mb-1 block">Subclube *</label>
                     <select
                       value={pfxForm.subclubId}
-                      onChange={(e) => setPfxForm(p => ({ ...p, subclubId: e.target.value }))}
+                      onChange={(e) => setPfxForm((p) => ({ ...p, subclubId: e.target.value }))}
                       className="input w-full text-sm"
                     >
                       <option value="">Selecione...</option>
-                      {subclubes.filter(s => s.is_active).map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
+                      {subclubes
+                        .filter((s) => s.is_active)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
@@ -607,21 +637,27 @@ export default function ConfigEstrutura() {
                     <input
                       type="number"
                       value={pfxForm.priority}
-                      onChange={(e) => setPfxForm(p => ({ ...p, priority: e.target.value }))}
+                      onChange={(e) => setPfxForm((p) => ({ ...p, priority: e.target.value }))}
                       className="input w-full text-sm font-mono"
                       placeholder="0"
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-3">
-                  <button onClick={closePfxForm} disabled={pfxSaving}
+                  <button
+                    onClick={closePfxForm}
+                    disabled={pfxSaving}
                     className="px-3 py-1.5 text-dark-400 hover:text-white text-xs transition-colors"
-                    aria-label="Cancelar edicao de regra de prefixo">
+                    aria-label="Cancelar edicao de regra de prefixo"
+                  >
                     Cancelar
                   </button>
-                  <button onClick={handlePfxSave} disabled={pfxSaving}
+                  <button
+                    onClick={handlePfxSave}
+                    disabled={pfxSaving}
                     className="btn-primary text-xs px-4 py-1.5"
-                    aria-label="Salvar regra de prefixo">
+                    aria-label="Salvar regra de prefixo"
+                  >
                     {pfxSaving ? 'Salvando...' : 'Salvar'}
                   </button>
                 </div>
@@ -645,7 +681,7 @@ export default function ConfigEstrutura() {
                     </tr>
                   </thead>
                   <tbody>
-                    {prefixRules.map(rule => (
+                    {prefixRules.map((rule) => (
                       <tr key={rule.id} className="border-b border-dark-800/30 hover:bg-dark-800/20 transition-colors">
                         <td className="py-2.5 px-2">
                           <span className="font-mono text-poker-400 bg-poker-900/20 px-2 py-0.5 rounded text-xs font-bold">
@@ -685,15 +721,13 @@ export default function ConfigEstrutura() {
           {/* ══ AGENTES ═══════════════════════════════════════════════════════ */}
           <div className="card mb-8">
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-              <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-                Agentes
-              </h3>
+              <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Agentes</h3>
             </div>
 
             {/* Subclub selector tabs */}
             {subclubes.length > 0 && (
               <div className="flex gap-2 mb-4 flex-wrap">
-                {subclubes.map(sc => (
+                {subclubes.map((sc) => (
                   <button
                     key={sc.id}
                     onClick={() => setAgentSubclubTab(sc.id)}
@@ -704,9 +738,7 @@ export default function ConfigEstrutura() {
                     }`}
                   >
                     {sc.name}
-                    <span className="ml-2 text-xs font-mono opacity-60">
-                      {agentCountPerSubclub.get(sc.id) || 0}
-                    </span>
+                    <span className="ml-2 text-xs font-mono opacity-60">{agentCountPerSubclub.get(sc.id) || 0}</span>
                   </button>
                 ))}
               </div>
@@ -716,7 +748,7 @@ export default function ConfigEstrutura() {
             <input
               placeholder="Buscar por nome ou ID..."
               value={agentSearch}
-              onChange={e => setAgentSearch(e.target.value)}
+              onChange={(e) => setAgentSearch(e.target.value)}
               className="w-full bg-dark-800 border border-dark-700 rounded-lg px-4 py-2 text-sm text-dark-100 placeholder:text-dark-500 mb-4 focus:border-poker-500 focus:outline-none"
             />
 
@@ -738,7 +770,7 @@ export default function ConfigEstrutura() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAgents.map(ag => {
+                    {filteredAgents.map((ag) => {
                       const isToggling = togglingDirect.has(ag.id);
                       return (
                         <tr key={ag.id} className="border-b border-dark-800 hover:bg-dark-800/30 transition-colors">
@@ -748,7 +780,9 @@ export default function ConfigEstrutura() {
                             <button
                               onClick={() => handleToggleDirect(ag.id, ag.name, ag.is_direct)}
                               disabled={isToggling}
-                              aria-label={ag.is_direct ? `Desmarcar ${ag.name} como direto` : `Marcar ${ag.name} como direto`}
+                              aria-label={
+                                ag.is_direct ? `Desmarcar ${ag.name} como direto` : `Marcar ${ag.name} como direto`
+                              }
                               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
                                 isToggling
                                   ? 'bg-dark-600 animate-pulse cursor-wait'

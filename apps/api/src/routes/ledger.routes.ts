@@ -44,61 +44,59 @@ router.post(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── GET /api/ledger — Listar movimentações ────────────────────────
-router.get(
-  '/',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
-      const weekStart = req.query.week_start as string;
-      const entityId = req.query.entity_id as string | undefined;
+router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const weekStart = req.query.week_start as string;
+    const entityId = req.query.entity_id as string | undefined;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
 
-      if (!weekStart) {
-        res.status(400).json({ success: false, error: 'Query param week_start obrigatório' });
-        return;
-      }
-
-      const data = await ledgerService.listEntries(tenantId, weekStart, entityId);
-
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    if (!weekStart) {
+      res.status(400).json({ success: false, error: 'Query param week_start obrigatório' });
+      return;
     }
+
+    const all = await ledgerService.listEntries(tenantId, weekStart, entityId);
+    const total = all.length;
+    const paged = all.slice((page - 1) * limit, page * limit);
+
+    res.json({
+      success: true,
+      data: paged,
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── GET /api/ledger/net — Calcular net de uma entidade ────────────
-router.get(
-  '/net',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
-      const weekStart = req.query.week_start as string;
-      const entityId = req.query.entity_id as string;
+router.get('/net', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const weekStart = req.query.week_start as string;
+    const entityId = req.query.entity_id as string;
 
-      if (!weekStart || !entityId) {
-        res.status(400).json({
-          success: false,
-          error: 'Query params week_start e entity_id obrigatórios',
-        });
-        return;
-      }
-
-      const data = await ledgerService.calcEntityLedgerNet(tenantId, weekStart, entityId);
-
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    if (!weekStart || !entityId) {
+      res.status(400).json({
+        success: false,
+        error: 'Query params week_start e entity_id obrigatórios',
+      });
+      return;
     }
+
+    const data = await ledgerService.calcEntityLedgerNet(tenantId, weekStart, entityId);
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── DELETE /api/ledger/:id — Deletar movimentação ─────────────────
 router.delete(
@@ -115,7 +113,7 @@ router.delete(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── PATCH /api/ledger/:id/reconcile — Toggle conciliação ───────────
@@ -141,7 +139,7 @@ router.patch(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 export default router;

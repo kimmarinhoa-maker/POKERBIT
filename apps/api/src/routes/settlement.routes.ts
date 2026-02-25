@@ -9,76 +9,65 @@ import { settlementService } from '../services/settlement.service';
 const router = Router();
 
 // ─── GET /api/settlements — Listar semanas ─────────────────────────
-router.get(
-  '/',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
-      const clubId = req.query.club_id as string | undefined;
-      const startDate = req.query.start_date as string | undefined;
-      const endDate = req.query.end_date as string | undefined;
+router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const clubId = req.query.club_id as string | undefined;
+    const startDate = req.query.start_date as string | undefined;
+    const endDate = req.query.end_date as string | undefined;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
 
-      const data = await settlementService.listWeeks(tenantId, clubId, startDate, endDate);
+    const data = await settlementService.listWeeks(tenantId, clubId, startDate, endDate);
+    const total = data.length;
+    const paged = data.slice((page - 1) * limit, page * limit);
 
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({
+      success: true,
+      data: paged,
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── GET /api/settlements/:id — Detalhe básico (compatibilidade) ────
-router.get(
-  '/:id',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
-      const detail = await settlementService.getSettlementDetail(tenantId, req.params.id);
+router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const detail = await settlementService.getSettlementDetail(tenantId, req.params.id);
 
-      if (!detail) {
-        res.status(404).json({ success: false, error: 'Settlement não encontrado' });
-        return;
-      }
-
-      res.json({ success: true, data: detail });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    if (!detail) {
+      res.status(404).json({ success: false, error: 'Settlement não encontrado' });
+      return;
     }
+
+    res.json({ success: true, data: detail });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── GET /api/settlements/:id/full — Breakdown por subclube ─────────
 // Coração da paridade funcional: retorna tudo agrupado por subclube
 // com fees, adjustments, acertoLiga e dashboardTotals
-router.get(
-  '/:id/full',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
-      const data = await settlementService.getSettlementWithSubclubs(
-        tenantId,
-        req.params.id,
-        req.allowedSubclubIds
-      );
+router.get('/:id/full', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const data = await settlementService.getSettlementWithSubclubs(tenantId, req.params.id, req.allowedSubclubIds);
 
-      if (!data) {
-        res.status(404).json({ success: false, error: 'Settlement não encontrado' });
-        return;
-      }
-
-      res.json({ success: true, data });
-    } catch (err: any) {
-      console.error('[settlement/full]', err);
-      res.status(500).json({ success: false, error: err.message });
+    if (!data) {
+      res.status(404).json({ success: false, error: 'Settlement não encontrado' });
+      return;
     }
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error('[settlement/full]', err);
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── PATCH /api/settlements/:id/notes — Atualizar notas ─────────────
 router.patch(
@@ -96,7 +85,9 @@ router.patch(
         return;
       }
 
-      const { data, error } = await (await import('../config/supabase')).supabaseAdmin
+      const { data, error } = await (
+        await import('../config/supabase')
+      ).supabaseAdmin
         .from('settlements')
         .update({ notes: notes || null })
         .eq('id', req.params.id)
@@ -114,7 +105,7 @@ router.patch(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── POST /api/settlements/:id/finalize — DRAFT → FINAL ───────────
@@ -127,18 +118,14 @@ router.post(
     try {
       const tenantId = req.tenantId!;
 
-      const data = await settlementService.finalizeSettlement(
-        tenantId,
-        req.params.id,
-        req.userId!
-      );
+      const data = await settlementService.finalizeSettlement(tenantId, req.params.id, req.userId!);
 
       res.json({ success: true, data });
     } catch (err: any) {
       const status = err.message.includes('não pode') ? 422 : 500;
       res.status(status).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── PATCH /api/settlements/:id/agents/:agentId/payment-type ────────
@@ -203,12 +190,15 @@ router.patch(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // Helper: normalize name (lowercase + remove accents)
 function normName(s: string): string {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 // ─── POST /api/settlements/:id/sync-agents ──────────────────────────
@@ -258,7 +248,7 @@ router.post(
         .eq('is_active', true);
 
       const subclubNameMap = new Map<string, string>();
-      for (const sc of (subclubOrgs || [])) {
+      for (const sc of subclubOrgs || []) {
         subclubNameMap.set(normName(sc.name), sc.id);
       }
 
@@ -272,7 +262,7 @@ router.post(
 
       const orgNameMap = new Map<string, string>();
       const orgParentMap = new Map<string, string>(); // orgId -> current parent_id
-      for (const org of (existingOrgs || [])) {
+      for (const org of existingOrgs || []) {
         orgNameMap.set(normName(org.name), org.id);
         orgParentMap.set(org.id, org.parent_id);
       }
@@ -288,15 +278,14 @@ router.post(
       let created = 0;
       let fixed = 0;
       let linked = 0;
-      const uniqueNames = [...new Set(allMetrics.map(m => m.agent_name))];
+      const uniqueNames = [...new Set(allMetrics.map((m) => m.agent_name))];
 
       for (const agentName of uniqueNames) {
         let orgId = orgNameMap.get(normName(agentName));
 
         // Determinar parent_id correto (SUBCLUB, fallback CLUB)
         const subclubName = agentSubclubMap.get(agentName);
-        const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName)))
-          || settlement.club_id;
+        const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
 
         // Criar org AGENT se nao existe
         if (!orgId) {
@@ -329,10 +318,7 @@ router.post(
           // Agente ja existe — corrigir parent_id se estiver apontando errado
           const currentParent = orgParentMap.get(orgId);
           if (currentParent && currentParent !== correctParentId && correctParentId !== settlement.club_id) {
-            await supabaseAdmin
-              .from('organizations')
-              .update({ parent_id: correctParentId })
-              .eq('id', orgId);
+            await supabaseAdmin.from('organizations').update({ parent_id: correctParentId }).eq('id', orgId);
             fixed++;
           }
         }
@@ -346,7 +332,7 @@ router.post(
             .eq('agent_name', agentName)
             .is('agent_id', null)
             .select('id');
-          linked += (updated?.length || 0);
+          linked += updated?.length || 0;
         }
 
         // Corrigir subclub_id em agent_week_metrics que tem subclub_name mas nao tem subclub_id
@@ -373,7 +359,7 @@ router.post(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── PATCH /api/settlements/:id/agents/:agentId/rb-rate ─────────────
@@ -434,7 +420,7 @@ router.patch(
       }
 
       const rakeTotal = Number(metric.rake_total_brl) || 0;
-      const commission_brl = Math.round((rakeTotal * rb_rate / 100 + Number.EPSILON) * 100) / 100;
+      const commission_brl = Math.round(((rakeTotal * rb_rate) / 100 + Number.EPSILON) * 100) / 100;
 
       // Atualizar rb_rate e commission_brl
       const { data, error } = await supabaseAdmin
@@ -451,7 +437,7 @@ router.patch(
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── POST /api/settlements/:id/void — FINAL → VOID ────────────────
@@ -470,19 +456,14 @@ router.post(
         return;
       }
 
-      const data = await settlementService.voidSettlement(
-        tenantId,
-        req.params.id,
-        req.userId!,
-        reason
-      );
+      const data = await settlementService.voidSettlement(tenantId, req.params.id, req.userId!, reason);
 
       res.json({ success: true, data });
     } catch (err: any) {
       const status = err.message.includes('Apenas') ? 422 : 500;
       res.status(status).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 export default router;

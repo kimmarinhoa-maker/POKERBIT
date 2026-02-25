@@ -128,7 +128,7 @@ export interface LedgerEntry {
 
 export interface UploadImportDTO {
   club_id: string;
-  week_start: string;  // YYYY-MM-DD (segunda-feira)
+  week_start: string; // YYYY-MM-DD (segunda-feira)
 }
 
 export interface CreateSettlementDTO {

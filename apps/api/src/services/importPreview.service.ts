@@ -18,6 +18,7 @@ import { detectWeekStart, WeekDetectionResult } from '../utils/detectWeekStart';
 import { round2 } from '../utils/round2';
 
 // Importa pacotes core (CommonJS)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { parseWorkbook, validateReadiness } = require('../../../../packages/importer/coreSuprema');
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -113,7 +114,6 @@ export interface ImportPreviewResponse {
 // ─── Service ────────────────────────────────────────────────────────
 
 class ImportPreviewService {
-
   /**
    * Analisa o XLSX e retorna preview SEM PERSISTIR nada.
    */
@@ -121,7 +121,7 @@ class ImportPreviewService {
     tenantId: string;
     fileBuffer: Buffer;
     fileName: string;
-    weekStartOverride?: string;  // Se o usuário forçar uma semana
+    weekStartOverride?: string; // Se o usuário forçar uma semana
   }): Promise<ImportPreviewResponse> {
     const { tenantId, fileBuffer, fileName, weekStartOverride } = params;
 
@@ -165,7 +165,9 @@ class ImportPreviewService {
         summary: {
           total_players: metrics?.length || 0,
           total_agents: agentMetrics?.length || 0,
-          total_rake_brl: round2((metrics || []).reduce((sum: number, m: any) => sum + (Number(m.rake_total_brl) || 0), 0)),
+          total_rake_brl: round2(
+            (metrics || []).reduce((sum: number, m: any) => sum + (Number(m.rake_total_brl) || 0), 0),
+          ),
           total_ggr_brl: round2((metrics || []).reduce((sum: number, m: any) => sum + (Number(m.ggr_brl) || 0), 0)),
         },
         agents: (agentMetrics || []).map((a: any) => a.agent_name),
@@ -187,7 +189,14 @@ class ImportPreviewService {
     if (parseResult.error) {
       return {
         week,
-        summary: { total_players: 0, total_agents: 0, total_subclubs: 0, total_winnings_brl: 0, total_rake_brl: 0, total_ggr_brl: 0 },
+        summary: {
+          total_players: 0,
+          total_agents: 0,
+          total_subclubs: 0,
+          total_winnings_brl: 0,
+          total_rake_brl: 0,
+          total_ggr_brl: 0,
+        },
         readiness: { ready: false, blockers_count: 1 },
         blockers: { unknown_agencies: [], players_without_agency: [] },
         subclubs_found: [],
@@ -215,14 +224,15 @@ class ImportPreviewService {
     const blockersCount = unknownAgencies.length + playersWithoutAgency.length;
 
     // 7.5) Duplicados (não bloqueante)
-    const duplicatePlayers: ImportPreviewResponse['duplicate_players'] =
-      (parseResult.duplicates || []).map((d: any) => ({
+    const duplicatePlayers: ImportPreviewResponse['duplicate_players'] = (parseResult.duplicates || []).map(
+      (d: any) => ({
         id: d.id,
         nick: d.nick,
         count: d.count,
         merged_ganhos: round2(d.merged_ganhos),
         merged_rake: round2(d.merged_rake),
-      }));
+      }),
+    );
 
     if (duplicatePlayers.length > 0) {
       warnings.push(`${duplicatePlayers.length} ID(s) duplicado(s) encontrado(s) — valores somados automaticamente`);
@@ -238,7 +248,7 @@ class ImportPreviewService {
     const summary = {
       total_players: allPlayers.length,
       total_agents: new Set(allPlayers.filter((p: any) => p.aname && p.aname !== 'None').map((p: any) => p.aname)).size,
-      total_subclubs: subclubsFound.filter(s => s.subclub_name !== '?').length,
+      total_subclubs: subclubsFound.filter((s) => s.subclub_name !== '?').length,
       total_winnings_brl: round2(allPlayers.reduce((sum: number, p: any) => sum + (p.ganhos || 0), 0)),
       total_rake_brl: round2(allPlayers.reduce((sum: number, p: any) => sum + (p.rake || 0), 0)),
       total_ggr_brl: round2(allPlayers.reduce((sum: number, p: any) => sum + (p.ggr || 0), 0)),
@@ -261,18 +271,17 @@ class ImportPreviewService {
     // Detect merge vs reimport mode
     if (existingSettlement) {
       const existingAgentSet: Set<string> = (existingSettlement as any)._existingAgentNames || new Set();
-      const newAgentNames = new Set(allPlayers
-        .filter((p: any) => p.aname && p.aname !== 'None')
-        .map((p: any) => p.aname));
+      const newAgentNames = new Set(
+        allPlayers.filter((p: any) => p.aname && p.aname !== 'None').map((p: any) => p.aname),
+      );
 
       // If most new agents don't exist in current settlement, it's a merge (different club)
       let newAgentsNotInExisting = 0;
       for (const a of newAgentNames) {
         if (!existingAgentSet.has(a)) newAgentsNotInExisting++;
       }
-      const overlapRatio = newAgentNames.size > 0
-        ? (newAgentNames.size - newAgentsNotInExisting) / newAgentNames.size
-        : 1;
+      const overlapRatio =
+        newAgentNames.size > 0 ? (newAgentNames.size - newAgentsNotInExisting) / newAgentNames.size : 1;
 
       existingSettlement.mode = overlapRatio < 0.5 ? 'merge' : 'reimport';
       delete (existingSettlement as any)._existingAgentNames;
@@ -492,7 +501,7 @@ class ImportPreviewService {
       prefixRules,
       playerLinks,
       ignoredAgents: {},
-      guToBrl: guRow ? Number(guRow.rate) : undefined,  // undefined = use default (5)
+      guToBrl: guRow ? Number(guRow.rate) : undefined, // undefined = use default (5)
     };
   }
 }

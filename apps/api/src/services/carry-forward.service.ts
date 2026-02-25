@@ -13,13 +13,8 @@ import { supabaseAdmin } from '../config/supabase';
 import type { CarryForwardResult, CloseWeekResponse } from '../types';
 
 export class CarryForwardService {
-
   // ─── Ler carry map: entity_id → amount para uma semana/clube ─────
-  async getCarryMap(
-    tenantId: string,
-    clubId: string,
-    weekStart: string
-  ): Promise<Record<string, number>> {
+  async getCarryMap(tenantId: string, clubId: string, weekStart: string): Promise<Record<string, number>> {
     const { data, error } = await supabaseAdmin
       .from('carry_forward')
       .select('entity_id, amount')
@@ -30,19 +25,14 @@ export class CarryForwardService {
     if (error) throw new Error(`Erro ao ler carry-forward: ${error.message}`);
 
     const map: Record<string, number> = {};
-    for (const row of (data || [])) {
+    for (const row of data || []) {
       map[row.entity_id] = Number(row.amount) || 0;
     }
     return map;
   }
 
   // ─── Ler carry de uma entidade específica ─────────────────────────
-  async getCarryForEntity(
-    tenantId: string,
-    clubId: string,
-    weekStart: string,
-    entityId: string
-  ): Promise<number> {
+  async getCarryForEntity(tenantId: string, clubId: string, weekStart: string, entityId: string): Promise<number> {
     const { data, error } = await supabaseAdmin
       .from('carry_forward')
       .select('amount')
@@ -57,10 +47,7 @@ export class CarryForwardService {
   }
 
   // ─── Computar e persistir carry-forward para todo o settlement ────
-  async computeAndPersist(
-    tenantId: string,
-    settlementId: string
-  ): Promise<CloseWeekResponse> {
+  async computeAndPersist(tenantId: string, settlementId: string): Promise<CloseWeekResponse> {
     // 1. Buscar settlement
     const { data: settlement, error: settErr } = await supabaseAdmin
       .from('settlements')
@@ -87,11 +74,14 @@ export class CarryForwardService {
     }
 
     // 3. Agrupar por agent_id estável (org UUID)
-    const agentMap = new Map<string, {
-      agent_name: string;
-      resultado: number;
-      metricIds: string[];
-    }>();
+    const agentMap = new Map<
+      string,
+      {
+        agent_name: string;
+        resultado: number;
+        metricIds: string[];
+      }
+    >();
 
     for (const a of agents) {
       const key = a.agent_id;
@@ -139,18 +129,19 @@ export class CarryForwardService {
       });
 
       // Upsert carry-forward para a PRÓXIMA semana
-      const { error: upsertErr } = await supabaseAdmin
-        .from('carry_forward')
-        .upsert({
+      const { error: upsertErr } = await supabaseAdmin.from('carry_forward').upsert(
+        {
           tenant_id: tenantId,
           club_id,
           entity_id: agentId,
           week_start: nextWeek,
           amount: saldoFinal,
           source_settlement_id: settlementId,
-        }, {
+        },
+        {
           onConflict: 'tenant_id,club_id,entity_id,week_start',
-        });
+        },
+      );
 
       if (upsertErr) {
         throw new Error(`Erro ao gravar carry-forward para ${info.agent_name}: ${upsertErr.message}`);
@@ -166,11 +157,7 @@ export class CarryForwardService {
   }
 
   // ─── Helper: calcular ledgerNet para vários entity_ids ────────────
-  private async calcLedgerNet(
-    tenantId: string,
-    weekStart: string,
-    entityIds: string[]
-  ): Promise<number> {
+  private async calcLedgerNet(tenantId: string, weekStart: string, entityIds: string[]): Promise<number> {
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
       .select('dir, amount')
@@ -182,9 +169,9 @@ export class CarryForwardService {
 
     let entradas = 0;
     let saidas = 0;
-    for (const e of (data || [])) {
+    for (const e of data || []) {
       if (e.dir === 'IN') entradas += Number(e.amount) || 0;
-      else                saidas   += Number(e.amount) || 0;
+      else saidas += Number(e.amount) || 0;
     }
 
     return entradas - saidas;

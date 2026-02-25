@@ -30,13 +30,15 @@ const app = express();
 
 // CORS: read ALLOWED_ORIGINS from env, fallback to pokermanager.com.br in production
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
   : ['https://pokermanager.com.br', 'https://www.pokermanager.com.br'];
 
-app.use(cors({
-  origin: env.NODE_ENV === 'production' ? allowedOrigins : '*',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: env.NODE_ENV === 'production' ? allowedOrigins : '*',
+    credentials: true,
+  }),
+);
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -71,18 +73,18 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── Rotas da API ──────────────────────────────────────────────────
-app.use('/api/auth',          authLimiter, authRoutes);
-app.use('/api/imports',       importLimiter, importRoutes);
-app.use('/api/settlements',   settlementRoutes);
-app.use('/api/ledger',        ledgerRoutes);
-app.use('/api/players',       playersRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/imports', importLimiter, importRoutes);
+app.use('/api/settlements', settlementRoutes);
+app.use('/api/ledger', ledgerRoutes);
+app.use('/api/players', playersRoutes);
 app.use('/api/organizations', organizationsRoutes);
-app.use('/api/config',        configRoutes);
-app.use('/api/links',         linksRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/links', linksRoutes);
 app.use('/api/carry-forward', carryForwardRoutes);
-app.use('/api/ofx',           ofxRoutes);
-app.use('/api/chippix',       chipPixRoutes);
-app.use('/api/users',         usersRoutes);
+app.use('/api/ofx', ofxRoutes);
+app.use('/api/chippix', chipPixRoutes);
+app.use('/api/users', usersRoutes);
 
 // ─── 404 handler ───────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -94,9 +96,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   console.error('[ERROR]', err);
   res.status(err.status || 500).json({
     success: false,
-    error: env.NODE_ENV === 'production'
-      ? 'Erro interno do servidor'
-      : err.message,
+    error: env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.message,
   });
 });
 

@@ -10,6 +10,7 @@ const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'];
 
 // Extende o Request do Express com dados do usuário
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       userId?: string;
@@ -24,11 +25,7 @@ declare global {
   }
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -64,7 +61,7 @@ export async function requireAuth(
     req.userId = data.user.id;
     req.userEmail = data.user.email;
     req.accessToken = token;
-    req.tenantIds = (tenants || []).map(t => t.tenant_id);
+    req.tenantIds = (tenants || []).map((t) => t.tenant_id);
     req.tenantRoles = {};
     for (const t of tenants || []) {
       req.tenantRoles[t.tenant_id] = t.role;
@@ -83,12 +80,8 @@ export async function requireAuth(
 }
 
 // Middleware que exige tenant_id no header ou query + resolve role e subclubs
-export async function requireTenant(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  const tenantId = req.headers['x-tenant-id'] as string || req.query.tenant_id as string;
+export async function requireTenant(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const tenantId = (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string);
 
   if (!tenantId) {
     res.status(400).json({ error: 'Header X-Tenant-Id obrigatório' });
@@ -115,7 +108,7 @@ export async function requireTenant(
         .select('org_id')
         .eq('user_id', req.userId!)
         .eq('tenant_id', tenantId);
-      req.allowedSubclubIds = (data || []).map(r => r.org_id);
+      req.allowedSubclubIds = (data || []).map((r) => r.org_id);
     } catch (err) {
       console.error('[auth] Erro ao buscar org_access:', err);
       req.allowedSubclubIds = [];

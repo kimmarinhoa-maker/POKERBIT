@@ -45,7 +45,7 @@ const navSections: NavSection[] = [
     label: 'OPERACAO',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/import',    label: 'Importar',  icon: Upload, roles: ['OWNER', 'ADMIN'] },
+      { href: '/import', label: 'Importar', icon: Upload, roles: ['OWNER', 'ADMIN'] },
       { href: '/import/history', label: 'Historico', icon: Clock, roles: ['OWNER', 'ADMIN'] },
       { href: '/lancamentos', label: 'Lancamentos', icon: Receipt, roles: ['OWNER', 'ADMIN'] },
     ],
@@ -63,8 +63,8 @@ const navSections: NavSection[] = [
     label: 'CADASTRO',
     items: [
       { href: '/players', label: 'Jogadores', icon: Users, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { href: '/clubs',   label: 'Clubes',    icon: Building2, roles: ['OWNER', 'ADMIN'] },
-      { href: '/links',   label: 'Vincular',  icon: LinkIcon, roles: ['OWNER', 'ADMIN'] },
+      { href: '/clubs', label: 'Clubes', icon: Building2, roles: ['OWNER', 'ADMIN'] },
+      { href: '/links', label: 'Vincular', icon: LinkIcon, roles: ['OWNER', 'ADMIN'] },
     ],
   },
   {
@@ -140,12 +140,15 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Sidebar */}
-      <aside role="navigation" className={`
+      <aside
+        role="navigation"
+        className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-dark-900 border-r border-dark-700 flex flex-col
         transform transition-transform duration-200 ease-in-out
         lg:relative lg:translate-x-0 lg:shrink-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      `}
+      >
         {/* Logo */}
         <div className="p-6 border-b border-dark-700">
           <Link href="/dashboard" className="flex items-center gap-3">
@@ -162,11 +165,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-5 overflow-y-auto" aria-label="Menu principal">
           {navSections
-            .filter(section => !section.roles || section.roles.includes(role))
+            .filter((section) => !section.roles || section.roles.includes(role))
             .map((section) => {
-              const visibleItems = section.items.filter(
-                item => !item.roles || item.roles.includes(role)
-              );
+              const visibleItems = section.items.filter((item) => !item.roles || item.roles.includes(role));
               if (visibleItems.length === 0) return null;
               return (
                 <div key={section.label}>
@@ -216,9 +217,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-dark-700">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-dark-200 truncate">
-                {user.email}
-              </p>
+              <p className="text-sm font-medium text-dark-200 truncate">{user.email}</p>
               <p className="text-xs text-dark-500">{role}</p>
             </div>
             <button
@@ -234,9 +233,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto lg:pt-0 pt-14">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto lg:pt-0 pt-14">{children}</main>
     </div>
   );
 }

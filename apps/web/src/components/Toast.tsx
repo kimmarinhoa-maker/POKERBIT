@@ -27,9 +27,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const toast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++nextId;
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3500);
   }, []);
 
@@ -38,7 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Toast container */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-        {toasts.map(t => (
+        {toasts.map((t) => (
           <div
             key={t.id}
             className={`pointer-events-auto px-4 py-3 rounded-lg text-sm font-medium shadow-toast backdrop-blur-sm border animate-slide-up ${

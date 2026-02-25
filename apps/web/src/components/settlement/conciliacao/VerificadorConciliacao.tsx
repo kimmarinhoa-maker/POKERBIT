@@ -33,22 +33,20 @@ export default function VerificadorConciliacao({ extrato, ledger, onVerificado }
     { label: 'Taxas', extrato: extrato.taxas, ledger: ledger.taxas, isCurrency: true },
   ];
 
-  const allOk = items.every(it => Math.abs(it.extrato - it.ledger) < 0.01);
+  const allOk = items.every((it) => Math.abs(it.extrato - it.ledger) < 0.01);
 
   useEffect(() => {
     onVerificado(allOk);
   }, [allOk, onVerificado]);
 
   return (
-    <div className={`border rounded-lg overflow-hidden mb-3 ${
-      allOk
-        ? 'border-emerald-500/30 bg-emerald-500/5'
-        : 'border-red-500/30 bg-red-500/5'
-    }`}>
+    <div
+      className={`border rounded-lg overflow-hidden mb-3 ${
+        allOk ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'
+      }`}
+    >
       {/* Header */}
-      <div className={`px-4 py-2 flex items-center gap-2 ${
-        allOk ? 'bg-emerald-500/10' : 'bg-red-500/10'
-      }`}>
+      <div className={`px-4 py-2 flex items-center gap-2 ${allOk ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
         <span className="text-sm font-bold">{allOk ? 'OK' : '!'}</span>
         <span className={`text-xs font-bold ${allOk ? 'text-emerald-400' : 'text-red-400'}`}>
           {allOk ? 'Verificacao OK — Extrato e Ledger conferem' : 'Divergencia encontrada — Extrato vs Ledger'}
@@ -60,15 +58,21 @@ export default function VerificadorConciliacao({ extrato, ledger, onVerificado }
         <thead>
           <tr className="bg-dark-800/30">
             <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500">Item</th>
-            <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500">Extrato</th>
-            <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500">Ledger</th>
-            <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-dark-500">Status</th>
+            <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500">
+              Extrato
+            </th>
+            <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500">
+              Ledger
+            </th>
+            <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-dark-500">
+              Status
+            </th>
           </tr>
         </thead>
         <tbody>
-          {items.map(it => {
+          {items.map((it) => {
             const ok = Math.abs(it.extrato - it.ledger) < 0.01;
-            const fmtVal = (v: number) => it.isCurrency ? formatBRL(v) : String(v);
+            const fmtVal = (v: number) => (it.isCurrency ? formatBRL(v) : String(v));
             return (
               <tr key={it.label} className="border-t border-dark-700/30">
                 <td className="px-4 py-2 font-medium text-dark-200">{it.label}</td>
@@ -79,7 +83,7 @@ export default function VerificadorConciliacao({ extrato, ledger, onVerificado }
                     <span className="text-emerald-500 text-[10px] font-bold">OK</span>
                   ) : (
                     <span className="text-red-400 text-[10px] font-bold">
-                      {it.isCurrency ? formatBRL(it.extrato - it.ledger) : (it.extrato - it.ledger)}
+                      {it.isCurrency ? formatBRL(it.extrato - it.ledger) : it.extrato - it.ledger}
                     </span>
                   )}
                 </td>

@@ -19,7 +19,13 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   VOID: { label: 'ANULADO', cls: 'border-red-500/30 bg-red-500/10 text-red-400' },
 };
 
-export default function WeekSelector({ currentSettlementId, weekStart, weekEnd, status, onNotFound }: WeekSelectorProps) {
+export default function WeekSelector({
+  currentSettlementId,
+  weekStart,
+  weekEnd,
+  status,
+  onNotFound,
+}: WeekSelectorProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const sc = STATUS_MAP[status] || STATUS_MAP.DRAFT;
@@ -71,26 +77,14 @@ export default function WeekSelector({ currentSettlementId, weekStart, weekEnd, 
     <div className="flex flex-col">
       <div className="flex items-center gap-3">
         {/* Status badge */}
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sc.cls}`}>
-          {sc.label}
-        </span>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sc.cls}`}>{sc.label}</span>
 
         <div className="h-4 w-px bg-dark-700" />
 
         {/* Date pickers */}
         <div className="flex items-end gap-2">
-          <WeekDatePicker
-            value={startDate}
-            onChange={handleStartChange}
-            allowedDay={1}
-            label="Data Inicial"
-          />
-          <WeekDatePicker
-            value={endDate}
-            onChange={setEndDate}
-            allowedDay={0}
-            label="Data Final"
-          />
+          <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
+          <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
           <button
             onClick={handleBuscar}
             disabled={searching || !startDate}

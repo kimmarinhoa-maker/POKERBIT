@@ -6,19 +6,19 @@ function mockLogo(initial: string, bg: string): string {
 }
 
 const logos = {
-  imperio:   mockLogo('I', '#d97706'),
+  imperio: mockLogo('I', '#d97706'),
   confraria: mockLogo('C', '#7c3aed'),
-  bet3:      mockLogo('3', '#2563eb'),
-  tgp:       mockLogo('T', '#059669'),
-  ch:        mockLogo('C', '#dc2626'),
+  bet3: mockLogo('3', '#2563eb'),
+  tgp: mockLogo('T', '#059669'),
+  ch: mockLogo('C', '#dc2626'),
 };
 
 export const mockSubClubs: SubClub[] = [
-  { id: 'sc-imperio',   name: 'Imperio',   icon: '\u{1F451}', logoUrl: logos.imperio },
+  { id: 'sc-imperio', name: 'Imperio', icon: '\u{1F451}', logoUrl: logos.imperio },
   { id: 'sc-confraria', name: 'Confraria', icon: '\u{1F36A}', logoUrl: logos.confraria },
-  { id: 'sc-3bet',      name: '3Bet',      icon: '\u{1F0CF}', logoUrl: logos.bet3 },
-  { id: 'sc-tgp',       name: 'TGP',       icon: '\u{1F3C6}', logoUrl: logos.tgp },
-  { id: 'sc-ch',        name: 'CH',        icon: '\u{26A1}',  logoUrl: logos.ch },
+  { id: 'sc-3bet', name: '3Bet', icon: '\u{1F0CF}', logoUrl: logos.bet3 },
+  { id: 'sc-tgp', name: 'TGP', icon: '\u{1F3C6}', logoUrl: logos.tgp },
+  { id: 'sc-ch', name: 'CH', icon: '\u{26A1}', logoUrl: logos.ch },
 ];
 
 // Gera launches zerados a partir dos subclubes

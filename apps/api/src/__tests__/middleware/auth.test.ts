@@ -66,9 +66,7 @@ describe('requireAuth', () => {
 
   it('token valido → injeta userId e continua', async () => {
     mockSupabase._setAuthUser({ id: 'user-123', email: 'test@test.com' });
-    mockSupabase._setResult('user_tenants', [
-      { tenant_id: 'tenant-1', role: 'OWNER' },
-    ]);
+    mockSupabase._setResult('user_tenants', [{ tenant_id: 'tenant-1', role: 'OWNER' }]);
     const app = makeApp([requireAuth]);
     const res = await request(app).get('/test').set('Authorization', 'Bearer valid-token');
     expect(res.status).toBe(200);
@@ -120,10 +118,7 @@ describe('requireTenant', () => {
   });
 
   it('AGENTE → busca allowedSubclubIds do banco', async () => {
-    mockSupabase._setResult('user_org_access', [
-      { org_id: 'org-1' },
-      { org_id: 'org-2' },
-    ]);
+    mockSupabase._setResult('user_org_access', [{ org_id: 'org-1' }, { org_id: 'org-2' }]);
     const app = makeApp([authInjector, requireTenant], (req, res) => {
       res.json({ role: req.userRole, subclubs: req.allowedSubclubIds });
     });

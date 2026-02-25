@@ -11,13 +11,8 @@ import { supabaseAdmin } from '../config/supabase';
 import type { CreateLedgerEntryDTO, MovementDir } from '../types';
 
 export class LedgerService {
-
   // ─── Criar movimentação ──────────────────────────────────────────
-  async createEntry(
-    tenantId: string,
-    dto: CreateLedgerEntryDTO,
-    userId: string
-  ) {
+  async createEntry(tenantId: string, dto: CreateLedgerEntryDTO, userId: string) {
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
       .insert({
@@ -51,11 +46,7 @@ export class LedgerService {
   }
 
   // ─── Listar movimentações por semana/entidade ────────────────────
-  async listEntries(
-    tenantId: string,
-    weekStart: string,
-    entityId?: string
-  ) {
+  async listEntries(tenantId: string, weekStart: string, entityId?: string) {
     let query = supabaseAdmin
       .from('ledger_entries')
       .select('*')
@@ -73,11 +64,7 @@ export class LedgerService {
   }
 
   // ─── Calcular ledger net de uma entidade na semana ───────────────
-  async calcEntityLedgerNet(
-    tenantId: string,
-    weekStart: string,
-    entityId: string
-  ) {
+  async calcEntityLedgerNet(tenantId: string, weekStart: string, entityId: string) {
     const entries = await this.listEntries(tenantId, weekStart, entityId);
 
     let entradas = 0;
@@ -85,7 +72,7 @@ export class LedgerService {
 
     for (const e of entries) {
       if (e.dir === 'IN') entradas += Number(e.amount) || 0;
-      else                saidas   += Number(e.amount) || 0;
+      else saidas += Number(e.amount) || 0;
     }
 
     return {
@@ -97,11 +84,7 @@ export class LedgerService {
   }
 
   // ─── Deletar movimentação ────────────────────────────────────────
-  async deleteEntry(
-    tenantId: string,
-    entryId: string,
-    userId: string
-  ) {
+  async deleteEntry(tenantId: string, entryId: string, userId: string) {
     // Buscar antes de deletar (para audit)
     const { data: existing } = await supabaseAdmin
       .from('ledger_entries')
@@ -112,11 +95,7 @@ export class LedgerService {
 
     if (!existing) throw new Error('Movimentação não encontrada');
 
-    const { error } = await supabaseAdmin
-      .from('ledger_entries')
-      .delete()
-      .eq('id', entryId)
-      .eq('tenant_id', tenantId);
+    const { error } = await supabaseAdmin.from('ledger_entries').delete().eq('id', entryId).eq('tenant_id', tenantId);
 
     if (error) throw new Error(`Erro ao deletar: ${error.message}`);
 
@@ -132,11 +111,7 @@ export class LedgerService {
     return { deleted: true };
   }
   // ─── Toggle conciliação ──────────────────────────────────────────
-  async toggleReconciled(
-    tenantId: string,
-    entryId: string,
-    value: boolean
-  ) {
+  async toggleReconciled(tenantId: string, entryId: string, value: boolean) {
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
       .update({ is_reconciled: value })

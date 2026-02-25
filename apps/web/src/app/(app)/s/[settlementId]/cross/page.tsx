@@ -84,7 +84,9 @@ export default function CrossClubPage() {
     }
   }, [settlementId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Flatten and consolidate agents from all subclubs
   const { crossAgents, subclubNames } = useMemo(() => {
@@ -127,7 +129,7 @@ export default function CrossClubPage() {
 
   // Filter
   const filteredAgents = useMemo(() => {
-    return crossAgents.filter(a => {
+    return crossAgents.filter((a) => {
       if (searchTerm && !a.agent_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (filterSubclub !== 'all' && !a.subclubs.includes(filterSubclub)) return false;
       if (showMultiOnly && a.subclubs.length < 2) return false;
@@ -141,12 +143,24 @@ export default function CrossClubPage() {
     sorted.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
-        case 'name': cmp = a.agent_name.localeCompare(b.agent_name); break;
-        case 'players': cmp = a.player_count - b.player_count; break;
-        case 'rake': cmp = a.rake_total - b.rake_total; break;
-        case 'resultado': cmp = a.resultado - b.resultado; break;
-        case 'commission': cmp = a.commission - b.commission; break;
-        case 'subclubs': cmp = a.subclubs.length - b.subclubs.length; break;
+        case 'name':
+          cmp = a.agent_name.localeCompare(b.agent_name);
+          break;
+        case 'players':
+          cmp = a.player_count - b.player_count;
+          break;
+        case 'rake':
+          cmp = a.rake_total - b.rake_total;
+          break;
+        case 'resultado':
+          cmp = a.resultado - b.resultado;
+          break;
+        case 'commission':
+          cmp = a.commission - b.commission;
+          break;
+        case 'subclubs':
+          cmp = a.subclubs.length - b.subclubs.length;
+          break;
       }
       return sortDir === 'desc' ? -cmp : cmp;
     });
@@ -156,7 +170,7 @@ export default function CrossClubPage() {
   // KPIs
   const kpis = useMemo(() => {
     const total = filteredAgents.length;
-    const multiClub = filteredAgents.filter(a => a.subclubs.length > 1).length;
+    const multiClub = filteredAgents.filter((a) => a.subclubs.length > 1).length;
     const totalRake = filteredAgents.reduce((s, a) => s + a.rake_total, 0);
     const totalResultado = filteredAgents.reduce((s, a) => s + a.resultado, 0);
     const totalComission = filteredAgents.reduce((s, a) => s + a.commission, 0);
@@ -166,7 +180,7 @@ export default function CrossClubPage() {
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
-      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
     } else {
       setSortKey(key);
       setSortDir('desc');
@@ -221,9 +235,7 @@ export default function CrossClubPage() {
             ← Visao Geral
           </Link>
           <div className="h-4 w-px bg-dark-700" />
-          <h2 className="text-lg font-bold text-white">
-            Cross-Club
-          </h2>
+          <h2 className="text-lg font-bold text-white">Cross-Club</h2>
           <WeekSelector
             currentSettlementId={settlementId}
             weekStart={settlement.week_start}
@@ -241,211 +253,211 @@ export default function CrossClubPage() {
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
             <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
           </div>
-        ) : <>
-        {/* Info banner */}
-        <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-4 py-3 mb-5 text-sm text-dark-300">
-          Visao consolidada de todos os agentes em todos os subclubes. Agentes com presenca em multiplos clubes sao destacados.
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-          <KpiCard label="Agentes" value={String(kpis.total)} borderColor="bg-purple-500" />
-          <KpiCard label="Jogadores" value={String(kpis.totalPlayers)} borderColor="bg-blue-500" />
-          <KpiCard label="Multi-Club" value={String(kpis.multiClub)} borderColor="bg-amber-500" />
-          <KpiCard label="Rake Total" value={formatBRL(kpis.totalRake)} borderColor="bg-poker-500" />
-          <KpiCard label="Comissao RB" value={formatBRL(kpis.totalComission)} borderColor="bg-purple-500" />
-          <KpiCard
-            label="Resultado"
-            value={formatBRL(kpis.totalResultado)}
-            borderColor={kpis.totalResultado >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
-            textColor={clr(kpis.totalResultado)}
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <div className="relative flex-1 max-w-xs">
-            <input
-              type="text"
-              placeholder="Buscar agente..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
-              aria-label="Buscar agente"
-            />
-          </div>
-          <select
-            value={filterSubclub}
-            onChange={e => setFilterSubclub(e.target.value)}
-            className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
-            aria-label="Filtrar por subclube"
-          >
-            <option value="all">Todos os Subclubes</option>
-            {subclubNames.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowMultiOnly(!showMultiOnly)}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              showMultiOnly
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                : 'bg-dark-800 text-dark-300 border border-dark-700/50 hover:text-dark-200'
-            }`}
-            aria-pressed={showMultiOnly}
-          >
-            Multi-Club Only
-          </button>
-          <span className="text-dark-500 text-xs ml-auto">
-            {sortedAgents.length} agente{sortedAgents.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {/* Agent table */}
-        {sortedAgents.length === 0 ? (
-          <div className="card text-center py-16">
-            <h3 className="text-xl font-bold text-white mb-2">Nenhum agente encontrado</h3>
-            <p className="text-dark-400 text-sm">Ajuste os filtros ou importe dados</p>
-          </div>
         ) : (
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" aria-label="Agentes cross-club">
-                <thead>
-                  <tr className="bg-dark-800/50">
-                    <th
-                      onClick={() => toggleSort('name')}
-                      className="px-4 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Agente{sortIcon('name')}
-                    </th>
-                    <th
-                      onClick={() => toggleSort('subclubs')}
-                      className="px-3 py-3 text-center font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'subclubs' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Subclubes{sortIcon('subclubs')}
-                    </th>
-                    <th
-                      onClick={() => toggleSort('players')}
-                      className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'players' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Jogadores{sortIcon('players')}
-                    </th>
-                    <th
-                      onClick={() => toggleSort('rake')}
-                      className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'rake' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Rake{sortIcon('rake')}
-                    </th>
-                    <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">
-                      Ganhos
-                    </th>
-                    <th
-                      onClick={() => toggleSort('commission')}
-                      className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'commission' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Comissao RB{sortIcon('commission')}
-                    </th>
-                    <th
-                      onClick={() => toggleSort('resultado')}
-                      className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
-                      role="columnheader"
-                      aria-sort={sortKey === 'resultado' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    >
-                      Resultado{sortIcon('resultado')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-800/50">
-                  {sortedAgents.map(agent => (
-                    <tr
-                      key={agent.agent_name}
-                      className="hover:bg-dark-800/20 transition-colors"
-                    >
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-medium">{agent.agent_name}</span>
-                          {agent.is_direct && (
-                            <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">
-                              DIRETO
-                            </span>
-                          )}
-                          {agent.subclubs.length > 1 && (
-                            <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold">
-                              MULTI
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {agent.subclubs.map(sc => (
-                            <span
-                              key={sc}
-                              className="text-[10px] bg-dark-700/50 text-dark-300 px-1.5 py-0.5 rounded"
-                            >
-                              {sc}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-dark-200">
-                        {agent.player_count}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-dark-200">
-                        {formatBRL(agent.rake_total)}
-                      </td>
-                      <td className={`px-3 py-2.5 text-right font-mono ${clr(agent.ganhos_total)}`}>
-                        {formatBRL(agent.ganhos_total)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-purple-400">
-                        {agent.commission > 0.01 ? formatBRL(agent.commission) : '—'}
-                      </td>
-                      <td className={`px-3 py-2.5 text-right font-mono font-bold ${clr(agent.resultado)}`}>
-                        {formatBRL(agent.resultado)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                {/* Footer totals */}
-                <tfoot>
-                  <tr className="bg-dark-800/30 border-t-2 border-dark-700">
-                    <td className="px-4 py-3 font-bold text-dark-200">TOTAL</td>
-                    <td className="px-3 py-3 text-center text-dark-400 text-xs">
-                      {subclubNames.length} clubs
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono font-bold text-dark-200">
-                      {kpis.totalPlayers}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono font-bold text-dark-200">
-                      {formatBRL(kpis.totalRake)}
-                    </td>
-                    <td className={`px-3 py-3 text-right font-mono font-bold ${clr(filteredAgents.reduce((s, a) => s + a.ganhos_total, 0))}`}>
-                      {formatBRL(filteredAgents.reduce((s, a) => s + a.ganhos_total, 0))}
-                    </td>
-                    <td className="px-3 py-3 text-right font-mono font-bold text-purple-400">
-                      {formatBRL(kpis.totalComission)}
-                    </td>
-                    <td className={`px-3 py-3 text-right font-mono font-bold ${clr(kpis.totalResultado)}`}>
-                      {formatBRL(kpis.totalResultado)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+          <>
+            {/* Info banner */}
+            <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg px-4 py-3 mb-5 text-sm text-dark-300">
+              Visao consolidada de todos os agentes em todos os subclubes. Agentes com presenca em multiplos clubes sao
+              destacados.
             </div>
-          </div>
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+              <KpiCard label="Agentes" value={String(kpis.total)} borderColor="bg-purple-500" />
+              <KpiCard label="Jogadores" value={String(kpis.totalPlayers)} borderColor="bg-blue-500" />
+              <KpiCard label="Multi-Club" value={String(kpis.multiClub)} borderColor="bg-amber-500" />
+              <KpiCard label="Rake Total" value={formatBRL(kpis.totalRake)} borderColor="bg-poker-500" />
+              <KpiCard label="Comissao RB" value={formatBRL(kpis.totalComission)} borderColor="bg-purple-500" />
+              <KpiCard
+                label="Resultado"
+                value={formatBRL(kpis.totalResultado)}
+                borderColor={kpis.totalResultado >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
+                textColor={clr(kpis.totalResultado)}
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <div className="relative flex-1 max-w-xs">
+                <input
+                  type="text"
+                  placeholder="Buscar agente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+                  aria-label="Buscar agente"
+                />
+              </div>
+              <select
+                value={filterSubclub}
+                onChange={(e) => setFilterSubclub(e.target.value)}
+                className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
+                aria-label="Filtrar por subclube"
+              >
+                <option value="all">Todos os Subclubes</option>
+                {subclubNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowMultiOnly(!showMultiOnly)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  showMultiOnly
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                    : 'bg-dark-800 text-dark-300 border border-dark-700/50 hover:text-dark-200'
+                }`}
+                aria-pressed={showMultiOnly}
+              >
+                Multi-Club Only
+              </button>
+              <span className="text-dark-500 text-xs ml-auto">
+                {sortedAgents.length} agente{sortedAgents.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Agent table */}
+            {sortedAgents.length === 0 ? (
+              <div className="card text-center py-16">
+                <h3 className="text-xl font-bold text-white mb-2">Nenhum agente encontrado</h3>
+                <p className="text-dark-400 text-sm">Ajuste os filtros ou importe dados</p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" aria-label="Agentes cross-club">
+                    <thead>
+                      <tr className="bg-dark-800/50">
+                        <th
+                          onClick={() => toggleSort('name')}
+                          className="px-4 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={sortKey === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        >
+                          Agente{sortIcon('name')}
+                        </th>
+                        <th
+                          onClick={() => toggleSort('subclubs')}
+                          className="px-3 py-3 text-center font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={sortKey === 'subclubs' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        >
+                          Subclubes{sortIcon('subclubs')}
+                        </th>
+                        <th
+                          onClick={() => toggleSort('players')}
+                          className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={sortKey === 'players' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        >
+                          Jogadores{sortIcon('players')}
+                        </th>
+                        <th
+                          onClick={() => toggleSort('rake')}
+                          className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={sortKey === 'rake' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        >
+                          Rake{sortIcon('rake')}
+                        </th>
+                        <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Ganhos</th>
+                        <th
+                          onClick={() => toggleSort('commission')}
+                          className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={
+                            sortKey === 'commission' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+                          }
+                        >
+                          Comissao RB{sortIcon('commission')}
+                        </th>
+                        <th
+                          onClick={() => toggleSort('resultado')}
+                          className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
+                          role="columnheader"
+                          aria-sort={
+                            sortKey === 'resultado' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+                          }
+                        >
+                          Resultado{sortIcon('resultado')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-800/50">
+                      {sortedAgents.map((agent) => (
+                        <tr key={agent.agent_name} className="hover:bg-dark-800/20 transition-colors">
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{agent.agent_name}</span>
+                              {agent.is_direct && (
+                                <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">
+                                  DIRETO
+                                </span>
+                              )}
+                              {agent.subclubs.length > 1 && (
+                                <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                                  MULTI
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {agent.subclubs.map((sc) => (
+                                <span
+                                  key={sc}
+                                  className="text-[10px] bg-dark-700/50 text-dark-300 px-1.5 py-0.5 rounded"
+                                >
+                                  {sc}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-dark-200">{agent.player_count}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-dark-200">
+                            {formatBRL(agent.rake_total)}
+                          </td>
+                          <td className={`px-3 py-2.5 text-right font-mono ${clr(agent.ganhos_total)}`}>
+                            {formatBRL(agent.ganhos_total)}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-purple-400">
+                            {agent.commission > 0.01 ? formatBRL(agent.commission) : '—'}
+                          </td>
+                          <td className={`px-3 py-2.5 text-right font-mono font-bold ${clr(agent.resultado)}`}>
+                            {formatBRL(agent.resultado)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {/* Footer totals */}
+                    <tfoot>
+                      <tr className="bg-dark-800/30 border-t-2 border-dark-700">
+                        <td className="px-4 py-3 font-bold text-dark-200">TOTAL</td>
+                        <td className="px-3 py-3 text-center text-dark-400 text-xs">{subclubNames.length} clubs</td>
+                        <td className="px-3 py-3 text-right font-mono font-bold text-dark-200">{kpis.totalPlayers}</td>
+                        <td className="px-3 py-3 text-right font-mono font-bold text-dark-200">
+                          {formatBRL(kpis.totalRake)}
+                        </td>
+                        <td
+                          className={`px-3 py-3 text-right font-mono font-bold ${clr(filteredAgents.reduce((s, a) => s + a.ganhos_total, 0))}`}
+                        >
+                          {formatBRL(filteredAgents.reduce((s, a) => s + a.ganhos_total, 0))}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono font-bold text-purple-400">
+                          {formatBRL(kpis.totalComission)}
+                        </td>
+                        <td className={`px-3 py-3 text-right font-mono font-bold ${clr(kpis.totalResultado)}`}>
+                          {formatBRL(kpis.totalResultado)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
-        </>}
       </div>
     </div>
   );
@@ -453,8 +465,16 @@ export default function CrossClubPage() {
 
 // ─── KPI Card ──────────────────────────────────────────────────────
 
-function KpiCard({ label, value, borderColor, textColor }: {
-  label: string; value: string; borderColor: string; textColor?: string;
+function KpiCard({
+  label,
+  value,
+  borderColor,
+  textColor,
+}: {
+  label: string;
+  value: string;
+  borderColor: string;
+  textColor?: string;
 }) {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">

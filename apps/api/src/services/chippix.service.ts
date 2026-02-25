@@ -8,23 +8,19 @@
 import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
 import { round2 } from '../utils/round2';
-import type {
-  ChipPixExtratoRow,
-  ChipPixImportResult,
-  NaoVinculado,
-} from '../types/chippix';
+import type { ChipPixExtratoRow, ChipPixImportResult, NaoVinculado } from '../types/chippix';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 interface ParsedPlayer {
-  idJog: string;         // Player ID from spreadsheet
-  nome: string;          // Member name
-  entrada: number;       // Gross input (sum)
-  saida: number;         // Gross output (sum)
-  taxa: number;          // Fees (sum)
-  txns: number;          // Transaction count
-  datas: string[];       // Unique dates
-  saldo: number;         // entrada - saida
+  idJog: string; // Player ID from spreadsheet
+  nome: string; // Member name
+  entrada: number; // Gross input (sum)
+  saida: number; // Gross output (sum)
+  taxa: number; // Fees (sum)
+  txns: number; // Transaction count
+  datas: string[]; // Unique dates
+  saldo: number; // entrada - saida
 }
 
 // Ledger-compatible row returned to frontend (with virtual fields for compat)
@@ -52,15 +48,12 @@ interface ChipPixRow {
 }
 
 export class ChipPixService {
-
   // ─── Parse XLSX ChipPix → aggregated player records ──────────────
   parseChipPix(buffer: Buffer): ParsedPlayer[] {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
 
     // Find sheet: prefer one containing "opera" (Operações), fallback to first
-    let sheetName = workbook.SheetNames.find(n =>
-      n.toLowerCase().includes('opera')
-    ) || workbook.SheetNames[0];
+    const sheetName = workbook.SheetNames.find((n) => n.toLowerCase().includes('opera')) || workbook.SheetNames[0];
 
     if (!sheetName) throw new Error('Arquivo XLSX vazio — nenhuma aba encontrada');
 
@@ -73,12 +66,12 @@ export class ChipPixService {
     const header = (data[0] || []).map((h: any) => String(h).trim().toLowerCase());
 
     // Locate columns
-    const iId = header.findIndex(h => h.includes('id jogador'));
-    const iTipo = header.findIndex(h => h === 'tipo');
-    const iEnt = header.findIndex(h => h.includes('entrada bruta'));
-    const iSai = header.findIndex(h => h.includes('saida bruta') || h.includes('saída bruta'));
-    const iTaxa = header.findIndex(h => h.includes('taxa'));
-    const iNome = header.findIndex(h => h === 'integrante');
+    const iId = header.findIndex((h) => h.includes('id jogador'));
+    const iTipo = header.findIndex((h) => h === 'tipo');
+    const iEnt = header.findIndex((h) => h.includes('entrada bruta'));
+    const iSai = header.findIndex((h) => h.includes('saida bruta') || h.includes('saída bruta'));
+    const iTaxa = header.findIndex((h) => h.includes('taxa'));
+    const iNome = header.findIndex((h) => h === 'integrante');
 
     if (iId < 0) {
       throw new Error('Coluna "Id Jogador" não encontrada. Verifique o arquivo.');
@@ -153,13 +146,13 @@ export class ChipPixService {
   // ─── Auto-match player ID against agent_week_metrics ─────────────
   private matchPlayerId(
     idJog: string,
-    players: Array<{ sup_id: string; player_nick: string; agent_id: string; agent_name: string }>
+    players: Array<{ sup_id: string; player_nick: string; agent_id: string; agent_name: string }>,
   ): { entityId: string; entityName: string } | null {
     const cpId = idJog.trim();
     if (!cpId) return null;
 
     // Tier 1: exact match on sup_id
-    let match = players.find(p => {
+    let match = players.find((p) => {
       const sid = String(p.sup_id || '').trim();
       return sid && sid === cpId;
     });
@@ -169,7 +162,7 @@ export class ChipPixService {
       const numMatch = cpId.match(/^(\d+)/);
       if (numMatch && numMatch[1].length >= 4) {
         const numPart = numMatch[1];
-        match = players.find(p => {
+        match = players.find((p) => {
           const sid = String(p.sup_id || '').trim();
           return sid && sid === numPart;
         });
@@ -178,7 +171,7 @@ export class ChipPixService {
 
     // Tier 3: substring match (both directions, min 5 chars)
     if (!match && cpId.length >= 5) {
-      match = players.find(p => {
+      match = players.find((p) => {
         const sid = String(p.sup_id || '').trim();
         return sid.length >= 5 && (sid.includes(cpId) || cpId.includes(sid));
       });
@@ -193,13 +186,7 @@ export class ChipPixService {
   }
 
   // ─── Upload: parse + auto-match + insert ledger_entries ──────────
-  async uploadChipPix(
-    tenantId: string,
-    buffer: Buffer,
-    fileName: string,
-    weekStart: string,
-    clubId?: string
-  ) {
+  async uploadChipPix(tenantId: string, buffer: Buffer, fileName: string, weekStart: string, clubId?: string) {
     const parsed = this.parseChipPix(buffer);
 
     if (parsed.length === 0) {
@@ -218,11 +205,11 @@ export class ChipPixService {
       if (clubId) query = query.eq('club_id', clubId);
 
       const { data } = await query;
-      players = (data || []).filter(p => p.sup_id);
+      players = (data || []).filter((p) => p.sup_id);
     }
 
     // Check existing external_refs to avoid duplicates
-    const refs = parsed.map(p => `cp_${p.idJog}`);
+    const refs = parsed.map((p) => `cp_${p.idJog}`);
     const { data: existing } = await supabaseAdmin
       .from('ledger_entries')
       .select('external_ref')
@@ -230,12 +217,12 @@ export class ChipPixService {
       .eq('source', 'chippix')
       .in('external_ref', refs);
 
-    const existingSet = new Set((existing || []).map(e => e.external_ref));
+    const existingSet = new Set((existing || []).map((e) => e.external_ref));
 
     let matched = 0;
     const toInsert = parsed
-      .filter(p => !existingSet.has(`cp_${p.idJog}`))
-      .map(p => {
+      .filter((p) => !existingSet.has(`cp_${p.idJog}`))
+      .map((p) => {
         // Auto-match
         const matchResult = this.matchPlayerId(p.idJog, players);
         if (matchResult) matched++;
@@ -259,13 +246,10 @@ export class ChipPixService {
 
     let inserted: ChipPixRow[] = [];
     if (toInsert.length > 0) {
-      const { data, error } = await supabaseAdmin
-        .from('ledger_entries')
-        .insert(toInsert)
-        .select();
+      const { data, error } = await supabaseAdmin.from('ledger_entries').insert(toInsert).select();
 
       if (error) throw new Error(`Erro ao salvar transações ChipPix: ${error.message}`);
-      inserted = (data || []).map(r => this.enrichRow(r));
+      inserted = (data || []).map((r) => this.enrichRow(r));
     }
 
     return {
@@ -298,11 +282,7 @@ export class ChipPixService {
   }
 
   // ─── Listar transações ChipPix de uma semana ─────────────────────
-  async listTransactions(
-    tenantId: string,
-    weekStart?: string,
-    status?: string
-  ): Promise<ChipPixRow[]> {
+  async listTransactions(tenantId: string, weekStart?: string, status?: string): Promise<ChipPixRow[]> {
     let query = supabaseAdmin
       .from('ledger_entries')
       .select('*')
@@ -315,20 +295,16 @@ export class ChipPixService {
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
 
-    let rows = (data || []).map(r => this.enrichRow(r));
+    let rows = (data || []).map((r) => this.enrichRow(r));
 
     // Filter by virtual status if requested
-    if (status) rows = rows.filter(r => r.status === status);
+    if (status) rows = rows.filter((r) => r.status === status);
 
     return rows;
   }
 
   // ─── Import Extrato → parse + link + insert direto em ledger ────
-  async importExtrato(
-    tenantId: string,
-    buffer: Buffer,
-    userId: string,
-  ): Promise<ChipPixImportResult> {
+  async importExtrato(tenantId: string, buffer: Buffer, userId: string): Promise<ChipPixImportResult> {
     // 1. Parse XLSX row-by-row
     const rows = this.parseExtrato(buffer);
     if (rows.length === 0) {
@@ -350,7 +326,7 @@ export class ChipPixService {
 
     if (activeSettlement && activeSettlement.week_start !== semana) {
       throw new Error(
-        `Semana incorreta. O arquivo é da semana ${semana} mas o fechamento ativo é ${activeSettlement.week_start}. Importe o extrato da semana correta.`
+        `Semana incorreta. O arquivo é da semana ${semana} mas o fechamento ativo é ${activeSettlement.week_start}. Importe o extrato da semana correta.`,
       );
     }
 
@@ -372,7 +348,7 @@ export class ChipPixService {
     }
 
     // 4. Collect all external_refs to check for dupes
-    const allRefs = rows.flatMap(r => {
+    const allRefs = rows.flatMap((r) => {
       const refs = [r.idOperacao];
       if (r.taxaOperacao > 0) refs.push(`${r.idOperacao}_fee`);
       return refs;
@@ -385,7 +361,7 @@ export class ChipPixService {
       .eq('source', 'chippix')
       .in('external_ref', allRefs);
 
-    const existingRefs = new Set((existingEntries || []).map(e => e.external_ref));
+    const existingRefs = new Set((existingEntries || []).map((e) => e.external_ref));
 
     // 5. Build inserts + track stats
     let vinculados = 0;
@@ -458,10 +434,7 @@ export class ChipPixService {
     // 6. Bulk insert
     let inseridos = 0;
     if (toInsert.length > 0) {
-      const { data: inserted, error } = await supabaseAdmin
-        .from('ledger_entries')
-        .insert(toInsert)
-        .select('id');
+      const { data: inserted, error } = await supabaseAdmin.from('ledger_entries').insert(toInsert).select('id');
 
       if (error) throw new Error(`Erro ao inserir ledger_entries: ${error.message}`);
       inseridos = inserted?.length || 0;
@@ -489,9 +462,7 @@ export class ChipPixService {
   // ─── Parse extrato XLSX row-by-row ─────────────────────────────────
   private parseExtrato(buffer: Buffer): ChipPixExtratoRow[] {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames.find(n =>
-      n.toLowerCase().includes('opera')
-    ) || workbook.SheetNames[0];
+    const sheetName = workbook.SheetNames.find((n) => n.toLowerCase().includes('opera')) || workbook.SheetNames[0];
 
     if (!sheetName) throw new Error('Arquivo XLSX vazio — nenhuma aba encontrada');
 
@@ -503,25 +474,24 @@ export class ChipPixService {
     const header = (data[0] || []).map((h: any) => String(h).trim().toLowerCase());
 
     // Map columns
-    const col = (patterns: string[]) =>
-      header.findIndex(h => patterns.some(p => h.includes(p)));
+    const col = (patterns: string[]) => header.findIndex((h) => patterns.some((p) => h.includes(p)));
 
-    const iData        = col(['data']);
-    const iTipo        = col(['tipo']);
-    const iFinalidade  = col(['finalidade']);
-    const iEntBruta    = col(['entrada bruta']);
-    const iSaiBruta    = col(['saida bruta', 'saída bruta']);
-    const iEntLiq      = col(['entrada liquida', 'entrada líquida']);
-    const iSaiLiq      = col(['saida liquida', 'saída líquida']);
-    const iIntegrante  = col(['integrante']);
-    const iTaxa        = col(['taxa da opera', 'taxa']);
-    const iIdJogador   = col(['id jogador']);
-    const iIdOperacao  = col(['id da opera']);
+    const iData = col(['data']);
+    const iTipo = col(['tipo']);
+    const iFinalidade = col(['finalidade']);
+    const iEntBruta = col(['entrada bruta']);
+    const iSaiBruta = col(['saida bruta', 'saída bruta']);
+    const iEntLiq = col(['entrada liquida', 'entrada líquida']);
+    const iSaiLiq = col(['saida liquida', 'saída líquida']);
+    const iIntegrante = col(['integrante']);
+    const iTaxa = col(['taxa da opera', 'taxa']);
+    const iIdJogador = col(['id jogador']);
+    const iIdOperacao = col(['id da opera']);
     const iIdPagamento = col(['id do pagamento']);
 
     if (iIdJogador < 0) throw new Error('Coluna "Id Jogador" não encontrada');
     if (iIdOperacao < 0) throw new Error('Coluna "Id da operação" não encontrada');
-    if (iTipo < 0)       throw new Error('Coluna "Tipo" não encontrada');
+    if (iTipo < 0) throw new Error('Coluna "Tipo" não encontrada');
 
     const parseNum = (val: any): number => {
       if (val === '' || val === null || val === undefined) return 0;
@@ -536,7 +506,7 @@ export class ChipPixService {
       }
       const s = String(val).trim();
       // DD/MM/YYYY
-      const brMatch = s.match(/^(\d{2})[/\-](\d{2})[/\-](\d{4})/);
+      const brMatch = s.match(/^(\d{2})[/-](\d{2})[/-](\d{4})/);
       if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
       // YYYY-MM-DD
       if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
@@ -557,18 +527,18 @@ export class ChipPixService {
       if (!idOperacao || !tipo) continue;
 
       rows.push({
-        data:           iData >= 0       ? parseDate(row[iData]) : '',
+        data: iData >= 0 ? parseDate(row[iData]) : '',
         tipo,
-        finalidade:     iFinalidade >= 0 ? String(row[iFinalidade] || '').trim() : '',
-        entradaBruta:   iEntBruta >= 0   ? parseNum(row[iEntBruta]) : 0,
-        saidaBruta:     iSaiBruta >= 0   ? parseNum(row[iSaiBruta]) : 0,
-        entradaLiquida: iEntLiq >= 0     ? parseNum(row[iEntLiq]) : 0,
-        saidaLiquida:   iSaiLiq >= 0     ? parseNum(row[iSaiLiq]) : 0,
-        integrante:     iIntegrante >= 0 ? String(row[iIntegrante] || '').trim() : '',
-        taxaOperacao:   iTaxa >= 0       ? parseNum(row[iTaxa]) : 0,
+        finalidade: iFinalidade >= 0 ? String(row[iFinalidade] || '').trim() : '',
+        entradaBruta: iEntBruta >= 0 ? parseNum(row[iEntBruta]) : 0,
+        saidaBruta: iSaiBruta >= 0 ? parseNum(row[iSaiBruta]) : 0,
+        entradaLiquida: iEntLiq >= 0 ? parseNum(row[iEntLiq]) : 0,
+        saidaLiquida: iSaiLiq >= 0 ? parseNum(row[iSaiLiq]) : 0,
+        integrante: iIntegrante >= 0 ? String(row[iIntegrante] || '').trim() : '',
+        taxaOperacao: iTaxa >= 0 ? parseNum(row[iTaxa]) : 0,
         idJogador,
         idOperacao,
-        idPagamento:    iIdPagamento >= 0 ? String(row[iIdPagamento] || '').trim() : '',
+        idPagamento: iIdPagamento >= 0 ? String(row[iIdPagamento] || '').trim() : '',
       });
     }
 
@@ -578,8 +548,8 @@ export class ChipPixService {
   // ─── Detect week_start from row dates ──────────────────────────────
   private detectWeekFromRows(rows: ChipPixExtratoRow[]): string {
     const dates = rows
-      .map(r => r.data)
-      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .map((r) => r.data)
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
       .sort();
 
     if (dates.length === 0) {
@@ -599,11 +569,7 @@ export class ChipPixService {
   }
 
   // ─── Aplicar vinculadas → marcar is_reconciled = true ───────────
-  async applyLinked(
-    tenantId: string,
-    weekStart: string,
-    userId: string
-  ) {
+  async applyLinked(tenantId: string, weekStart: string, userId: string) {
     // Records already live in ledger_entries; "apply" = mark reconciled
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
@@ -728,11 +694,7 @@ export class ChipPixService {
       throw new Error('Não é possível excluir transação já aplicada');
     }
 
-    const { error } = await supabaseAdmin
-      .from('ledger_entries')
-      .delete()
-      .eq('id', txId)
-      .eq('tenant_id', tenantId);
+    const { error } = await supabaseAdmin.from('ledger_entries').delete().eq('id', txId).eq('tenant_id', tenantId);
 
     if (error) throw new Error(`Erro ao excluir: ${error.message}`);
     return { id: txId };

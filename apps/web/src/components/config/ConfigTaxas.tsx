@@ -1,10 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  getFeeConfig,
-  updateFeeConfig,
-} from '@/lib/api';
+import { getFeeConfig, updateFeeConfig } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 
@@ -17,11 +14,15 @@ interface FeeConfig {
 }
 
 const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' | 'ggr' | 'conversion' }> = {
-  taxaApp:       { label: 'Taxa Aplicativo',  sublabel: 'Percentual cobrado pelo aplicativo',  base: 'rake' },
-  taxaLiga:      { label: 'Taxa Liga',         sublabel: 'Percentual destinado a liga',          base: 'rake' },
-  taxaRodeoGGR:  { label: 'Taxa Rodeo GGR',    sublabel: 'Percentual sobre GGR rodeo',           base: 'ggr'  },
-  taxaRodeoApp:  { label: 'Taxa Rodeo App',     sublabel: 'Percentual app sobre GGR rodeo',       base: 'ggr'  },
-  GU_TO_BRL:     { label: 'Conversao GU \u2192 BRL', sublabel: 'Multiplicador da unidade Grand Union para Real', base: 'conversion' },
+  taxaApp: { label: 'Taxa Aplicativo', sublabel: 'Percentual cobrado pelo aplicativo', base: 'rake' },
+  taxaLiga: { label: 'Taxa Liga', sublabel: 'Percentual destinado a liga', base: 'rake' },
+  taxaRodeoGGR: { label: 'Taxa Rodeo GGR', sublabel: 'Percentual sobre GGR rodeo', base: 'ggr' },
+  taxaRodeoApp: { label: 'Taxa Rodeo App', sublabel: 'Percentual app sobre GGR rodeo', base: 'ggr' },
+  GU_TO_BRL: {
+    label: 'Conversao GU \u2192 BRL',
+    sublabel: 'Multiplicador da unidade Grand Union para Real',
+    base: 'conversion',
+  },
 };
 
 const rakeKeys = ['taxaApp', 'taxaLiga'];
@@ -58,7 +59,7 @@ export default function ConfigTaxas() {
   }
 
   function getRateByName(name: string): number {
-    const fee = fees.find(f => f.name === name);
+    const fee = fees.find((f) => f.name === name);
     return fee ? Number(fee.rate) : 0;
   }
 
@@ -82,7 +83,7 @@ export default function ConfigTaxas() {
     setSaving(true);
     setError(null);
     try {
-      const feesPayload = [...rakeKeys, ...ggrKeys, ...conversionKeys].map(key => ({
+      const feesPayload = [...rakeKeys, ...ggrKeys, ...conversionKeys].map((key) => ({
         name: key,
         rate: parseFloat(form[key]) || 0,
         base: feesMeta[key].base,
@@ -126,22 +127,18 @@ export default function ConfigTaxas() {
 
       {/* Feedback */}
       {error && (
-        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">
-          {error}
-        </div>
+        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{error}</div>
       )}
 
       {/* Fees card */}
       <div className="card">
         {/* Rake section */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-            Taxas sobre Rake
-          </h3>
+          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre Rake</h3>
         </div>
 
         <div className="space-y-4 mb-6">
-          {rakeKeys.map(key => (
+          {rakeKeys.map((key) => (
             <FeeRow
               key={key}
               name={key}
@@ -149,20 +146,18 @@ export default function ConfigTaxas() {
               rate={getRateByName(key)}
               editing={editing}
               formValue={form[key] || ''}
-              onChange={(val) => setForm(prev => ({ ...prev, [key]: val }))}
+              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
             />
           ))}
         </div>
 
         {/* GGR section */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-            Taxas sobre GGR
-          </h3>
+          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre GGR</h3>
         </div>
 
         <div className="space-y-4 mb-6">
-          {ggrKeys.map(key => (
+          {ggrKeys.map((key) => (
             <FeeRow
               key={key}
               name={key}
@@ -170,20 +165,18 @@ export default function ConfigTaxas() {
               rate={getRateByName(key)}
               editing={editing}
               formValue={form[key] || ''}
-              onChange={(val) => setForm(prev => ({ ...prev, [key]: val }))}
+              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
             />
           ))}
         </div>
 
         {/* Conversion section */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-            Conversao de Moeda
-          </h3>
+          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Conversao de Moeda</h3>
         </div>
 
         <div className="space-y-4">
-          {conversionKeys.map(key => (
+          {conversionKeys.map((key) => (
             <FeeRow
               key={key}
               name={key}
@@ -191,7 +184,7 @@ export default function ConfigTaxas() {
               rate={getRateByName(key) || 5}
               editing={editing}
               formValue={form[key] || '5'}
-              onChange={(val) => setForm(prev => ({ ...prev, [key]: val }))}
+              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
               unit="x"
             />
           ))}
@@ -223,12 +216,11 @@ export default function ConfigTaxas() {
       {/* Info card */}
       <div className="mt-6 card bg-dark-800/30 border-dark-700/40">
         <div className="text-sm text-dark-400 space-y-1">
-          <p>
-            Estas taxas sao aplicadas automaticamente no calculo do acerto de cada subclube.
-          </p>
+          <p>Estas taxas sao aplicadas automaticamente no calculo do acerto de cada subclube.</p>
           <p>
             <strong className="text-dark-300">Rake:</strong> incide sobre o rake gerado pelos jogadores.
-            <strong className="text-dark-300 ml-2">GGR:</strong> incide sobre o GGR Rodeo (receita bruta de jogos rodeo).
+            <strong className="text-dark-300 ml-2">GGR:</strong> incide sobre o GGR Rodeo (receita bruta de jogos
+            rodeo).
           </p>
         </div>
       </div>
@@ -258,9 +250,7 @@ function FeeRow({
   return (
     <div className="flex items-center justify-between py-1">
       <div>
-        <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>
-          {meta.label}
-        </span>
+        <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>{meta.label}</span>
         <p className="text-[11px] text-dark-500">{meta.sublabel}</p>
       </div>
 

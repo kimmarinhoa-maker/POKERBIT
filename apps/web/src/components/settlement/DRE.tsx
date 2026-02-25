@@ -9,8 +9,12 @@ interface Props {
     name: string;
     totals: { ganhos: number; rake: number; ggr: number; resultado: number; rbTotal?: number };
     feesComputed: {
-      taxaApp: number; taxaLiga: number; taxaRodeoGGR: number; taxaRodeoApp: number;
-      totalTaxas: number; totalTaxasSigned: number;
+      taxaApp: number;
+      taxaLiga: number;
+      taxaRodeoGGR: number;
+      taxaRodeoApp: number;
+      totalTaxas: number;
+      totalTaxasSigned: number;
     };
     adjustments: { overlay: number; compras: number; security: number; outros: number };
     totalLancamentos: number;
@@ -35,14 +39,12 @@ export default function DRE({ subclub, fees }: Props) {
   // acertoLiga already available from subclub
 
   // All sections expanded by default
-  const [openSections, setOpenSections] = useState<Set<SectionId>>(
-    () => new Set(ALL_SECTIONS)
-  );
+  const [openSections, setOpenSections] = useState<Set<SectionId>>(() => new Set(ALL_SECTIONS));
 
   const allExpanded = openSections.size === ALL_SECTIONS.length;
 
   const toggleSection = useCallback((id: SectionId) => {
-    setOpenSections(prev => {
+    setOpenSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -208,27 +210,31 @@ export default function DRE({ subclub, fees }: Props) {
           onToggle={() => toggleSection('acerto')}
           className="mt-6"
         >
-          <div className={`rounded-lg p-5 border-2 ${
-            acertoLiga > 0.01
-              ? 'bg-poker-950/40 border-poker-700/60'
-              : acertoLiga < -0.01
-                ? 'bg-red-950/30 border-red-700/50'
-                : 'bg-dark-800/50 border-dark-600/50'
-          }`}>
+          <div
+            className={`rounded-lg p-5 border-2 ${
+              acertoLiga > 0.01
+                ? 'bg-poker-950/40 border-poker-700/60'
+                : acertoLiga < -0.01
+                  ? 'bg-red-950/30 border-red-700/50'
+                  : 'bg-dark-800/50 border-dark-600/50'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-dark-400 uppercase tracking-wider font-medium mb-1">
-                  Acerto Liga
-                </p>
-                <p className={`text-sm font-medium ${
-                  acertoLiga > 0.01 ? 'text-poker-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-400'
-                }`}>
+                <p className="text-xs text-dark-400 uppercase tracking-wider font-medium mb-1">Acerto Liga</p>
+                <p
+                  className={`text-sm font-medium ${
+                    acertoLiga > 0.01 ? 'text-poker-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-400'
+                  }`}
+                >
                   {acertoDirecao}
                 </p>
               </div>
-              <p className={`text-2xl font-bold font-mono ${
-                acertoLiga > 0.01 ? 'text-poker-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-300'
-              }`}>
+              <p
+                className={`text-2xl font-bold font-mono ${
+                  acertoLiga > 0.01 ? 'text-poker-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-300'
+                }`}
+              >
                 {formatBRL(acertoLiga)}
               </p>
             </div>
@@ -294,7 +300,13 @@ function AccordionSection({
   );
 }
 
-function DRERow({ label, sublabel, value, color, bold }: {
+function DRERow({
+  label,
+  sublabel,
+  value,
+  color,
+  bold,
+}: {
   label: string;
   sublabel?: string;
   value: number;
@@ -308,9 +320,7 @@ function DRERow({ label, sublabel, value, color, bold }: {
         <span className={`text-sm ${bold ? 'font-semibold text-dark-200' : 'text-dark-300'}`}>{label}</span>
         {sublabel && <span className="text-[11px] text-dark-500">{sublabel}</span>}
       </div>
-      <span className={`font-mono text-sm ${bold ? 'font-bold' : 'font-medium'} ${textColor}`}>
-        {formatBRL(value)}
-      </span>
+      <span className={`font-mono text-sm ${bold ? 'font-bold' : 'font-medium'} ${textColor}`}>{formatBRL(value)}</span>
     </div>
   );
 }
@@ -329,7 +339,14 @@ function Separator() {
   return <div className="border-t border-dark-700/50 my-1" />;
 }
 
-function DreKpiCard({ icon, label, sublabel, value, borderColor, textColor }: {
+function DreKpiCard({
+  icon,
+  label,
+  sublabel,
+  value,
+  borderColor,
+  textColor,
+}: {
   icon: string;
   label: string;
   sublabel?: string;
@@ -343,12 +360,8 @@ function DreKpiCard({ icon, label, sublabel, value, borderColor, textColor }: {
       <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
       <div className="p-4">
         <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium mb-1">{label}</p>
-        {sublabel && (
-          <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>
-        )}
-        <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>
-          {value}
-        </p>
+        {sublabel && <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>}
+        <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>{value}</p>
       </div>
     </div>
   );

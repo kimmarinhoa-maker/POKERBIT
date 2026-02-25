@@ -40,7 +40,7 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
   const comprasValue = -Math.abs(parseNum(compras));
   const totalLancamentos = useMemo(
     () => comprasValue + parseNum(security) + parseNum(outros),
-    [comprasValue, security, outros]
+    [comprasValue, security, outros],
   );
 
   if (!row) return null;
@@ -58,13 +58,9 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative bg-dark-900 border border-dark-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700 bg-dark-800/40">
           <div className="flex items-center gap-3">
@@ -85,16 +81,18 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
         </div>
 
         <form onSubmit={handleSubmit}>
-
           {/* Campos de valor */}
           <div className="px-6 pt-5 pb-4">
             <p className="text-[10px] font-semibold text-dark-500 uppercase tracking-widest mb-3">Valores</p>
             <div className="grid grid-cols-3 gap-3">
-
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-medium text-dark-400">Compras <span className="text-danger-500">(negativo)</span></label>
+                <label className="block text-[11px] font-medium text-dark-400">
+                  Compras <span className="text-danger-500">(negativo)</span>
+                </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-danger-500 text-[11px] font-mono">-R$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-danger-500 text-[11px] font-mono">
+                    -R$
+                  </span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -109,7 +107,9 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-medium text-dark-400">Security</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[11px] font-mono">R$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[11px] font-mono">
+                    R$
+                  </span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -124,7 +124,9 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-medium text-dark-400">Outros</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[11px] font-mono">R$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[11px] font-mono">
+                    R$
+                  </span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -135,16 +137,17 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
                   />
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* Total em tempo real */}
           <div className="mx-6 px-4 py-3 rounded-lg bg-dark-800/60 border border-dark-700 flex items-center justify-between">
             <span className="text-[11px] font-medium text-dark-400 uppercase tracking-wide">Total lancamentos</span>
-            <span className={`font-mono text-base font-bold ${
-              totalLancamentos < 0 ? 'text-danger-500' : totalLancamentos > 0 ? 'text-poker-500' : 'text-dark-400'
-            }`}>
+            <span
+              className={`font-mono text-base font-bold ${
+                totalLancamentos < 0 ? 'text-danger-500' : totalLancamentos > 0 ? 'text-poker-500' : 'text-dark-400'
+              }`}
+            >
               {formatCurrency(totalLancamentos)}
             </span>
           </div>
@@ -170,7 +173,6 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
               Confirmar
             </button>
           </div>
-
         </form>
       </div>
     </div>

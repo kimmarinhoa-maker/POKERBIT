@@ -102,10 +102,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       if (isDraft) {
         await syncSettlementAgents(settlementId).catch(() => {});
       }
-      const [orgsRes, ledgerRes] = await Promise.all([
-        listOrganizations('AGENT'),
-        listLedger(weekStart),
-      ]);
+      const [orgsRes, ledgerRes] = await Promise.all([listOrganizations('AGENT'), listLedger(weekStart)]);
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
     } catch {
@@ -171,7 +168,13 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     // Fallback only for "sem agente" variants
     const isSemAgente = !agentName || /sem.agente|^\(sem.agente\)$|^none$/i.test(agentName);
     if (isSemAgente) {
-      return playersByAgent.get('') || playersByAgent.get('(sem agente)') || playersByAgent.get('SEM AGENTE') || playersByAgent.get('None') || [];
+      return (
+        playersByAgent.get('') ||
+        playersByAgent.get('(sem agente)') ||
+        playersByAgent.get('SEM AGENTE') ||
+        playersByAgent.get('None') ||
+        []
+      );
     }
     return [];
   }
@@ -186,7 +189,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   // Split agents into non-direct and direct (using backend annotations)
   // Also add synthetic agent entries for orphan direct player groups
   const { nonDirectAgents, directAgents } = useMemo(() => {
-    const agentNames = new Set(agents.map(a => a.agent_name));
+    const agentNames = new Set(agents.map((a) => a.agent_name));
     const nonDirect: AgentMetric[] = [];
     const direct: AgentMetric[] = [];
     for (const a of agents) {
@@ -221,12 +224,11 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const filteredNonDirect = useMemo(() => {
     if (!search.trim()) return nonDirectAgents;
     const q = search.toLowerCase();
-    return nonDirectAgents.filter(a => {
+    return nonDirectAgents.filter((a) => {
       if (a.agent_name.toLowerCase().includes(q)) return true;
       const agentPlayers = getPlayersForAgent(a.agent_name);
-      return agentPlayers.some(p =>
-        (p.nickname || '').toLowerCase().includes(q) ||
-        (p.external_player_id || '').includes(q)
+      return agentPlayers.some(
+        (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
       );
     });
   }, [nonDirectAgents, search, playersByAgent]);
@@ -234,12 +236,11 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const filteredDirect = useMemo(() => {
     if (!search.trim()) return directAgents;
     const q = search.toLowerCase();
-    return directAgents.filter(a => {
+    return directAgents.filter((a) => {
       if (a.agent_name.toLowerCase().includes(q)) return true;
       const agentPlayers = getPlayersForAgent(a.agent_name);
-      return agentPlayers.some(p =>
-        (p.nickname || '').toLowerCase().includes(q) ||
-        (p.external_player_id || '').includes(q)
+      return agentPlayers.some(
+        (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
       );
     });
   }, [directAgents, search, playersByAgent]);
@@ -267,7 +268,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   // ─── Handlers ───────────────────────────────────────────────────
 
   function toggleAgent(id: string) {
-    setExpandedAgents(prev => {
+    setExpandedAgents((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -284,7 +285,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     if (entries.length > 0) {
       const commission = Number(agent.commission_brl) || 0;
       if (commission <= 0) return 'confirmado';
-      const totalOut = entries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = entries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
       if (totalOut >= commission - 0.01) return 'confirmado';
       return 'parcial';
     }
@@ -388,9 +389,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white">Rakeback — {subclub.name}</h2>
-        <p className="text-dark-400 text-sm">
-          Distribuicao de rakeback por agente e jogador
-        </p>
+        <p className="text-dark-400 text-sm">Distribuicao de rakeback por agente e jogador</p>
       </div>
 
       {/* KPIs */}
@@ -423,7 +422,9 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           <div className={`h-0.5 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lucro Liquido</p>
-            <p className={`text-xl font-bold mt-1 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p
+              className={`text-xl font-bold mt-1 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            >
               {formatBRL(kpis.lucroLiquido)}
             </p>
             <p className="text-[10px] text-dark-500">Rake - RB - Taxas</p>
@@ -533,9 +534,21 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 // ─── Sub-tab: Agencias ──────────────────────────────────────────────
 
 function AgenciasTab({
-  agents, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent, getAgentStatus,
-  taxRate, isDraft,
-  editingRate, rateInput, setRateInput, savingRate, startEditRate, saveAgentRate, setEditingRate,
+  agents,
+  playersByAgent,
+  getPlayersForAgent,
+  expandedAgents,
+  toggleAgent,
+  getAgentStatus,
+  taxRate,
+  isDraft,
+  editingRate,
+  rateInput,
+  setRateInput,
+  savingRate,
+  startEditRate,
+  saveAgentRate,
+  setEditingRate,
   canEditRates,
 }: {
   agents: AgentMetric[];
@@ -556,15 +569,13 @@ function AgenciasTab({
   canEditRates: boolean;
 }) {
   if (agents.length === 0) {
-    return (
-      <div className="card text-center py-12 text-dark-400">
-        Nenhuma agencia (nao-direta) neste subclube
-      </div>
-    );
+    return <div className="card text-center py-12 text-dark-400">Nenhuma agencia (nao-direta) neste subclube</div>;
   }
 
   // Totals
-  let totalRake = 0, totalRB = 0, totalLucro = 0;
+  let totalRake = 0,
+    totalRB = 0,
+    totalLucro = 0;
   for (const a of agents) {
     const rake = Number(a.rake_total_brl) || 0;
     const rb = Number(a.commission_brl) || 0;
@@ -585,7 +596,7 @@ function AgenciasTab({
           <span className="text-right">Lucro Liq.</span>
         </div>
 
-        {agents.map(agent => {
+        {agents.map((agent) => {
           const isExpanded = expandedAgents.has(agent.id);
           const agentPlayers = getPlayersForAgent(agent.agent_name);
           const rake = Number(agent.rake_total_brl) || 0;
@@ -601,7 +612,9 @@ function AgenciasTab({
                 role="button"
                 tabIndex={0}
                 onClick={() => toggleAgent(agent.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleAgent(agent.id); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') toggleAgent(agent.id);
+                }}
                 className="w-full grid grid-cols-[1fr_120px_100px_120px_120px] items-center px-5 py-3 hover:bg-dark-800/20 transition-colors cursor-pointer select-none"
               >
                 <div className="flex items-center gap-2 text-left">
@@ -614,9 +627,7 @@ function AgenciasTab({
                   </span>
                   <StatusBadge status={status} />
                 </div>
-                <span className="text-right font-mono text-sm text-dark-200">
-                  {formatBRL(rake)}
-                </span>
+                <span className="text-right font-mono text-sm text-dark-200">{formatBRL(rake)}</span>
                 <div className="text-right" onClick={(e) => e.stopPropagation()}>
                   {isEditing ? (
                     <span className="flex items-center justify-end gap-1">
@@ -665,7 +676,9 @@ function AgenciasTab({
                 <span className={`text-right font-mono text-sm ${rbValue > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
                   {rbValue > 0 ? formatBRL(rbValue) : '—'}
                 </span>
-                <span className={`text-right font-mono text-sm font-semibold ${lucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                <span
+                  className={`text-right font-mono text-sm font-semibold ${lucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+                >
                   {formatBRL(lucro)}
                 </span>
               </div>
@@ -691,14 +704,18 @@ function AgenciasTab({
                           <tr key={i} className="hover:bg-dark-800/20 transition-colors">
                             <td className="px-8 py-1.5 text-dark-200">{p.nickname}</td>
                             <td className="px-3 py-1.5 text-dark-500 text-xs font-mono">{p.external_player_id}</td>
-                            <td className="px-3 py-1.5 text-right font-mono text-dark-300">{formatBRL(Number(p.rake_total_brl))}</td>
+                            <td className="px-3 py-1.5 text-right font-mono text-dark-300">
+                              {formatBRL(Number(p.rake_total_brl))}
+                            </td>
                             <td className="px-3 py-1.5 text-right text-dark-400">
                               {Number(p.rb_rate) > 0 ? `${p.rb_rate}%` : '—'}
                             </td>
                             <td className="px-3 py-1.5 text-right font-mono text-dark-300">
                               {Number(p.rb_value_brl) > 0 ? formatBRL(Number(p.rb_value_brl)) : '—'}
                             </td>
-                            <td className={`px-5 py-1.5 text-right font-mono ${Number(p.resultado_brl) < 0 ? 'text-red-400' : 'text-poker-400'}`}>
+                            <td
+                              className={`px-5 py-1.5 text-right font-mono ${Number(p.resultado_brl) < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                            >
                               {formatBRL(Number(p.resultado_brl))}
                             </td>
                           </tr>
@@ -717,7 +734,9 @@ function AgenciasTab({
           <span className="text-right font-mono text-sm font-bold text-dark-200">{formatBRL(round2(totalRake))}</span>
           <span className="text-right">—</span>
           <span className="text-right font-mono text-sm font-bold text-yellow-400">{formatBRL(round2(totalRB))}</span>
-          <span className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+          <span
+            className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+          >
             {formatBRL(round2(totalLucro))}
           </span>
         </div>
@@ -729,12 +748,36 @@ function AgenciasTab({
 // ─── Sub-tab: Jogadores (Diretos) ───────────────────────────────────
 
 function JogadoresTab({
-  agents, allAgents, orgs, directNameSet, orgByName, playersByAgent, getPlayersForAgent, expandedAgents, toggleAgent,
-  taxRate, isDraft,
-  editingRate, rateInput, setRateInput, savingRate, startEditRate, savePlayerRate, setEditingRate,
-  directDropdown, setDirectDropdown, handleMarkDirect, handleRemoveDirect,
-  applyAllAgent, setApplyAllAgent, applyAllRate, setApplyAllRate, applyingAll, handleApplyAll,
-  resolveOrgId, canEditRates,
+  agents,
+  allAgents,
+  orgs,
+  directNameSet,
+  orgByName,
+  playersByAgent,
+  getPlayersForAgent,
+  expandedAgents,
+  toggleAgent,
+  taxRate,
+  isDraft,
+  editingRate,
+  rateInput,
+  setRateInput,
+  savingRate,
+  startEditRate,
+  savePlayerRate,
+  setEditingRate,
+  directDropdown,
+  setDirectDropdown,
+  handleMarkDirect,
+  handleRemoveDirect,
+  applyAllAgent,
+  setApplyAllAgent,
+  applyAllRate,
+  setApplyAllRate,
+  applyingAll,
+  handleApplyAll,
+  resolveOrgId,
+  canEditRates,
 }: {
   agents: AgentMetric[];
   allAgents: AgentMetric[];
@@ -797,7 +840,9 @@ function JogadoresTab({
             >
               <option value="">Selecionar agencia...</option>
               {availableForDirect.map(({ agent, orgId }) => (
-                <option key={orgId} value={orgId}>{agent.agent_name}</option>
+                <option key={orgId} value={orgId}>
+                  {agent.agent_name}
+                </option>
               ))}
             </select>
             <button
@@ -822,9 +867,7 @@ function JogadoresTab({
       </div>
 
       {agents.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">
-          Nenhuma agencia direta definida
-        </div>
+        <div className="card text-center py-12 text-dark-400">Nenhuma agencia direta definida</div>
       ) : (
         <div className="card p-0 overflow-hidden">
           {/* Table header */}
@@ -836,7 +879,7 @@ function JogadoresTab({
             <span className="text-right">Lucro Liq.</span>
           </div>
 
-          {agents.map(agent => {
+          {agents.map((agent) => {
             const isExpanded = expandedAgents.has(agent.id);
             const agentPlayers = getPlayersForAgent(agent.agent_name);
             const rake = Number(agent.rake_total_brl) || 0;
@@ -851,7 +894,9 @@ function JogadoresTab({
                   role="button"
                   tabIndex={0}
                   onClick={() => toggleAgent(agent.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleAgent(agent.id); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') toggleAgent(agent.id);
+                  }}
                   className="w-full grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 hover:bg-dark-800/20 transition-colors cursor-pointer select-none"
                 >
                   <div className="flex items-center gap-2 text-left">
@@ -867,7 +912,10 @@ function JogadoresTab({
                     </span>
                     {isDraft && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveDirect(agent); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveDirect(agent);
+                        }}
                         aria-label={`Remover agencia direta ${agent.agent_name}`}
                         className="text-dark-500 hover:text-red-400 text-xs transition-colors"
                         title="Remover direto"
@@ -879,7 +927,9 @@ function JogadoresTab({
                   <span className="text-right font-mono text-sm text-dark-200">{formatBRL(rake)}</span>
                   <span className="text-right text-sm text-dark-400 italic">Individual</span>
                   <span className="text-right font-mono text-sm text-yellow-400">{formatBRL(totalPlayerRB)}</span>
-                  <span className={`text-right font-mono text-sm font-semibold ${lucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-right font-mono text-sm font-semibold ${lucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+                  >
                     {formatBRL(lucro)}
                   </span>
                 </div>
@@ -913,11 +963,16 @@ function JogadoresTab({
                             >
                               {applyingAll ? '...' : 'Aplicar'}
                             </button>
-                            <button onClick={() => setApplyAllAgent(null)} className="text-dark-500 text-xs">✕</button>
+                            <button onClick={() => setApplyAllAgent(null)} className="text-dark-500 text-xs">
+                              ✕
+                            </button>
                           </div>
                         ) : (
                           <button
-                            onClick={(e) => { e.stopPropagation(); setApplyAllAgent(agent.agent_name); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setApplyAllAgent(agent.agent_name);
+                            }}
                             className="text-xs text-dark-400 hover:text-dark-200 border border-dark-700 rounded px-2 py-1 transition-colors"
                           >
                             Aplicar % a todos
@@ -982,7 +1037,9 @@ function JogadoresTab({
                                     </span>
                                   ) : (
                                     <span className="flex items-center justify-end gap-1">
-                                      <span className={`font-mono text-sm ${pRBRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
+                                      <span
+                                        className={`font-mono text-sm ${pRBRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}
+                                      >
                                         {pRBRate}%
                                       </span>
                                       {isDraft && canEditRates && (
@@ -997,10 +1054,14 @@ function JogadoresTab({
                                     </span>
                                   )}
                                 </td>
-                                <td className={`px-3 py-1.5 text-right font-mono ${pRBValue > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
+                                <td
+                                  className={`px-3 py-1.5 text-right font-mono ${pRBValue > 0 ? 'text-yellow-400' : 'text-dark-500'}`}
+                                >
                                   {pRBValue > 0 ? formatBRL(pRBValue) : '—'}
                                 </td>
-                                <td className={`px-5 py-1.5 text-right font-mono ${pLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                                <td
+                                  className={`px-5 py-1.5 text-right font-mono ${pLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+                                >
                                   {formatBRL(pLucro)}
                                 </td>
                               </tr>
@@ -1016,7 +1077,9 @@ function JogadoresTab({
 
           {/* Totals row */}
           {(() => {
-            let totalRake = 0, totalRB = 0, totalLucro = 0;
+            let totalRake = 0,
+              totalRB = 0,
+              totalLucro = 0;
             for (const a of agents) {
               const rake = Number(a.rake_total_brl) || 0;
               const agentPlayers = getPlayersForAgent(a.agent_name);
@@ -1028,10 +1091,16 @@ function JogadoresTab({
             return (
               <div className="border-t-2 border-dark-600 grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 bg-dark-800/30">
                 <span className="text-sm font-bold text-poker-400">TOTAL ({agents.length} agencias)</span>
-                <span className="text-right font-mono text-sm font-bold text-dark-200">{formatBRL(round2(totalRake))}</span>
+                <span className="text-right font-mono text-sm font-bold text-dark-200">
+                  {formatBRL(round2(totalRake))}
+                </span>
                 <span className="text-right">—</span>
-                <span className="text-right font-mono text-sm font-bold text-yellow-400">{formatBRL(round2(totalRB))}</span>
-                <span className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                <span className="text-right font-mono text-sm font-bold text-yellow-400">
+                  {formatBRL(round2(totalRB))}
+                </span>
+                <span
+                  className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+                >
                   {formatBRL(round2(totalLucro))}
                 </span>
               </div>
@@ -1048,13 +1117,13 @@ function JogadoresTab({
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     confirmado: 'bg-green-500/20 text-green-400 border-green-500/40',
-    parcial:    'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-    pendente:   'bg-red-500/20 text-red-400 border-red-500/40',
+    parcial: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+    pendente: 'bg-red-500/20 text-red-400 border-red-500/40',
   };
   const labels: Record<string, string> = {
     confirmado: 'confirmado',
-    parcial:    'parcial',
-    pendente:   'pendente',
+    parcial: 'parcial',
+    pendente: 'pendente',
   };
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${styles[status] || styles.pendente}`}>
@@ -1062,4 +1131,3 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
-

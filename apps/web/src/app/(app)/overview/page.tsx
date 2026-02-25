@@ -56,14 +56,18 @@ export default function OverviewPage() {
         const res = await listSettlements();
         if (res.success) {
           const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
-            b.week_start.localeCompare(a.week_start)
+            b.week_start.localeCompare(a.week_start),
           );
           setSettlements(list);
           if (list.length > 0) setSelectedId(list[0].id);
         } else {
           toast(res.error || 'Erro ao carregar semanas', 'error');
         }
-      } catch { toast('Erro de conexao com o servidor', 'error'); } finally { setLoading(false); }
+      } catch {
+        toast('Erro de conexao com o servidor', 'error');
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -77,7 +81,7 @@ export default function OverviewPage() {
         if (res.success && res.data?.subclubs) {
           const rows: PlayerRow[] = [];
           for (const sc of res.data.subclubs) {
-            for (const p of (sc.players || [])) {
+            for (const p of sc.players || []) {
               rows.push({
                 nickname: p.nickname || p.external_player_id || '—',
                 external_player_id: p.external_player_id || '',
@@ -95,14 +99,16 @@ export default function OverviewPage() {
           setAllPlayers(rows);
           setPage(0);
         }
-      } catch { toast('Erro ao carregar jogadores', 'error'); } finally { setLoadingFull(false); }
+      } catch {
+        toast('Erro ao carregar jogadores', 'error');
+      } finally {
+        setLoadingFull(false);
+      }
     })();
   }, [selectedId]);
 
   // Unique subclubs
-  const subclubs = useMemo(() =>
-    [...new Set(allPlayers.map(p => p.subclub))].sort(),
-  [allPlayers]);
+  const subclubs = useMemo(() => [...new Set(allPlayers.map((p) => p.subclub))].sort(), [allPlayers]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -112,8 +118,8 @@ export default function OverviewPage() {
     const totalGGR = round2(allPlayers.reduce((s, p) => s + p.ggr, 0));
     const totalRB = round2(allPlayers.reduce((s, p) => s + p.rbValue, 0));
     const totalResult = round2(allPlayers.reduce((s, p) => s + p.resultado, 0));
-    const winners = allPlayers.filter(p => p.winnings > 0.01).length;
-    const losers = allPlayers.filter(p => p.winnings < -0.01).length;
+    const winners = allPlayers.filter((p) => p.winnings > 0.01).length;
+    const losers = allPlayers.filter((p) => p.winnings < -0.01).length;
     return { total, totalWinnings, totalRake, totalGGR, totalRB, totalResult, winners, losers };
   }, [allPlayers]);
 
@@ -133,13 +139,14 @@ export default function OverviewPage() {
   // Filter + sort + paginate
   const filtered = useMemo(() => {
     let result = allPlayers;
-    if (filterSubclub !== 'all') result = result.filter(p => p.subclub === filterSubclub);
+    if (filterSubclub !== 'all') result = result.filter((p) => p.subclub === filterSubclub);
     if (search) {
       const s = search.toLowerCase();
-      result = result.filter(p =>
-        p.nickname.toLowerCase().includes(s) ||
-        p.external_player_id.toLowerCase().includes(s) ||
-        p.agent_name.toLowerCase().includes(s)
+      result = result.filter(
+        (p) =>
+          p.nickname.toLowerCase().includes(s) ||
+          p.external_player_id.toLowerCase().includes(s) ||
+          p.agent_name.toLowerCase().includes(s),
       );
     }
     return result;
@@ -155,15 +162,16 @@ export default function OverviewPage() {
     });
   }, [filtered, sortKey, sortDir]);
 
-  const paginated = useMemo(() =>
-    sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-  [sorted, page]);
+  const paginated = useMemo(() => sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [sorted, page]);
 
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
   function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('desc'); }
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
     setPage(0);
   }
 
@@ -177,8 +185,8 @@ export default function OverviewPage() {
     return v > 0.01 ? 'text-emerald-400' : v < -0.01 ? 'text-red-400' : 'text-dark-400';
   }
 
-  const selectedWeek = settlements.find(s => s.id === selectedId);
-  const sortIcon = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const selectedWeek = settlements.find((s) => s.id === selectedId);
+  const sortIcon = (key: SortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   if (loading) {
     return (
@@ -194,18 +202,19 @@ export default function OverviewPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Visao Geral</h2>
-          <p className="text-dark-400 text-sm">
-            Todos os jogadores de todos os subclubes
-          </p>
+          <p className="text-dark-400 text-sm">Todos os jogadores de todos os subclubes</p>
         </div>
 
         <select
           value={selectedId}
-          onChange={e => { setSelectedId(e.target.value); setPage(0); }}
+          onChange={(e) => {
+            setSelectedId(e.target.value);
+            setPage(0);
+          }}
           className="bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
           aria-label="Selecionar semana"
         >
-          {settlements.map(s => (
+          {settlements.map((s) => (
             <option key={s.id} value={s.id}>
               Semana {fmtDate(s.week_start)} — {s.status}
             </option>
@@ -230,9 +239,11 @@ export default function OverviewPage() {
                 <span className="text-red-400">{kpis.losers} L</span>
               </p>
             </div>
-            <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
-              kpis.totalWinnings >= 0 ? 'border-t-emerald-500' : 'border-t-red-500'
-            } rounded-lg p-4 text-center`}>
+            <div
+              className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
+                kpis.totalWinnings >= 0 ? 'border-t-emerald-500' : 'border-t-red-500'
+              } rounded-lg p-4 text-center`}
+            >
               <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Profit/Loss</p>
               <p className={`font-mono text-lg font-bold ${clr(kpis.totalWinnings)}`}>
                 {formatBRL(kpis.totalWinnings)}
@@ -246,23 +257,26 @@ export default function OverviewPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">GGR Total</p>
               <p className="font-mono text-lg font-bold text-yellow-400">{formatBRL(kpis.totalGGR)}</p>
             </div>
-            <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
-              kpis.totalResult >= 0 ? 'border-t-amber-500' : 'border-t-red-500'
-            } rounded-lg p-4 text-center`}>
+            <div
+              className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
+                kpis.totalResult >= 0 ? 'border-t-amber-500' : 'border-t-red-500'
+              } rounded-lg p-4 text-center`}
+            >
               <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Total</p>
-              <p className={`font-mono text-lg font-bold ${clr(kpis.totalResult)}`}>
-                {formatBRL(kpis.totalResult)}
-              </p>
+              <p className={`font-mono text-lg font-bold ${clr(kpis.totalResult)}`}>{formatBRL(kpis.totalResult)}</p>
             </div>
           </div>
 
           {/* Subclub cards */}
           {subclubStats.length > 1 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {subclubStats.map(sc => (
+              {subclubStats.map((sc) => (
                 <button
                   key={sc.name}
-                  onClick={() => { setFilterSubclub(f => f === sc.name ? 'all' : sc.name); setPage(0); }}
+                  onClick={() => {
+                    setFilterSubclub((f) => (f === sc.name ? 'all' : sc.name));
+                    setPage(0);
+                  }}
                   className={`rounded-lg p-3 border transition-colors text-left ${
                     filterSubclub === sc.name
                       ? 'bg-poker-900/30 border-poker-700/50'
@@ -288,14 +302,20 @@ export default function OverviewPage() {
                 type="text"
                 placeholder="Buscar jogador, ID, agente..."
                 value={search}
-                onChange={e => { setSearch(e.target.value); setPage(0); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
                 className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
                 aria-label="Buscar jogador, ID ou agente"
               />
             </div>
             {filterSubclub !== 'all' && (
               <button
-                onClick={() => { setFilterSubclub('all'); setPage(0); }}
+                onClick={() => {
+                  setFilterSubclub('all');
+                  setPage(0);
+                }}
                 className="text-xs text-dark-400 hover:text-dark-200 transition-colors"
               >
                 Limpar filtro ({filterSubclub})
@@ -333,7 +353,9 @@ export default function OverviewPage() {
                           className="px-3 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
                           onClick={() => handleSort('agent_name')}
                           role="columnheader"
-                          aria-sort={sortKey === 'agent_name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          aria-sort={
+                            sortKey === 'agent_name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+                          }
                         >
                           Agente{sortIcon('agent_name')}
                         </th>
@@ -367,7 +389,9 @@ export default function OverviewPage() {
                           className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200"
                           onClick={() => handleSort('resultado')}
                           role="columnheader"
-                          aria-sort={sortKey === 'resultado' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                          aria-sort={
+                            sortKey === 'resultado' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+                          }
                         >
                           Resultado{sortIcon('resultado')}
                         </th>
@@ -375,19 +399,24 @@ export default function OverviewPage() {
                     </thead>
                     <tbody className="divide-y divide-dark-800/50">
                       {paginated.map((p, i) => (
-                        <tr key={`${p.external_player_id}-${p.subclub}-${i}`} className="hover:bg-dark-800/20 transition-colors">
+                        <tr
+                          key={`${p.external_player_id}-${p.subclub}-${i}`}
+                          className="hover:bg-dark-800/20 transition-colors"
+                        >
                           <td className="px-4 py-2 text-white font-medium text-sm">{p.nickname}</td>
-                          <td className="px-3 py-2 text-dark-500 text-[10px] font-mono">{p.external_player_id || '—'}</td>
+                          <td className="px-3 py-2 text-dark-500 text-[10px] font-mono">
+                            {p.external_player_id || '—'}
+                          </td>
                           <td className="px-3 py-2 text-dark-300 text-xs">{p.agent_name}</td>
                           <td className="px-3 py-2">
-                            <span className="text-xs bg-dark-700/50 text-dark-300 px-2 py-0.5 rounded">{p.subclub}</span>
+                            <span className="text-xs bg-dark-700/50 text-dark-300 px-2 py-0.5 rounded">
+                              {p.subclub}
+                            </span>
                           </td>
                           <td className={`px-3 py-2 text-right font-mono ${clr(p.winnings)}`}>
                             {formatBRL(p.winnings)}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono text-dark-300">
-                            {formatBRL(p.rake)}
-                          </td>
+                          <td className="px-3 py-2 text-right font-mono text-dark-300">{formatBRL(p.rake)}</td>
                           <td className="px-3 py-2 text-right text-dark-400 text-xs">
                             {p.rbRate > 0 ? `${p.rbRate}%` : '—'}
                           </td>
@@ -408,13 +437,9 @@ export default function OverviewPage() {
                           <td className={`px-3 py-3 text-right font-mono ${clr(kpis.totalWinnings)}`}>
                             {formatBRL(kpis.totalWinnings)}
                           </td>
-                          <td className="px-3 py-3 text-right font-mono text-dark-200">
-                            {formatBRL(kpis.totalRake)}
-                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(kpis.totalRake)}</td>
                           <td className="px-3 py-3 text-right text-dark-400 text-xs">—</td>
-                          <td className="px-3 py-3 text-right font-mono text-dark-200">
-                            {formatBRL(kpis.totalRB)}
-                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(kpis.totalRB)}</td>
                           <td className={`px-3 py-3 text-right font-mono font-bold ${clr(kpis.totalResult)}`}>
                             {formatBRL(kpis.totalResult)}
                           </td>
@@ -429,7 +454,7 @@ export default function OverviewPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-4">
                   <button
-                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 hover:bg-dark-800 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -439,7 +464,7 @@ export default function OverviewPage() {
                     {page + 1} / {totalPages}
                   </span>
                   <button
-                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={page >= totalPages - 1}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium text-dark-300 hover:bg-dark-800 disabled:opacity-30 disabled:cursor-not-allowed"
                   >

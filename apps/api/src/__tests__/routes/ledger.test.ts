@@ -19,7 +19,10 @@ vi.mock('../../services/ledger.service', () => ({
 vi.mock('../../middleware/auth', () => ({
   requireAuth: (_req: any, _res: any, next: any) => next(),
   requireTenant: (_req: any, _res: any, next: any) => next(),
-  requireRole: (..._roles: string[]) => (_req: any, _res: any, next: any) => next(),
+  requireRole:
+    (..._roles: string[]) =>
+    (_req: any, _res: any, next: any) =>
+      next(),
 }));
 
 const ledgerRoutes = (await import('../../routes/ledger.routes')).default;

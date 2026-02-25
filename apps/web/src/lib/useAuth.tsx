@@ -76,15 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canWrite = role === 'OWNER' || role === 'ADMIN' || role === 'FINANCEIRO';
   const isScoped = allowedSubclubs !== null && allowedSubclubs.length > 0;
 
-  const canAccess = useCallback((...roles: string[]) => {
-    return roles.includes(role);
-  }, [role]);
+  const canAccess = useCallback(
+    (...roles: string[]) => {
+      return roles.includes(role);
+    },
+    [role],
+  );
 
-  const canEditSubclub = useCallback((subclubId: string) => {
-    if (isAdmin) return true;
-    if (!allowedSubclubs) return true; // null = all access
-    return allowedSubclubs.includes(subclubId);
-  }, [isAdmin, allowedSubclubs]);
+  const canEditSubclub = useCallback(
+    (subclubId: string) => {
+      if (isAdmin) return true;
+      if (!allowedSubclubs) return true; // null = all access
+      return allowedSubclubs.includes(subclubId);
+    },
+    [isAdmin, allowedSubclubs],
+  );
 
   const logout = useCallback(() => {
     clearAuth();

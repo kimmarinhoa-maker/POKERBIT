@@ -53,21 +53,25 @@ export default function OverlaySection({
           <h2 className="text-xs font-bold text-blue-400 flex items-center gap-1.5 uppercase tracking-widest">
             <span>{'\u{1F30D}'}</span> Overlay Global
           </h2>
-          <p className="text-[10px] text-dark-500 mt-0.5">
-            Valor total dividido entre os clubes selecionados abaixo
-          </p>
+          <p className="text-[10px] text-dark-500 mt-0.5">Valor total dividido entre os clubes selecionados abaixo</p>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className={`flex items-center gap-1.5 bg-dark-800 border rounded-lg px-3 py-1.5 ${
-            locked ? 'border-dark-600 opacity-60' : 'border-dark-700'
-          }`}>
+          <div
+            className={`flex items-center gap-1.5 bg-dark-800 border rounded-lg px-3 py-1.5 ${
+              locked ? 'border-dark-600 opacity-60' : 'border-dark-700'
+            }`}
+          >
             <span className="text-dark-500 font-mono text-[11px]">R$</span>
             <input
               type="text"
               inputMode="decimal"
               value={locked ? String(totalOverlay || '') : inputValue}
-              onChange={(e) => { if (!locked) setInputValue(e.target.value); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !locked) handleConfirm(); }}
+              onChange={(e) => {
+                if (!locked) setInputValue(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !locked) handleConfirm();
+              }}
               placeholder="0,00"
               readOnly={locked}
               className={`bg-transparent font-mono text-base font-bold outline-none w-24 text-right placeholder:text-dark-600 ${
@@ -83,7 +87,12 @@ export default function OverlaySection({
               title="Editar"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
               </svg>
             </button>
           ) : (
@@ -102,9 +111,7 @@ export default function OverlaySection({
       </div>
 
       {/* Label */}
-      <p className="text-[10px] font-semibold text-dark-500 uppercase tracking-widest">
-        Aplicar a:
-      </p>
+      <p className="text-[10px] font-semibold text-dark-500 uppercase tracking-widest">Aplicar a:</p>
 
       {/* Clubes em linha */}
       <div className="flex flex-wrap gap-2">
@@ -125,11 +132,15 @@ export default function OverlaySection({
                   : 'border-dark-700 bg-dark-900 hover:border-dark-600 opacity-40'
               }`}
             >
-              <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 text-[10px] ${
-                isSelected
-                  ? locked ? 'bg-dark-500 border-dark-500 text-white' : 'bg-poker-500 border-poker-500 text-white'
-                  : 'border-dark-600 bg-dark-800'
-              }`}>
+              <span
+                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 text-[10px] ${
+                  isSelected
+                    ? locked
+                      ? 'bg-dark-500 border-dark-500 text-white'
+                      : 'bg-poker-500 border-poker-500 text-white'
+                    : 'border-dark-600 bg-dark-800'
+                }`}
+              >
                 {isSelected && '\u2713'}
               </span>
               <ClubLogo name={club.name} logoUrl={club.logoUrl} size="sm" />
@@ -155,9 +166,7 @@ export default function OverlaySection({
           <span className="text-dark-600"> {'\u00F7'} </span>
           {selectedCount} clube{selectedCount > 1 ? 's' : ''}
           <span className="text-dark-600"> : </span>
-          <span className="font-bold text-dark-200">
-            {formatCurrency(perClub)} por clube
-          </span>
+          <span className="font-bold text-dark-200">{formatCurrency(perClub)} por clube</span>
         </p>
       )}
     </div>

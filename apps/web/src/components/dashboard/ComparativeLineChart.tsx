@@ -9,7 +9,10 @@ interface Props {
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
-  const value = (payload[0].value as number).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const value = (payload[0].value as number).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return (
     <div className="bg-dark-800 border border-dark-700 rounded-lg p-2 text-xs font-mono">
       <p className="text-dark-400 mb-1">Semana {label}</p>
@@ -21,15 +24,7 @@ function CustomTooltip({ active, payload, label }: any) {
 function CustomDot(props: any) {
   const { cx, cy, index, dataLength } = props;
   const isLast = index === dataLength - 1;
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={isLast ? 7 : 4}
-      fill={isLast ? '#22c55e' : '#15803d'}
-      stroke="none"
-    />
-  );
+  return <circle cx={cx} cy={cy} r={isLast ? 7 : 4} fill={isLast ? '#22c55e' : '#15803d'} stroke="none" />;
 }
 
 export default function ComparativeLineChart({ data }: Props) {
@@ -50,12 +45,7 @@ export default function ComparativeLineChart({ data }: Props) {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-          <XAxis
-            dataKey="semana"
-            tick={{ fill: '#475569', fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-          />
+          <XAxis dataKey="semana" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis
             domain={[0, 'auto']}
             tick={{ fill: '#475569', fontSize: 11 }}

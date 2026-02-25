@@ -16,12 +16,13 @@ interface Props {
   onDataChange: () => void;
 }
 
-const fields: { key: 'overlay' | 'compras' | 'security' | 'outros'; label: string; sublabel: string; icon: string }[] = [
-  { key: 'overlay',  label: 'Overlay',  sublabel: 'Parte do clube',     icon: 'target' },
-  { key: 'compras',  label: 'Compras',  sublabel: 'Fichas / buy-ins',   icon: 'money' },
-  { key: 'security', label: 'Security', sublabel: 'Seguranca',          icon: 'shield' },
-  { key: 'outros',   label: 'Outros',   sublabel: 'Lancamentos avulsos', icon: 'note' },
-];
+const fields: { key: 'overlay' | 'compras' | 'security' | 'outros'; label: string; sublabel: string; icon: string }[] =
+  [
+    { key: 'overlay', label: 'Overlay', sublabel: 'Parte do clube', icon: 'target' },
+    { key: 'compras', label: 'Compras', sublabel: 'Fichas / buy-ins', icon: 'money' },
+    { key: 'security', label: 'Security', sublabel: 'Seguranca', icon: 'shield' },
+    { key: 'outros', label: 'Outros', sublabel: 'Lancamentos avulsos', icon: 'note' },
+  ];
 
 export default function Ajustes({ subclub, weekStart, settlementStatus, onDataChange }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
@@ -42,7 +43,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
   // KPIs
   const kpis = useMemo(() => {
     const adj = subclub.adjustments;
-    const nonZero = fields.filter(f => Math.abs(adj[f.key] || 0) > 0.01).length;
+    const nonZero = fields.filter((f) => Math.abs(adj[f.key] || 0) > 0.01).length;
     const positive = fields.reduce((s, f) => s + Math.max(0, adj[f.key] || 0), 0);
     const negative = fields.reduce((s, f) => s + Math.min(0, adj[f.key] || 0), 0);
     return { nonZero, positive, negative, total: subclub.totalLancamentos };
@@ -93,8 +94,10 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
 
   // Live total while editing
   const editTotal = editing
-    ? (parseFloat(form.overlay) || 0) + (parseFloat(form.compras) || 0) +
-      (parseFloat(form.security) || 0) + (parseFloat(form.outros) || 0)
+    ? (parseFloat(form.overlay) || 0) +
+      (parseFloat(form.compras) || 0) +
+      (parseFloat(form.security) || 0) +
+      (parseFloat(form.outros) || 0)
     : subclub.totalLancamentos;
 
   return (
@@ -111,9 +114,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
             Editar
           </button>
         )}
-        {!isDraft && (
-          <span className="badge-final text-xs">FINALIZADO — somente leitura</span>
-        )}
+        {!isDraft && <span className="badge-final text-xs">FINALIZADO — somente leitura</span>}
       </div>
 
       {/* KPI Cards */}
@@ -144,7 +145,9 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
           <div className={`h-0.5 ${kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total</p>
-            <p className={`text-xl font-bold mt-1 font-mono ${kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}`}>
+            <p
+              className={`text-xl font-bold mt-1 font-mono ${kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}`}
+            >
               {formatBRL(kpis.total)}
             </p>
           </div>
@@ -152,31 +155,26 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">
-          {error}
-        </div>
+        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{error}</div>
       )}
 
       <div className="card max-w-xl">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-            Lancamentos
-          </h3>
-          {editing && (
-            <span className="text-[10px] text-poker-400 ml-auto font-semibold">EDITANDO</span>
-          )}
+          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Lancamentos</h3>
+          {editing && <span className="text-[10px] text-poker-400 ml-auto font-semibold">EDITANDO</span>}
         </div>
 
         <div className="space-y-3">
           {fields.map(({ key, label, sublabel, icon }) => (
-            <div key={key} className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors ${
-              editing ? 'bg-dark-800/30' : ''
-            }`}>
+            <div
+              key={key}
+              className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors ${
+                editing ? 'bg-dark-800/30' : ''
+              }`}
+            >
               <div className="flex items-center gap-3">
                 <div>
-                  <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>
-                    {label}
-                  </span>
+                  <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>{label}</span>
                   <span className="text-[11px] text-dark-500 ml-2">{sublabel}</span>
                 </div>
               </div>
@@ -186,7 +184,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
                   type="number"
                   step="0.01"
                   value={form[key]}
-                  onChange={(e) => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+                  onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
                   aria-label={`Valor do ajuste ${label}`}
                   className="input w-40 text-right font-mono text-sm"
                 />
@@ -199,10 +197,11 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
           {/* Total */}
           <div className="pt-3 mt-1 border-t-2 border-dark-600 flex items-center justify-between px-3">
             <span className="text-sm font-bold text-white uppercase tracking-wide">Total Lancamentos</span>
-            <span className={`font-mono text-lg font-bold ${
-              editTotal > 0.01 ? 'text-poker-400' :
-              editTotal < -0.01 ? 'text-red-400' : 'text-dark-500'
-            }`}>
+            <span
+              className={`font-mono text-lg font-bold ${
+                editTotal > 0.01 ? 'text-poker-400' : editTotal < -0.01 ? 'text-red-400' : 'text-dark-500'
+              }`}
+            >
               {formatBRL(editTotal)}
             </span>
           </div>
@@ -214,7 +213,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
           {editing ? (
             <textarea
               value={form.obs}
-              onChange={(e) => setForm(prev => ({ ...prev, obs: e.target.value }))}
+              onChange={(e) => setForm((prev) => ({ ...prev, obs: e.target.value }))}
               maxLength={500}
               rows={3}
               placeholder="Observacoes sobre os lancamentos..."
@@ -222,9 +221,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
               className="input w-full text-sm resize-none"
             />
           ) : (
-            <p className="text-sm text-dark-400">
-              {subclub.adjustments.obs || '—'}
-            </p>
+            <p className="text-sm text-dark-400">{subclub.adjustments.obs || '—'}</p>
           )}
         </div>
 
@@ -258,9 +255,7 @@ function ValueDisplay({ value }: { value: number }) {
     return <span className="text-dark-600 text-sm font-mono">R$ 0,00</span>;
   }
   return (
-    <span className={`font-mono text-sm font-semibold ${
-      value > 0 ? 'text-poker-400' : 'text-red-400'
-    }`}>
+    <span className={`font-mono text-sm font-semibold ${value > 0 ? 'text-poker-400' : 'text-red-400'}`}>
       {formatBRL(value)}
     </span>
   );

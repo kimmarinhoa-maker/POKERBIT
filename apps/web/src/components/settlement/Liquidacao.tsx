@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { listLedger, createLedgerEntry, deleteLedgerEntry, getCarryForward, updateAgentPaymentType, formatBRL } from '@/lib/api';
+import {
+  listLedger,
+  createLedgerEntry,
+  deleteLedgerEntry,
+  getCarryForward,
+  updateAgentPaymentType,
+  formatBRL,
+} from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
@@ -52,7 +59,14 @@ type EntityStatus = 'quitado' | 'credito' | 'parcial' | 'aberto' | 'sem-mov';
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Liquidacao({ subclub, weekStart, clubId, settlementId, settlementStatus, onDataChange }: Props) {
+export default function Liquidacao({
+  subclub,
+  weekStart,
+  clubId,
+  settlementId,
+  settlementStatus,
+  onDataChange,
+}: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const agents = subclub.agents || [];
   const allPlayers = subclub.players || [];
@@ -77,10 +91,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
   const loadLedger = useCallback(async () => {
     setLoading(true);
     try {
-      const [ledgerRes, carryRes] = await Promise.all([
-        listLedger(weekStart),
-        getCarryForward(weekStart, clubId),
-      ]);
+      const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
       if (ledgerRes.success) setAllEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
@@ -104,7 +115,9 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
     return set;
   }, [agents, allPlayers]);
 
-  useEffect(() => { loadLedger(); }, [loadLedger]);
+  useEffect(() => {
+    loadLedger();
+  }, [loadLedger]);
 
   // Group ledger entries by entity_id
   const ledgerByEntity = useMemo(() => {
@@ -129,7 +142,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
 
   // Compute per-agent liquidation data with canonical formula
   const agentLiq = useMemo(() => {
-    const agentNames = new Set(agents.map(a => a.agent_name));
+    const agentNames = new Set(agents.map((a) => a.agent_name));
 
     function computeLiq(agent: AgentMetric) {
       // Resolve entries — match by agent IDs + all player-level keys
@@ -139,7 +152,10 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
       function add(list: LedgerEntry[] | undefined) {
         if (!list) return;
         for (const e of list) {
-          if (!seen.has(e.id)) { seen.add(e.id); entries.push(e); }
+          if (!seen.has(e.id)) {
+            seen.add(e.id);
+            entries.push(e);
+          }
         }
       }
       // Agent-level keys
@@ -157,8 +173,8 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
         }
       }
 
-      const totalIn = entries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-      const totalOut = entries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      const totalIn = entries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = entries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
       const resultado = Number(agent.resultado_brl) || 0;
 
       // Canonical formula: pendente = totalDevido + pago
@@ -215,14 +231,17 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
   }, [agents, ledgerByEntity, playersByAgent, carryMap, directNameSet]);
 
   // Helper: check if agent is direct via backend annotation
-  const isAgentDirect = useCallback((agent: AgentMetric) => {
-    return agent.is_direct === true || directNameSet.has(agent.agent_name.toLowerCase());
-  }, [directNameSet]);
+  const isAgentDirect = useCallback(
+    (agent: AgentMetric) => {
+      return agent.is_direct === true || directNameSet.has(agent.agent_name.toLowerCase());
+    },
+    [directNameSet],
+  );
 
   // Tab counts
   const tabCounts = useMemo(() => {
-    const agencias = agentLiq.filter(a => !isAgentDirect(a.agent)).length;
-    const jogadores = agentLiq.filter(a => isAgentDirect(a.agent)).length;
+    const agencias = agentLiq.filter((a) => !isAgentDirect(a.agent)).length;
+    const jogadores = agentLiq.filter((a) => isAgentDirect(a.agent)).length;
     return { agencias, jogadores };
   }, [agentLiq, isAgentDirect]);
 
@@ -231,16 +250,16 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
     let result = agentLiq;
     // Tab filter
     if (viewTab === 'agencias') {
-      result = result.filter(a => !isAgentDirect(a.agent));
+      result = result.filter((a) => !isAgentDirect(a.agent));
     } else {
-      result = result.filter(a => isAgentDirect(a.agent));
+      result = result.filter((a) => isAgentDirect(a.agent));
     }
     if (statusFilter !== 'todos') {
-      result = result.filter(a => a.status === statusFilter);
+      result = result.filter((a) => a.status === statusFilter);
     }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(a => a.agent.agent_name.toLowerCase().includes(term));
+      result = result.filter((a) => a.agent.agent_name.toLowerCase().includes(term));
     }
     return result;
   }, [agentLiq, viewTab, searchTerm, statusFilter, isAgentDirect]);
@@ -258,7 +277,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
       case 'nome':
         return arr.sort((a, b) => a.agent.agent_name.localeCompare(b.agent.agent_name));
       case 'status': {
-        const order: Record<EntityStatus, number> = { 'aberto': 0, 'parcial': 1, 'credito': 2, 'quitado': 3, 'sem-mov': 4 };
+        const order: Record<EntityStatus, number> = { aberto: 0, parcial: 1, credito: 2, quitado: 3, 'sem-mov': 4 };
         return arr.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
       }
       default:
@@ -268,31 +287,42 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
 
   // KPI totals (tab-aware)
   const kpis = useMemo(() => {
-    const tabData = viewTab === 'agencias'
-      ? agentLiq.filter(a => !isAgentDirect(a.agent))
-      : agentLiq.filter(a => isAgentDirect(a.agent));
-    const withMov = tabData.filter(a => a.hasMov);
+    const tabData =
+      viewTab === 'agencias'
+        ? agentLiq.filter((a) => !isAgentDirect(a.agent))
+        : agentLiq.filter((a) => isAgentDirect(a.agent));
+    const withMov = tabData.filter((a) => a.hasMov);
     const totalResultado = round2(tabData.reduce((s, a) => s + a.resultado, 0));
     const totalRecebido = round2(tabData.reduce((s, a) => s + a.totalIn, 0));
     const totalPago = round2(tabData.reduce((s, a) => s + a.totalOut, 0));
     const totalPendente = round2(tabData.reduce((s, a) => s + a.pendente, 0));
     const totalRB = round2(tabData.reduce((s, a) => s + Number(a.agent.commission_brl || 0), 0));
-    const quitados = tabData.filter(a => a.status === 'quitado').length;
+    const quitados = tabData.filter((a) => a.status === 'quitado').length;
     const comMov = withMov.length;
     const statusCounts = {
-      quitado: tabData.filter(a => a.status === 'quitado').length,
-      parcial: tabData.filter(a => a.status === 'parcial').length,
-      aberto: tabData.filter(a => a.status === 'aberto').length,
-      credito: tabData.filter(a => a.status === 'credito').length,
-      'sem-mov': tabData.filter(a => a.status === 'sem-mov').length,
+      quitado: tabData.filter((a) => a.status === 'quitado').length,
+      parcial: tabData.filter((a) => a.status === 'parcial').length,
+      aberto: tabData.filter((a) => a.status === 'aberto').length,
+      credito: tabData.filter((a) => a.status === 'credito').length,
+      'sem-mov': tabData.filter((a) => a.status === 'sem-mov').length,
     };
-    return { totalResultado, totalRecebido, totalPago, totalPendente, totalRB, quitados, comMov, total: tabData.length, statusCounts };
+    return {
+      totalResultado,
+      totalRecebido,
+      totalPago,
+      totalPendente,
+      totalRB,
+      quitados,
+      comMov,
+      total: tabData.length,
+      statusCounts,
+    };
   }, [agentLiq, viewTab, isAgentDirect]);
 
-  const pctQuit = kpis.comMov > 0 ? Math.round(kpis.quitados / kpis.comMov * 100) : 0;
+  const pctQuit = kpis.comMov > 0 ? Math.round((kpis.quitados / kpis.comMov) * 100) : 0;
 
   function toggleAgent(id: string) {
-    setExpandedAgents(prev => {
+    setExpandedAgents((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -355,17 +385,17 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
 
   async function handleTogglePaymentType(agentId: string, currentType: 'fiado' | 'avista') {
     const newType = currentType === 'fiado' ? 'avista' : 'fiado';
-    setPaymentTypeLoading(prev => new Set(prev).add(agentId));
+    setPaymentTypeLoading((prev) => new Set(prev).add(agentId));
     try {
       const res = await updateAgentPaymentType(settlementId, agentId, newType);
       if (res.success) {
-        setPaymentTypeOverrides(prev => ({ ...prev, [agentId]: newType }));
+        setPaymentTypeOverrides((prev) => ({ ...prev, [agentId]: newType }));
         onDataChange();
       }
     } catch {
       toast('Erro ao alterar tipo de pagamento', 'error');
     } finally {
-      setPaymentTypeLoading(prev => {
+      setPaymentTypeLoading((prev) => {
         const next = new Set(prev);
         next.delete(agentId);
         return next;
@@ -391,9 +421,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
       <div className="mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Liquidacao — {subclub.name}</h2>
-          <p className="text-dark-400 text-sm">
-            Status de pagamento por agente — {agents.length} agentes
-          </p>
+          <p className="text-dark-400 text-sm">Status de pagamento por agente — {agents.length} agentes</p>
         </div>
       </div>
 
@@ -417,12 +445,18 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pago</p>
           <p className="font-mono text-lg font-bold text-blue-400">{formatBRL(kpis.totalPago)}</p>
         </div>
-        <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}>
+        <div
+          className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
+        >
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saldo Final</p>
-          <p className={`font-mono text-lg font-bold ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+          <p
+            className={`font-mono text-lg font-bold ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}
+          >
             {formatBRL(kpis.totalPendente)}
           </p>
-          <p className="text-[9px] text-dark-500">{kpis.quitados}/{kpis.comMov} quitados</p>
+          <p className="text-[9px] text-dark-500">
+            {kpis.quitados}/{kpis.comMov} quitados
+          </p>
         </div>
       </div>
 
@@ -438,9 +472,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
           <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
               className={`h-2.5 rounded-full transition-all duration-700 shadow-glow-green ${
-                pctQuit === 100
-                  ? 'bg-emerald-500'
-                  : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+                pctQuit === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
               }`}
               style={{ width: `${pctQuit}%` }}
             />
@@ -459,9 +491,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
           onClick={() => setViewTab('agencias')}
         >
           Agências
-          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
-            {tabCounts.agencias}
-          </span>
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{tabCounts.agencias}</span>
         </button>
         <button
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
@@ -472,21 +502,21 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
           onClick={() => setViewTab('jogadores')}
         >
           Jogadores
-          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
-            {tabCounts.jogadores}
-          </span>
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{tabCounts.jogadores}</span>
         </button>
       </div>
 
       {/* Status filter buttons (like HTML) */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {([
-          { key: 'todos', label: 'Todos', count: kpis.total },
-          { key: 'aberto', label: 'Em Aberto', count: kpis.statusCounts.aberto },
-          { key: 'parcial', label: 'Parcial', count: kpis.statusCounts.parcial },
-          { key: 'quitado', label: 'Quitado', count: kpis.statusCounts.quitado },
-          { key: 'credito', label: 'Credito', count: kpis.statusCounts.credito },
-        ] as const).map(f => (
+        {(
+          [
+            { key: 'todos', label: 'Todos', count: kpis.total },
+            { key: 'aberto', label: 'Em Aberto', count: kpis.statusCounts.aberto },
+            { key: 'parcial', label: 'Parcial', count: kpis.statusCounts.parcial },
+            { key: 'quitado', label: 'Quitado', count: kpis.statusCounts.quitado },
+            { key: 'credito', label: 'Credito', count: kpis.statusCounts.credito },
+          ] as const
+        ).map((f) => (
           <button
             key={f.key}
             onClick={() => setStatusFilter(f.key)}
@@ -508,13 +538,13 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
             type="text"
             placeholder="Buscar agente..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
           />
         </div>
         <select
           value={sortMode}
-          onChange={e => setSortMode(e.target.value as SortMode)}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
           className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
         >
           <option value="devedor">Maior devedor</option>
@@ -528,9 +558,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
       {/* Agent list */}
       {sorted.length === 0 ? (
         <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0
-            ? 'Nenhum agente neste subclube'
-            : 'Nenhum agente encontrado'}
+          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
         </div>
       ) : (
         <div className="space-y-2">
@@ -561,9 +589,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                           DIRETO
                         </span>
                       )}
-                      <span className="text-dark-500 text-xs ml-2">
-                        {agent.player_count} jog.
-                      </span>
+                      <span className="text-dark-500 text-xs ml-2">{agent.player_count} jog.</span>
                     </div>
                     <StatusBadge status={status} />
                     {/* Payment Type Badge (Fiado / A Vista) */}
@@ -610,24 +636,35 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-dark-500 uppercase">Direcao</p>
-                      <p className={`text-xs font-medium ${
-                        direcao === 'A Receber' ? 'text-poker-400' : direcao === 'A Pagar' ? 'text-red-400' : 'text-dark-500'
-                      }`}>
+                      <p
+                        className={`text-xs font-medium ${
+                          direcao === 'A Receber'
+                            ? 'text-poker-400'
+                            : direcao === 'A Pagar'
+                              ? 'text-red-400'
+                              : 'text-dark-500'
+                        }`}
+                      >
                         {direcao}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-dark-500 uppercase">Pendente</p>
-                      <p className={`font-mono font-semibold ${
-                        Math.abs(pendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'
-                      }`}>
+                      <p
+                        className={`font-mono font-semibold ${
+                          Math.abs(pendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'
+                        }`}
+                      >
                         {formatBRL(pendente)}
                       </p>
                     </div>
 
                     {isDraft && canPay && status !== 'quitado' && status !== 'sem-mov' && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); openQuickPay(agent); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openQuickPay(agent);
+                        }}
                         aria-label={`Registrar pagamento para ${agent.agent_name}`}
                         className="px-3 py-1.5 rounded-lg bg-poker-600/20 text-poker-400 text-xs font-medium hover:bg-poker-600/30 transition-colors"
                       >
@@ -651,7 +688,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                               step="0.01"
                               min="0.01"
                               value={payForm.amount}
-                              onChange={(e) => setPayForm(p => ({ ...p, amount: e.target.value }))}
+                              onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))}
                               className="input w-full text-sm font-mono"
                               placeholder="0,00"
                               autoFocus
@@ -661,7 +698,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                             <label className="text-[10px] text-dark-500 mb-0.5 block">Dir</label>
                             <select
                               value={payForm.dir}
-                              onChange={(e) => setPayForm(p => ({ ...p, dir: e.target.value as 'IN' | 'OUT' }))}
+                              onChange={(e) => setPayForm((p) => ({ ...p, dir: e.target.value as 'IN' | 'OUT' }))}
                               aria-label="Direcao do pagamento"
                               className="input w-full text-sm"
                             >
@@ -674,7 +711,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                             <input
                               type="text"
                               value={payForm.method}
-                              onChange={(e) => setPayForm(p => ({ ...p, method: e.target.value }))}
+                              onChange={(e) => setPayForm((p) => ({ ...p, method: e.target.value }))}
                               className="input w-full text-sm"
                             />
                           </div>
@@ -702,13 +739,15 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
                       <p className="text-dark-500 text-xs py-2">Nenhuma movimentacao registrada</p>
                     ) : (
                       <div className="space-y-1">
-                        {entries.map(e => (
+                        {entries.map((e) => (
                           <div key={e.id} className="flex items-center justify-between py-1.5 text-xs">
                             <div className="flex items-center gap-3">
                               <span className="text-dark-500 font-mono">{fmtDate(e.created_at)}</span>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                e.dir === 'IN' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
-                              }`}>
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  e.dir === 'IN' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
+                                }`}
+                              >
                                 {e.dir === 'IN' ? '↓ IN' : '↑ OUT'}
                               </span>
                               <span className={`font-mono ${e.dir === 'IN' ? 'text-poker-400' : 'text-red-400'}`}>
@@ -745,16 +784,12 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
 
 function StatusBadge({ status }: { status: EntityStatus }) {
   const config: Record<EntityStatus, { label: string; cls: string }> = {
-    'quitado':  { label: 'Quitado',  cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
-    'credito':  { label: 'Credito',  cls: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },
-    'parcial':  { label: 'Parcial',  cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    'aberto':   { label: 'Em Aberto', cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
-    'sem-mov':  { label: 'Sem Mov.',  cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
+    quitado: { label: 'Quitado', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
+    credito: { label: 'Credito', cls: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },
+    parcial: { label: 'Parcial', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+    aberto: { label: 'Em Aberto', cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
+    'sem-mov': { label: 'Sem Mov.', cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
   };
   const c = config[status] || config['aberto'];
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${c.cls}`}>
-      {c.label}
-    </span>
-  );
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${c.cls}`}>{c.label}</span>;
 }

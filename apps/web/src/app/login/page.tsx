@@ -35,10 +35,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-[0.05]" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)`,
-        backgroundSize: '32px 32px',
-      }} />
+      <div
+        className="absolute inset-0 opacity-[0.05]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
+        }}
+      />
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
@@ -53,9 +56,7 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="card space-y-5 animate-slide-up">
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-1.5">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-dark-300 mb-1.5">Email</label>
             <input
               type="email"
               value={email}
@@ -68,9 +69,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-300 mb-1.5">
-              Senha
-            </label>
+            <label className="block text-sm font-medium text-dark-300 mb-1.5">Senha</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -98,11 +97,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full py-3 text-base font-semibold"
-          >
+          <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base font-semibold">
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <Spinner size="sm" variant="white" />
@@ -115,9 +110,7 @@ export default function LoginPage() {
         </form>
 
         {/* Footer */}
-        <p className="text-center text-dark-600 text-xs mt-8">
-          Poker Manager SaaS v1.0
-        </p>
+        <p className="text-center text-dark-600 text-xs mt-8">Poker Manager SaaS v1.0</p>
       </div>
     </div>
   );

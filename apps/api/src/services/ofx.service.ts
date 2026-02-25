@@ -11,7 +11,7 @@ import { supabaseAdmin } from '../config/supabase';
 
 interface ParsedTransaction {
   fitid: string;
-  tx_date: string;    // YYYY-MM-DD
+  tx_date: string; // YYYY-MM-DD
   amount: number;
   memo: string;
   bank_name: string;
@@ -54,15 +54,12 @@ export interface AutoMatchSuggestion {
 }
 
 export class OFXService {
-
   // ─── Parse OFX raw text → transactions ────────────────────────────
   parseOFX(raw: string, fileName: string): ParsedTransaction[] {
     const txns: ParsedTransaction[] = [];
 
     // Extract STMTTRN blocks
-    const blocks = raw.match(
-      /<STMTTRN[\s\S]*?<\/STMTTRN>|<STMTTRN>([\s\S]*?)(?=<STMTTRN>|<\/BANKTRANLIST>)/gi
-    ) || [];
+    const blocks = raw.match(/<STMTTRN[\s\S]*?<\/STMTTRN>|<STMTTRN>([\s\S]*?)(?=<STMTTRN>|<\/BANKTRANLIST>)/gi) || [];
 
     // Extract bank name from OFX header
     const bankMatch = raw.match(/<(?:FI>[\s\S]*?<ORG>|ORG>)([^<\r\n]+)/i);
@@ -90,9 +87,8 @@ export class OFXService {
       const txDate = `${y}-${mo}-${d}`;
 
       // Enrich memo with payee
-      const memoFull = payee && !memo.toLowerCase().includes(payee.toLowerCase().substring(0, 8))
-        ? `${memo} · ${payee}`
-        : memo;
+      const memoFull =
+        payee && !memo.toLowerCase().includes(payee.toLowerCase().substring(0, 8)) ? `${memo} · ${payee}` : memo;
 
       txns.push({
         fitid,
@@ -108,12 +104,7 @@ export class OFXService {
   }
 
   // ─── Upload: parse + upsert into bank_transactions ────────────────
-  async uploadOFX(
-    tenantId: string,
-    raw: string,
-    fileName: string,
-    weekStart?: string
-  ) {
+  async uploadOFX(tenantId: string, raw: string, fileName: string, weekStart?: string) {
     const parsed = this.parseOFX(raw, fileName);
 
     if (parsed.length === 0) {
@@ -121,18 +112,18 @@ export class OFXService {
     }
 
     // Check existing FITIDs to avoid duplicates
-    const fitids = parsed.map(t => t.fitid);
+    const fitids = parsed.map((t) => t.fitid);
     const { data: existing } = await supabaseAdmin
       .from('bank_transactions')
       .select('fitid')
       .eq('tenant_id', tenantId)
       .in('fitid', fitids);
 
-    const existingSet = new Set((existing || []).map(e => e.fitid));
+    const existingSet = new Set((existing || []).map((e) => e.fitid));
 
     const toInsert = parsed
-      .filter(t => !existingSet.has(t.fitid))
-      .map(t => ({
+      .filter((t) => !existingSet.has(t.fitid))
+      .map((t) => ({
         tenant_id: tenantId,
         source: 'ofx',
         fitid: t.fitid,
@@ -147,10 +138,7 @@ export class OFXService {
 
     let inserted: BankTransaction[] = [];
     if (toInsert.length > 0) {
-      const { data, error } = await supabaseAdmin
-        .from('bank_transactions')
-        .insert(toInsert)
-        .select();
+      const { data, error } = await supabaseAdmin.from('bank_transactions').insert(toInsert).select();
 
       if (error) throw new Error(`Erro ao salvar transações: ${error.message}`);
       inserted = data || [];
@@ -165,11 +153,7 @@ export class OFXService {
   }
 
   // ─── Listar transações de uma semana ──────────────────────────────
-  async listTransactions(
-    tenantId: string,
-    weekStart?: string,
-    status?: string
-  ): Promise<BankTransaction[]> {
+  async listTransactions(tenantId: string, weekStart?: string, status?: string): Promise<BankTransaction[]> {
     let query = supabaseAdmin
       .from('bank_transactions')
       .select('*')
@@ -186,13 +170,7 @@ export class OFXService {
   }
 
   // ─── Vincular transação a uma entidade ────────────────────────────
-  async linkTransaction(
-    tenantId: string,
-    txId: string,
-    entityId: string,
-    entityName: string,
-    category?: string
-  ) {
+  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, category?: string) {
     const { data, error } = await supabaseAdmin
       .from('bank_transactions')
       .update({
@@ -244,11 +222,7 @@ export class OFXService {
   }
 
   // ─── Aplicar transações vinculadas → criar ledger_entries ─────────
-  async applyLinked(
-    tenantId: string,
-    weekStart: string,
-    userId: string
-  ) {
+  async applyLinked(tenantId: string, weekStart: string, userId: string) {
     // Fetch all linked (not yet applied) transactions for this week
     const { data: linked, error: fetchErr } = await supabaseAdmin
       .from('bank_transactions')
@@ -316,10 +290,7 @@ export class OFXService {
   }
 
   // ─── Auto-Match: 5-tier matching for pending OFX transactions ──────
-  async autoMatch(
-    tenantId: string,
-    weekStart: string
-  ): Promise<AutoMatchSuggestion[]> {
+  async autoMatch(tenantId: string, weekStart: string): Promise<AutoMatchSuggestion[]> {
     // 1) Fetch pending OFX transactions for this week
     const { data: pendingTxns, error: txErr } = await supabaseAdmin
       .from('bank_transactions')
@@ -339,7 +310,7 @@ export class OFXService {
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart);
 
-    const agents = (agentMetrics || []);
+    const agents = agentMetrics || [];
 
     // Build a unique set of entity names (agents + player nicks)
     const entityMap = new Map<string, { id: string; name: string; type: 'agent' | 'player' }>();
@@ -409,7 +380,7 @@ export class OFXService {
       // ── Tier 2: Amount+date match against unreconciled ledger ──
       const txAmount = Math.abs(Number(tx.amount));
       const txDate = tx.tx_date; // YYYY-MM-DD
-      const ledgerMatch = unreconciledLedger.find(le => {
+      const ledgerMatch = unreconciledLedger.find((le) => {
         const leAmount = Math.abs(Number(le.amount));
         // Amount must match within 0.01 tolerance
         const amountMatch = Math.abs(leAmount - txAmount) < 0.01;
@@ -495,7 +466,7 @@ export class OFXService {
 
       // ── Tier 4: Payment method detection (PIX, TED, DOC) ──────
       const paymentMethods = ['PIX', 'TED', 'DOC', 'BOLETO', 'TRANSFERENCIA', 'TRANSF', 'DEP', 'DEPOSITO', 'SAQUE'];
-      const detectedMethod = paymentMethods.find(m => memoUpper.includes(m));
+      const detectedMethod = paymentMethods.find((m) => memoUpper.includes(m));
 
       if (detectedMethod) {
         suggestions.push({
@@ -545,11 +516,7 @@ export class OFXService {
       throw new Error('Não é possível excluir transação já aplicada');
     }
 
-    const { error } = await supabaseAdmin
-      .from('bank_transactions')
-      .delete()
-      .eq('id', txId)
-      .eq('tenant_id', tenantId);
+    const { error } = await supabaseAdmin.from('bank_transactions').delete().eq('id', txId).eq('tenant_id', tenantId);
 
     if (error) throw new Error(`Erro ao excluir: ${error.message}`);
     return { deleted: true };

@@ -17,7 +17,7 @@ export async function exportElementAsJpg(
   options?: {
     backgroundColor?: string;
     scale?: number;
-  }
+  },
 ): Promise<void> {
   const canvas = await html2canvas(element, {
     backgroundColor: options?.backgroundColor || '#ffffff',

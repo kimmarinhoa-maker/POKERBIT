@@ -18,19 +18,27 @@ interface Props {
   isScoped?: boolean;
 }
 
-export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart, status, logoMap = {}, isScoped }: Props) {
+export default function SubclubSidebar({
+  subclubs,
+  selected,
+  onSelect,
+  weekStart,
+  status,
+  logoMap = {},
+  isScoped,
+}: Props) {
   return (
     <div className="w-[180px] min-w-[180px] bg-dark-900 border-r border-dark-700 flex flex-col overflow-y-auto">
       {/* Header */}
       <div className="p-4 border-b border-dark-700">
         <p className="text-xs text-dark-500 uppercase tracking-wider font-medium">Fechamento</p>
-        <p className="text-sm text-dark-200 mt-1">
-          {new Date(weekStart + 'T00:00:00').toLocaleDateString('pt-BR')}
-        </p>
+        <p className="text-sm text-dark-200 mt-1">{new Date(weekStart + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
         <div className="flex items-center gap-1.5 mt-1">
-          <span className={`inline-block ${
-            status === 'DRAFT' ? 'badge-draft' : status === 'FINAL' ? 'badge-final' : 'badge-void'
-          }`}>
+          <span
+            className={`inline-block ${
+              status === 'DRAFT' ? 'badge-draft' : status === 'FINAL' ? 'badge-final' : 'badge-void'
+            }`}
+          >
             {status === 'DRAFT' ? 'RASCUNHO' : status}
           </span>
           {isScoped && (
@@ -58,9 +66,7 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
 
       {/* Subclubes */}
       <div className="p-2 pt-0">
-        <p className="px-3 py-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-medium">
-          Subclubes
-        </p>
+        <p className="px-3 py-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-medium">Subclubes</p>
         <div className="space-y-0.5">
           {subclubs.map((sc) => (
             <button
@@ -73,14 +79,19 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
               }`}
             >
               <span className="flex items-center gap-2 min-w-0">
-                <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="sm" className="!w-6 !h-6 !text-[10px]" />
+                <ClubLogo
+                  logoUrl={logoMap[sc.name.toLowerCase()]}
+                  name={sc.name}
+                  size="sm"
+                  className="!w-6 !h-6 !text-[10px]"
+                />
                 <span className="font-medium truncate">{sc.name}</span>
               </span>
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                selected === sc.name
-                  ? 'bg-poker-700/30 text-poker-300'
-                  : 'bg-dark-800 text-dark-400'
-              }`}>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  selected === sc.name ? 'bg-poker-700/30 text-poker-300' : 'bg-dark-800 text-dark-400'
+                }`}
+              >
                 {sc.totals.players}
               </span>
             </button>

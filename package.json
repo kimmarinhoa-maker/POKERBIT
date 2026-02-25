@@ -12,6 +12,8 @@
     "golden:update": "node tools/run_golden.js --update",
     "golden:inspect": "node tools/run_golden.js --inspect",
     "test": "vitest run",
+    "test:web": "npm run test --prefix apps/web",
+    "test:all": "vitest run && npm run test --prefix apps/web",
     "test:watch": "vitest",
     "test:golden": "node tools/compare.js",
     "lint": "eslint apps/web/src apps/api/src --ext .ts,.tsx --max-warnings 100",
@@ -22,9 +24,12 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.57.0",
+    "jsdom": "^25.0.1",
     "prettier": "^3.3.0",
     "vitest": "^4.0.18"
   }

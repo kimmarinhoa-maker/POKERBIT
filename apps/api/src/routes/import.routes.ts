@@ -25,10 +25,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ];
+    const allowed = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
     if (allowed.includes(file.mimetype) || file.originalname.endsWith('.xlsx')) {
       cb(null, true);
     } else {
@@ -43,50 +40,44 @@ const upload = multer({
 // Retorna: preview com summary, blockers, distribuição por subclube
 // NÃO escreve nada no banco.
 
-router.post(
-  '/preview',
-  requireAuth,
-  requireTenant,
-  upload.single('file'),
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ success: false, error: 'Arquivo XLSX obrigatório' });
-        return;
-      }
-
-      const tenantId = req.tenantId!;
-      const weekStartOverride = req.body.week_start || undefined;
-
-      const preview = await importPreviewService.preview({
-        tenantId,
-        fileBuffer: req.file.buffer,
-        fileName: req.file.originalname,
-        weekStartOverride,
-      });
-
-      // Também retornar subclubes do tenant para os dropdowns de vinculação
-      const { data: subclubs } = await supabaseAdmin
-        .from('organizations')
-        .select('id, name')
-        .eq('tenant_id', tenantId)
-        .eq('type', 'SUBCLUB')
-        .eq('is_active', true)
-        .order('name');
-
-      res.json({
-        success: true,
-        data: {
-          ...preview,
-          available_subclubs: subclubs || [],
-        },
-      });
-    } catch (err: any) {
-      console.error('[POST /api/imports/preview]', err);
-      res.status(500).json({ success: false, error: err.message });
+router.post('/preview', requireAuth, requireTenant, upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'Arquivo XLSX obrigatório' });
+      return;
     }
+
+    const tenantId = req.tenantId!;
+    const weekStartOverride = req.body.week_start || undefined;
+
+    const preview = await importPreviewService.preview({
+      tenantId,
+      fileBuffer: req.file.buffer,
+      fileName: req.file.originalname,
+      weekStartOverride,
+    });
+
+    // Também retornar subclubes do tenant para os dropdowns de vinculação
+    const { data: subclubs } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .eq('type', 'SUBCLUB')
+      .eq('is_active', true)
+      .order('name');
+
+    res.json({
+      success: true,
+      data: {
+        ...preview,
+        available_subclubs: subclubs || [],
+      },
+    });
+  } catch (err: any) {
+    console.error('[POST /api/imports/preview]', err);
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── POST /api/imports/confirm — Persiste (só se ready=true) ────────
 //
@@ -147,7 +138,7 @@ router.post(
       console.error('[POST /api/imports/confirm]', err);
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── POST /api/imports — [LEGACY] Upload + processamento direto ─────
@@ -203,61 +194,58 @@ router.post(
       console.error('[POST /api/imports]', err);
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 // ─── GET /api/imports — Listar importações ──────────────────────────
-router.get(
-  '/',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
+router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
 
-      const { data, error } = await supabaseAdmin
-        .from('imports')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(50);
+    const { data, error, count } = await supabaseAdmin
+      .from('imports')
+      .select('*', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      res.json({ success: true, data: data || [] });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({
+      success: true,
+      data: data || [],
+      meta: { total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit) },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── GET /api/imports/:id — Detalhe de um import ────────────────────
-router.get(
-  '/:id',
-  requireAuth,
-  requireTenant,
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.tenantId!;
+router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
 
-      const { data, error } = await supabaseAdmin
-        .from('imports')
-        .select('*')
-        .eq('id', req.params.id)
-        .eq('tenant_id', tenantId)
-        .single();
+    const { data, error } = await supabaseAdmin
+      .from('imports')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('tenant_id', tenantId)
+      .single();
 
-      if (error || !data) {
-        res.status(404).json({ success: false, error: 'Import não encontrado' });
-        return;
-      }
-
-      res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    if (error || !data) {
+      res.status(404).json({ success: false, error: 'Import não encontrado' });
+      return;
     }
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
-);
+});
 
 // ─── DELETE /api/imports/:id — Remover um import ────────────────────
 router.delete(
@@ -297,7 +285,7 @@ router.delete(
       console.error('[DELETE /api/imports/:id]', err);
       res.status(500).json({ success: false, error: err.message });
     }
-  }
+  },
 );
 
 export default router;

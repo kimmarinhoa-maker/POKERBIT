@@ -28,18 +28,32 @@ interface PendenciesStepProps {
 }
 
 export default function PendenciesStep({
-  preview, agentLinks, playerLinks, playerSelections, saving,
-  bulkSubclubId, setBulkSubclubId, bulkMode, setBulkMode,
-  bulkAgentName, setBulkAgentName, bulkNewAgentName, setBulkNewAgentName,
-  onLinkAgent, onLinkPlayer, onBulkLink, onSetPlayerSelection,
-  onReprocess, onBack, loading,
+  preview,
+  agentLinks,
+  playerLinks,
+  playerSelections,
+  saving,
+  bulkSubclubId,
+  setBulkSubclubId,
+  bulkMode,
+  setBulkMode,
+  bulkAgentName,
+  setBulkAgentName,
+  bulkNewAgentName,
+  setBulkNewAgentName,
+  onLinkAgent,
+  onLinkPlayer,
+  onBulkLink,
+  onSetPlayerSelection,
+  onReprocess,
+  onBack,
+  loading,
 }: PendenciesStepProps) {
-
   function getAgentsForSubclub(subclubId: string) {
     if (!preview) return [];
-    const subclub = preview.available_subclubs.find(s => s.id === subclubId);
+    const subclub = preview.available_subclubs.find((s) => s.id === subclubId);
     if (!subclub) return [];
-    return preview.available_agents.filter(a => a.subclub_name === subclub.name);
+    return preview.available_agents.filter((a) => a.subclub_name === subclub.name);
   }
 
   // Phase 3: Progress computation
@@ -47,8 +61,8 @@ export default function PendenciesStep({
   const totalPlayersNone = preview.blockers.players_without_agency.length;
   const totalPendencies = totalAgencies + totalPlayersNone;
 
-  const resolvedAgencies = preview.blockers.unknown_agencies.filter(a => agentLinks[a.agent_name]).length;
-  const resolvedPlayers = preview.blockers.players_without_agency.filter(p => playerLinks[p.player_id]).length;
+  const resolvedAgencies = preview.blockers.unknown_agencies.filter((a) => agentLinks[a.agent_name]).length;
+  const resolvedPlayers = preview.blockers.players_without_agency.filter((p) => playerLinks[p.player_id]).length;
   const resolvedCount = resolvedAgencies + resolvedPlayers;
   const progressPct = totalPendencies > 0 ? Math.round((resolvedCount / totalPendencies) * 100) : 100;
 
@@ -63,7 +77,7 @@ export default function PendenciesStep({
       if (agentLinks[agency.agent_name]) continue;
       if (!agency.detected_prefix) continue;
       const prefix = agency.detected_prefix.toUpperCase();
-      const match = preview.available_subclubs.find(sc => sc.name.toUpperCase().includes(prefix));
+      const match = preview.available_subclubs.find((sc) => sc.name.toUpperCase().includes(prefix));
       if (match) {
         suggestions[agency.agent_name] = { subclubId: match.id, subclubName: match.name };
       }
@@ -98,7 +112,9 @@ export default function PendenciesStep({
           <span className="text-sm text-dark-300">
             {resolvedCount}/{totalPendencies} pendencias resolvidas
           </span>
-          <span className={`text-sm font-bold ${progressPct === 100 ? 'text-green-400' : progressPct >= 66 ? 'text-yellow-400' : 'text-red-400'}`}>
+          <span
+            className={`text-sm font-bold ${progressPct === 100 ? 'text-green-400' : progressPct >= 66 ? 'text-yellow-400' : 'text-red-400'}`}
+          >
             {progressPct}%
           </span>
         </div>
@@ -132,10 +148,10 @@ export default function PendenciesStep({
           </div>
 
           <div className="space-y-3">
-            {preview.blockers.unknown_agencies.map(agency => {
+            {preview.blockers.unknown_agencies.map((agency) => {
               const isLinked = !!agentLinks[agency.agent_name];
               const linkedSubclubId = agentLinks[agency.agent_name];
-              const linkedSubclub = preview.available_subclubs.find(s => s.id === linkedSubclubId);
+              const linkedSubclub = preview.available_subclubs.find((s) => s.id === linkedSubclubId);
               const isSaving = saving[`agent:${agency.agent_name}`];
               const suggestion = agencySuggestions[agency.agent_name];
 
@@ -143,11 +159,7 @@ export default function PendenciesStep({
                 <div
                   key={agency.agent_name}
                   className={`card transition-all duration-300 ${
-                    isLinked
-                      ? 'opacity-60 border-green-700/30'
-                      : suggestion
-                        ? 'border-blue-700/30'
-                        : ''
+                    isLinked ? 'opacity-60 border-green-700/30' : suggestion ? 'border-blue-700/30' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -161,7 +173,9 @@ export default function PendenciesStep({
                       </span>
                     </div>
                     {isLinked && linkedSubclub && (
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getClubStyle(linkedSubclub.name)}`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold border ${getClubStyle(linkedSubclub.name)}`}
+                      >
                         {'\u2713'} {linkedSubclub.name}
                       </span>
                     )}
@@ -169,7 +183,7 @@ export default function PendenciesStep({
 
                   {agency.sample_players.length > 0 && (
                     <p className="text-dark-500 text-xs mb-2">
-                      Jogadores: {agency.sample_players.map(p => p.player_name).join(', ')}
+                      Jogadores: {agency.sample_players.map((p) => p.player_name).join(', ')}
                     </p>
                   )}
 
@@ -183,8 +197,10 @@ export default function PendenciesStep({
                         }}
                         disabled={isSaving}
                       >
-                        <option value="" disabled>Selecionar subclube...</option>
-                        {preview.available_subclubs.map(sc => (
+                        <option value="" disabled>
+                          Selecionar subclube...
+                        </option>
+                        {preview.available_subclubs.map((sc) => (
                           <option key={sc.id} value={sc.id}>
                             {getClubIcon(sc.name)} {sc.name}
                           </option>
@@ -234,8 +250,10 @@ export default function PendenciesStep({
                   }}
                 >
                   <option value="">Selecionar...</option>
-                  {preview.available_subclubs.map(sc => (
-                    <option key={sc.id} value={sc.id}>{sc.name}</option>
+                  {preview.available_subclubs.map((sc) => (
+                    <option key={sc.id} value={sc.id}>
+                      {sc.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -245,7 +263,13 @@ export default function PendenciesStep({
                   <label className="block text-xs text-dark-500 mb-1">Agencia</label>
                   <select
                     className="input w-full text-sm"
-                    value={bulkMode === 'agent' ? `agent:${bulkAgentName}` : bulkMode === 'new_agent' ? '__new__' : '__direct__'}
+                    value={
+                      bulkMode === 'agent'
+                        ? `agent:${bulkAgentName}`
+                        : bulkMode === 'new_agent'
+                          ? '__new__'
+                          : '__direct__'
+                    }
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === '__direct__') {
@@ -261,7 +285,7 @@ export default function PendenciesStep({
                     }}
                   >
                     <option value="__direct__">Jogador direto (sem agencia)</option>
-                    {getAgentsForSubclub(bulkSubclubId).map(a => (
+                    {getAgentsForSubclub(bulkSubclubId).map((a) => (
                       <option key={a.agent_name} value={`agent:${a.agent_name}`}>
                         {a.agent_name}
                       </option>
@@ -285,15 +309,13 @@ export default function PendenciesStep({
 
               <button
                 onClick={onBulkLink}
-                disabled={
-                  saving['bulk-none'] ||
-                  !bulkSubclubId ||
-                  (bulkMode === 'new_agent' && !bulkNewAgentName)
-                }
+                disabled={saving['bulk-none'] || !bulkSubclubId || (bulkMode === 'new_agent' && !bulkNewAgentName)}
                 className="btn-primary py-2 px-4 text-sm shrink-0"
               >
                 {saving['bulk-none'] ? (
-                  <span className="flex items-center gap-1"><Spinner size="sm" variant="white" /> Vinculando...</span>
+                  <span className="flex items-center gap-1">
+                    <Spinner size="sm" variant="white" /> Vinculando...
+                  </span>
                 ) : (
                   'Vincular Todos'
                 )}
@@ -303,23 +325,28 @@ export default function PendenciesStep({
 
           {/* Individual player rows */}
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {preview.blockers.players_without_agency.map(player => {
+            {preview.blockers.players_without_agency.map((player) => {
               const isLinked = !!playerLinks[player.player_id];
               const linkedSubclubId = playerLinks[player.player_id];
-              const linkedSubclub = preview.available_subclubs.find(s => s.id === linkedSubclubId);
+              const linkedSubclub = preview.available_subclubs.find((s) => s.id === linkedSubclubId);
               const isSaving = saving[`player:${player.player_id}`];
               const sel = playerSelections[player.player_id];
 
               if (isLinked) {
                 return (
-                  <div key={player.player_id} className="flex items-center justify-between p-2.5 rounded-lg border bg-dark-800/30 border-green-700/30 opacity-60 transition-all duration-300">
+                  <div
+                    key={player.player_id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border bg-dark-800/30 border-green-700/30 opacity-60 transition-all duration-300"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-green-400">{'\u2713'}</span>
                       <span className="text-poker-400 font-mono text-xs shrink-0">{player.player_id}</span>
                       <span className="text-white text-sm truncate">{player.player_name}</span>
                     </div>
                     {linkedSubclub && (
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold border shrink-0 ${getClubStyle(linkedSubclub.name)}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-bold border shrink-0 ${getClubStyle(linkedSubclub.name)}`}
+                      >
                         {'\u2713'} {linkedSubclub.name}
                       </span>
                     )}
@@ -328,7 +355,10 @@ export default function PendenciesStep({
               }
 
               return (
-                <div key={player.player_id} className="p-3 rounded-lg border bg-dark-800/50 border-yellow-700/30 transition-all duration-300">
+                <div
+                  key={player.player_id}
+                  className="p-3 rounded-lg border bg-dark-800/50 border-yellow-700/30 transition-all duration-300"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-poker-400 font-mono text-xs shrink-0">{player.player_id}</span>
                     <span className="text-white text-sm">{player.player_name}</span>
@@ -347,8 +377,10 @@ export default function PendenciesStep({
                         }}
                       >
                         <option value="">Subclube...</option>
-                        {preview.available_subclubs.map(sc => (
-                          <option key={sc.id} value={sc.id}>{sc.name}</option>
+                        {preview.available_subclubs.map((sc) => (
+                          <option key={sc.id} value={sc.id}>
+                            {sc.name}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -358,25 +390,43 @@ export default function PendenciesStep({
                         <select
                           className="input w-full text-xs"
                           value={
-                            sel.mode === 'agent' ? `agent:${sel.agentName}` :
-                            sel.mode === 'new_agent' ? '__new__' :
-                            '__direct__'
+                            sel.mode === 'agent'
+                              ? `agent:${sel.agentName}`
+                              : sel.mode === 'new_agent'
+                                ? '__new__'
+                                : '__direct__'
                           }
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val === '__direct__') {
-                              onSetPlayerSelection(player.player_id, { ...sel, mode: 'direct', agentName: undefined, agentId: undefined });
+                              onSetPlayerSelection(player.player_id, {
+                                ...sel,
+                                mode: 'direct',
+                                agentName: undefined,
+                                agentId: undefined,
+                              });
                             } else if (val === '__new__') {
-                              onSetPlayerSelection(player.player_id, { ...sel, mode: 'new_agent', agentName: undefined, agentId: undefined, newAgentName: '' });
+                              onSetPlayerSelection(player.player_id, {
+                                ...sel,
+                                mode: 'new_agent',
+                                agentName: undefined,
+                                agentId: undefined,
+                                newAgentName: '',
+                              });
                             } else if (val.startsWith('agent:')) {
                               const agName = val.replace('agent:', '');
-                              const ag = preview.available_agents.find(a => a.agent_name === agName);
-                              onSetPlayerSelection(player.player_id, { ...sel, mode: 'agent', agentName: agName, agentId: ag?.agent_id });
+                              const ag = preview.available_agents.find((a) => a.agent_name === agName);
+                              onSetPlayerSelection(player.player_id, {
+                                ...sel,
+                                mode: 'agent',
+                                agentName: agName,
+                                agentId: ag?.agent_id,
+                              });
                             }
                           }}
                         >
                           <option value="__direct__">Jogador direto</option>
-                          {getAgentsForSubclub(sel.subclubId).map(a => (
+                          {getAgentsForSubclub(sel.subclubId).map((a) => (
                             <option key={a.agent_name} value={`agent:${a.agent_name}`}>
                               {a.agent_name}
                             </option>
@@ -402,11 +452,7 @@ export default function PendenciesStep({
                     {sel?.subclubId && (
                       <button
                         onClick={() => onLinkPlayer(player.player_id, sel)}
-                        disabled={
-                          isSaving ||
-                          !sel.subclubId ||
-                          (sel.mode === 'new_agent' && !sel.newAgentName)
-                        }
+                        disabled={isSaving || !sel.subclubId || (sel.mode === 'new_agent' && !sel.newAgentName)}
                         className="px-3 py-1.5 bg-poker-600 hover:bg-poker-500 text-white text-xs font-medium rounded transition-colors disabled:opacity-50 shrink-0"
                       >
                         {isSaving ? <Spinner size="sm" variant="white" /> : 'Vincular'}
@@ -423,18 +469,11 @@ export default function PendenciesStep({
       {/* Bottom bar */}
       <div className="sticky bottom-0 bg-dark-900/95 backdrop-blur-sm border-t border-dark-700 py-4 -mx-6 px-6 mt-6">
         <div className="flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
-          >
+          <button onClick={onBack} className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors">
             {'\u2190'} Voltar
           </button>
           <div className="flex items-center gap-3">
-            {!allResolved && (
-              <span className="text-yellow-400 text-sm">
-                {'\u26A0\uFE0F'} Ainda ha pendencias
-              </span>
-            )}
+            {!allResolved && <span className="text-yellow-400 text-sm">{'\u26A0\uFE0F'} Ainda ha pendencias</span>}
             <button
               onClick={onReprocess}
               disabled={loading}

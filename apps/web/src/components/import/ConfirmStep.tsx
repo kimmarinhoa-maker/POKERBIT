@@ -29,7 +29,7 @@ export default function ConfirmStep({ preview, loading, error, onConfirm, onBack
       return;
     }
     const interval = setInterval(() => {
-      setProgressIdx(prev => Math.min(prev + 1, PROGRESS_STEPS.length - 1));
+      setProgressIdx((prev) => Math.min(prev + 1, PROGRESS_STEPS.length - 1));
     }, 1200);
     return () => clearInterval(interval);
   }, [loading]);
@@ -45,7 +45,8 @@ export default function ConfirmStep({ preview, loading, error, onConfirm, onBack
           <div className="flex items-center gap-3">
             <span className="text-2xl">{'\u2795'}</span>
             <p className="text-blue-300 text-sm">
-              <span className="font-bold">Importacao adicional:</span> os dados desta planilha serao adicionados ao fechamento existente (v{preview.existing_settlement.version}) sem alterar dados de outros clubes.
+              <span className="font-bold">Importacao adicional:</span> os dados desta planilha serao adicionados ao
+              fechamento existente (v{preview.existing_settlement.version}) sem alterar dados de outros clubes.
             </p>
           </div>
         </div>
@@ -56,7 +57,9 @@ export default function ConfirmStep({ preview, loading, error, onConfirm, onBack
           <span className="text-3xl">{'\u2705'}</span>
           <div>
             <p className="text-green-400 font-semibold text-lg">Tudo pronto!</p>
-            <p className="text-dark-400 text-sm">{preview.readiness.blockers_count} pendencias &middot; Pronto para importar</p>
+            <p className="text-dark-400 text-sm">
+              {preview.readiness.blockers_count} pendencias &middot; Pronto para importar
+            </p>
           </div>
         </div>
 
@@ -116,10 +119,7 @@ export default function ConfirmStep({ preview, loading, error, onConfirm, onBack
       {error && (
         <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300 text-sm">
           {'\u274C'} {error}
-          <button
-            onClick={onConfirm}
-            className="ml-3 text-red-400 hover:text-red-300 underline text-xs"
-          >
+          <button onClick={onConfirm} className="ml-3 text-red-400 hover:text-red-300 underline text-xs">
             Tentar novamente
           </button>
         </div>

@@ -84,7 +84,10 @@ function fmtDate(dt: string): string {
 
 function fmtDateTime(dt: string): string {
   return new Date(dt).toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -120,10 +123,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const [ledgerRes, carryRes] = await Promise.all([
-        listLedger(weekStart),
-        getCarryForward(weekStart, clubId),
-      ]);
+      const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
       if (ledgerRes.success) setEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
@@ -133,7 +133,9 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
     }
   }, [weekStart, clubId]);
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   // Build direct set from backend-annotated is_direct flag (single source of truth)
   // Same logic as Jogadores.tsx: agent.is_direct + player.agent_is_direct + SEM AGENTE
@@ -180,11 +182,12 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
   // Compute financial data for each agent
   const agentFinancials: AgentFinancials[] = useMemo(() => {
-    return agents.map(rawAgent => {
+    return agents.map((rawAgent) => {
       // Use backend-annotated is_direct (already set by settlement service)
       const agent = { ...rawAgent, is_direct: directNameSet.has(rawAgent.agent_name.toLowerCase()) };
-      const agPlayers = (playersByAgent.get(agent.agent_name) || [])
-        .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
+      const agPlayers = (playersByAgent.get(agent.agent_name) || []).sort((a, b) =>
+        (a.nickname || '').localeCompare(b.nickname || ''),
+      );
 
       // Resolve ledger entries — match by agent IDs + all player-level keys
       // (mirrors backend settlement.service.ts broad-matching logic)
@@ -193,7 +196,10 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       function add(list: LedgerEntry[] | undefined) {
         if (!list) return;
         for (const e of list) {
-          if (!seen.has(e.id)) { seen.add(e.id); agEntries.push(e); }
+          if (!seen.has(e.id)) {
+            seen.add(e.id);
+            agEntries.push(e);
+          }
         }
       }
       // Agent-level keys
@@ -217,27 +223,42 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       const saldoAnterior = (agent.agent_id && carryMap[agent.agent_id]) || 0;
       const totalDevido = round2(resultado + saldoAnterior);
 
-      const totalIn = agEntries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-      const totalOut = agEntries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      const totalIn = agEntries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = agEntries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
       const pago = round2(totalIn - totalOut);
       const pendente = round2(totalDevido + pago);
 
       return {
-        agent, players: agPlayers, entries: agEntries,
-        ganhos, rakeTotal, rbAgente, resultado,
-        saldoAnterior, totalDevido, totalIn, totalOut, pago, pendente,
+        agent,
+        players: agPlayers,
+        entries: agEntries,
+        ganhos,
+        rakeTotal,
+        rbAgente,
+        resultado,
+        saldoAnterior,
+        totalDevido,
+        totalIn,
+        totalOut,
+        pago,
+        pendente,
       };
     });
   }, [agents, playersByAgent, ledgerByEntity, directNameSet]);
 
   // Helper: check if agent is "direct" (same logic as Jogadores tab)
-  const isDirectAgent = useCallback((name: string) => {
-    return directNameSet.has(name.toLowerCase());
-  }, [directNameSet]);
+  const isDirectAgent = useCallback(
+    (name: string) => {
+      return directNameSet.has(name.toLowerCase());
+    },
+    [directNameSet],
+  );
 
   // Split by direct / normal
-  const normalAgents = useMemo(() =>
-    agentFinancials.filter(d => !isDirectAgent(d.agent.agent_name)), [agentFinancials, isDirectAgent]);
+  const normalAgents = useMemo(
+    () => agentFinancials.filter((d) => !isDirectAgent(d.agent.agent_name)),
+    [agentFinancials, isDirectAgent],
+  );
 
   // "Jogadores" tab: build individual player rows from ALL direct players
   // Uses players array directly (same source as Jogadores.tsx) to avoid missing
@@ -257,12 +278,15 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       // Match ledger entries for this specific player
       const seen = new Set<string>();
       const playerEntries: LedgerEntry[] = [];
-      function addP(list: LedgerEntry[] | undefined) {
+      const addP = (list: LedgerEntry[] | undefined) => {
         if (!list) return;
         for (const e of list) {
-          if (!seen.has(e.id)) { seen.add(e.id); playerEntries.push(e); }
+          if (!seen.has(e.id)) {
+            seen.add(e.id);
+            playerEntries.push(e);
+          }
         }
-      }
+      };
       if ((p as any).id) addP(ledgerByEntity.get((p as any).id));
       if ((p as any).player_id) addP(ledgerByEntity.get((p as any).player_id));
       if (p.external_player_id) {
@@ -275,17 +299,20 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       let saldoAnterior = 0;
       const carryKeys = [(p as any).player_id, (p as any).id, p.external_player_id].filter(Boolean);
       for (const k of carryKeys) {
-        if (carryMap[k]) { saldoAnterior = carryMap[k]; break; }
+        if (carryMap[k]) {
+          saldoAnterior = carryMap[k];
+          break;
+        }
       }
 
       const totalDevido = round2(resultado + saldoAnterior);
-      const totalIn = playerEntries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-      const totalOut = playerEntries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+      const totalIn = playerEntries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+      const totalOut = playerEntries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
       const pago = round2(totalIn - totalOut);
       const pendente = round2(totalDevido + pago);
 
       // Lookup parent agent for payment_type
-      const parentAgent = agents.find(a => a.agent_name === agentName);
+      const parentAgent = agents.find((a) => a.agent_name === agentName);
 
       // Build a synthetic "agent" object representing this player
       const playerAsAgent: AgentMetric = {
@@ -306,8 +333,16 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         agent: playerAsAgent,
         players: [p],
         entries: playerEntries,
-        ganhos, rakeTotal, rbAgente: rbJogador, resultado,
-        saldoAnterior, totalDevido, totalIn, totalOut, pago, pendente,
+        ganhos,
+        rakeTotal,
+        rbAgente: rbJogador,
+        resultado,
+        saldoAnterior,
+        totalDevido,
+        totalIn,
+        totalOut,
+        pago,
+        pendente,
       });
     }
 
@@ -317,13 +352,14 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const activeData = activeTab === 'agencias' ? normalAgents : directPlayerRows;
 
   // Sort by absolute pendente (biggest first)
-  const sortedData = useMemo(() =>
-    [...activeData].sort((a, b) => Math.abs(b.pendente) - Math.abs(a.pendente)),
-  [activeData]);
+  const sortedData = useMemo(
+    () => [...activeData].sort((a, b) => Math.abs(b.pendente) - Math.abs(a.pendente)),
+    [activeData],
+  );
 
   // Filter by search + result type
   const filteredData = useMemo(() => {
-    return sortedData.filter(d => {
+    return sortedData.filter((d) => {
       if (searchTerm && !d.agent.agent_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (resultFilter === 'pagar' && !(d.pendente < -0.01)) return false;
       if (resultFilter === 'receber' && !(d.pendente > 0.01)) return false;
@@ -335,17 +371,13 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   // KPIs for active tab
   const kpis = useMemo(() => {
     const total = activeData.length;
-    const totalPagar = activeData
-      .filter(d => d.pendente < -0.01)
-      .reduce((s, d) => s + Math.abs(d.pendente), 0);
-    const totalReceber = activeData
-      .filter(d => d.pendente > 0.01)
-      .reduce((s, d) => s + d.pendente, 0);
+    const totalPagar = activeData.filter((d) => d.pendente < -0.01).reduce((s, d) => s + Math.abs(d.pendente), 0);
+    const totalReceber = activeData.filter((d) => d.pendente > 0.01).reduce((s, d) => s + d.pendente, 0);
     return { total, totalPagar, totalReceber };
   }, [activeData]);
 
   function toggleExpand(agentId: string) {
-    setExpandedAgents(prev => {
+    setExpandedAgents((prev) => {
       const next = new Set(prev);
       if (next.has(agentId)) next.delete(agentId);
       else next.add(agentId);
@@ -391,13 +423,19 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         </div>
         <button
           onClick={() => {
-            const withMov = filteredData.filter(d => Math.abs(d.pendente) > 0.01 || Math.abs(d.totalDevido) > 0.01);
-            if (withMov.length === 0) { toast('Nenhum agente com movimentacao', 'info'); return; }
+            const withMov = filteredData.filter((d) => Math.abs(d.pendente) > 0.01 || Math.abs(d.totalDevido) > 0.01);
+            if (withMov.length === 0) {
+              toast('Nenhum agente com movimentacao', 'info');
+              return;
+            }
             toast(`Exportando ${withMov.length} comprovantes...`, 'info');
             // Sequential export
             let idx = 0;
             function next() {
-              if (idx >= withMov.length) { toast('Todos exportados!', 'success'); return; }
+              if (idx >= withMov.length) {
+                toast('Todos exportados!', 'success');
+                return;
+              }
               setSelectedAgent(withMov[idx]);
               idx++;
             }
@@ -438,11 +476,18 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+          <div
+            className={`h-0.5 ${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+          />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
             <p className="text-sm font-bold mt-1 font-mono text-dark-200">
-              {activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length}/{kpis.total} quitados
+              {
+                activeData.filter(
+                  (d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01),
+                ).length
+              }
+              /{kpis.total} quitados
             </p>
           </div>
         </div>
@@ -459,9 +504,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           }`}
         >
           Agências
-          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
-            {normalAgents.length}
-          </span>
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{normalAgents.length}</span>
         </button>
         <button
           onClick={() => setActiveTab('diretos')}
@@ -472,9 +515,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           }`}
         >
           Jogadores
-          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">
-            {directPlayerRows.length}
-          </span>
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{directPlayerRows.length}</span>
         </button>
       </div>
 
@@ -485,14 +526,14 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             type="text"
             placeholder="Buscar agente..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             aria-label="Buscar agente"
             className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
           />
         </div>
         <select
           value={resultFilter}
-          onChange={e => setResultFilter(e.target.value as typeof resultFilter)}
+          onChange={(e) => setResultFilter(e.target.value as typeof resultFilter)}
           aria-label="Filtrar por status"
           className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
         >
@@ -506,13 +547,11 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       {/* Agent cards */}
       {filteredData.length === 0 ? (
         <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0
-            ? 'Nenhum agente neste subclube'
-            : 'Nenhum agente encontrado com os filtros aplicados'}
+          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado com os filtros aplicados'}
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredData.map(data => (
+          {filteredData.map((data) => (
             <AgentCard
               key={data.agent.id}
               data={data}
@@ -529,7 +568,12 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
 // ─── Agent Card ──────────────────────────────────────────────────────
 
-function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
+function AgentCard({
+  data,
+  isExpanded,
+  onToggleExpand,
+  onGenerateStatement,
+}: {
   data: AgentFinancials;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -541,18 +585,21 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
   const hasPago = Math.abs(pago) > 0.01;
 
   // Status badge
-  const statusBadge = Math.abs(pendente) < 0.01 && hasMov
-    ? { label: 'Quitado', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-    : pendente > 0.01
-      ? { label: 'A Receber', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-      : pendente < -0.01
-        ? { label: 'A Pagar', bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' }
-        : null;
+  const statusBadge =
+    Math.abs(pendente) < 0.01 && hasMov
+      ? { label: 'Quitado', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
+      : pendente > 0.01
+        ? { label: 'A Receber', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
+        : pendente < -0.01
+          ? { label: 'A Pagar', bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' }
+          : null;
 
   return (
-    <div className={`card overflow-hidden transition-all border-l-4 ${
-      (agent.payment_type || 'fiado') === 'avista' ? 'border-l-emerald-500' : 'border-l-yellow-500'
-    } ${!hasMov ? 'opacity-50' : ''}`}>
+    <div
+      className={`card overflow-hidden transition-all border-l-4 ${
+        (agent.payment_type || 'fiado') === 'avista' ? 'border-l-emerald-500' : 'border-l-yellow-500'
+      } ${!hasMov ? 'opacity-50' : ''}`}
+    >
       {/* Main row */}
       <div className="flex items-center gap-2">
         {/* Col 1: Name + ID + jog count — fixed width */}
@@ -592,7 +639,9 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
               {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
             </span>
             {statusBadge && (
-              <span className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}>
+              <span
+                className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}
+              >
                 {statusBadge.label}
               </span>
             )}
@@ -608,32 +657,19 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
             customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
             w={100}
           />
-          <DataCol
-            label="SALDO ANT."
-            value={saldoAnterior}
-            customColor="text-yellow-400"
-            showZero
-            w={100}
-          />
-          <DataCol
-            label="PAGO"
-            value={pago}
-            customColor="text-sky-400"
-            w={100}
-          />
-          <DataCol
-            label="SALDO"
-            value={pendente}
-            isFinal
-            w={100}
-          />
+          <DataCol label="SALDO ANT." value={saldoAnterior} customColor="text-yellow-400" showZero w={100} />
+          <DataCol label="PAGO" value={pago} customColor="text-sky-400" w={100} />
+          <DataCol label="SALDO" value={pendente} isFinal w={100} />
         </div>
 
         {/* Col 4: Actions — fixed */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-1">
           {hasMov && (
             <button
-              onClick={(e) => { e.stopPropagation(); onGenerateStatement(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onGenerateStatement();
+              }}
               className="text-xs px-3 py-1.5 whitespace-nowrap border border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
             >
               {Math.abs(pendente) < 0.01 && hasMov ? 'Comprovante Gerado' : 'Gerar Comprovante'}
@@ -656,9 +692,7 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Financial summary */}
             <div>
-              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
-                Resumo Financeiro
-              </h4>
+              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">Resumo Financeiro</h4>
               <div className="space-y-1.5 text-sm">
                 <FinRow label="Ganhos/Perdas" value={data.ganhos} />
                 <FinRow label="Rake Gerado" value={data.rakeTotal} muted />
@@ -736,7 +770,15 @@ function AgentCard({ data, isExpanded, onToggleExpand, onGenerateStatement }: {
 
 // ─── Data Column (card row) ──────────────────────────────────────────
 
-function DataCol({ label, value, customColor, isFinal, tooltip, showZero, w }: {
+function DataCol({
+  label,
+  value,
+  customColor,
+  isFinal,
+  tooltip,
+  showZero,
+  w,
+}: {
   label: string;
   value: number;
   customColor?: string;
@@ -764,7 +806,14 @@ function DataCol({ label, value, customColor, isFinal, tooltip, showZero, w }: {
 
 // ─── Financial Row (expand + statement) ──────────────────────────────
 
-function FinRow({ label, value, muted, bold, large, customColor }: {
+function FinRow({
+  label,
+  value,
+  muted,
+  bold,
+  large,
+  customColor,
+}: {
   label: string;
   value: number;
   muted?: boolean;
@@ -785,7 +834,13 @@ function FinRow({ label, value, muted, bold, large, customColor }: {
 
 // ─── Statement View (Print-Friendly) ─────────────────────────────────
 
-function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
+function StatementView({
+  data,
+  subclubName,
+  weekStart,
+  weekEnd,
+  onBack,
+}: {
   data: AgentFinancials;
   subclubName: string;
   weekStart: string;
@@ -850,12 +905,13 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
       </div>
 
       {/* Statement */}
-      <div ref={statementRef} className="card print:shadow-none print:border-none print:bg-white print:text-black max-w-4xl mx-auto">
+      <div
+        ref={statementRef}
+        className="card print:shadow-none print:border-none print:bg-white print:text-black max-w-4xl mx-auto"
+      >
         {/* Header */}
         <div className="text-center mb-6 pb-4 border-b border-dark-700/50 print:border-black/20">
-          <h2 className="text-xl font-bold text-white print:text-black">
-            Demonstrativo de Rakeback
-          </h2>
+          <h2 className="text-xl font-bold text-white print:text-black">Demonstrativo de Rakeback</h2>
           <p className="text-dark-400 print:text-gray-600 text-sm mt-1">
             {subclubName} — Semana {fmtDate(weekStart)} a {fmtDate(weekEnd)}
           </p>
@@ -891,10 +947,7 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
             <PrintFinRow label="Ganhos/Perdas" value={data.ganhos} />
             <PrintFinRow label="Rake Gerado" value={data.rakeTotal} muted />
             {data.rbAgente > 0.01 && (
-              <PrintFinRow
-                label={isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}%)`}
-                value={data.rbAgente}
-              />
+              <PrintFinRow label={isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}%)`} value={data.rbAgente} />
             )}
             <div className="border-t border-dark-700/30 print:border-gray-300 pt-2">
               <PrintFinRow label="Resultado da Semana" value={data.resultado} bold />
@@ -977,17 +1030,25 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-800/30 print:divide-black/10">
-                {entries.map(e => (
+                {entries.map((e) => (
                   <tr key={e.id}>
-                    <td className="py-1.5 text-dark-300 print:text-black text-xs font-mono">{fmtDateTime(e.created_at)}</td>
+                    <td className="py-1.5 text-dark-300 print:text-black text-xs font-mono">
+                      {fmtDateTime(e.created_at)}
+                    </td>
                     <td className="py-1.5 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        e.dir === 'IN' ? 'bg-poker-900/30 text-poker-400 print:text-green-700' : 'bg-red-900/30 text-red-400 print:text-red-700'
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                          e.dir === 'IN'
+                            ? 'bg-poker-900/30 text-poker-400 print:text-green-700'
+                            : 'bg-red-900/30 text-red-400 print:text-red-700'
+                        }`}
+                      >
                         {e.dir}
                       </span>
                     </td>
-                    <td className={`py-1.5 text-right font-mono ${e.dir === 'IN' ? 'text-poker-400 print:text-green-700' : 'text-red-400 print:text-red-700'}`}>
+                    <td
+                      className={`py-1.5 text-right font-mono ${e.dir === 'IN' ? 'text-poker-400 print:text-green-700' : 'text-red-400 print:text-red-700'}`}
+                    >
                       {formatBRL(Number(e.amount))}
                     </td>
                     <td className="py-1.5 text-dark-400 print:text-gray-600 text-xs">{e.method || '—'}</td>
@@ -1000,33 +1061,35 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
         )}
 
         {/* Status footer */}
-        <div className={`rounded-lg p-4 border-2 ${
-          Math.abs(data.pendente) < 0.01
-            ? 'bg-green-950/30 border-green-700/50 print:border-green-600'
-            : Math.abs(data.pago) > 0.01
-              ? 'bg-orange-950/20 border-orange-700/30 print:border-orange-600'
-              : 'bg-dark-800/50 border-dark-600/50 print:border-black/20'
-        }`}>
+        <div
+          className={`rounded-lg p-4 border-2 ${
+            Math.abs(data.pendente) < 0.01
+              ? 'bg-green-950/30 border-green-700/50 print:border-green-600'
+              : Math.abs(data.pago) > 0.01
+                ? 'bg-orange-950/20 border-orange-700/30 print:border-orange-600'
+                : 'bg-dark-800/50 border-dark-600/50 print:border-black/20'
+          }`}
+        >
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">Resultado</p>
-              <p className={`font-mono font-bold ${clrPrint(data.resultado)}`}>
-                {formatBRL(data.resultado)}
-              </p>
+              <p className={`font-mono font-bold ${clrPrint(data.resultado)}`}>{formatBRL(data.resultado)}</p>
             </div>
             <div>
               <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">Total Pago</p>
-              <p className="font-mono font-bold text-sky-400 print:text-blue-700">
-                {formatBRL(data.totalOut)}
-              </p>
+              <p className="font-mono font-bold text-sky-400 print:text-blue-700">{formatBRL(data.totalOut)}</p>
             </div>
             <div>
               <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">
                 {Math.abs(data.pendente) < 0.01 ? 'Quitado' : Math.abs(data.pago) > 0.01 ? 'Parcial' : 'Pendente'}
               </p>
-              <p className={`font-mono font-bold ${
-                Math.abs(data.pendente) < 0.01 ? 'text-green-400 print:text-green-700' : 'text-yellow-400 print:text-orange-600'
-              }`}>
+              <p
+                className={`font-mono font-bold ${
+                  Math.abs(data.pendente) < 0.01
+                    ? 'text-green-400 print:text-green-700'
+                    : 'text-yellow-400 print:text-orange-600'
+                }`}
+              >
                 {formatBRL(data.pendente)}
               </p>
             </div>
@@ -1048,7 +1111,13 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PrintFinRow({ label, value, muted, bold, large }: {
+function PrintFinRow({
+  label,
+  value,
+  muted,
+  bold,
+  large,
+}: {
   label: string;
   value: number;
   muted?: boolean;

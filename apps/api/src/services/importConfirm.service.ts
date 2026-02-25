@@ -22,7 +22,9 @@ import { importPreviewService } from './importPreview.service';
 import { round2 } from '../utils/round2';
 
 // Importa pacotes core (CommonJS)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { parseWorkbook, validateReadiness } = require('../../../../packages/importer/coreSuprema');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { calculateWeek } = require('../../../../packages/engine/calculateWeek');
 
 // Mapa: nome do subclube → UUID da organization
@@ -42,14 +44,13 @@ export interface ConfirmResult {
 interface ConfirmOptions {
   tenantId: string;
   clubId: string;
-  weekStart: string;       // YYYY-MM-DD confirmado pelo usuário
+  weekStart: string; // YYYY-MM-DD confirmado pelo usuário
   fileName: string;
   fileBuffer: Buffer;
   uploadedBy: string;
 }
 
 class ImportConfirmService {
-
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
     const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy } = opts;
     const warnings: string[] = [];
@@ -72,7 +73,10 @@ class ImportConfirmService {
     if (hasUnknown || hasMissing) {
       const unknownCount = allPlayers.filter((p: any) => p._status === 'unknown_subclub').length;
       const missingCount = allPlayers.filter((p: any) => p._status === 'missing_agency').length;
-      throw new ConfirmError(409, `Ainda há pendências: ${unknownCount} agência(s) sem clube, ${missingCount} jogador(es) sem agência. Resolva antes de confirmar.`);
+      throw new ConfirmError(
+        409,
+        `Ainda há pendências: ${unknownCount} agência(s) sem clube, ${missingCount} jogador(es) sem agência. Resolva antes de confirmar.`,
+      );
     }
 
     // ── 2) Dedup + Upload para Storage ────────────────────────────
@@ -101,21 +105,18 @@ class ImportConfirmService {
 
     // Upload para storage
     const storagePath = `${tenantId}/${weekStart}/${fileHash}_${fileName}`;
-    const { error: storageError } = await supabaseAdmin.storage
-      .from('imports')
-      .upload(storagePath, fileBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        upsert: true,
-      });
+    const { error: storageError } = await supabaseAdmin.storage.from('imports').upload(storagePath, fileBuffer, {
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      upsert: true,
+    });
 
     if (storageError) {
       warnings.push(`Upload para storage falhou: ${storageError.message}`);
     }
 
     // Criar/atualizar registro de import
-    const { error: importError } = await supabaseAdmin
-      .from('imports')
-      .upsert({
+    const { error: importError } = await supabaseAdmin.from('imports').upsert(
+      {
         id: importId,
         tenant_id: tenantId,
         club_id: clubId,
@@ -127,9 +128,11 @@ class ImportConfirmService {
         status: 'PROCESSING',
         row_count: 0,
         player_count: 0,
-      }, {
+      },
+      {
         onConflict: 'id',
-      });
+      },
+    );
 
     if (importError) {
       throw new ConfirmError(500, `Erro ao criar import: ${importError.message}`);
@@ -207,7 +210,9 @@ class ImportConfirmService {
           .update({ import_id: importId, inputs_hash: fileHash })
           .eq('id', settlementId);
 
-        warnings.push(`Dados mesclados com settlement existente (v${version}). Subclubes atualizados: ${Array.from(newSubclubNames).join(', ')}`);
+        warnings.push(
+          `Dados mesclados com settlement existente (v${version}). Subclubes atualizados: ${Array.from(newSubclubNames).join(', ')}`,
+        );
       } else {
         // NEW settlement
         version = await this.getNextVersion(tenantId, weekStart);
@@ -235,8 +240,21 @@ class ImportConfirmService {
 
       // ── 8) Persist metrics ────────────────────────────────────────
 
-      await this.persistPlayerMetrics(tenantId, settlementId, weekStart, weekResult.allPlayers, playerUuidMap, orgNameMap);
-      const agentCount = await this.persistAgentMetrics(tenantId, settlementId, weekStart, weekResult.clubs, orgNameMap);
+      await this.persistPlayerMetrics(
+        tenantId,
+        settlementId,
+        weekStart,
+        weekResult.allPlayers,
+        playerUuidMap,
+        orgNameMap,
+      );
+      const agentCount = await this.persistAgentMetrics(
+        tenantId,
+        settlementId,
+        weekStart,
+        weekResult.clubs,
+        orgNameMap,
+      );
 
       // ── 9) Mark import as DONE ────────────────────────────────────
 
@@ -260,12 +278,8 @@ class ImportConfirmService {
         club_count: weekResult.totals?.clubs || 0,
         warnings,
       };
-
     } catch (err: any) {
-      await supabaseAdmin
-        .from('imports')
-        .update({ status: 'ERROR', error_message: err.message })
-        .eq('id', importId);
+      await supabaseAdmin.from('imports').update({ status: 'ERROR', error_message: err.message }).eq('id', importId);
       throw err;
     }
   }
@@ -274,12 +288,9 @@ class ImportConfirmService {
 
   private async cleanPreviousImport(tenantId: string, importId: string) {
     // Buscar settlement deste import
-    const { data: settlements } = await supabaseAdmin
-      .from('settlements')
-      .select('id')
-      .eq('import_id', importId);
+    const { data: settlements } = await supabaseAdmin.from('settlements').select('id').eq('import_id', importId);
 
-    for (const s of (settlements || [])) {
+    for (const s of settlements || []) {
       await supabaseAdmin.from('player_week_metrics').delete().eq('settlement_id', s.id);
       await supabaseAdmin.from('agent_week_metrics').delete().eq('settlement_id', s.id);
     }
@@ -308,7 +319,7 @@ class ImportConfirmService {
       }
     }
 
-    const rows = Array.from(uniquePlayers.values()).map(p => ({
+    const rows = Array.from(uniquePlayers.values()).map((p) => ({
       tenant_id: tenantId,
       external_id: p.external_id,
       nickname: p.nickname,
@@ -327,7 +338,9 @@ class ImportConfirmService {
   private async buildPlayerUuidMap(tenantId: string): Promise<Record<string, string>> {
     const map: Record<string, string> = {};
     const { data } = await supabaseAdmin.from('players').select('id, external_id').eq('tenant_id', tenantId);
-    (data || []).forEach(p => { map[p.external_id] = p.id; });
+    (data || []).forEach((p) => {
+      map[p.external_id] = p.id;
+    });
     return map;
   }
 
@@ -339,7 +352,7 @@ class ImportConfirmService {
       .eq('tenant_id', tenantId)
       .in('type', ['SUBCLUB', 'AGENT']);
 
-    (data || []).forEach(org => {
+    (data || []).forEach((org) => {
       map[org.name] = org.id;
       map[org.name.toUpperCase()] = org.id;
     });
@@ -376,10 +389,14 @@ class ImportConfirmService {
   }
 
   private async persistPlayerMetrics(
-    tenantId: string, settlementId: string, weekStart: string,
-    allPlayers: any[], playerUuidMap: Record<string, string>, orgNameMap: OrgNameMap
+    tenantId: string,
+    settlementId: string,
+    weekStart: string,
+    allPlayers: any[],
+    playerUuidMap: Record<string, string>,
+    orgNameMap: OrgNameMap,
   ) {
-    const rows = allPlayers.map(p => ({
+    const rows = allPlayers.map((p) => ({
       settlement_id: settlementId,
       tenant_id: tenantId,
       week_start: weekStart,
@@ -408,11 +425,16 @@ class ImportConfirmService {
       if (error) {
         // If unique constraint violation, clean up conflicting rows and retry
         if (error.code === '23505') {
-          console.warn(`[confirm] Constraint conflict in player_metrics batch ${i}, cleaning up overlapping players...`);
-          const extIds = batch.map(r => r.external_player_id).filter(Boolean);
+          console.warn(
+            `[confirm] Constraint conflict in player_metrics batch ${i}, cleaning up overlapping players...`,
+          );
+          const extIds = batch.map((r) => r.external_player_id).filter(Boolean);
           if (extIds.length > 0) {
-            await supabaseAdmin.from('player_week_metrics').delete()
-              .eq('settlement_id', settlementId).in('external_player_id', extIds);
+            await supabaseAdmin
+              .from('player_week_metrics')
+              .delete()
+              .eq('settlement_id', settlementId)
+              .in('external_player_id', extIds);
           }
           const { error: retryErr } = await supabaseAdmin.from('player_week_metrics').insert(batch);
           if (retryErr) {
@@ -428,8 +450,11 @@ class ImportConfirmService {
   }
 
   private async persistAgentMetrics(
-    tenantId: string, settlementId: string, weekStart: string,
-    clubs: Record<string, any>, orgNameMap: OrgNameMap
+    tenantId: string,
+    settlementId: string,
+    weekStart: string,
+    clubs: Record<string, any>,
+    orgNameMap: OrgNameMap,
   ): Promise<number> {
     const rows: any[] = [];
 
@@ -448,9 +473,7 @@ class ImportConfirmService {
           player_count: agent.playerCount,
           rake_total_brl: round2(agent.rakeTime || 0),
           ganhos_total_brl: round2(agent.ganhosTime || 0),
-          ggr_total_brl: round2(
-            (agent.players || []).reduce((s: number, p: any) => s + (Number(p.ggr) || 0), 0)
-          ),
+          ggr_total_brl: round2((agent.players || []).reduce((s: number, p: any) => s + (Number(p.ggr) || 0), 0)),
           rb_rate: agent.agentRate || 0,
           commission_brl: round2(agent.rbAgente || 0),
           resultado_brl: round2(agent.resultadoAgente || 0),
@@ -464,10 +487,13 @@ class ImportConfirmService {
         // If unique constraint violation, clean up conflicting rows and retry
         if (error.code === '23505') {
           console.warn('[confirm] Constraint conflict in agent_metrics, cleaning up overlapping agents...');
-          const agentNames = rows.map(r => r.agent_name).filter(Boolean);
+          const agentNames = rows.map((r) => r.agent_name).filter(Boolean);
           if (agentNames.length > 0) {
-            await supabaseAdmin.from('agent_week_metrics').delete()
-              .eq('settlement_id', settlementId).in('agent_name', agentNames);
+            await supabaseAdmin
+              .from('agent_week_metrics')
+              .delete()
+              .eq('settlement_id', settlementId)
+              .in('agent_name', agentNames);
           }
           const { error: retryErr } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
           if (retryErr) {

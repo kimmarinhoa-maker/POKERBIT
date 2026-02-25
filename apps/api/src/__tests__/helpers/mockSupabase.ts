@@ -35,14 +35,35 @@ export function createMockSupabase() {
     const chain: any = {};
 
     const methods = [
-      'select', 'insert', 'update', 'delete', 'upsert',
-      'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
-      'is', 'in', 'like', 'ilike',
-      'order', 'limit', 'range',
-      'single', 'maybeSingle',
-      'match', 'not', 'or', 'filter',
-      'textSearch', 'contains', 'containedBy',
-      'overlaps', 'csv',
+      'select',
+      'insert',
+      'update',
+      'delete',
+      'upsert',
+      'eq',
+      'neq',
+      'gt',
+      'gte',
+      'lt',
+      'lte',
+      'is',
+      'in',
+      'like',
+      'ilike',
+      'order',
+      'limit',
+      'range',
+      'single',
+      'maybeSingle',
+      'match',
+      'not',
+      'or',
+      'filter',
+      'textSearch',
+      'contains',
+      'containedBy',
+      'overlaps',
+      'csv',
     ];
 
     for (const method of methods) {
@@ -50,7 +71,7 @@ export function createMockSupabase() {
     }
 
     // Make the chain thenable (for await)
-    chain.then = (resolve: Function) => {
+    chain.then = (resolve: (value: any) => any) => {
       const result = getResult(table);
       resolve(result);
       return chain;

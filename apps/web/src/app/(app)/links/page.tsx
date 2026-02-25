@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  getUnlinkedPlayers,
-  linkAgent,
-  linkPlayer,
-  bulkLinkPlayers,
-  formatBRL,
-} from '@/lib/api';
+import { getUnlinkedPlayers, linkAgent, linkPlayer, bulkLinkPlayers, formatBRL } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 
@@ -27,15 +21,19 @@ interface Subclub {
 }
 
 const CLUB_COLORS: Record<string, string> = {
-  IMPERIO:    'bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/30',
-  TGP:        'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30',
-  CONFRARIA:  'bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/30',
-  '3BET':     'bg-green-500/20 text-green-400 border-green-500/40 hover:bg-green-500/30',
-  CH:         'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30',
+  IMPERIO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40 hover:bg-yellow-500/30',
+  TGP: 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30',
+  CONFRARIA: 'bg-purple-500/20 text-purple-400 border-purple-500/40 hover:bg-purple-500/30',
+  '3BET': 'bg-green-500/20 text-green-400 border-green-500/40 hover:bg-green-500/30',
+  CH: 'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30',
 };
 
 const CLUB_ICONS: Record<string, string> = {
-  IMPERIO: 'IM', TGP: 'TG', CONFRARIA: 'CF', '3BET': '3B', CH: 'CH',
+  IMPERIO: 'IM',
+  TGP: 'TG',
+  CONFRARIA: 'CF',
+  '3BET': '3B',
+  CH: 'CH',
 };
 
 function getClubStyle(name: string) {
@@ -70,11 +68,13 @@ export default function LinksPage() {
     }
   }, [settlementId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleLinkAgent(agentName: string, subclub: Subclub) {
     const key = `agent:${agentName}`;
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       const res = await linkAgent(agentName, subclub.id);
       if (res.success) {
@@ -85,24 +85,27 @@ export default function LinksPage() {
         });
         newLinked[key] = subclub.name;
         setLinked(newLinked);
-        toast(`${agentName} → ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`, 'success');
+        toast(
+          `${agentName} → ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`,
+          'success',
+        );
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
     } catch (err: any) {
       toast(err.message, 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
   async function handleLinkPlayer(player: UnlinkedPlayer, subclub: Subclub) {
     const key = player.externalId;
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       const res = await linkPlayer(player.externalId, subclub.id);
       if (res.success) {
-        setLinked(prev => ({ ...prev, [key]: subclub.name }));
+        setLinked((prev) => ({ ...prev, [key]: subclub.name }));
         toast(`${player.nickname} → ${subclub.name}`, 'success');
       } else {
         toast(`Erro: ${res.error}`, 'error');
@@ -110,7 +113,7 @@ export default function LinksPage() {
     } catch (err: any) {
       toast(err.message, 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -119,13 +122,13 @@ export default function LinksPage() {
     if (!players.length) return;
 
     const key = 'bulk-none';
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       const res = await bulkLinkPlayers(
         players.map((p: UnlinkedPlayer) => ({
           external_player_id: p.externalId,
           subclub_id: subclub.id,
-        }))
+        })),
       );
       if (res.success) {
         const newLinked = { ...linked };
@@ -140,12 +143,12 @@ export default function LinksPage() {
     } catch (err: any) {
       toast(err.message, 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
   const totalUnlinked = data?.total || 0;
-  const totalLinked = Object.keys(linked).filter(k => !k.startsWith('agent:')).length;
+  const totalLinked = Object.keys(linked).filter((k) => !k.startsWith('agent:')).length;
   const remaining = totalUnlinked - totalLinked;
 
   if (loading) {
@@ -162,9 +165,7 @@ export default function LinksPage() {
   if (error) {
     return (
       <div className="p-8 max-w-3xl mx-auto">
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">
-          {error}
-        </div>
+        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">{error}</div>
       </div>
     );
   }
@@ -174,10 +175,7 @@ export default function LinksPage() {
       <div className="p-8 max-w-3xl mx-auto text-center py-16">
         <h2 className="text-2xl font-bold text-white mb-2">Todos vinculados!</h2>
         <p className="text-dark-400 mb-6">Nenhum jogador pendente de vinculacao.</p>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="btn-primary px-6 py-2"
-        >
+        <button onClick={() => router.push('/dashboard')} className="btn-primary px-6 py-2">
           Voltar ao Dashboard
         </button>
       </div>
@@ -191,12 +189,10 @@ export default function LinksPage() {
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            Vincular Jogadores
-          </h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">Vincular Jogadores</h2>
           <p className="text-dark-400 mt-1">
-            {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido.
-            Vincule antes de validar os numeros.
+            {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido. Vincule antes de validar os
+            numeros.
           </p>
         </div>
         <div className="text-right">
@@ -210,7 +206,7 @@ export default function LinksPage() {
       <div className="w-full bg-dark-700 rounded-full h-2 mb-8">
         <div
           className="bg-poker-500 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${totalUnlinked > 0 ? (totalLinked / totalUnlinked * 100) : 0}%` }}
+          style={{ width: `${totalUnlinked > 0 ? (totalLinked / totalUnlinked) * 100 : 0}%` }}
         />
       </div>
 
@@ -223,15 +219,15 @@ export default function LinksPage() {
           <div key={agentName} className="card mb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  isNoneAgent ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'
-                }`}>
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    isNoneAgent ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'
+                  }`}
+                >
                   {isNoneAgent ? '?' : 'AG'}
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">
-                    {isNoneAgent ? 'Jogadores Sem Agente' : agentName}
-                  </h3>
+                  <h3 className="text-white font-semibold">{isNoneAgent ? 'Jogadores Sem Agente' : agentName}</h3>
                   <p className="text-dark-400 text-xs">
                     {players.length} jogador{players.length !== 1 ? 'es' : ''}
                     {!isNoneAgent && ' · Prefixo nao reconhecido'}
@@ -242,7 +238,7 @@ export default function LinksPage() {
               {!isNoneAgent && !agentLinkedClub && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-dark-500 text-xs mr-1">Vincular todos:</span>
-                  {subclubs.map(sc => (
+                  {subclubs.map((sc) => (
                     <button
                       key={sc.id}
                       onClick={() => handleLinkAgent(agentName, sc)}
@@ -266,16 +262,14 @@ export default function LinksPage() {
 
             {isNoneAgent && !linked['bulk-none-done'] && (
               <div className="bg-dark-800/50 rounded-lg p-3 mb-4 border border-dark-700">
-                <p className="text-dark-300 text-sm mb-2">
-                  Vincular TODOS os {players.length} jogadores sem agente a:
-                </p>
+                <p className="text-dark-300 text-sm mb-2">Vincular TODOS os {players.length} jogadores sem agente a:</p>
                 <div className="flex gap-1.5 flex-wrap">
-                  {subclubs.map(sc => (
+                  {subclubs.map((sc) => (
                     <button
                       key={sc.id}
                       onClick={async () => {
                         await handleBulkLinkNone(sc);
-                        setLinked(prev => ({ ...prev, 'bulk-none-done': 'true' }));
+                        setLinked((prev) => ({ ...prev, 'bulk-none-done': 'true' }));
                       }}
                       disabled={saving['bulk-none']}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${getClubStyle(sc.name)} ${
@@ -286,9 +280,7 @@ export default function LinksPage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-dark-500 text-xs mt-2">
-                  Ou vincule individualmente abaixo:
-                </p>
+                <p className="text-dark-500 text-xs mt-2">Ou vincule individualmente abaixo:</p>
               </div>
             )}
 
@@ -301,32 +293,26 @@ export default function LinksPage() {
                   <div
                     key={player.externalId}
                     className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                      playerLinked
-                        ? 'bg-dark-800/30 border-dark-700/30 opacity-60'
-                        : 'bg-dark-800/50 border-dark-700'
+                      playerLinked ? 'bg-dark-800/30 border-dark-700/30 opacity-60' : 'bg-dark-800/50 border-dark-700'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-poker-400 font-mono text-xs shrink-0">
-                        {player.externalId}
-                      </span>
-                      <span className="text-white text-sm truncate">
-                        {player.nickname}
-                      </span>
+                      <span className="text-poker-400 font-mono text-xs shrink-0">{player.externalId}</span>
+                      <span className="text-white text-sm truncate">{player.nickname}</span>
                       {player.agentName && player.agentName !== agentName && (
-                        <span className="text-dark-500 text-xs">
-                          · {player.agentName}
-                        </span>
+                        <span className="text-dark-500 text-xs">· {player.agentName}</span>
                       )}
                     </div>
 
                     {playerLinked ? (
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 ${getClubStyle(playerLinked)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 ${getClubStyle(playerLinked)}`}
+                      >
                         ✓ {playerLinked}
                       </span>
                     ) : (
                       <div className="flex gap-1 shrink-0">
-                        {subclubs.map(sc => (
+                        {subclubs.map((sc) => (
                           <button
                             key={sc.id}
                             onClick={() => handleLinkPlayer(player, sc)}
@@ -358,9 +344,7 @@ export default function LinksPage() {
                 {remaining} jogador{remaining !== 1 ? 'es' : ''} ainda sem vinculo
               </span>
             ) : (
-              <span className="text-green-400">
-                Todos vinculados! Reimporte para aplicar.
-              </span>
+              <span className="text-green-400">Todos vinculados! Reimporte para aplicar.</span>
             )}
           </div>
           <div className="flex gap-3">
@@ -379,7 +363,6 @@ export default function LinksPage() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

@@ -98,7 +98,10 @@ export default function DashboardPage() {
 
       // Build per-club data (enables toggle filtering)
       let totalLancamentos = 0;
-      let totalOverlay = 0, totalCompras = 0, totalSecurity = 0, totalOutros = 0;
+      let totalOverlay = 0,
+        totalCompras = 0,
+        totalSecurity = 0,
+        totalOutros = 0;
       const clubes: ClubeData[] = [];
 
       for (const sc of subclubs) {
@@ -214,12 +217,12 @@ export default function DashboardPage() {
           // Load remaining settlements for charts (max 12 total, background)
           const chartSettlements = res.data.slice(0, 12);
           const already = [currentData, prevData].filter(Boolean) as WeekData[];
-          const alreadyIds = new Set(already.map(w => w.settlement.id));
+          const alreadyIds = new Set(already.map((w) => w.settlement.id));
           const remaining = chartSettlements.filter((s: any) => !alreadyIds.has(s.id));
 
           if (remaining.length > 0) {
-            Promise.all(remaining.map((s: any) => loadWeekData(s))).then(results => {
-              const all = [...already, ...results.filter(Boolean) as WeekData[]];
+            Promise.all(remaining.map((s: any) => loadWeekData(s))).then((results) => {
+              const all = [...already, ...(results.filter(Boolean) as WeekData[])];
               all.sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
               setAllWeekData(all);
             });
@@ -296,7 +299,7 @@ export default function DashboardPage() {
   const [disabledClubs, setDisabledClubs] = useState<Set<string>>(new Set());
 
   const toggleClub = useCallback((nome: string) => {
-    setDisabledClubs(prev => {
+    setDisabledClubs((prev) => {
       const next = new Set(prev);
       if (next.has(nome)) next.delete(nome);
       else next.add(nome);
@@ -319,7 +322,7 @@ export default function DashboardPage() {
         totalLancamentos: week.totalLancamentos,
       };
     }
-    const enabled = week.clubes.filter(c => !disabledClubs.has(c.nome));
+    const enabled = week.clubes.filter((c) => !disabledClubs.has(c.nome));
     const jogadoresAtivos = enabled.reduce((s, c) => s + c.jogadores, 0);
     const rakeTotal = round2(enabled.reduce((s, c) => s + c.rake, 0));
     const ganhosTotal = round2(enabled.reduce((s, c) => s + c.ganhos, 0));
@@ -337,7 +340,10 @@ export default function DashboardPage() {
       ganhosTotal,
       ggrTotal,
       despesas: {
-        taxas, rakeback, lancamentos, total: despesasTotal,
+        taxas,
+        rakeback,
+        lancamentos,
+        total: despesasTotal,
         overlay: week.despesas.overlay,
         compras: week.despesas.compras,
         security: week.despesas.security,
@@ -363,20 +369,24 @@ export default function DashboardPage() {
   const deltaResultado = f && fp ? calcDelta(f.resultadoFinal, fp.resultadoFinal) : null;
   const deltaAcerto = f && fp ? calcDelta(f.acertoLiga, fp.acertoLiga) : null;
 
-  const despesasBreakdown = f ? [
-    { label: 'Taxas Liga + App', value: '', rawValue: -f.despesas.taxas },
-    { label: 'Rakeback', value: '', rawValue: -f.despesas.rakeback },
-    { label: 'Compras', value: '', rawValue: f.despesas.compras },
-    { label: 'Overlay', value: '', rawValue: f.despesas.overlay },
-    { label: 'Security', value: '', rawValue: f.despesas.security },
-    { label: 'Outros', value: '', rawValue: f.despesas.outros },
-  ] : [];
+  const despesasBreakdown = f
+    ? [
+        { label: 'Taxas Liga + App', value: '', rawValue: -f.despesas.taxas },
+        { label: 'Rakeback', value: '', rawValue: -f.despesas.rakeback },
+        { label: 'Compras', value: '', rawValue: f.despesas.compras },
+        { label: 'Overlay', value: '', rawValue: f.despesas.overlay },
+        { label: 'Security', value: '', rawValue: f.despesas.security },
+        { label: 'Outros', value: '', rawValue: f.despesas.outros },
+      ]
+    : [];
 
-  const resultadoBreakdown = f ? [
-    { label: 'Profit/Loss', value: '', rawValue: f.ganhosTotal },
-    { label: 'Rake', value: '', rawValue: f.rakeTotal },
-    { label: 'GGR Rodeio', value: '', rawValue: f.ggrTotal },
-  ] : [];
+  const resultadoBreakdown = f
+    ? [
+        { label: 'Profit/Loss', value: '', rawValue: f.ganhosTotal },
+        { label: 'Rake', value: '', rawValue: f.rakeTotal },
+        { label: 'GGR Rodeio', value: '', rawValue: f.ggrTotal },
+      ]
+    : [];
 
   // Chart data from all loaded settlements
   const chartData: ChartDataPoint[] = useMemo(() => {
@@ -388,7 +398,6 @@ export default function DashboardPage() {
       rake: w.rakeTotal,
     }));
   }, [allWeekData]);
-
 
   const status = d?.settlement?.status || 'DRAFT';
   const statusLabel = status === 'FINAL' ? 'FECHADO' : status === 'DRAFT' ? 'RASCUNHO' : status;
@@ -419,18 +428,8 @@ export default function DashboardPage() {
 
             {/* Date pickers */}
             <div className="flex items-end gap-2">
-              <WeekDatePicker
-                value={startDate}
-                onChange={handleStartChange}
-                allowedDay={1}
-                label="Data Inicial"
-              />
-              <WeekDatePicker
-                value={endDate}
-                onChange={setEndDate}
-                allowedDay={0}
-                label="Data Final"
-              />
+              <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
+              <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
               <button
                 onClick={handleBuscar}
                 disabled={searching || !startDate}
@@ -450,10 +449,7 @@ export default function DashboardPage() {
         </div>
 
         {d && !notFoundEmpty && isAdmin && d.settlement?.status === 'DRAFT' && (
-          <Link
-            href={`/s/${d.settlement?.id}`}
-            className="btn-primary flex items-center gap-2"
-          >
+          <Link href={`/s/${d.settlement?.id}`} className="btn-primary flex items-center gap-2">
             Finalizar Semana {'\u2192'}
           </Link>
         )}
@@ -470,9 +466,7 @@ export default function DashboardPage() {
       {!loading && notFoundEmpty && (
         <div className="flex flex-col items-center justify-center py-32">
           <h2 className="text-xl font-bold text-dark-100 mb-2">Nenhum fechamento encontrado</h2>
-          <p className="text-dark-400 mb-6">
-            Nao existe fechamento importado para o periodo selecionado.
-          </p>
+          <p className="text-dark-400 mb-6">Nao existe fechamento importado para o periodo selecionado.</p>
           <Link href="/import" className="btn-primary inline-flex items-center gap-2 px-6 py-3">
             Importar Semana
           </Link>
@@ -527,35 +521,43 @@ export default function DashboardPage() {
             {(() => {
               const acerto = f?.acertoLiga ?? 0;
               return (
-                <div className={`relative rounded-xl bg-dark-900 overflow-hidden ${
-                  acerto < 0
-                    ? 'border-2 border-danger-500 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
-                    : acerto > 0
-                    ? 'border-2 border-poker-500 shadow-[0_0_20px_rgba(34,197,94,0.15)]'
-                    : 'border border-dark-700'
-                }`}>
+                <div
+                  className={`relative rounded-xl bg-dark-900 overflow-hidden ${
+                    acerto < 0
+                      ? 'border-2 border-danger-500 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
+                      : acerto > 0
+                        ? 'border-2 border-poker-500 shadow-[0_0_20px_rgba(34,197,94,0.15)]'
+                        : 'border border-dark-700'
+                  }`}
+                >
                   <div className="p-5">
                     <div className="text-[10px] font-bold text-dark-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                       Fechamento Semana
                     </div>
 
-                    <div className={`font-mono text-2xl font-semibold mb-1 ${
-                      acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
-                    }`}>
+                    <div
+                      className={`font-mono text-2xl font-semibold mb-1 ${
+                        acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
+                      }`}
+                    >
                       {formatCurrency(acerto)}
                     </div>
 
-                    <div className={`text-xs mt-1 ${
-                      acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
-                    }`}>
+                    <div
+                      className={`text-xs mt-1 ${
+                        acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
+                      }`}
+                    >
                       {acerto < 0 ? 'clube deve pagar a liga' : acerto > 0 ? 'clube tem a receber' : 'zerado'}
                     </div>
 
                     {deltaAcerto && !deltaAcerto.isZero && (
                       <div className="mt-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          deltaAcerto.isUp ? 'bg-poker-900 text-poker-500' : 'bg-red-900/50 text-red-400'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            deltaAcerto.isUp ? 'bg-poker-900 text-poker-500' : 'bg-red-900/50 text-red-400'
+                          }`}
+                        >
                           {deltaAcerto.isUp ? '\u25B2' : '\u25BC'} {deltaAcerto.pct}% vs sem. anterior
                         </span>
                       </div>
@@ -564,19 +566,17 @@ export default function DashboardPage() {
                     <div className="mt-3 pt-3 border-t border-dark-800 space-y-1">
                       <div className="flex justify-between text-xs text-dark-400">
                         <span>Resultado</span>
-                        <span className="font-mono text-dark-100">
-                          {formatCurrency(f?.resultadoFinal ?? 0)}
-                        </span>
+                        <span className="font-mono text-dark-100">{formatCurrency(f?.resultadoFinal ?? 0)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-dark-400">
                         <span>Taxas</span>
-                        <span className="font-mono text-danger-500">
-                          {formatCurrency(f?.totalTaxasSigned ?? 0)}
-                        </span>
+                        <span className="font-mono text-danger-500">{formatCurrency(f?.totalTaxasSigned ?? 0)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-dark-400">
                         <span>Lancamentos</span>
-                        <span className={`font-mono ${(f?.totalLancamentos ?? 0) < 0 ? 'text-danger-500' : 'text-poker-500'}`}>
+                        <span
+                          className={`font-mono ${(f?.totalLancamentos ?? 0) < 0 ? 'text-danger-500' : 'text-poker-500'}`}
+                        >
                           {formatCurrency(f?.totalLancamentos ?? 0)}
                         </span>
                       </div>

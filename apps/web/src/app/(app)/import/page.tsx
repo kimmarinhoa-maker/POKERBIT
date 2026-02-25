@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import {
-  importPreview,
-  importConfirm,
-  listOrganizations,
-  linkAgent,
-  linkPlayer,
-  bulkLinkPlayers,
-} from '@/lib/api';
+import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 
@@ -101,12 +94,12 @@ export default function ImportWizardPage() {
   async function handleLinkAgentInline(agentName: string, subclubId: string) {
     if (!subclubId) return;
     const key = `agent:${agentName}`;
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       const res = await linkAgent(agentName, subclubId);
       if (res.success) {
-        setAgentLinks(prev => ({ ...prev, [agentName]: subclubId }));
-        const subclub = preview?.available_subclubs.find(s => s.id === subclubId);
+        setAgentLinks((prev) => ({ ...prev, [agentName]: subclubId }));
+        const subclub = preview?.available_subclubs.find((s) => s.id === subclubId);
         toast(`${agentName} \u2192 ${subclub?.name || '?'}`, 'success');
       } else {
         toast(res.error || 'Erro desconhecido', 'error');
@@ -114,27 +107,25 @@ export default function ImportWizardPage() {
     } catch (err: any) {
       toast(err.message || 'Erro de conexao', 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
   async function handleLinkPlayerWithSelection(playerId: string, sel: PlayerSelection) {
     if (!sel.subclubId) return;
     const key = `player:${playerId}`;
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       if (sel.mode === 'new_agent' && sel.newAgentName) {
         await linkAgent(sel.newAgentName, sel.subclubId);
       }
-      const agentName = sel.mode === 'agent' ? sel.agentName :
-                        sel.mode === 'new_agent' ? sel.newAgentName :
-                        undefined;
+      const agentName = sel.mode === 'agent' ? sel.agentName : sel.mode === 'new_agent' ? sel.newAgentName : undefined;
       const agentId = sel.mode === 'agent' ? sel.agentId : undefined;
 
       const res = await linkPlayer(playerId, sel.subclubId, agentId, agentName);
       if (res.success) {
-        setPlayerLinks(prev => ({ ...prev, [playerId]: sel.subclubId }));
-        const subclub = preview?.available_subclubs.find(s => s.id === sel.subclubId);
+        setPlayerLinks((prev) => ({ ...prev, [playerId]: sel.subclubId }));
+        const subclub = preview?.available_subclubs.find((s) => s.id === sel.subclubId);
         const label = agentName ? `${subclub?.name} / ${agentName}` : `${subclub?.name} (direto)`;
         toast(`Jogador ${playerId} \u2192 ${label}`, 'success');
       } else {
@@ -143,13 +134,13 @@ export default function ImportWizardPage() {
     } catch (err: any) {
       toast(err.message || 'Erro de conexao', 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
   async function handleBulkLinkNone() {
     if (!preview || !bulkSubclubId) return;
-    const nonePlayers = preview.blockers.players_without_agency.filter(p => !playerLinks[p.player_id]);
+    const nonePlayers = preview.blockers.players_without_agency.filter((p) => !playerLinks[p.player_id]);
     if (!nonePlayers.length) return;
 
     if (bulkMode === 'new_agent' && bulkNewAgentName) {
@@ -161,25 +152,25 @@ export default function ImportWizardPage() {
       }
     }
 
-    const agentName = bulkMode === 'agent' ? bulkAgentName :
-                      bulkMode === 'new_agent' ? bulkNewAgentName :
-                      undefined;
+    const agentName = bulkMode === 'agent' ? bulkAgentName : bulkMode === 'new_agent' ? bulkNewAgentName : undefined;
 
     const key = 'bulk-none';
-    setSaving(prev => ({ ...prev, [key]: true }));
+    setSaving((prev) => ({ ...prev, [key]: true }));
     try {
       const res = await bulkLinkPlayers(
-        nonePlayers.map(p => ({
+        nonePlayers.map((p) => ({
           external_player_id: p.player_id,
           subclub_id: bulkSubclubId,
           agent_name: agentName,
-        }))
+        })),
       );
       if (res.success) {
         const newLinks = { ...playerLinks };
-        nonePlayers.forEach(p => { newLinks[p.player_id] = bulkSubclubId; });
+        nonePlayers.forEach((p) => {
+          newLinks[p.player_id] = bulkSubclubId;
+        });
         setPlayerLinks(newLinks);
-        const subclub = preview?.available_subclubs.find(s => s.id === bulkSubclubId);
+        const subclub = preview?.available_subclubs.find((s) => s.id === bulkSubclubId);
         const label = agentName ? `${subclub?.name} / ${agentName}` : `${subclub?.name} (direto)`;
         toast(`${nonePlayers.length} jogadores \u2192 ${label}`, 'success');
       } else {
@@ -188,7 +179,7 @@ export default function ImportWizardPage() {
     } catch (err: any) {
       toast(err.message || 'Erro de conexao', 'error');
     } finally {
-      setSaving(prev => ({ ...prev, [key]: false }));
+      setSaving((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -234,15 +225,15 @@ export default function ImportWizardPage() {
 
   return (
     <div>
-      <StepIndicator
-        currentStep={confirmResult ? 'confirm' : step}
-        skipPendencies={!!preview?.readiness.ready}
-      />
+      <StepIndicator currentStep={confirmResult ? 'confirm' : step} skipPendencies={!!preview?.readiness.ready} />
 
       {step === 'upload' && (
         <UploadStep
           file={file}
-          setFile={(f) => { setFile(f); setError(''); }}
+          setFile={(f) => {
+            setFile(f);
+            setError('');
+          }}
           clubs={clubs}
           clubId={clubId}
           setClubId={setClubId}
@@ -257,11 +248,7 @@ export default function ImportWizardPage() {
       )}
 
       {step === 'preview' && preview && (
-        <PreviewStep
-          preview={preview}
-          onNext={handlePreviewNext}
-          onBack={() => setStep('upload')}
-        />
+        <PreviewStep preview={preview} onNext={handlePreviewNext} onBack={() => setStep('upload')} />
       )}
 
       {step === 'pendencies' && preview && (
@@ -282,7 +269,7 @@ export default function ImportWizardPage() {
           onLinkAgent={handleLinkAgentInline}
           onLinkPlayer={handleLinkPlayerWithSelection}
           onBulkLink={handleBulkLinkNone}
-          onSetPlayerSelection={(id, sel) => setPlayerSelections(prev => ({ ...prev, [id]: sel }))}
+          onSetPlayerSelection={(id, sel) => setPlayerSelections((prev) => ({ ...prev, [id]: sel }))}
           onReprocess={handlePreview}
           onBack={() => setStep('preview')}
           loading={loading}
@@ -299,13 +286,7 @@ export default function ImportWizardPage() {
         />
       )}
 
-      {confirmResult && (
-        <SuccessStep
-          preview={preview}
-          confirmResult={confirmResult}
-          onReset={handleReset}
-        />
-      )}
+      {confirmResult && <SuccessStep preview={preview} confirmResult={confirmResult} onReset={handleReset} />}
     </div>
   );
 }

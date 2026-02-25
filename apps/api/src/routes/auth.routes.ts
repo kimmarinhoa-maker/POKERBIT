@@ -73,14 +73,12 @@ router.post('/login', async (req: Request, res: Response) => {
           refresh_token: data.session.refresh_token,
           expires_at: data.session.expires_at,
         },
-        tenants: (tenants || []).map(t => ({
+        tenants: (tenants || []).map((t) => ({
           id: (t as any).tenants.id,
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
-          allowed_subclubs: FULL_ACCESS_ROLES.includes(t.role)
-            ? null
-            : orgAccessByTenant.get(t.tenant_id) || [],
+          allowed_subclubs: FULL_ACCESS_ROLES.includes(t.role) ? null : orgAccessByTenant.get(t.tenant_id) || [],
         })),
       },
     });
@@ -126,11 +124,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'];
 
     // Buscar profile
-    const { data: profile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*')
-      .eq('id', req.userId!)
-      .single();
+    const { data: profile } = await supabaseAdmin.from('user_profiles').select('*').eq('id', req.userId!).single();
 
     // Buscar tenants
     const { data: tenants } = await supabaseAdmin
@@ -162,13 +156,13 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         id: req.userId,
         email: req.userEmail,
         profile: profile || null,
-        tenants: (tenants || []).map(t => ({
+        tenants: (tenants || []).map((t) => ({
           id: (t as any).tenants.id,
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
           allowed_subclubs: FULL_ACCESS_ROLES.includes(t.role)
-            ? null  // null = acesso total
+            ? null // null = acesso total
             : orgAccessByTenant.get(t.tenant_id) || [],
         })),
       },

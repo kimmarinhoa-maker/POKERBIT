@@ -2,12 +2,23 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  listLedger, toggleReconciled, formatBRL,
-  uploadOFX, listOFXTransactions, linkOFXTransaction,
-  unlinkOFXTransaction, ignoreOFXTransaction, applyOFXTransactions,
-  deleteOFXTransaction, ofxAutoMatch,
-  uploadChipPix, listChipPixTransactions, linkChipPixTransaction,
-  unlinkChipPixTransaction, ignoreChipPixTransaction, applyChipPixTransactions,
+  listLedger,
+  toggleReconciled,
+  formatBRL,
+  uploadOFX,
+  listOFXTransactions,
+  linkOFXTransaction,
+  unlinkOFXTransaction,
+  ignoreOFXTransaction,
+  applyOFXTransactions,
+  deleteOFXTransaction,
+  ofxAutoMatch,
+  uploadChipPix,
+  listChipPixTransactions,
+  linkChipPixTransaction,
+  unlinkChipPixTransaction,
+  ignoreChipPixTransaction,
+  applyChipPixTransactions,
   deleteChipPixTransaction,
   getChipPixLedgerSummary,
 } from '@/lib/api';
@@ -81,25 +92,25 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     }
   }, [weekStart]);
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   // KPIs (Ledger)
   const kpis = useMemo(() => {
     const total = entries.length;
-    const reconciled = entries.filter(e => e.is_reconciled).length;
+    const reconciled = entries.filter((e) => e.is_reconciled).length;
     const pending = total - reconciled;
-    const totalIn = entries.filter(e => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-    const totalOut = entries.filter(e => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
-    const pendingAmount = entries
-      .filter(e => !e.is_reconciled)
-      .reduce((s, e) => s + Number(e.amount), 0);
+    const totalIn = entries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
+    const totalOut = entries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+    const pendingAmount = entries.filter((e) => !e.is_reconciled).reduce((s, e) => s + Number(e.amount), 0);
     return { total, reconciled, pending, totalIn, totalOut, pendingAmount };
   }, [entries]);
 
   // Filter
   const filteredEntries = useMemo(() => {
-    if (filter === 'reconciled') return entries.filter(e => e.is_reconciled);
-    if (filter === 'pending') return entries.filter(e => !e.is_reconciled);
+    if (filter === 'reconciled') return entries.filter((e) => e.is_reconciled);
+    if (filter === 'pending') return entries.filter((e) => !e.is_reconciled);
     return entries;
   }, [entries, filter]);
 
@@ -108,9 +119,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     try {
       const res = await toggleReconciled(entryId, !currentValue);
       if (res.success) {
-        setEntries(prev =>
-          prev.map(e => e.id === entryId ? { ...e, is_reconciled: !currentValue } : e)
-        );
+        setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, is_reconciled: !currentValue } : e)));
       }
     } catch {
       toast('Erro ao alterar conciliacao', 'error');
@@ -121,7 +130,10 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
 
   function fmtDateTime(dt: string) {
     return new Date(dt).toLocaleString('pt-BR', {
-      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 
@@ -136,7 +148,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     <div>
       {/* Sub-tabs */}
       <div className="flex gap-1 mb-5" role="tablist" aria-label="Sub-abas de conciliacao">
-        {subTabs.map(tab => (
+        {subTabs.map((tab) => (
           <button
             key={tab.key}
             role="tab"
@@ -150,19 +162,32 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
             }`}
           >
             {tab.label}
-            {tab.count !== undefined && (
-              <span className="ml-1.5 text-xs text-dark-500">({tab.count})</span>
-            )}
+            {tab.count !== undefined && <span className="ml-1.5 text-xs text-dark-500">({tab.count})</span>}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
       {activeSubTab === 'chippix' && (
-        <ChipPixTab weekStart={weekStart} clubId={clubId} isDraft={isDraft} canEdit={canEdit} onDataChange={onDataChange} agents={agents} players={players} />
+        <ChipPixTab
+          weekStart={weekStart}
+          clubId={clubId}
+          isDraft={isDraft}
+          canEdit={canEdit}
+          onDataChange={onDataChange}
+          agents={agents}
+          players={players}
+        />
       )}
       {activeSubTab === 'ofx' && (
-        <OFXTab weekStart={weekStart} isDraft={isDraft} canEdit={canEdit} onDataChange={onDataChange} agents={agents} players={players} />
+        <OFXTab
+          weekStart={weekStart}
+          isDraft={isDraft}
+          canEdit={canEdit}
+          onDataChange={onDataChange}
+          agents={agents}
+          players={players}
+        />
       )}
       {activeSubTab === 'ledger' && (
         <LedgerTab
@@ -207,12 +232,12 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
   // Filter agents and players based on search
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    const filteredAgents = agents.filter(a => {
+    const filteredAgents = agents.filter((a) => {
       const name = (a.agent_name || '').toLowerCase();
       const id = (a.agent_id || '').toLowerCase();
       return !q || name.includes(q) || id.includes(q);
     });
-    const filteredPlayers = players.filter(p => {
+    const filteredPlayers = players.filter((p) => {
       const name = (p.nickname || '').toLowerCase();
       const id = (p.external_player_id || '').toLowerCase();
       return !q || name.includes(q) || id.includes(q);
@@ -257,11 +282,11 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightIdx(prev => Math.min(prev + 1, flatItems.length - 1));
+        setHighlightIdx((prev) => Math.min(prev + 1, flatItems.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightIdx(prev => Math.max(prev - 1, 0));
+        setHighlightIdx((prev) => Math.max(prev - 1, 0));
         break;
       case 'Enter':
         e.preventDefault();
@@ -295,7 +320,10 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
         type="text"
         placeholder="Buscar agente ou jogador..."
         value={search}
-        onChange={e => { setSearch(e.target.value); setOpen(true); }}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setOpen(true);
+        }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
         className="input text-xs w-full"
@@ -306,9 +334,7 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
       {open && (
         <div className="absolute left-0 right-0 top-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
           {totalResults === 0 ? (
-            <div className="px-3 py-4 text-center text-xs text-dark-500">
-              Nenhum resultado
-            </div>
+            <div className="px-3 py-4 text-center text-xs text-dark-500">Nenhum resultado</div>
           ) : (
             <>
               {/* Agents section */}
@@ -324,7 +350,10 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
                       <button
                         key={`agent-${a.agent_id || a.agent_name}`}
                         type="button"
-                        onMouseDown={(e) => { e.preventDefault(); selectItem(a.agent_id || a.agent_name, a.agent_name); }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectItem(a.agent_id || a.agent_name, a.agent_name);
+                        }}
                         onMouseEnter={() => setHighlightIdx(flatIdx)}
                         className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${
                           isHighlighted ? 'bg-poker-600/20 text-white' : 'text-dark-200 hover:bg-dark-700'
@@ -353,7 +382,10 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
                       <button
                         key={`player-${p.external_player_id || p.nickname}`}
                         type="button"
-                        onMouseDown={(e) => { e.preventDefault(); selectItem(p.external_player_id || p.nickname || '', p.nickname || ''); }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectItem(p.external_player_id || p.nickname || '', p.nickname || '');
+                        }}
                         onMouseEnter={() => setHighlightIdx(flatIdx)}
                         className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${
                           isHighlighted ? 'bg-poker-600/20 text-white' : 'text-dark-200 hover:bg-dark-700'
@@ -361,7 +393,9 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
                       >
                         <span className="text-xs font-medium truncate">{p.nickname || '(sem nome)'}</span>
                         {p.external_player_id && (
-                          <span className="text-[10px] text-dark-500 font-mono ml-2 flex-shrink-0">{p.external_player_id}</span>
+                          <span className="text-[10px] text-dark-500 font-mono ml-2 flex-shrink-0">
+                            {p.external_player_id}
+                          </span>
                         )}
                       </button>
                     );
@@ -394,7 +428,15 @@ interface BankTx {
 
 type ChipPixFilter = 'all' | 'pending' | 'linked' | 'locked' | 'applied' | 'ignored';
 
-function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents, players }: {
+function ChipPixTab({
+  weekStart,
+  clubId,
+  isDraft,
+  canEdit,
+  onDataChange,
+  agents,
+  players,
+}: {
   weekStart: string;
   clubId: string;
   isDraft: boolean;
@@ -438,8 +480,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
     }
   }, [weekStart]);
 
-  useEffect(() => { loadTxns(); }, [loadTxns]);
-  useEffect(() => { if (txns.length > 0) loadLedgerSummary(); }, [txns.length, loadLedgerSummary]);
+  useEffect(() => {
+    loadTxns();
+  }, [loadTxns]);
+  useEffect(() => {
+    if (txns.length > 0) loadLedgerSummary();
+  }, [txns.length, loadLedgerSummary]);
 
   // Parse memo: "ChipPix · Nome · ent X.XX − saí Y.YY · taxa Z.ZZ · N txns"
   function parseMemo(memo: string | null) {
@@ -472,14 +518,14 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
       totalSaida += p.saida;
     }
     const impacto = totalEntrada - totalSaida;
-    const pending = txns.filter(t => t.status === 'pending').length;
-    const linked = txns.filter(t => t.status === 'linked').length;
-    const applied = txns.filter(t => t.status === 'applied').length;
-    const appliedAmount = txns.filter(t => t.status === 'applied')
-      .reduce((s, t) => s + Number(t.amount), 0);
-    const ignored = txns.filter(t => t.status === 'ignored').length;
-    const unlinked = txns.filter(t => !t.entity_id && t.status === 'pending').length;
-    const unlinkedAmount = txns.filter(t => !t.entity_id && t.status === 'pending')
+    const pending = txns.filter((t) => t.status === 'pending').length;
+    const linked = txns.filter((t) => t.status === 'linked').length;
+    const applied = txns.filter((t) => t.status === 'applied').length;
+    const appliedAmount = txns.filter((t) => t.status === 'applied').reduce((s, t) => s + Number(t.amount), 0);
+    const ignored = txns.filter((t) => t.status === 'ignored').length;
+    const unlinked = txns.filter((t) => !t.entity_id && t.status === 'pending').length;
+    const unlinkedAmount = txns
+      .filter((t) => !t.entity_id && t.status === 'pending')
       .reduce((s, t) => s + Number(t.amount), 0);
     // Also sum taxas from chippix_fee entries (parsed from description)
     let totalTaxas = 0;
@@ -505,25 +551,28 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
   }, [txns]);
 
   // Extrato stats for verificador (derived from parsed memo data)
-  const extratoStats = useMemo<VerificadorStats>(() => ({
-    jogadores: txns.filter(t => t.status !== 'ignored').length,
-    entradas: kpis.totalEntrada,
-    saidas: kpis.totalSaida,
-    impacto: kpis.impacto,
-    taxas: kpis.totalTaxas,
-  }), [txns, kpis]);
+  const extratoStats = useMemo<VerificadorStats>(
+    () => ({
+      jogadores: txns.filter((t) => t.status !== 'ignored').length,
+      entradas: kpis.totalEntrada,
+      saidas: kpis.totalSaida,
+      impacto: kpis.impacto,
+      taxas: kpis.totalTaxas,
+    }),
+    [txns, kpis],
+  );
 
   // Filter + search
   const filtered = useMemo(() => {
     let result = txns;
     if (filter === 'locked') {
-      result = result.filter(t => t.status === 'linked' || t.status === 'applied');
+      result = result.filter((t) => t.status === 'linked' || t.status === 'applied');
     } else if (filter !== 'all') {
-      result = result.filter(t => t.status === filter);
+      result = result.filter((t) => t.status === filter);
     }
     if (search.trim()) {
       const q = search.toLowerCase().trim();
-      result = result.filter(t => {
+      result = result.filter((t) => {
         const id = cpId(t.fitid).toLowerCase();
         const name = (t.entity_name || '').toLowerCase();
         const memo = (t.memo || '').toLowerCase();
@@ -561,19 +610,16 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
     setAutoLinking(true);
     let count = 0;
     try {
-      const pendingTxns = txns.filter(t => t.status === 'pending' && !t.entity_id);
+      const pendingTxns = txns.filter((t) => t.status === 'pending' && !t.entity_id);
       for (const tx of pendingTxns) {
         const playerId = cpId(tx.fitid);
-        const match = players.find(p =>
-          p.external_player_id === playerId ||
-          p.external_player_id === tx.fitid
-        );
+        const match = players.find((p) => p.external_player_id === playerId || p.external_player_id === tx.fitid);
         if (match && match.external_player_id) {
           try {
             const res = await linkChipPixTransaction(
               tx.id,
               match.external_player_id,
-              match.nickname || match.external_player_id
+              match.nickname || match.external_player_id,
             );
             if (res.success) count++;
           } catch {
@@ -638,7 +684,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
   }
 
   async function handleClear() {
-    const deletable = txns.filter(t => t.status !== 'applied');
+    const deletable = txns.filter((t) => t.status !== 'applied');
     if (deletable.length === 0) return;
     if (!confirm(`Limpar ${deletable.length} registros não aplicados?`)) return;
     for (const tx of deletable) {
@@ -734,7 +780,8 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
         <div className="text-center">
           <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Staged</div>
           <div className="font-extrabold text-sm text-yellow-400">
-            {kpis.pending} <span className="text-[9px] font-normal opacity-60">pendente{kpis.pending !== 1 ? 's' : ''}</span>
+            {kpis.pending}{' '}
+            <span className="text-[9px] font-normal opacity-60">pendente{kpis.pending !== 1 ? 's' : ''}</span>
           </div>
         </div>
         <div className="text-center">
@@ -747,18 +794,16 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
           <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Não Vinculado</div>
           <div className={`font-extrabold text-sm ${kpis.unlinked > 0 ? 'text-orange-400' : 'text-dark-400'}`}>
             {kpis.unlinked}
-            {kpis.unlinked > 0 && <span className="text-[9px] font-normal opacity-60"> ({formatBRL(kpis.unlinkedAmount)})</span>}
+            {kpis.unlinked > 0 && (
+              <span className="text-[9px] font-normal opacity-60"> ({formatBRL(kpis.unlinkedAmount)})</span>
+            )}
           </div>
         </div>
       </div>
 
       {/* ── Verificador de Conciliação ───────────────────────────── */}
       {txns.length > 0 && ledgerStats && (
-        <VerificadorConciliacao
-          extrato={extratoStats}
-          ledger={ledgerStats}
-          onVerificado={setVerificadoOk}
-        />
+        <VerificadorConciliacao extrato={extratoStats} ledger={ledgerStats} onVerificado={setVerificadoOk} />
       )}
 
       {/* ── Search + Filters ─────────────────────────────────────── */}
@@ -768,12 +813,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
             type="text"
             placeholder="Buscar por ID ou nome..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="bg-dark-800 border border-dark-700 text-dark-100 rounded-lg px-3 py-1.5 text-xs w-52 focus:border-poker-500 focus:outline-none"
           />
         </div>
         <div className="flex gap-1">
-          {filterBtns.map(fb => (
+          {filterBtns.map((fb) => (
             <button
               key={fb.key}
               onClick={() => setFilter(fb.key)}
@@ -805,25 +850,40 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-dark-800/50">
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">ID / Nome</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Entrada</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Saída</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Impacto</th>
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">Status</th>
+                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                      ID / Nome
+                    </th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                      Entrada
+                    </th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                      Saída
+                    </th>
+                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                      Impacto
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(tx => {
+                  {filtered.map((tx) => {
                     const parsed = parseMemo(tx.memo);
                     const impacto = parsed.entrada - parsed.saida;
                     const isLinking = linkingId === tx.id;
 
                     return (
-                      <tr key={tx.id} className={`border-b border-dark-800 transition-colors hover:bg-white/[.02] ${tx.status === 'ignored' ? 'opacity-50' : ''}`}>
+                      <tr
+                        key={tx.id}
+                        className={`border-b border-dark-800 transition-colors hover:bg-white/[.02] ${tx.status === 'ignored' ? 'opacity-50' : ''}`}
+                      >
                         {/* ID / Nome */}
                         <td className="px-3 py-2.5 align-middle">
                           <span className="text-blue-400 font-mono font-bold">{cpId(tx.fitid)}</span>
-                          <div className="text-dark-500 text-[10px]">{parsed.nome || tx.entity_name || '—'} · {parsed.ops} ops</div>
+                          <div className="text-dark-500 text-[10px]">
+                            {parsed.nome || tx.entity_name || '—'} · {parsed.ops} ops
+                          </div>
                         </td>
                         {/* Entrada */}
                         <td className="px-3 py-2.5 text-right align-middle font-mono">
@@ -833,9 +893,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
                         </td>
                         {/* Saída */}
                         <td className="px-3 py-2.5 text-right align-middle font-mono">
-                          <span className="text-red-500">
-                            {parsed.saida > 0 ? `-${formatBRL(parsed.saida)}` : '—'}
-                          </span>
+                          <span className="text-red-500">{parsed.saida > 0 ? `-${formatBRL(parsed.saida)}` : '—'}</span>
                         </td>
                         {/* Impacto */}
                         <td className="px-3 py-2.5 text-right align-middle font-mono font-bold">
@@ -851,11 +909,20 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
                                 agents={agents}
                                 players={players}
                                 value={linkForm.entity_name}
-                                onChange={(entityId, entityName) => setLinkForm({ entity_id: entityId, entity_name: entityName })}
+                                onChange={(entityId, entityName) =>
+                                  setLinkForm({ entity_id: entityId, entity_name: entityName })
+                                }
                                 autoFocus
                               />
-                              <button onClick={() => handleLink(tx.id)} className="btn-primary text-[10px] px-2 py-0.5">OK</button>
-                              <button onClick={() => setLinkingId(null)} className="text-[10px] text-dark-500 hover:text-dark-300">✕</button>
+                              <button onClick={() => handleLink(tx.id)} className="btn-primary text-[10px] px-2 py-0.5">
+                                OK
+                              </button>
+                              <button
+                                onClick={() => setLinkingId(null)}
+                                className="text-[10px] text-dark-500 hover:text-dark-300"
+                              >
+                                ✕
+                              </button>
                             </div>
                           ) : tx.entity_name && tx.status === 'linked' ? (
                             <div className="flex items-center gap-1.5">
@@ -863,7 +930,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
                                 {tx.entity_name}
                               </span>
                               {isDraft && (
-                                <button onClick={() => handleUnlink(tx.id)} className="text-[10px] text-dark-600 hover:text-yellow-400">✕</button>
+                                <button
+                                  onClick={() => handleUnlink(tx.id)}
+                                  className="text-[10px] text-dark-600 hover:text-yellow-400"
+                                >
+                                  ✕
+                                </button>
                               )}
                             </div>
                           ) : tx.status === 'applied' ? (
@@ -874,7 +946,12 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
                             <div className="flex items-center gap-1.5">
                               <span className="text-dark-500 text-[10px]">Ignorado</span>
                               {isDraft && (
-                                <button onClick={() => handleIgnore(tx.id, false)} className="text-[10px] text-dark-600 hover:text-emerald-400">Restaurar</button>
+                                <button
+                                  onClick={() => handleIgnore(tx.id, false)}
+                                  className="text-[10px] text-dark-600 hover:text-emerald-400"
+                                >
+                                  Restaurar
+                                </button>
                               )}
                             </div>
                           ) : (
@@ -882,7 +959,10 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
                               {isDraft ? (
                                 <>
                                   <button
-                                    onClick={() => { setLinkingId(tx.id); setLinkForm({ entity_id: '', entity_name: '' }); }}
+                                    onClick={() => {
+                                      setLinkingId(tx.id);
+                                      setLinkForm({ entity_id: '', entity_name: '' });
+                                    }}
                                     className="text-[10px] text-dark-500 hover:text-blue-400 transition-colors"
                                   >
                                     Vincular...
@@ -914,7 +994,8 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] text-dark-500">Progresso de vinculação</span>
               <span className="text-[10px] font-mono text-dark-400">
-                {kpis.linked + kpis.applied}/{kpis.jogadores} ({kpis.jogadores > 0 ? Math.round((kpis.linked + kpis.applied) / kpis.jogadores * 100) : 0}%)
+                {kpis.linked + kpis.applied}/{kpis.jogadores} (
+                {kpis.jogadores > 0 ? Math.round(((kpis.linked + kpis.applied) / kpis.jogadores) * 100) : 0}%)
               </span>
             </div>
             <div className="w-full bg-dark-800 rounded-full h-2">
@@ -936,7 +1017,14 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
 
 type OFXFilter = 'all' | 'pending' | 'linked' | 'applied' | 'ignored';
 
-function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: {
+function OFXTab({
+  weekStart,
+  isDraft,
+  canEdit,
+  onDataChange,
+  agents,
+  players,
+}: {
   weekStart: string;
   isDraft: boolean;
   canEdit: boolean;
@@ -973,22 +1061,24 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
     }
   }, [weekStart]);
 
-  useEffect(() => { loadTxns(); }, [loadTxns]);
+  useEffect(() => {
+    loadTxns();
+  }, [loadTxns]);
 
   // KPIs
   const kpis = useMemo(() => {
     const total = txns.length;
-    const pending = txns.filter(t => t.status === 'pending').length;
-    const linked = txns.filter(t => t.status === 'linked').length;
-    const applied = txns.filter(t => t.status === 'applied').length;
-    const ignored = txns.filter(t => t.status === 'ignored').length;
+    const pending = txns.filter((t) => t.status === 'pending').length;
+    const linked = txns.filter((t) => t.status === 'linked').length;
+    const applied = txns.filter((t) => t.status === 'applied').length;
+    const ignored = txns.filter((t) => t.status === 'ignored').length;
     const totalAmount = txns.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
     return { total, pending, linked, applied, ignored, totalAmount };
   }, [txns]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return txns;
-    return txns.filter(t => t.status === filter);
+    return txns.filter((t) => t.status === filter);
   }, [txns, filter]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -999,7 +1089,10 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
     try {
       const res = await uploadOFX(file, weekStart);
       if (res.success) {
-        setFeedback({ type: 'success', msg: `${res.data?.imported || 0} transacoes importadas (${res.data?.skipped || 0} duplicatas ignoradas)` });
+        setFeedback({
+          type: 'success',
+          msg: `${res.data?.imported || 0} transacoes importadas (${res.data?.skipped || 0} duplicatas ignoradas)`,
+        });
         loadTxns();
       } else {
         setFeedback({ type: 'error', msg: res.error || 'Erro ao importar' });
@@ -1069,7 +1162,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
       if (res.success && res.data) {
         setSuggestions(res.data);
         setShowSuggestions(true);
-        const actionable = res.data.filter(s => s.confidence !== 'none');
+        const actionable = res.data.filter((s) => s.confidence !== 'none');
         setFeedback({
           type: 'success',
           msg: `Auto-classificacao concluida: ${actionable.length} sugestoes encontradas de ${res.data.length} pendentes`,
@@ -1090,7 +1183,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
     try {
       const res = await linkOFXTransaction(s.transaction_id, s.suggested_entity_id, s.suggested_entity_name);
       if (res.success) {
-        setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
+        setSuggestions((prev) => prev.filter((x) => x.transaction_id !== s.transaction_id));
         loadTxns();
       }
     } catch {
@@ -1101,12 +1194,12 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
   }
 
   function handleRejectSuggestion(txId: string) {
-    setSuggestions(prev => prev.filter(x => x.transaction_id !== txId));
+    setSuggestions((prev) => prev.filter((x) => x.transaction_id !== txId));
   }
 
   async function handleAcceptAll() {
     const actionable = suggestions.filter(
-      s => (s.confidence === 'high' || s.confidence === 'medium') && s.suggested_entity_id && s.suggested_entity_name
+      (s) => (s.confidence === 'high' || s.confidence === 'medium') && s.suggested_entity_id && s.suggested_entity_name,
     );
     if (actionable.length === 0) return;
     if (!confirm(`Aceitar ${actionable.length} sugestoes (alta + media confianca)?`)) return;
@@ -1118,7 +1211,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
         const res = await linkOFXTransaction(s.transaction_id, s.suggested_entity_id!, s.suggested_entity_name!);
         if (res.success) {
           accepted++;
-          setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
+          setSuggestions((prev) => prev.filter((x) => x.transaction_id !== s.transaction_id));
         }
       } catch {
         /* continue on error */
@@ -1131,25 +1224,25 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
 
   // Confidence badge config
   const confidenceCfg: Record<string, { label: string; cls: string }> = {
-    high:   { label: 'Alta',   cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
-    medium: { label: 'Media',  cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    low:    { label: 'Baixa',  cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
-    none:   { label: 'Nenhuma',cls: 'bg-red-500/10 text-red-400/60 border-red-500/20' },
+    high: { label: 'Alta', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
+    medium: { label: 'Media', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+    low: { label: 'Baixa', cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
+    none: { label: 'Nenhuma', cls: 'bg-red-500/10 text-red-400/60 border-red-500/20' },
   };
 
   // Actionable suggestions (not 'none')
-  const actionableSuggestions = suggestions.filter(s => s.confidence !== 'none');
-  const highMediumCount = suggestions.filter(s => s.confidence === 'high' || s.confidence === 'medium').length;
+  const actionableSuggestions = suggestions.filter((s) => s.confidence !== 'none');
+  const highMediumCount = suggestions.filter((s) => s.confidence === 'high' || s.confidence === 'medium').length;
 
   function fmtDate(dt: string) {
     return new Date(dt + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   }
 
   const statusCfg: Record<string, { label: string; cls: string }> = {
-    pending:  { label: 'Pendente', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-    linked:   { label: 'Vinculado', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
-    applied:  { label: 'Aplicado', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
-    ignored:  { label: 'Ignorado', cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
+    pending: { label: 'Pendente', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+    linked: { label: 'Vinculado', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
+    applied: { label: 'Aplicado', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
+    ignored: { label: 'Ignorado', cls: 'bg-dark-700/30 text-dark-400 border-dark-600/40' },
   };
 
   return (
@@ -1158,14 +1251,21 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
       <div className="flex items-start gap-4 mb-5">
         {/* Upload */}
         <div className="card flex-shrink-0 w-64">
-          <label className={`flex flex-col items-center justify-center py-6 cursor-pointer border-2 border-dashed rounded-lg transition-colors ${
-            uploading ? 'border-poker-500/50 bg-poker-900/10' : 'border-dark-600/50 hover:border-dark-500'
-          }`}>
-            <input type="file" accept=".ofx,.OFX" onChange={handleUpload} className="hidden" disabled={uploading || !canEdit} aria-label="Importar arquivo OFX" />
+          <label
+            className={`flex flex-col items-center justify-center py-6 cursor-pointer border-2 border-dashed rounded-lg transition-colors ${
+              uploading ? 'border-poker-500/50 bg-poker-900/10' : 'border-dark-600/50 hover:border-dark-500'
+            }`}
+          >
+            <input
+              type="file"
+              accept=".ofx,.OFX"
+              onChange={handleUpload}
+              className="hidden"
+              disabled={uploading || !canEdit}
+              aria-label="Importar arquivo OFX"
+            />
             <span className="text-sm mb-2 text-dark-400">{uploading ? 'Aguarde...' : ''}</span>
-            <span className="text-sm text-dark-300 font-medium">
-              {uploading ? 'Importando...' : 'Importar OFX'}
-            </span>
+            <span className="text-sm text-dark-300 font-medium">{uploading ? 'Importando...' : 'Importar OFX'}</span>
             <span className="text-xs text-dark-500 mt-1">Clique ou arraste</span>
           </label>
         </div>
@@ -1197,13 +1297,17 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
 
       {/* Feedback */}
       {feedback && (
-        <div className={`mb-4 rounded-lg p-3 text-sm ${
-          feedback.type === 'success'
-            ? 'bg-green-900/30 border border-green-700/50 text-green-300'
-            : 'bg-red-900/30 border border-red-700/50 text-red-300'
-        }`}>
+        <div
+          className={`mb-4 rounded-lg p-3 text-sm ${
+            feedback.type === 'success'
+              ? 'bg-green-900/30 border border-green-700/50 text-green-300'
+              : 'bg-red-900/30 border border-red-700/50 text-red-300'
+          }`}
+        >
           {feedback.msg}
-          <button onClick={() => setFeedback(null)} className="float-right text-dark-500 hover:text-dark-300">✕</button>
+          <button onClick={() => setFeedback(null)} className="float-right text-dark-500 hover:text-dark-300">
+            ✕
+          </button>
         </div>
       )}
 
@@ -1212,7 +1316,8 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
         <div className="card bg-purple-500/5 border-purple-500/10 mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm text-dark-300">
-              <span className="text-purple-400 font-bold">{kpis.pending}</span> transacoes pendentes podem ser auto-classificadas
+              <span className="text-purple-400 font-bold">{kpis.pending}</span> transacoes pendentes podem ser
+              auto-classificadas
             </p>
             <p className="text-[10px] text-dark-500 mt-0.5">
               5 niveis de correspondencia: nome exato, valor+data, substring, metodo de pagamento
@@ -1229,7 +1334,9 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                 <span className="animate-spin inline-block w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full" />
                 Classificando...
               </span>
-            ) : 'Auto-Classificar'}
+            ) : (
+              'Auto-Classificar'
+            )}
           </button>
         </div>
       )}
@@ -1253,7 +1360,10 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                 </button>
               )}
               <button
-                onClick={() => { setShowSuggestions(false); setSuggestions([]); }}
+                onClick={() => {
+                  setShowSuggestions(false);
+                  setSuggestions([]);
+                }}
                 className="text-xs text-dark-500 hover:text-dark-300 transition-colors"
               >
                 Fechar
@@ -1262,7 +1372,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
           </div>
 
           <div className="space-y-1.5">
-            {suggestions.map(s => {
+            {suggestions.map((s) => {
               const cc = confidenceCfg[s.confidence] || confidenceCfg.none;
               const isAccepting = acceptingId === s.transaction_id;
               const canAccept = s.suggested_entity_id && s.suggested_entity_name;
@@ -1272,21 +1382,23 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Date */}
-                      <span className="text-xs text-dark-500 font-mono w-12 flex-shrink-0">
-                        {fmtDate(s.tx_date)}
-                      </span>
+                      <span className="text-xs text-dark-500 font-mono w-12 flex-shrink-0">{fmtDate(s.tx_date)}</span>
 
                       {/* Direction */}
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${
-                        s.dir === 'in' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
-                      }`}>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${
+                          s.dir === 'in' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
+                        }`}
+                      >
                         {s.dir === 'in' ? 'IN' : 'OUT'}
                       </span>
 
                       {/* Amount */}
-                      <span className={`font-mono text-sm font-bold w-24 text-right flex-shrink-0 ${
-                        s.dir === 'in' ? 'text-poker-400' : 'text-red-400'
-                      }`}>
+                      <span
+                        className={`font-mono text-sm font-bold w-24 text-right flex-shrink-0 ${
+                          s.dir === 'in' ? 'text-poker-400' : 'text-red-400'
+                        }`}
+                      >
                         {formatBRL(Number(s.amount))}
                       </span>
 
@@ -1299,7 +1411,10 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                     <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                       {/* Suggested entity */}
                       {s.suggested_entity_name && (
-                        <span className="text-xs text-blue-400 font-medium max-w-[140px] truncate" title={s.suggested_entity_name}>
+                        <span
+                          className="text-xs text-blue-400 font-medium max-w-[140px] truncate"
+                          title={s.suggested_entity_name}
+                        >
                           {s.suggested_entity_name}
                         </span>
                       )}
@@ -1329,9 +1444,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                   </div>
 
                   {/* Match reason */}
-                  <p className="text-[10px] text-dark-500 mt-1.5 pl-12">
-                    {s.match_reason}
-                  </p>
+                  <p className="text-[10px] text-dark-500 mt-1.5 pl-12">{s.match_reason}</p>
                 </div>
               );
             })}
@@ -1359,9 +1472,21 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
       {/* Filter */}
       {kpis.total > 0 && (
         <div className="flex items-center gap-2 mb-4">
-          {(['all', 'pending', 'linked', 'applied', 'ignored'] as OFXFilter[]).map(mode => {
-            const labels: Record<OFXFilter, string> = { all: 'Todas', pending: 'Pendentes', linked: 'Vinculadas', applied: 'Aplicadas', ignored: 'Ignoradas' };
-            const counts: Record<OFXFilter, number> = { all: kpis.total, pending: kpis.pending, linked: kpis.linked, applied: kpis.applied, ignored: kpis.ignored };
+          {(['all', 'pending', 'linked', 'applied', 'ignored'] as OFXFilter[]).map((mode) => {
+            const labels: Record<OFXFilter, string> = {
+              all: 'Todas',
+              pending: 'Pendentes',
+              linked: 'Vinculadas',
+              applied: 'Aplicadas',
+              ignored: 'Ignoradas',
+            };
+            const counts: Record<OFXFilter, number> = {
+              all: kpis.total,
+              pending: kpis.pending,
+              linked: kpis.linked,
+              applied: kpis.applied,
+              ignored: kpis.ignored,
+            };
             if (counts[mode] === 0 && mode !== 'all') return null;
             return (
               <button
@@ -1408,14 +1533,15 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-800/50">
-                {filtered.map(tx => {
+                {filtered.map((tx) => {
                   const sc = statusCfg[tx.status] || statusCfg.pending;
                   const isLinking = linkingId === tx.id;
 
                   return (
-                    <tr key={tx.id} className={`transition-colors ${
-                      tx.status === 'ignored' ? 'opacity-50' : 'hover:bg-dark-800/20'
-                    }`}>
+                    <tr
+                      key={tx.id}
+                      className={`transition-colors ${tx.status === 'ignored' ? 'opacity-50' : 'hover:bg-dark-800/20'}`}
+                    >
                       <td className="px-3 py-2.5 text-dark-300 text-xs font-mono whitespace-nowrap">
                         {fmtDate(tx.tx_date)}
                       </td>
@@ -1434,27 +1560,46 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                               agents={agents}
                               players={players}
                               value={linkForm.entity_name}
-                              onChange={(entityId, entityName) => setLinkForm({ entity_id: entityId, entity_name: entityName })}
+                              onChange={(entityId, entityName) =>
+                                setLinkForm({ entity_id: entityId, entity_name: entityName })
+                              }
                               autoFocus
                             />
-                            <button onClick={() => handleLink(tx.id)} aria-label="Confirmar vinculacao OFX" className="btn-primary text-xs px-3 py-1.5">OK</button>
-                            <button onClick={() => setLinkingId(null)} aria-label="Cancelar vinculacao" className="text-xs text-dark-500 hover:text-dark-300">✕</button>
+                            <button
+                              onClick={() => handleLink(tx.id)}
+                              aria-label="Confirmar vinculacao OFX"
+                              className="btn-primary text-xs px-3 py-1.5"
+                            >
+                              OK
+                            </button>
+                            <button
+                              onClick={() => setLinkingId(null)}
+                              aria-label="Cancelar vinculacao"
+                              className="text-xs text-dark-500 hover:text-dark-300"
+                            >
+                              ✕
+                            </button>
                           </div>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          tx.dir === 'in'
-                            ? 'bg-poker-900/30 text-poker-400 border-poker-500/30'
-                            : 'bg-red-900/30 text-red-400 border-red-500/30'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            tx.dir === 'in'
+                              ? 'bg-poker-900/30 text-poker-400 border-poker-500/30'
+                              : 'bg-red-900/30 text-red-400 border-red-500/30'
+                          }`}
+                        >
                           {tx.dir === 'in' ? '↓ IN' : '↑ OUT'}
                         </span>
                       </td>
-                      <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
-                        tx.dir === 'in' ? 'text-poker-400' : 'text-red-400'
-                      }`}>
-                        {tx.dir === 'in' ? '+' : '−'}{formatBRL(Number(tx.amount))}
+                      <td
+                        className={`px-3 py-2.5 text-right font-mono font-semibold ${
+                          tx.dir === 'in' ? 'text-poker-400' : 'text-red-400'
+                        }`}
+                      >
+                        {tx.dir === 'in' ? '+' : '−'}
+                        {formatBRL(Number(tx.amount))}
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sc.cls}`}>
@@ -1463,12 +1608,18 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                       </td>
                       <td className="px-3 py-2.5">
                         {tx.entity_name ? (
-                          <span className="text-xs text-blue-400 font-medium truncate block max-w-[140px]" title={tx.entity_name}>
+                          <span
+                            className="text-xs text-blue-400 font-medium truncate block max-w-[140px]"
+                            title={tx.entity_name}
+                          >
                             {tx.entity_name}
                           </span>
                         ) : tx.status === 'pending' && isDraft ? (
                           <button
-                            onClick={() => { setLinkingId(tx.id); setLinkForm({ entity_id: '', entity_name: '' }); }}
+                            onClick={() => {
+                              setLinkingId(tx.id);
+                              setLinkForm({ entity_id: '', entity_name: '' });
+                            }}
                             aria-label="Vincular transacao OFX"
                             className="text-xs text-dark-500 hover:text-blue-400 transition-colors"
                           >
@@ -1481,24 +1632,44 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
                       <td className="px-3 py-2.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {isDraft && tx.status === 'pending' && (
-                            <button onClick={() => handleIgnore(tx.id, true)}
+                            <button
+                              onClick={() => handleIgnore(tx.id, true)}
                               aria-label="Ignorar transacao OFX"
-                              className="text-dark-600 hover:text-dark-300 transition-colors text-xs" title="Ignorar">Ign</button>
+                              className="text-dark-600 hover:text-dark-300 transition-colors text-xs"
+                              title="Ignorar"
+                            >
+                              Ign
+                            </button>
                           )}
                           {isDraft && tx.status === 'linked' && (
-                            <button onClick={() => handleUnlink(tx.id)}
+                            <button
+                              onClick={() => handleUnlink(tx.id)}
                               aria-label="Desvincular transacao OFX"
-                              className="text-dark-500 hover:text-yellow-400 transition-colors text-xs" title="Desvincular">Desv</button>
+                              className="text-dark-500 hover:text-yellow-400 transition-colors text-xs"
+                              title="Desvincular"
+                            >
+                              Desv
+                            </button>
                           )}
                           {isDraft && tx.status === 'ignored' && (
-                            <button onClick={() => handleIgnore(tx.id, false)}
+                            <button
+                              onClick={() => handleIgnore(tx.id, false)}
                               aria-label="Restaurar transacao OFX"
-                              className="text-dark-500 hover:text-emerald-400 transition-colors text-xs" title="Restaurar">Rest</button>
+                              className="text-dark-500 hover:text-emerald-400 transition-colors text-xs"
+                              title="Restaurar"
+                            >
+                              Rest
+                            </button>
                           )}
                           {isDraft && tx.status !== 'applied' && (
-                            <button onClick={() => handleDelete(tx.id)}
+                            <button
+                              onClick={() => handleDelete(tx.id)}
                               aria-label="Excluir transacao OFX"
-                              className="text-dark-600 hover:text-red-400 transition-colors text-xs" title="Excluir">✕</button>
+                              className="text-dark-600 hover:text-red-400 transition-colors text-xs"
+                              title="Excluir"
+                            >
+                              ✕
+                            </button>
                           )}
                         </div>
                       </td>
@@ -1517,13 +1688,16 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-dark-400">Progresso de vinculacao</span>
             <span className="text-xs font-mono text-dark-300">
-              {kpis.linked + kpis.applied}/{kpis.total} ({kpis.total > 0 ? Math.round((kpis.linked + kpis.applied) / kpis.total * 100) : 0}%)
+              {kpis.linked + kpis.applied}/{kpis.total} (
+              {kpis.total > 0 ? Math.round(((kpis.linked + kpis.applied) / kpis.total) * 100) : 0}%)
             </span>
           </div>
           <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
               className={`h-2.5 rounded-full transition-all duration-500 shadow-glow-green ${
-                kpis.linked + kpis.applied === kpis.total ? 'bg-green-500' : 'bg-gradient-to-r from-poker-600 to-poker-400'
+                kpis.linked + kpis.applied === kpis.total
+                  ? 'bg-green-500'
+                  : 'bg-gradient-to-r from-poker-600 to-poker-400'
               }`}
               style={{ width: `${kpis.total > 0 ? ((kpis.linked + kpis.applied) / kpis.total) * 100 : 0}%` }}
             />
@@ -1557,18 +1731,32 @@ function FonteBadge({ entry }: { entry: LedgerEntry }) {
     cls = 'bg-dark-700/30 text-dark-300 border-dark-600/30';
   }
 
-  return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${cls}`}>
-      {fonte}
-    </span>
-  );
+  return <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${cls}`}>{fonte}</span>;
 }
 
 // ─── Ledger Tab ──────────────────────────────────────────────────────
 
-function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit, toggling, onToggle, fmtDateTime }: {
+function LedgerTab({
+  entries,
+  kpis,
+  filter,
+  setFilter,
+  loading,
+  isDraft,
+  canEdit,
+  toggling,
+  onToggle,
+  fmtDateTime,
+}: {
   entries: LedgerEntry[];
-  kpis: { total: number; reconciled: number; pending: number; totalIn: number; totalOut: number; pendingAmount: number };
+  kpis: {
+    total: number;
+    reconciled: number;
+    pending: number;
+    totalIn: number;
+    totalOut: number;
+    pendingAmount: number;
+  };
   filter: FilterMode;
   setFilter: (f: FilterMode) => void;
   loading: boolean;
@@ -1598,7 +1786,9 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Conciliadas</p>
           <p className="font-mono text-lg font-bold text-emerald-400">{kpis.reconciled}</p>
         </div>
-        <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.pending > 0 ? 'border-t-yellow-500' : 'border-t-emerald-500'} rounded-lg p-3 text-center`}>
+        <div
+          className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.pending > 0 ? 'border-t-yellow-500' : 'border-t-emerald-500'} rounded-lg p-3 text-center`}
+        >
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pendentes</p>
           <p className={`font-mono text-lg font-bold ${kpis.pending > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
             {kpis.pending > 0 ? kpis.pending : '✓'}
@@ -1608,9 +1798,13 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4">
-        {(['all', 'reconciled', 'pending'] as FilterMode[]).map(mode => {
+        {(['all', 'reconciled', 'pending'] as FilterMode[]).map((mode) => {
           const labels: Record<FilterMode, string> = { all: 'Todas', reconciled: 'Conciliadas', pending: 'Pendentes' };
-          const counts: Record<FilterMode, number> = { all: kpis.total, reconciled: kpis.reconciled, pending: kpis.pending };
+          const counts: Record<FilterMode, number> = {
+            all: kpis.total,
+            reconciled: kpis.reconciled,
+            pending: kpis.pending,
+          };
           return (
             <button
               key={mode}
@@ -1655,15 +1849,13 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-800/50">
-                {entries.map(e => {
+                {entries.map((e) => {
                   const isToggling = toggling === e.id;
                   return (
                     <tr
                       key={e.id}
                       className={`transition-colors ${
-                        e.is_reconciled
-                          ? 'opacity-60 hover:opacity-80'
-                          : 'hover:bg-dark-800/20'
+                        e.is_reconciled ? 'opacity-60 hover:opacity-80' : 'hover:bg-dark-800/20'
                       }`}
                     >
                       <td className="px-4 py-2.5 text-center">
@@ -1683,32 +1875,31 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
                           ) : null}
                         </button>
                       </td>
-                      <td className="px-3 py-2.5 text-white font-medium">
-                        {e.entity_name || '—'}
-                      </td>
-                      <td className="px-3 py-2.5 text-dark-300 text-xs font-mono">
-                        {fmtDateTime(e.created_at)}
-                      </td>
+                      <td className="px-3 py-2.5 text-white font-medium">{e.entity_name || '—'}</td>
+                      <td className="px-3 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at)}</td>
                       <td className="px-3 py-2.5 text-center">
                         <FonteBadge entry={e} />
                       </td>
                       <td className="px-3 py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          e.dir === 'IN'
-                            ? 'bg-poker-900/30 text-poker-400 border-poker-500/30'
-                            : 'bg-red-900/30 text-red-400 border-red-500/30'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            e.dir === 'IN'
+                              ? 'bg-poker-900/30 text-poker-400 border-poker-500/30'
+                              : 'bg-red-900/30 text-red-400 border-red-500/30'
+                          }`}
+                        >
                           {e.dir === 'IN' ? '↓ IN' : '↑ OUT'}
                         </span>
                       </td>
-                      <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
-                        e.dir === 'IN' ? 'text-poker-400' : 'text-red-400'
-                      }`}>
-                        {e.dir === 'IN' ? '+' : '−'}{formatBRL(Number(e.amount))}
+                      <td
+                        className={`px-3 py-2.5 text-right font-mono font-semibold ${
+                          e.dir === 'IN' ? 'text-poker-400' : 'text-red-400'
+                        }`}
+                      >
+                        {e.dir === 'IN' ? '+' : '−'}
+                        {formatBRL(Number(e.amount))}
                       </td>
-                      <td className="px-3 py-2.5 text-dark-400 text-xs">
-                        {e.method || '—'}
-                      </td>
+                      <td className="px-3 py-2.5 text-dark-400 text-xs">{e.method || '—'}</td>
                       <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">
                         {e.description || '—'}
                       </td>
@@ -1727,7 +1918,7 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-dark-400">Progresso de conciliacao</span>
             <span className="text-xs font-mono text-dark-300">
-              {kpis.reconciled}/{kpis.total} ({kpis.total > 0 ? Math.round(kpis.reconciled / kpis.total * 100) : 0}%)
+              {kpis.reconciled}/{kpis.total} ({kpis.total > 0 ? Math.round((kpis.reconciled / kpis.total) * 100) : 0}%)
             </span>
           </div>
           <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">

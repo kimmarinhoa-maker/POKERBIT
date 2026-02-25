@@ -32,10 +32,18 @@ function validateFile(f: File): string | null {
 }
 
 export default function UploadStep({
-  file, setFile, clubs, clubId, setClubId,
-  weekStartOverride, setWeekStartOverride,
-  showWeekOverride, setShowWeekOverride,
-  loading, error, onPreview,
+  file,
+  setFile,
+  clubs,
+  clubId,
+  setClubId,
+  weekStartOverride,
+  setWeekStartOverride,
+  showWeekOverride,
+  setShowWeekOverride,
+  loading,
+  error,
+  onPreview,
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -43,9 +51,16 @@ export default function UploadStep({
 
   function trySetFile(f: File | null) {
     setFileError(null);
-    if (!f) { setFile(null); return; }
+    if (!f) {
+      setFile(null);
+      return;
+    }
     const err = validateFile(f);
-    if (err) { setFileError(err); setFile(null); return; }
+    if (err) {
+      setFileError(err);
+      setFile(null);
+      return;
+    }
     setFile(f);
   }
 
@@ -60,14 +75,22 @@ export default function UploadStep({
     <div>
       <div
         onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
         onClick={() => fileRef.current?.click()}
         role="button"
         tabIndex={0}
         aria-label="Selecionar arquivo XLSX"
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click();
+        }}
         className={`card border-2 border-dashed cursor-pointer text-center py-12 transition-all duration-200 ${
           dragOver
             ? 'border-poker-400 bg-poker-900/20 scale-[1.01]'
@@ -93,9 +116,7 @@ export default function UploadStep({
           <div>
             <div className="text-4xl mb-3">{'\u{1F4C4}'}</div>
             <p className="text-poker-400 font-medium">{file.name}</p>
-            <p className="text-dark-500 text-sm mt-1">
-              {(file.size / 1024).toFixed(0)} KB &middot; Clique para trocar
-            </p>
+            <p className="text-dark-500 text-sm mt-1">{(file.size / 1024).toFixed(0)} KB &middot; Clique para trocar</p>
           </div>
         ) : (
           <div>
@@ -131,7 +152,10 @@ export default function UploadStep({
                 className="input flex-1"
               />
               <button
-                onClick={() => { setShowWeekOverride(false); setWeekStartOverride(''); }}
+                onClick={() => {
+                  setShowWeekOverride(false);
+                  setWeekStartOverride('');
+                }}
                 className="text-dark-500 text-xs hover:text-dark-300"
               >
                 {'\u2715'} Auto-detectar
@@ -144,13 +168,11 @@ export default function UploadStep({
       {clubs.length > 1 && (
         <div className="mt-4">
           <label className="block text-sm font-medium text-dark-300 mb-1.5">Clube</label>
-          <select
-            value={clubId}
-            onChange={(e) => setClubId(e.target.value)}
-            className="input w-full"
-          >
-            {clubs.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+          <select value={clubId} onChange={(e) => setClubId(e.target.value)} className="input w-full">
+            {clubs.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>

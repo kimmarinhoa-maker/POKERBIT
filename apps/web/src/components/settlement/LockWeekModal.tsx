@@ -15,11 +15,11 @@ interface CheckItem {
 }
 
 const CHECKLIST: CheckItem[] = [
-  { key: 'import',     label: 'Importacao conferida',      description: 'Dados importados estao corretos e sem erros' },
-  { key: 'rakeback',   label: 'Rakeback definido',         description: 'Taxas RB dos agentes/jogadores estao configuradas' },
-  { key: 'ledger',     label: 'Movimentacoes registradas', description: 'Todos pagamentos IN/OUT foram lancados' },
-  { key: 'reconciled', label: 'Conciliacao revisada',      description: 'Movimentacoes foram conferidas/conciliadas' },
-  { key: 'confirm',    label: 'Confirmo a finalizacao',    description: 'Entendo que apos finalizar nao poderei editar' },
+  { key: 'import', label: 'Importacao conferida', description: 'Dados importados estao corretos e sem erros' },
+  { key: 'rakeback', label: 'Rakeback definido', description: 'Taxas RB dos agentes/jogadores estao configuradas' },
+  { key: 'ledger', label: 'Movimentacoes registradas', description: 'Todos pagamentos IN/OUT foram lancados' },
+  { key: 'reconciled', label: 'Conciliacao revisada', description: 'Movimentacoes foram conferidas/conciliadas' },
+  { key: 'confirm', label: 'Confirmo a finalizacao', description: 'Entendo que apos finalizar nao poderei editar' },
 ];
 
 interface LockWeekModalProps {
@@ -46,13 +46,16 @@ export default function LockWeekModal({
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState<'checklist' | 'processing' | 'done'>('checklist');
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<{ finalized: boolean; carryCount: number }>({ finalized: false, carryCount: 0 });
+  const [results, setResults] = useState<{ finalized: boolean; carryCount: number }>({
+    finalized: false,
+    carryCount: 0,
+  });
 
-  const allChecked = CHECKLIST.every(c => checked.has(c.key));
+  const allChecked = CHECKLIST.every((c) => checked.has(c.key));
   const totalAgents = subclubs.reduce((s: number, sc: any) => s + (sc.agents?.length || 0), 0);
 
   function toggle(key: string) {
-    setChecked(prev => {
+    setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -73,7 +76,7 @@ export default function LockWeekModal({
 
       // 2. Compute carry-forward
       const carryRes = await closeWeek(settlementId);
-      const carryCount = carryRes.success ? (carryRes.data?.count || 0) : 0;
+      const carryCount = carryRes.success ? carryRes.data?.count || 0 : 0;
 
       // 3. Finalize settlement (DRAFT -> FINAL)
       const finalRes = await finalizeSettlement(settlementId);
@@ -91,14 +94,21 @@ export default function LockWeekModal({
     }
   }
 
-  const fmtDate = (dt: string) =>
-    new Date(dt + 'T00:00:00').toLocaleDateString('pt-BR');
+  const fmtDate = (dt: string) => new Date(dt + 'T00:00:00').toLocaleDateString('pt-BR');
 
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" aria-hidden="true">
-      <div className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal animate-slide-up w-full max-w-lg mx-4" role="dialog" aria-modal="true" aria-label="Finalizar semana">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      aria-hidden="true"
+    >
+      <div
+        className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal animate-slide-up w-full max-w-lg mx-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Finalizar semana"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700">
           <div>
@@ -106,11 +116,19 @@ export default function LockWeekModal({
             <p className="text-dark-400 text-xs mt-0.5">
               Semana {fmtDate(weekStart)}
               {subclubs.length > 0 && (
-                <> — {totalAgents} agentes em {subclubs.length} subclube(s)</>
+                <>
+                  {' '}
+                  — {totalAgents} agentes em {subclubs.length} subclube(s)
+                </>
               )}
             </p>
           </div>
-          <button onClick={onClose} className="text-dark-500 hover:text-dark-300 text-lg" disabled={processing} aria-label="Cancelar finalizacao">
+          <button
+            onClick={onClose}
+            className="text-dark-500 hover:text-dark-300 text-lg"
+            disabled={processing}
+            aria-label="Cancelar finalizacao"
+          >
             ✕
           </button>
         </div>
@@ -120,11 +138,9 @@ export default function LockWeekModal({
           {step === 'checklist' && (
             <>
               {/* Checklist */}
-              <p className="text-xs text-dark-400 mb-3 uppercase tracking-wider font-bold">
-                Checklist de verificacao
-              </p>
+              <p className="text-xs text-dark-400 mb-3 uppercase tracking-wider font-bold">Checklist de verificacao</p>
               <div className="space-y-2 mb-5">
-                {CHECKLIST.map(item => (
+                {CHECKLIST.map((item) => (
                   <label
                     key={item.key}
                     className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors border ${
@@ -173,8 +189,8 @@ export default function LockWeekModal({
               {/* Info */}
               <div className="bg-yellow-900/10 border border-yellow-700/20 rounded-lg p-3 mb-4">
                 <p className="text-xs text-yellow-400/80">
-                  Ao finalizar, o status mudara de RASCUNHO para FINAL. O carry-forward (saldo anterior)
-                  sera calculado e gravado automaticamente para a proxima semana.
+                  Ao finalizar, o status mudara de RASCUNHO para FINAL. O carry-forward (saldo anterior) sera calculado
+                  e gravado automaticamente para a proxima semana.
                 </p>
               </div>
             </>
@@ -192,9 +208,14 @@ export default function LockWeekModal({
             <div className="py-8 text-center">
               <h4 className="text-lg font-bold text-white mb-2">Semana Finalizada!</h4>
               <div className="space-y-1 text-sm text-dark-300">
-                <p>Status alterado para <span className="text-emerald-400 font-bold">FINAL</span></p>
+                <p>
+                  Status alterado para <span className="text-emerald-400 font-bold">FINAL</span>
+                </p>
                 {results.carryCount > 0 && (
-                  <p>Carry-forward calculado para <span className="text-poker-400 font-bold">{results.carryCount}</span> agentes</p>
+                  <p>
+                    Carry-forward calculado para <span className="text-poker-400 font-bold">{results.carryCount}</span>{' '}
+                    agentes
+                  </p>
                 )}
               </div>
             </div>
@@ -205,7 +226,11 @@ export default function LockWeekModal({
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-dark-700">
           {step === 'checklist' && (
             <>
-              <button onClick={onClose} className="text-dark-400 hover:text-white text-sm transition-colors" aria-label="Cancelar finalizacao">
+              <button
+                onClick={onClose}
+                className="text-dark-400 hover:text-white text-sm transition-colors"
+                aria-label="Cancelar finalizacao"
+              >
                 Cancelar
               </button>
               <button

@@ -39,25 +39,12 @@ export default function ComparativeBarChart({ data }: Props) {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-          <XAxis
-            dataKey="semana"
-            tick={{ fill: '#475569', fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            domain={[0, 'auto']}
-            tick={{ fill: '#475569', fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-          />
+          <XAxis dataKey="semana" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 'auto']} tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="atual" radius={[4, 4, 0, 0]}>
             {data.map((_, index) => (
-              <Cell
-                key={index}
-                fill={index === data.length - 1 ? 'url(#barGradCurrent)' : 'url(#barGradDefault)'}
-              />
+              <Cell key={index} fill={index === data.length - 1 ? 'url(#barGradCurrent)' : 'url(#barGradDefault)'} />
             ))}
           </Bar>
         </BarChart>

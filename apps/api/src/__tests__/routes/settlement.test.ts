@@ -17,10 +17,10 @@ vi.mock('../../services/settlement.service', () => ({
 
 // Mock supabase for routes that use it directly (notes, payment-type, etc.)
 const mockChain: any = {};
-['select', 'insert', 'update', 'delete', 'eq', 'is', 'single', 'order', 'limit'].forEach(m => {
+['select', 'insert', 'update', 'delete', 'eq', 'is', 'single', 'order', 'limit'].forEach((m) => {
   mockChain[m] = vi.fn().mockReturnValue(mockChain);
 });
-mockChain.then = (resolve: Function) => {
+mockChain.then = (resolve: (value: any) => any) => {
   resolve(mockChain._result || { data: null, error: null });
   return mockChain;
 };
@@ -36,10 +36,12 @@ vi.mock('../../config/supabase', () => ({
 vi.mock('../../middleware/auth', () => ({
   requireAuth: (_req: any, _res: any, next: any) => next(),
   requireTenant: (_req: any, _res: any, next: any) => next(),
-  requireRole: (..._roles: string[]) => (_req: any, _res: any, next: any) => {
-    if (_req.userRole && _roles.includes(_req.userRole)) return next();
-    return _res.status(403).json({ success: false, error: 'Sem permissão para esta ação' });
-  },
+  requireRole:
+    (..._roles: string[]) =>
+    (_req: any, _res: any, next: any) => {
+      if (_req.userRole && _roles.includes(_req.userRole)) return next();
+      return _res.status(403).json({ success: false, error: 'Sem permissão para esta ação' });
+    },
 }));
 
 const settlementRoutes = (await import('../../routes/settlement.routes')).default;
@@ -54,9 +56,7 @@ describe('Settlement Routes', () => {
   // ─── GET /api/settlements ──────────────────────────────────────────
   describe('GET /api/settlements', () => {
     it('lista settlements', async () => {
-      mockService.listWeeks.mockResolvedValue([
-        { id: 's1', week_start: '2024-01-01', status: 'DRAFT' },
-      ]);
+      mockService.listWeeks.mockResolvedValue([{ id: 's1', week_start: '2024-01-01', status: 'DRAFT' }]);
 
       const { app } = createTestApp();
       app.use('/api/settlements', settlementRoutes);
@@ -73,9 +73,7 @@ describe('Settlement Routes', () => {
       app.use('/api/settlements', settlementRoutes);
 
       await request(app).get('/api/settlements?club_id=c1&start_date=2024-01-01&end_date=2024-01-07');
-      expect(mockService.listWeeks).toHaveBeenCalledWith(
-        'test-tenant-id', 'c1', '2024-01-01', '2024-01-07',
-      );
+      expect(mockService.listWeeks).toHaveBeenCalledWith('test-tenant-id', 'c1', '2024-01-01', '2024-01-07');
     });
 
     it('erro do service → 500', async () => {
@@ -121,9 +119,7 @@ describe('Settlement Routes', () => {
       const { app } = createTestApp({ userRole: 'FINANCEIRO' });
       app.use('/api/settlements', settlementRoutes);
 
-      const res = await request(app)
-        .patch('/api/settlements/s1/notes')
-        .send({ notes: 'hello' });
+      const res = await request(app).patch('/api/settlements/s1/notes').send({ notes: 'hello' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
@@ -132,9 +128,7 @@ describe('Settlement Routes', () => {
       const { app } = createTestApp({ userRole: 'AUDITOR' });
       app.use('/api/settlements', settlementRoutes);
 
-      const res = await request(app)
-        .patch('/api/settlements/s1/notes')
-        .send({ notes: 'hack' });
+      const res = await request(app).patch('/api/settlements/s1/notes').send({ notes: 'hack' });
       expect(res.status).toBe(403);
     });
   });

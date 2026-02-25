@@ -13,8 +13,8 @@
 import XLSX from 'xlsx';
 
 export interface WeekDetectionResult {
-  week_start: string;    // YYYY-MM-DD (segunda-feira)
-  week_end: string;      // YYYY-MM-DD (domingo)
+  week_start: string; // YYYY-MM-DD (segunda-feira)
+  week_end: string; // YYYY-MM-DD (domingo)
   detected_from: 'xlsx' | 'filename' | 'fallback';
   confidence: 'high' | 'medium' | 'low';
 }

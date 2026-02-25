@@ -32,7 +32,8 @@ export default function ClubsPage() {
 
   // KPIs
   const kpis = useMemo(() => {
-    let subclubes = 0, agents = 0;
+    let subclubes = 0,
+      agents = 0;
     for (const club of tree) {
       const subs = club.subclubes || [];
       subclubes += subs.length;
@@ -44,7 +45,7 @@ export default function ClubsPage() {
   }, [tree]);
 
   function toggleExpand(subId: string) {
-    setExpandedSubs(prev => {
+    setExpandedSubs((prev) => {
       const next = new Set(prev);
       if (next.has(subId)) next.delete(subId);
       else next.add(subId);
@@ -110,10 +111,7 @@ export default function ClubsPage() {
                   const isExpanded = expandedSubs.has(sub.id);
 
                   return (
-                    <div
-                      key={sub.id}
-                      className="bg-dark-800 rounded-lg border border-dark-700/50 overflow-hidden"
-                    >
+                    <div key={sub.id} className="bg-dark-800 rounded-lg border border-dark-700/50 overflow-hidden">
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">

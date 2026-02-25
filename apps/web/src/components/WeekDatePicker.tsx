@@ -11,8 +11,18 @@ interface WeekDatePickerProps {
 
 const WEEKDAYS = ['Do', 'Se', 'Te', 'Qu', 'Qu', 'Se', 'Sa'];
 const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
 ];
 
 function toISO(y: number, m: number, d: number): string {
@@ -88,11 +98,14 @@ export default function WeekDatePicker({ value, onChange, allowedDay, label }: W
         onClick={() => setOpen(!open)}
         className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-left text-sm text-white hover:border-dark-500 transition-colors flex items-center justify-between"
       >
-        <span className={value ? 'text-white' : 'text-dark-500'}>
-          {value ? formatDDMMYYYY(value) : 'dd/mm/aaaa'}
-        </span>
+        <span className={value ? 'text-white' : 'text-dark-500'}>{value ? formatDDMMYYYY(value) : 'dd/mm/aaaa'}</span>
         <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
         </svg>
       </button>
 
@@ -159,11 +172,12 @@ export default function WeekDatePicker({ value, onChange, allowedDay, label }: W
                   type="button"
                   onClick={() => selectDay(cell.day)}
                   className={`w-9 h-9 flex items-center justify-center text-xs rounded-lg font-semibold transition-colors
-                    ${isSelected
-                      ? 'bg-poker-600 text-white'
-                      : isToday
-                        ? 'bg-dark-700 text-poker-400 hover:bg-poker-600/30'
-                        : 'text-white hover:bg-dark-700'
+                    ${
+                      isSelected
+                        ? 'bg-poker-600 text-white'
+                        : isToday
+                          ? 'bg-dark-700 text-poker-400 hover:bg-poker-600/30'
+                          : 'text-white hover:bg-dark-700'
                     }`}
                 >
                   {cell.day}

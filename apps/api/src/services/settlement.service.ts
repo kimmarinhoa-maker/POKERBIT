@@ -17,7 +17,10 @@ import type { SettlementStatus } from '../types';
 
 // ─── normName: lowercase + remove acentos para matching robusto ──────
 function normName(s: string): string {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 // ─── round2: REGRA DE OURO ──────────────────────────────────────────
@@ -30,16 +33,17 @@ function sumArr(arr: any[], key: string): number {
 }
 
 export class SettlementService {
-
   // ─── Listar semanas disponíveis ──────────────────────────────────
   async listWeeks(tenantId: string, clubId?: string, startDate?: string, endDate?: string) {
     let query = supabaseAdmin
       .from('settlements')
-      .select(`
+      .select(
+        `
         id, club_id, week_start, version, status,
         import_id, notes, finalized_at, created_at,
         organizations!inner(name)
-      `)
+      `,
+      )
       .eq('tenant_id', tenantId)
       .order('week_start', { ascending: false });
 
@@ -120,7 +124,7 @@ export class SettlementService {
   async getSettlementWithSubclubs(
     tenantId: string,
     settlementId: string,
-    allowedSubclubIds?: string[] | null  // null/undefined = todos
+    allowedSubclubIds?: string[] | null, // null/undefined = todos
   ) {
     // ── Passo A: fetch settlement ──────────────────────────────────
     const { data: settlement, error: sErr } = await supabaseAdmin
@@ -147,11 +151,7 @@ export class SettlementService {
         .eq('settlement_id', settlementId)
         .eq('tenant_id', tenantId)
         .order('agent_name'),
-      supabaseAdmin
-        .from('fee_config')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true),
+      supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('is_active', true),
       supabaseAdmin
         .from('club_adjustments')
         .select('*')
@@ -187,7 +187,7 @@ export class SettlementService {
     // ── Build is_direct map: org_id + normalized name ──────────────────
     const directByOrgId = new Map<string, boolean>();
     const directByName = new Map<string, boolean>();
-    for (const org of (agentOrgsRes.data || [])) {
+    for (const org of agentOrgsRes.data || []) {
       const isDirect = org.metadata?.is_direct === true;
       if (isDirect) {
         directByOrgId.set(org.id, true);
@@ -197,27 +197,23 @@ export class SettlementService {
     // Annotate each agent metric with is_direct
     for (const a of agents) {
       (a as any).is_direct =
-        (a.agent_id && directByOrgId.has(a.agent_id)) ||
-        directByName.has(normName(a.agent_name || '')) ||
-        false;
+        (a.agent_id && directByOrgId.has(a.agent_id)) || directByName.has(normName(a.agent_name || '')) || false;
     }
     // Annotate each player with agent's is_direct
     for (const p of players) {
       (p as any).agent_is_direct =
-        (p.agent_id && directByOrgId.has(p.agent_id)) ||
-        directByName.has(normName(p.agent_name || '')) ||
-        false;
+        (p.agent_id && directByOrgId.has(p.agent_id)) || directByName.has(normName(p.agent_name || '')) || false;
     }
 
     // ── Build carry-forward map: entity_id → amount ──────────────────
     const carryMap = new Map<string, number>();
-    for (const cf of (carryRes.data || [])) {
+    for (const cf of carryRes.data || []) {
       carryMap.set(cf.entity_id, Number(cf.amount) || 0);
     }
 
     // ── Build ledger map: entity_id → { total, detalhe[] } ──────────
     const ledgerMap = new Map<string, { total: number; detalhe: any[] }>();
-    for (const le of (ledgerRes.data || [])) {
+    for (const le of ledgerRes.data || []) {
       if (le.source === 'system' || le.source === 'import') continue;
       const key = le.entity_id;
       if (!key) continue;
@@ -235,14 +231,15 @@ export class SettlementService {
     }
     // Sort each detalhe array by created_at DESC
     for (const [, v] of ledgerMap) {
-      v.detalhe.sort((a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      v.detalhe.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     // ── Normalizar fees ────────────────────────────────────────────
     const fees: Record<string, number> = {
-      taxaApp: 0, taxaLiga: 0, taxaRodeoGGR: 0, taxaRodeoApp: 0,
+      taxaApp: 0,
+      taxaLiga: 0,
+      taxaRodeoGGR: 0,
+      taxaRodeoApp: 0,
     };
     for (const r of feeRows) {
       fees[r.name] = Number(r.rate);
@@ -269,12 +266,15 @@ export class SettlementService {
       return subclubNameToId.get(name) || `name:${name}`;
     };
 
-    const bySub = new Map<string, {
-      id: string;
-      name: string;
-      players: any[];
-      agents: any[];
-    }>();
+    const bySub = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        players: any[];
+        agents: any[];
+      }
+    >();
 
     for (const p of players) {
       const key = subKey(p);
@@ -303,19 +303,19 @@ export class SettlementService {
     }
 
     // ── Passo C: compute por subclub ────────────────────────────────
-    const subclubs = Array.from(bySub.values()).map(sc => {
+    const subclubs = Array.from(bySub.values()).map((sc) => {
       const ganhos = round2(sumArr(sc.players, 'winnings_brl'));
       const rake = round2(sumArr(sc.players, 'rake_total_brl'));
       const ggr = round2(sumArr(sc.players, 'ggr_brl'));
 
       // Jogadores ativos = com ganhos != 0 OU rake > 0
       const activePlayers = sc.players.filter(
-        (p: any) => (Number(p.winnings_brl) || 0) !== 0 || (Number(p.rake_total_brl) || 0) > 0
+        (p: any) => (Number(p.winnings_brl) || 0) !== 0 || (Number(p.rake_total_brl) || 0) > 0,
       ).length;
 
       const totals = {
         players: activePlayers,
-        agents: new Set(sc.agents.map(x => x.agent_name).filter(Boolean)).size,
+        agents: new Set(sc.agents.map((x) => x.agent_name).filter(Boolean)).size,
         ganhos,
         rake,
         netProfit: round2(sumArr(sc.players, 'net_profit_brl')),
@@ -329,7 +329,11 @@ export class SettlementService {
       const feesComputed = this.computeFees(totals, fees);
 
       const adj = adjBySubclub.get(sc.id) || {
-        overlay: 0, compras: 0, security: 0, outros: 0, obs: null,
+        overlay: 0,
+        compras: 0,
+        security: 0,
+        outros: 0,
+        obs: null,
       };
       const adjustments = {
         overlay: round2(Number(adj.overlay || 0)),
@@ -339,20 +343,19 @@ export class SettlementService {
         obs: adj.obs || null,
       };
       const totalLancamentos = round2(
-        adjustments.overlay + adjustments.compras +
-        adjustments.security + adjustments.outros
+        adjustments.overlay + adjustments.compras + adjustments.security + adjustments.outros,
       );
 
       // ── Fórmula canônica TRAVADA (versão signed) ──────────────────
       // acertoLiga = resultado + totalTaxasSigned + totalLancamentos
-      const acertoLiga = round2(
-        totals.resultado + feesComputed.totalTaxasSigned + totalLancamentos
-      );
+      const acertoLiga = round2(totals.resultado + feesComputed.totalTaxasSigned + totalLancamentos);
 
       const acertoDirecao =
-        acertoLiga > 0.01 ? `Liga deve pagar ao ${sc.name}` :
-        acertoLiga < -0.01 ? `${sc.name} deve pagar à Liga` :
-        'Neutro';
+        acertoLiga > 0.01
+          ? `Liga deve pagar ao ${sc.name}`
+          : acertoLiga < -0.01
+            ? `${sc.name} deve pagar à Liga`
+            : 'Neutro';
 
       // ── Enriquecer cada jogador com carry + pagamentos ────────────
       // Build agent lookup: agent_name → IDs from agent_week_metrics
@@ -401,12 +404,15 @@ export class SettlementService {
         // Saldo anterior (carry-forward)
         let saldoAnterior = 0;
         for (const k of keys) {
-          if (carryMap.has(k)) { saldoAnterior = carryMap.get(k)!; break; }
+          if (carryMap.has(k)) {
+            saldoAnterior = carryMap.get(k)!;
+            break;
+          }
         }
 
         // Pagamentos (ledger entries) — collect from all matching keys
         let totalPagamentos = 0;
-        let pagamentosDetalhe: any[] = [];
+        const pagamentosDetalhe: any[] = [];
         const usedKeys = new Set<string>();
         for (const k of keys) {
           if (ledgerMap.has(k) && !usedKeys.has(k)) {
@@ -417,9 +423,7 @@ export class SettlementService {
           }
         }
         // Re-sort detalhe combined
-        pagamentosDetalhe.sort((a: any, b: any) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
+        pagamentosDetalhe.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         const resultadoSemana = Number(p.resultado_brl) || 0;
         const saldoAtual = round2(resultadoSemana + saldoAnterior + round2(totalPagamentos));
@@ -428,9 +432,7 @@ export class SettlementService {
         p.total_pagamentos = round2(totalPagamentos);
         p.pagamentos_detalhe = pagamentosDetalhe;
         p.saldo_atual = saldoAtual;
-        p.situacao = saldoAtual > 0.01 ? 'a_receber'
-                   : saldoAtual < -0.01 ? 'a_pagar'
-                   : 'quitado';
+        p.situacao = saldoAtual > 0.01 ? 'a_receber' : saldoAtual < -0.01 ? 'a_pagar' : 'quitado';
       }
 
       return {
@@ -454,9 +456,7 @@ export class SettlementService {
     // allowedSubclubIds=null → acesso total; array → filtrar por id
     let filteredSubclubs = subclubs;
     if (Array.isArray(allowedSubclubIds)) {
-      filteredSubclubs = subclubs.filter(sc =>
-        sc.id && allowedSubclubIds.includes(sc.id)
-      );
+      filteredSubclubs = subclubs.filter((sc) => sc.id && allowedSubclubIds.includes(sc.id));
     }
 
     // ── Dashboard totals (rollup) ────────────────────────────────────
@@ -479,26 +479,23 @@ export class SettlementService {
   }
 
   // ─── Compute fees por subclub ────────────────────────────────────
-  private computeFees(
-    totals: { rake: number; ggr: number },
-    fees: Record<string, number>
-  ) {
-    const taxaApp = round2(totals.rake * (fees.taxaApp || 0) / 100);
-    const taxaLiga = round2(totals.rake * (fees.taxaLiga || 0) / 100);
+  private computeFees(totals: { rake: number; ggr: number }, fees: Record<string, number>) {
+    const taxaApp = round2((totals.rake * (fees.taxaApp || 0)) / 100);
+    const taxaLiga = round2((totals.rake * (fees.taxaLiga || 0)) / 100);
 
     const ggrBase = totals.ggr > 0 ? totals.ggr : 0;
-    const taxaRodeoGGR = round2(ggrBase * (fees.taxaRodeoGGR || 0) / 100);
-    const taxaRodeoApp = round2(ggrBase * (fees.taxaRodeoApp || 0) / 100);
+    const taxaRodeoGGR = round2((ggrBase * (fees.taxaRodeoGGR || 0)) / 100);
+    const taxaRodeoApp = round2((ggrBase * (fees.taxaRodeoApp || 0)) / 100);
 
     const totalTaxas = round2(taxaApp + taxaLiga + taxaRodeoGGR + taxaRodeoApp);
     const totalTaxasSigned = round2(-totalTaxas);
 
     return {
-      taxaApp,          // positivo (UI)
-      taxaLiga,         // positivo (UI)
-      taxaRodeoGGR,     // positivo (UI)
-      taxaRodeoApp,     // positivo (UI)
-      totalTaxas,       // positivo (UI: "R$ 3.993,23")
+      taxaApp, // positivo (UI)
+      taxaLiga, // positivo (UI)
+      taxaRodeoGGR, // positivo (UI)
+      taxaRodeoApp, // positivo (UI)
+      totalTaxas, // positivo (UI: "R$ 3.993,23")
       totalTaxasSigned, // negativo (cálculo acertoLiga)
     };
   }
@@ -508,7 +505,7 @@ export class SettlementService {
   // (round2 por jogador → round2 por subclub → round2 dashboard)
   private rollupDashboard(subclubs: any[]) {
     // Soma direta dos dados de jogadores — apenas 1 round2 no final
-    const allPlayers = subclubs.flatMap(s => s.players || []);
+    const allPlayers = subclubs.flatMap((s) => s.players || []);
 
     const ganhos = round2(sumArr(allPlayers, 'winnings_brl'));
     const rake = round2(sumArr(allPlayers, 'rake_total_brl'));
@@ -517,13 +514,9 @@ export class SettlementService {
     const resultado = round2(ganhos + rake + ggr);
 
     // Fees e lançamentos continuam somados por subclub (são per-subclub por natureza)
-    const totalTaxas = round2(
-      subclubs.reduce((acc, s) => acc + Number(s.feesComputed.totalTaxas || 0), 0)
-    );
+    const totalTaxas = round2(subclubs.reduce((acc, s) => acc + Number(s.feesComputed.totalTaxas || 0), 0));
     const totalTaxasSigned = round2(-totalTaxas);
-    const totalLancamentos = round2(
-      subclubs.reduce((acc, s) => acc + Number(s.totalLancamentos || 0), 0)
-    );
+    const totalLancamentos = round2(subclubs.reduce((acc, s) => acc + Number(s.totalLancamentos || 0), 0));
     const acertoLiga = round2(resultado + totalTaxasSigned + totalLancamentos);
 
     return {

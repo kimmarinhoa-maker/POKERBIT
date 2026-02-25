@@ -52,9 +52,7 @@ export default function Detalhamento({ subclub }: Props) {
         agentName,
         agentId: agentMetric?.agent_id || null,
         externalAgentId: extAgentId,
-        players: pls.sort((a, b) =>
-          (a.nickname || '').localeCompare(b.nickname || '')
-        ),
+        players: pls.sort((a, b) => (a.nickname || '').localeCompare(b.nickname || '')),
         totals: {
           ganhos: Math.round((ganhos + Number.EPSILON) * 100) / 100,
           rake: Math.round((rake + Number.EPSILON) * 100) / 100,
@@ -73,16 +71,16 @@ export default function Detalhamento({ subclub }: Props) {
     if (!search.trim()) return agentGroups;
     const q = search.toLowerCase();
     return agentGroups
-      .map(g => ({
+      .map((g) => ({
         ...g,
         players: g.players.filter(
           (p) =>
             (p.nickname || '').toLowerCase().includes(q) ||
             (p.agent_name || '').toLowerCase().includes(q) ||
-            (p.external_player_id || '').includes(q)
+            (p.external_player_id || '').includes(q),
         ),
       }))
-      .filter(g => g.players.length > 0);
+      .filter((g) => g.players.length > 0);
   }, [agentGroups, search]);
 
   // Grand totals (always from ALL players, not filtered)
@@ -103,7 +101,7 @@ export default function Detalhamento({ subclub }: Props) {
 
   // Filtered totals (for table footer)
   const filteredTotals = useMemo(() => {
-    const allFilteredPlayers = filteredGroups.flatMap(g => g.players);
+    const allFilteredPlayers = filteredGroups.flatMap((g) => g.players);
     const ganhos = allFilteredPlayers.reduce((s, p) => s + Number(p.winnings_brl || 0), 0);
     const rake = allFilteredPlayers.reduce((s, p) => s + Number(p.rake_total_brl || 0), 0);
     const ggr = allFilteredPlayers.reduce((s, p) => s + Number(p.ggr_brl || 0), 0);
@@ -117,7 +115,7 @@ export default function Detalhamento({ subclub }: Props) {
   }, [filteredGroups]);
 
   function toggleAgent(name: string) {
-    setExpandedAgents(prev => {
+    setExpandedAgents((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
@@ -126,7 +124,7 @@ export default function Detalhamento({ subclub }: Props) {
   }
 
   function expandAll() {
-    setExpandedAgents(new Set(filteredGroups.map(g => g.agentName)));
+    setExpandedAgents(new Set(filteredGroups.map((g) => g.agentName)));
   }
 
   function collapseAll() {
@@ -152,7 +150,7 @@ export default function Detalhamento({ subclub }: Props) {
         ]);
       }
     }
-    const csv = rows.map(r => r.join(';')).join('\n');
+    const csv = rows.map((r) => r.join(';')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -185,18 +183,20 @@ export default function Detalhamento({ subclub }: Props) {
           <div className="h-0.5 bg-blue-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores Ativos</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">
-              {grandTotals.ativos}
-            </p>
+            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{grandTotals.ativos}</p>
           </div>
         </div>
 
         {/* Profit / Loss */}
-        <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}>
+        <div
+          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
+        >
           <div className={`h-0.5 ${grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Profit/Loss</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}>
+            <p
+              className={`text-xl font-bold mt-2 font-mono ${grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}
+            >
               {formatBRL(grandTotals.ganhos)}
             </p>
           </div>
@@ -207,9 +207,7 @@ export default function Detalhamento({ subclub }: Props) {
           <div className="h-0.5 bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Gerado</p>
-            <p className="text-xl font-bold mt-2 font-mono text-poker-400">
-              {formatBRL(grandTotals.rake)}
-            </p>
+            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(grandTotals.rake)}</p>
           </div>
         </div>
 
@@ -225,11 +223,15 @@ export default function Detalhamento({ subclub }: Props) {
         </div>
 
         {/* Resultado Final */}
-        <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ring-1 ring-amber-700/30`}>
+        <div
+          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ring-1 ring-amber-700/30`}
+        >
           <div className={`h-0.5 ${grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Final</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+            <p
+              className={`text-xl font-bold mt-2 font-mono ${grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}
+            >
               {formatBRL(grandTotals.resultado)}
             </p>
           </div>
@@ -252,10 +254,7 @@ export default function Detalhamento({ subclub }: Props) {
           <button onClick={collapseAll} className="btn-secondary text-xs px-3 py-1.5">
             Recolher Todos
           </button>
-          <button
-            onClick={() => exportCSV(filteredGroups)}
-            className="btn-secondary text-xs px-3 py-1.5"
-          >
+          <button onClick={() => exportCSV(filteredGroups)} className="btn-secondary text-xs px-3 py-1.5">
             Exportar CSV
           </button>
         </div>
@@ -292,9 +291,7 @@ export default function Detalhamento({ subclub }: Props) {
             {/* ── TOTAL footer row ── */}
             {filteredGroups.length > 0 && (
               <tr className="border-t-2 border-dark-700 bg-dark-900">
-                <td className="px-3 py-2 font-bold text-dark-100 uppercase tracking-widest text-[10px]">
-                  TOTAL
-                </td>
+                <td className="px-3 py-2 font-bold text-dark-100 uppercase tracking-widest text-[10px]">TOTAL</td>
                 <td className="px-3 py-2 text-right font-mono text-xs font-bold text-emerald-400">
                   {formatBRL(filteredTotals.rake)}
                 </td>
@@ -304,7 +301,9 @@ export default function Detalhamento({ subclub }: Props) {
                 <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${ggrColor(filteredTotals.ggr)}`}>
                   {Math.abs(filteredTotals.ggr) > 0.001 ? formatBRL(filteredTotals.ggr) : '\u2014'}
                 </td>
-                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.resultado)}`}>
+                <td
+                  className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.resultado)}`}
+                >
                   {formatBRL(filteredTotals.resultado)}
                 </td>
               </tr>
@@ -337,15 +336,10 @@ function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: Agent
   return (
     <>
       {/* Agent row */}
-      <tr
-        className="hover:bg-dark-800/40 cursor-pointer border-b border-dark-800 transition-colors"
-        onClick={onToggle}
-      >
+      <tr className="hover:bg-dark-800/40 cursor-pointer border-b border-dark-800 transition-colors" onClick={onToggle}>
         <td className="px-3 py-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-dark-500 text-[10px]">
-              {isExpanded ? '\u25BC' : '\u25B6'}
-            </span>
+            <span className="text-dark-500 text-[10px]">{isExpanded ? '\u25BC' : '\u25B6'}</span>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-dark-100 text-xs font-semibold">{group.agentName}</span>
@@ -384,15 +378,11 @@ function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: Agent
               key={p.external_player_id || i}
               className="hover:bg-dark-800/20 transition-colors border-b border-white/[0.04]"
             >
-              <td className="pl-8 pr-3 py-1 text-dark-400 text-xs">
-                {p.nickname || p.external_player_id || '\u2014'}
-              </td>
+              <td className="pl-8 pr-3 py-1 text-dark-400 text-xs">{p.nickname || p.external_player_id || '\u2014'}</td>
               <td className="px-3 py-1 text-right font-mono text-xs text-emerald-400">
                 {pRake > 0.001 ? formatBRL(pRake) : '\u2014'}
               </td>
-              <td className={`px-3 py-1 text-right font-mono text-xs ${valColor(pGanhos)}`}>
-                {formatBRL(pGanhos)}
-              </td>
+              <td className={`px-3 py-1 text-right font-mono text-xs ${valColor(pGanhos)}`}>{formatBRL(pGanhos)}</td>
               <td className={`px-3 py-1 text-right font-mono text-xs ${ggrColor(pGGR)}`}>
                 {Math.abs(pGGR) > 0.001 ? formatBRL(pGGR) : '\u2014'}
               </td>

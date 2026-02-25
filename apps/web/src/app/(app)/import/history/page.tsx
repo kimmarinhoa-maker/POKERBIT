@@ -19,10 +19,10 @@ interface ImportRecord {
 }
 
 const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
-  DONE:       { label: 'Concluido',   cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
+  DONE: { label: 'Concluido', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
   PROCESSING: { label: 'Processando', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
-  ERROR:      { label: 'Erro',        cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
-  PENDING:    { label: 'Pendente',    cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
+  ERROR: { label: 'Erro', cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
+  PENDING: { label: 'Pendente', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
 };
 
 export default function ImportHistoryPage() {
@@ -57,7 +57,7 @@ export default function ImportHistoryPage() {
     try {
       const res = await deleteImport(imp.id);
       if (res.success) {
-        setImports(prev => prev.filter(i => i.id !== imp.id));
+        setImports((prev) => prev.filter((i) => i.id !== imp.id));
         toast('Importacao removida', 'success');
       } else {
         toast(res.error || 'Erro ao remover', 'error');
@@ -89,9 +89,7 @@ export default function ImportHistoryPage() {
         <div className="card text-center py-16">
           <div className="text-5xl mb-4">{'\u{1F4E4}'}</div>
           <p className="text-dark-400 text-lg mb-2">Nenhuma importacao encontrada</p>
-          <p className="text-dark-500 text-sm">
-            Importe sua primeira planilha na aba &ldquo;Nova Importacao&rdquo;.
-          </p>
+          <p className="text-dark-500 text-sm">Importe sua primeira planilha na aba &ldquo;Nova Importacao&rdquo;.</p>
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
@@ -127,12 +125,8 @@ export default function ImportHistoryPage() {
                       {new Date(imp.created_at).toLocaleDateString('pt-BR')}{' '}
                       {new Date(imp.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </td>
-                    <td className="p-3 text-center text-dark-300 font-mono">
-                      {imp.player_count ?? '-'}
-                    </td>
-                    <td className="p-3 text-center text-dark-300 font-mono">
-                      {imp.agent_count ?? '-'}
-                    </td>
+                    <td className="p-3 text-center text-dark-300 font-mono">{imp.player_count ?? '-'}</td>
+                    <td className="p-3 text-center text-dark-300 font-mono">{imp.agent_count ?? '-'}</td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.cls}`}>
                         {st.label}

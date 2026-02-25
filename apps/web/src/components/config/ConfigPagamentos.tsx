@@ -2,8 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  listPaymentMethods, createPaymentMethod, updatePaymentMethod, deletePaymentMethod,
-  listBankAccounts, createBankAccount, updateBankAccount, deleteBankAccount,
+  listPaymentMethods,
+  createPaymentMethod,
+  updatePaymentMethod,
+  deletePaymentMethod,
+  listBankAccounts,
+  createBankAccount,
+  updateBankAccount,
+  deleteBankAccount,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
@@ -42,10 +48,7 @@ export default function ConfigPagamentos() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [mRes, bRes] = await Promise.all([
-        listPaymentMethods(),
-        listBankAccounts(),
-      ]);
+      const [mRes, bRes] = await Promise.all([listPaymentMethods(), listBankAccounts()]);
       if (mRes.success) setMethods(mRes.data || []);
       if (bRes.success) setBanks(bRes.data || []);
     } catch {
@@ -55,7 +58,9 @@ export default function ConfigPagamentos() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (loading) {
     return (
@@ -105,10 +110,7 @@ export default function ConfigPagamentos() {
 //  Payment Methods Section
 // ═══════════════════════════════════════════════════════════════════
 
-function PaymentMethodsSection({ methods, onReload }: {
-  methods: PaymentMethod[];
-  onReload: () => void;
-}) {
+function PaymentMethodsSection({ methods, onReload }: { methods: PaymentMethod[]; onReload: () => void }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', is_default: false });
   const [saving, setSaving] = useState(false);
@@ -126,7 +128,11 @@ function PaymentMethodsSection({ methods, onReload }: {
         onReload();
         toast('Metodo de pagamento criado', 'success');
       }
-    } catch { toast('Erro ao criar metodo de pagamento', 'error'); } finally { setSaving(false); }
+    } catch {
+      toast('Erro ao criar metodo de pagamento', 'error');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleToggleActive(m: PaymentMethod) {
@@ -160,18 +166,15 @@ function PaymentMethodsSection({ methods, onReload }: {
       {/* Info */}
       <div className="card bg-dark-800/30 border-dark-700/40 mb-4">
         <p className="text-sm text-dark-400">
-          Metodos de pagamento aparecem ao registrar movimentacoes (PIX, Transferencia, ChipPix, etc).
-          O metodo padrao e pre-selecionado automaticamente.
+          Metodos de pagamento aparecem ao registrar movimentacoes (PIX, Transferencia, ChipPix, etc). O metodo padrao e
+          pre-selecionado automaticamente.
         </p>
       </div>
 
       {/* List */}
       <div className="space-y-1.5 mb-4">
-        {methods.map(m => (
-          <div
-            key={m.id}
-            className={`card flex items-center justify-between py-3 ${!m.is_active ? 'opacity-50' : ''}`}
-          >
+        {methods.map((m) => (
+          <div key={m.id} className={`card flex items-center justify-between py-3 ${!m.is_active ? 'opacity-50' : ''}`}>
             <div className="flex items-center gap-3">
               {editingId === m.id ? (
                 <input
@@ -244,24 +247,35 @@ function PaymentMethodsSection({ methods, onReload }: {
               type="text"
               placeholder="Nome do metodo (ex: PIX)"
               value={form.name}
-              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className="input flex-1 text-sm"
               autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate();
+              }}
             />
             <label className="flex items-center gap-1.5 text-xs text-dark-400 cursor-pointer whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={form.is_default}
-                onChange={(e) => setForm(f => ({ ...f, is_default: e.target.checked }))}
+                onChange={(e) => setForm((f) => ({ ...f, is_default: e.target.checked }))}
                 className="accent-poker-500"
               />
               Padrao
             </label>
-            <button onClick={handleCreate} disabled={saving} className="btn-primary text-xs px-4 py-2" aria-label="Salvar metodo de pagamento">
+            <button
+              onClick={handleCreate}
+              disabled={saving}
+              className="btn-primary text-xs px-4 py-2"
+              aria-label="Salvar metodo de pagamento"
+            >
               {saving ? '...' : 'Adicionar'}
             </button>
-            <button onClick={() => setShowForm(false)} className="text-dark-500 hover:text-dark-300 text-xs" aria-label="Cancelar criacao de metodo">
+            <button
+              onClick={() => setShowForm(false)}
+              className="text-dark-500 hover:text-dark-300 text-xs"
+              aria-label="Cancelar criacao de metodo"
+            >
               Cancelar
             </button>
           </div>
@@ -283,10 +297,7 @@ function PaymentMethodsSection({ methods, onReload }: {
 //  Bank Accounts Section
 // ═══════════════════════════════════════════════════════════════════
 
-function BankAccountsSection({ banks, onReload }: {
-  banks: BankAccount[];
-  onReload: () => void;
-}) {
+function BankAccountsSection({ banks, onReload }: { banks: BankAccount[]; onReload: () => void }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', bank_code: '', agency: '', account_nr: '', is_default: false });
   const [saving, setSaving] = useState(false);
@@ -309,7 +320,11 @@ function BankAccountsSection({ banks, onReload }: {
         onReload();
         toast('Conta bancaria criada', 'success');
       }
-    } catch { toast('Erro ao criar conta bancaria', 'error'); } finally { setSaving(false); }
+    } catch {
+      toast('Erro ao criar conta bancaria', 'error');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleToggleActive(b: BankAccount) {
@@ -339,11 +354,8 @@ function BankAccountsSection({ banks, onReload }: {
 
       {/* List */}
       <div className="space-y-1.5 mb-4">
-        {banks.map(b => (
-          <div
-            key={b.id}
-            className={`card py-3 ${!b.is_active ? 'opacity-50' : ''}`}
-          >
+        {banks.map((b) => (
+          <div key={b.id} className={`card py-3 ${!b.is_active ? 'opacity-50' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-dark-700/50 flex items-center justify-center text-xs font-bold text-dark-400 flex-shrink-0">
@@ -411,7 +423,7 @@ function BankAccountsSection({ banks, onReload }: {
                 type="text"
                 placeholder="Ex: Nubank, C6 Bank"
                 value={form.name}
-                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 className="input w-full text-sm"
                 autoFocus
               />
@@ -422,7 +434,7 @@ function BankAccountsSection({ banks, onReload }: {
                 type="text"
                 placeholder="Ex: 260"
                 value={form.bank_code}
-                onChange={(e) => setForm(f => ({ ...f, bank_code: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, bank_code: e.target.value }))}
                 className="input w-full text-sm"
               />
             </div>
@@ -432,7 +444,7 @@ function BankAccountsSection({ banks, onReload }: {
                 type="text"
                 placeholder="Ex: 0001"
                 value={form.agency}
-                onChange={(e) => setForm(f => ({ ...f, agency: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, agency: e.target.value }))}
                 className="input w-full text-sm"
               />
             </div>
@@ -442,7 +454,7 @@ function BankAccountsSection({ banks, onReload }: {
                 type="text"
                 placeholder="Ex: 12345-6"
                 value={form.account_nr}
-                onChange={(e) => setForm(f => ({ ...f, account_nr: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, account_nr: e.target.value }))}
                 className="input w-full text-sm"
               />
             </div>
@@ -452,16 +464,25 @@ function BankAccountsSection({ banks, onReload }: {
               <input
                 type="checkbox"
                 checked={form.is_default}
-                onChange={(e) => setForm(f => ({ ...f, is_default: e.target.checked }))}
+                onChange={(e) => setForm((f) => ({ ...f, is_default: e.target.checked }))}
                 className="accent-poker-500"
               />
               Conta padrao
             </label>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowForm(false)} className="text-dark-500 hover:text-dark-300 text-xs" aria-label="Cancelar criacao de conta">
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-dark-500 hover:text-dark-300 text-xs"
+                aria-label="Cancelar criacao de conta"
+              >
                 Cancelar
               </button>
-              <button onClick={handleCreate} disabled={saving} className="btn-primary text-xs px-4 py-2" aria-label="Salvar conta bancaria">
+              <button
+                onClick={handleCreate}
+                disabled={saving}
+                className="btn-primary text-xs px-4 py-2"
+                aria-label="Salvar conta bancaria"
+              >
                 {saving ? '...' : 'Adicionar Conta'}
               </button>
             </div>

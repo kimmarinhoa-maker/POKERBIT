@@ -4,12 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { LaunchRow, SubClub } from '@/types/launches';
-import {
-  listSettlements,
-  listOrganizations,
-  getClubAdjustments,
-  saveClubAdjustments,
-} from '@/lib/api';
+import { listSettlements, listOrganizations, getClubAdjustments, saveClubAdjustments } from '@/lib/api';
 import OverlaySection from '@/components/launches/OverlaySection';
 import LaunchesTable from '@/components/launches/LaunchesTable';
 import EditModal from '@/components/launches/EditModal';
@@ -124,102 +119,102 @@ export default function LancamentosPage() {
   }, [launches, totalOverlay, selectedClubIds]);
 
   // Handle overlay confirm — save to Supabase for each selected club
-  const handleOverlayConfirm = useCallback(async (value: number) => {
-    setTotalOverlay(value);
-    if (!weekStart) return;
+  const handleOverlayConfirm = useCallback(
+    async (value: number) => {
+      setTotalOverlay(value);
+      if (!weekStart) return;
 
-    setSavingOverlay(true);
-    try {
-      const selectedCount = selectedClubIds.length;
-      const perClub = selectedCount > 0 ? value / selectedCount : 0;
+      setSavingOverlay(true);
+      try {
+        const selectedCount = selectedClubIds.length;
+        const perClub = selectedCount > 0 ? value / selectedCount : 0;
 
-      // Save overlay for each club
-      const promises = clubs.map((club) => {
-        const isSelected = selectedClubIds.includes(club.id);
-        const overlayValue = isSelected ? perClub : 0;
-        const existing = launches.find((r) => r.subclubId === club.id);
+        // Save overlay for each club
+        const promises = clubs.map((club) => {
+          const isSelected = selectedClubIds.includes(club.id);
+          const overlayValue = isSelected ? perClub : 0;
+          const existing = launches.find((r) => r.subclubId === club.id);
 
-        return saveClubAdjustments({
-          subclub_id: club.id,
-          week_start: weekStart,
-          overlay: overlayValue,
-          compras: existing?.compras ?? 0,
-          security: existing?.security ?? 0,
-          outros: existing?.outros ?? 0,
-          obs: existing?.obs ?? '',
+          return saveClubAdjustments({
+            subclub_id: club.id,
+            week_start: weekStart,
+            overlay: overlayValue,
+            compras: existing?.compras ?? 0,
+            security: existing?.security ?? 0,
+            outros: existing?.outros ?? 0,
+            obs: existing?.obs ?? '',
+          });
         });
-      });
 
-      await Promise.all(promises);
+        await Promise.all(promises);
 
-      // Update local state
-      setLaunches((prev) =>
-        prev.map((row) => {
-          const isSelected = selectedClubIds.includes(row.subclubId);
-          const overlay = isSelected ? perClub : 0;
-          return { ...row, overlay };
-        })
-      );
+        // Update local state
+        setLaunches((prev) =>
+          prev.map((row) => {
+            const isSelected = selectedClubIds.includes(row.subclubId);
+            const overlay = isSelected ? perClub : 0;
+            return { ...row, overlay };
+          }),
+        );
 
-      toast('Overlay salvo com sucesso', 'success');
-    } catch (err: any) {
-      toast(err.message || 'Erro ao salvar overlay', 'error');
-    } finally {
-      setSavingOverlay(false);
-    }
-  }, [weekStart, selectedClubIds, clubs, launches, toast]);
+        toast('Overlay salvo com sucesso', 'success');
+      } catch (err: any) {
+        toast(err.message || 'Erro ao salvar overlay', 'error');
+      } finally {
+        setSavingOverlay(false);
+      }
+    },
+    [weekStart, selectedClubIds, clubs, launches, toast],
+  );
 
   // Handle modal save — save to Supabase
-  const handleSave = useCallback(async (data: {
-    subclubId: string;
-    compras: number;
-    security: number;
-    outros: number;
-    obs: string;
-  }) => {
-    if (!weekStart) return;
+  const handleSave = useCallback(
+    async (data: { subclubId: string; compras: number; security: number; outros: number; obs: string }) => {
+      if (!weekStart) return;
 
-    try {
-      const existing = rows.find((r) => r.subclubId === data.subclubId);
+      try {
+        const existing = rows.find((r) => r.subclubId === data.subclubId);
 
-      const res = await saveClubAdjustments({
-        subclub_id: data.subclubId,
-        week_start: weekStart,
-        overlay: existing?.overlay ?? 0,
-        compras: data.compras,
-        security: data.security,
-        outros: data.outros,
-        obs: data.obs,
-      });
-
-      if (res?.error) {
-        toast(res.error, 'error');
-        return;
-      }
-
-      // Update local state
-      setLaunches((prev) =>
-        prev.map((row) =>
-          row.subclubId === data.subclubId
-            ? { ...row, compras: data.compras, security: data.security, outros: data.outros, obs: data.obs }
-            : row
-        )
-      );
-      setEditingRow(null);
-      toast('Lancamento salvo com sucesso', 'success');
-
-      setSavedIds((prev) => new Set(prev).add(data.subclubId));
-      setTimeout(() => {
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(data.subclubId);
-          return next;
+        const res = await saveClubAdjustments({
+          subclub_id: data.subclubId,
+          week_start: weekStart,
+          overlay: existing?.overlay ?? 0,
+          compras: data.compras,
+          security: data.security,
+          outros: data.outros,
+          obs: data.obs,
         });
-      }, 3000);
-    } catch (err: any) {
-      toast(err.message || 'Erro ao salvar lancamento', 'error');
-    }
-  }, [weekStart, rows, toast]);
+
+        if (res?.error) {
+          toast(res.error, 'error');
+          return;
+        }
+
+        // Update local state
+        setLaunches((prev) =>
+          prev.map((row) =>
+            row.subclubId === data.subclubId
+              ? { ...row, compras: data.compras, security: data.security, outros: data.outros, obs: data.obs }
+              : row,
+          ),
+        );
+        setEditingRow(null);
+        toast('Lancamento salvo com sucesso', 'success');
+
+        setSavedIds((prev) => new Set(prev).add(data.subclubId));
+        setTimeout(() => {
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(data.subclubId);
+            return next;
+          });
+        }, 3000);
+      } catch (err: any) {
+        toast(err.message || 'Erro ao salvar lancamento', 'error');
+      }
+    },
+    [weekStart, rows, toast],
+  );
 
   // Edit handler
   function handleEdit(subclubId: string) {
@@ -244,9 +239,7 @@ export default function LancamentosPage() {
         <div className="card p-8 text-center max-w-md">
           <div className="text-4xl mb-4">{'\u{1F512}'}</div>
           <h2 className="text-lg font-bold text-white mb-2">Acesso Restrito</h2>
-          <p className="text-sm text-dark-400">
-            Apenas administradores podem acessar a pagina de lancamentos.
-          </p>
+          <p className="text-sm text-dark-400">Apenas administradores podem acessar a pagina de lancamentos.</p>
         </div>
       </div>
     );
@@ -272,9 +265,7 @@ export default function LancamentosPage() {
         <div className="card p-8 text-center max-w-md">
           <div className="text-4xl mb-4">{'\u{1F4C5}'}</div>
           <h2 className="text-lg font-bold text-white mb-2">Nenhum acerto encontrado</h2>
-          <p className="text-sm text-dark-400">
-            Crie um acerto primeiro para poder lancar ajustes.
-          </p>
+          <p className="text-sm text-dark-400">Crie um acerto primeiro para poder lancar ajustes.</p>
         </div>
       </div>
     );
@@ -294,7 +285,12 @@ export default function LancamentosPage() {
         </div>
         <div className="flex items-center gap-2 bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5">
           <svg className="w-3.5 h-3.5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
           <span className="font-mono text-xs text-dark-300">
             {fmtDate(weekStart)} — {fmtDate(weekEnd)}
@@ -310,9 +306,7 @@ export default function LancamentosPage() {
         onOverlayChange={handleOverlayConfirm}
         onSelectionChange={setSelectedClubIds}
       />
-      {savingOverlay && (
-        <p className="text-xs text-blue-400 text-center animate-pulse">Salvando overlay...</p>
-      )}
+      {savingOverlay && <p className="text-xs text-blue-400 text-center animate-pulse">Salvando overlay...</p>}
 
       {/* Launches Table */}
       <div className="space-y-3">

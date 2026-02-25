@@ -26,18 +26,18 @@ import Liquidacao from '@/components/settlement/Liquidacao';
 import DashboardClube from '@/components/settlement/DashboardClube';
 
 // ─── Tabs pesadas (code-split com dynamic import) ────────────────────
-const Rakeback = dynamic(
-  () => import('@/components/settlement/Rakeback'),
-  { loading: () => <TabSkeleton />, ssr: false }
-);
-const Comprovantes = dynamic(
-  () => import('@/components/settlement/Comprovantes'),
-  { loading: () => <TabSkeleton />, ssr: false }
-);
-const Conciliacao = dynamic(
-  () => import('@/components/settlement/Conciliacao'),
-  { loading: () => <TabSkeleton />, ssr: false }
-);
+const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), {
+  loading: () => <TabSkeleton />,
+  ssr: false,
+});
+const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), {
+  loading: () => <TabSkeleton />,
+  ssr: false,
+});
+const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), {
+  loading: () => <TabSkeleton />,
+  ssr: false,
+});
 
 export default function SubclubPanelPage() {
   const params = useParams();
@@ -132,19 +132,14 @@ export default function SubclubPanelPage() {
   const { settlement, fees, subclubs } = data;
 
   // Find current subclub
-  const currentSubclub = subclubs.find(
-    (sc: any) => sc.name === subclubId || sc.id === subclubId
-  );
+  const currentSubclub = subclubs.find((sc: any) => sc.name === subclubId || sc.id === subclubId);
 
   if (!currentSubclub) {
     return (
       <div className="p-8">
         <div className="card text-center py-16">
           <p className="text-red-400 mb-4">Subclube &quot;{subclubId}&quot; nao encontrado</p>
-          <button
-            onClick={() => router.push(`/s/${settlementId}`)}
-            className="btn-secondary text-sm"
-          >
+          <button onClick={() => router.push(`/s/${settlementId}`)} className="btn-secondary text-sm">
             Voltar para Semana
           </button>
         </div>
@@ -178,13 +173,7 @@ export default function SubclubPanelPage() {
       case 'dashboard':
         return <DashboardClube subclub={currentSubclub} fees={fees} />;
       case 'jogadores':
-        return (
-          <Jogadores
-            subclub={currentSubclub}
-            weekStart={settlement.week_start}
-            clubId={settlement.club_id}
-          />
-        );
+        return <Jogadores subclub={currentSubclub} weekStart={settlement.week_start} clubId={settlement.club_id} />;
 
       // Tabs funcionais
       case 'ajustes':
@@ -202,11 +191,7 @@ export default function SubclubPanelPage() {
         return <Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} logoMap={logoMap} />;
       case 'extrato':
         return (
-          <Extrato
-            weekStart={settlement.week_start}
-            settlementStatus={settlement.status}
-            onDataChange={loadData}
-          />
+          <Extrato weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
         );
       case 'liquidacao':
         return (
@@ -248,7 +233,10 @@ export default function SubclubPanelPage() {
             settlementStatus={settlement.status}
             onDataChange={loadData}
             agents={(currentSubclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
-            players={(currentSubclub.players || []).map((p: any) => ({ external_player_id: p.external_player_id, nickname: p.nickname }))}
+            players={(currentSubclub.players || []).map((p: any) => ({
+              external_player_id: p.external_player_id,
+              nickname: p.nickname,
+            }))}
           />
         );
 
@@ -272,7 +260,10 @@ export default function SubclubPanelPage() {
         notes={settlement.notes || ''}
         subclubs={subclubs}
         onClose={() => setShowLockModal(false)}
-        onSuccess={() => { setShowLockModal(false); loadData(); }}
+        onSuccess={() => {
+          setShowLockModal(false);
+          loadData();
+        }}
       />
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
@@ -331,12 +322,9 @@ export default function SubclubPanelPage() {
           <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
           {/* Col 2: Content area */}
-          <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
-            {renderContent()}
-          </div>
+          <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">{renderContent()}</div>
         </div>
       )}
     </div>
   );
 }
-

@@ -23,21 +23,17 @@ export default function ConfigPage() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white">Configuracao</h2>
-        <p className="text-dark-400 text-sm">
-          Estrutura, pagamentos e taxas da operacao
-        </p>
+        <p className="text-dark-400 text-sm">Estrutura, pagamentos e taxas da operacao</p>
       </div>
 
       {/* Main tabs — underline style */}
       <div className="flex gap-6 mb-6 border-b border-dark-700/50">
-        {tabs.map(tab => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`pb-3 text-sm font-semibold transition-colors relative ${
-              activeTab === tab.key
-                ? 'text-white'
-                : 'text-dark-400 hover:text-dark-200'
+              activeTab === tab.key ? 'text-white' : 'text-dark-400 hover:text-dark-200'
             }`}
           >
             {tab.label}

@@ -36,33 +36,38 @@ const sections: TabSection[] = [
   {
     label: 'OPERACAO',
     items: [
-      { key: 'resumo',       icon: BarChart3,     label: 'Resumo do Clube', roles: ALL_ROLES },
-      { key: 'detalhamento', icon: Search,         label: 'Detalhamento',    roles: ALL_ROLES },
-      { key: 'dashboard',    icon: LineChart,      label: 'Dashboard',       roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'rakeback',     icon: Percent,        label: 'Rakeback',        roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { key: 'resumo', icon: BarChart3, label: 'Resumo do Clube', roles: ALL_ROLES },
+      { key: 'detalhamento', icon: Search, label: 'Detalhamento', roles: ALL_ROLES },
+      { key: 'dashboard', icon: LineChart, label: 'Dashboard', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { key: 'rakeback', icon: Percent, label: 'Rakeback', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
     ],
   },
   {
     label: 'FECHAMENTOS',
     items: [
-      { key: 'jogadores',    icon: Users,          label: 'Jogadores',    roles: ALL_ROLES },
-      { key: 'liquidacao',   icon: ClipboardList,  label: 'Liquidacao',   roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'comprovantes', icon: FileText,       label: 'Comprovantes', roles: ALL_ROLES },
-      { key: 'extrato',      icon: BookOpen,       label: 'Extrato',      roles: ALL_ROLES },
+      { key: 'jogadores', icon: Users, label: 'Jogadores', roles: ALL_ROLES },
+      {
+        key: 'liquidacao',
+        icon: ClipboardList,
+        label: 'Liquidacao',
+        roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'],
+      },
+      { key: 'comprovantes', icon: FileText, label: 'Comprovantes', roles: ALL_ROLES },
+      { key: 'extrato', icon: BookOpen, label: 'Extrato', roles: ALL_ROLES },
     ],
   },
   {
     label: 'FINANCEIRO',
     items: [
-      { key: 'conciliacao',  icon: Landmark,          label: 'Conciliacao', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'ajustes',      icon: SlidersHorizontal, label: 'Ajustes',     roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
+      { key: 'conciliacao', icon: Landmark, label: 'Conciliacao', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
     ],
   },
   {
     label: 'RESULTADO',
     items: [
-      { key: 'dre',          icon: TrendingUp,  label: 'DRE',  roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'liga',         icon: Trophy,       label: 'Liga', roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
+      { key: 'dre', icon: TrendingUp, label: 'DRE', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { key: 'liga', icon: Trophy, label: 'Liga', roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
     ],
   },
 ];
@@ -87,9 +92,13 @@ export default function SubNavTabs({ activeTab, onTabChange }: Props) {
   const { role } = useAuth();
 
   return (
-    <div className="w-[200px] min-w-[200px] bg-dark-900/50 border-r border-dark-700/50 overflow-y-auto py-4" role="tablist" aria-label="Navegacao do settlement">
+    <div
+      className="w-[200px] min-w-[200px] bg-dark-900/50 border-r border-dark-700/50 overflow-y-auto py-4"
+      role="tablist"
+      aria-label="Navegacao do settlement"
+    >
       {sections.map((section) => {
-        const visibleItems = section.items.filter(item => item.roles.includes(role));
+        const visibleItems = section.items.filter((item) => item.roles.includes(role));
         if (visibleItems.length === 0) return null;
         return (
           <div key={section.label} className="mb-4">

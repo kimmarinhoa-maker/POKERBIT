@@ -6,9 +6,7 @@ const API_BASE = '/api';
 
 // Direct backend URL for file uploads (bypasses Next.js proxy which can fail on large multipart bodies)
 const API_DIRECT =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3001/api'
-    : '/api';
+  typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api';
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -59,7 +57,7 @@ async function apiFetch<T = any>(
   const tenantId = getTenantId();
 
   const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string> || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
 
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -153,10 +151,14 @@ export async function uploadXLSX(file: File, clubId: string, weekStart: string) 
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
 
-  return apiFetch('/imports', {
-    method: 'POST',
-    body: form,
-  }, true);
+  return apiFetch(
+    '/imports',
+    {
+      method: 'POST',
+      body: form,
+    },
+    true,
+  );
 }
 
 // Import Wizard — Preview (não toca no banco)
@@ -165,10 +167,14 @@ export async function importPreview(file: File, weekStartOverride?: string) {
   form.append('file', file);
   if (weekStartOverride) form.append('week_start', weekStartOverride);
 
-  return apiFetch('/imports/preview', {
-    method: 'POST',
-    body: form,
-  }, true);
+  return apiFetch(
+    '/imports/preview',
+    {
+      method: 'POST',
+      body: form,
+    },
+    true,
+  );
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
@@ -178,10 +184,14 @@ export async function importConfirm(file: File, clubId: string, weekStart: strin
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
 
-  return apiFetch('/imports/confirm', {
-    method: 'POST',
-    body: form,
-  }, true);
+  return apiFetch(
+    '/imports/confirm',
+    {
+      method: 'POST',
+      body: form,
+    },
+    true,
+  );
 }
 
 export async function listImports() {
@@ -230,22 +240,14 @@ export async function updateSettlementNotes(id: string, notes: string | null) {
   });
 }
 
-export async function updateAgentPaymentType(
-  settlementId: string,
-  agentId: string,
-  paymentType: 'fiado' | 'avista'
-) {
+export async function updateAgentPaymentType(settlementId: string, agentId: string, paymentType: 'fiado' | 'avista') {
   return apiFetch(`/settlements/${settlementId}/agents/${agentId}/payment-type`, {
     method: 'PATCH',
     body: JSON.stringify({ payment_type: paymentType }),
   });
 }
 
-export async function updateAgentRbRate(
-  settlementId: string,
-  agentMetricId: string,
-  rbRate: number
-) {
+export async function updateAgentRbRate(settlementId: string, agentMetricId: string, rbRate: number) {
   return apiFetch(`/settlements/${settlementId}/agents/${agentMetricId}/rb-rate`, {
     method: 'PATCH',
     body: JSON.stringify({ rb_rate: rbRate }),
@@ -279,14 +281,22 @@ export async function getOrgTree() {
 }
 
 export async function createOrganization(data: {
-  name: string; parent_id: string; type: 'SUBCLUB'; external_id?: string;
+  name: string;
+  parent_id: string;
+  type: 'SUBCLUB';
+  external_id?: string;
 }) {
   return apiFetch('/organizations', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateOrganization(id: string, data: {
-  name?: string; external_id?: string; is_active?: boolean;
-}) {
+export async function updateOrganization(
+  id: string,
+  data: {
+    name?: string;
+    external_id?: string;
+    is_active?: boolean;
+  },
+) {
   return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
@@ -297,10 +307,14 @@ export async function deleteOrganization(id: string) {
 export async function uploadClubLogo(orgId: string, file: File) {
   const formData = new FormData();
   formData.append('logo', file);
-  return apiFetch(`/organizations/${orgId}/logo`, {
-    method: 'POST',
-    body: formData,
-  }, true);
+  return apiFetch(
+    `/organizations/${orgId}/logo`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+    true,
+  );
 }
 
 export async function deleteClubLogo(orgId: string) {
@@ -311,15 +325,18 @@ export async function getPrefixRules() {
   return apiFetch('/organizations/prefix-rules');
 }
 
-export async function createPrefixRule(data: {
-  prefix: string; subclub_id: string; priority?: number;
-}) {
+export async function createPrefixRule(data: { prefix: string; subclub_id: string; priority?: number }) {
   return apiFetch('/organizations/prefix-rules', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updatePrefixRule(id: string, data: {
-  prefix?: string; subclub_id?: string; priority?: number;
-}) {
+export async function updatePrefixRule(
+  id: string,
+  data: {
+    prefix?: string;
+    subclub_id?: string;
+    priority?: number;
+  },
+) {
   return apiFetch(`/organizations/prefix-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
@@ -423,7 +440,12 @@ export async function linkAgent(agentName: string, subclubId: string) {
   });
 }
 
-export async function linkPlayer(externalPlayerId: string, subclubId: string, agentExternalId?: string, agentName?: string) {
+export async function linkPlayer(
+  externalPlayerId: string,
+  subclubId: string,
+  agentExternalId?: string,
+  agentName?: string,
+) {
   return apiFetch('/links/player', {
     method: 'POST',
     body: JSON.stringify({
@@ -435,12 +457,14 @@ export async function linkPlayer(externalPlayerId: string, subclubId: string, ag
   });
 }
 
-export async function bulkLinkPlayers(players: Array<{
-  external_player_id: string;
-  subclub_id: string;
-  agent_external_id?: string;
-  agent_name?: string;
-}>) {
+export async function bulkLinkPlayers(
+  players: Array<{
+    external_player_id: string;
+    subclub_id: string;
+    agent_external_id?: string;
+    agent_name?: string;
+  }>,
+) {
   return apiFetch('/links/bulk-players', {
     method: 'POST',
     body: JSON.stringify({ players }),
@@ -496,7 +520,10 @@ export async function createPaymentMethod(data: { name: string; is_default?: boo
   return apiFetch('/config/payment-methods', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updatePaymentMethod(id: string, data: { name?: string; is_default?: boolean; is_active?: boolean; sort_order?: number }) {
+export async function updatePaymentMethod(
+  id: string,
+  data: { name?: string; is_default?: boolean; is_active?: boolean; sort_order?: number },
+) {
   return apiFetch(`/config/payment-methods/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
@@ -510,11 +537,27 @@ export async function listBankAccounts() {
   return apiFetch('/config/bank-accounts');
 }
 
-export async function createBankAccount(data: { name: string; bank_code?: string; agency?: string; account_nr?: string; is_default?: boolean }) {
+export async function createBankAccount(data: {
+  name: string;
+  bank_code?: string;
+  agency?: string;
+  account_nr?: string;
+  is_default?: boolean;
+}) {
   return apiFetch('/config/bank-accounts', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateBankAccount(id: string, data: { name?: string; bank_code?: string; agency?: string; account_nr?: string; is_default?: boolean; is_active?: boolean }) {
+export async function updateBankAccount(
+  id: string,
+  data: {
+    name?: string;
+    bank_code?: string;
+    agency?: string;
+    account_nr?: string;
+    is_default?: boolean;
+    is_active?: boolean;
+  },
+) {
   return apiFetch(`/config/bank-accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
@@ -696,7 +739,9 @@ export async function inviteUser(email: string, role: string): Promise<ApiRespon
   });
 }
 
-export async function getUserOrgAccess(userTenantId: string): Promise<ApiResponse<{ full_access: boolean; org_ids: string[] }>> {
+export async function getUserOrgAccess(
+  userTenantId: string,
+): Promise<ApiResponse<{ full_access: boolean; org_ids: string[] }>> {
   return apiFetch(`/users/${userTenantId}/org-access`);
 }
 

@@ -28,18 +28,14 @@ export default function ImportLayout({ children }: { children: React.ReactNode }
 
         {/* Nav tabs */}
         <div className="flex gap-1 mb-6 border-b border-dark-700">
-          {TABS.map(tab => {
-            const isActive = tab.href === '/import'
-              ? pathname === '/import'
-              : pathname.startsWith(tab.href);
+          {TABS.map((tab) => {
+            const isActive = tab.href === '/import' ? pathname === '/import' : pathname.startsWith(tab.href);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  isActive
-                    ? 'border-poker-500 text-poker-400'
-                    : 'border-transparent text-dark-400 hover:text-dark-200'
+                  isActive ? 'border-poker-500 text-poker-400' : 'border-transparent text-dark-400 hover:text-dark-200'
                 }`}
               >
                 <span>{tab.icon}</span>

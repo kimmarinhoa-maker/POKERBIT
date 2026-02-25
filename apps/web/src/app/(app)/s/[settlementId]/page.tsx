@@ -147,7 +147,11 @@ export default function SettlementOverviewPage() {
           )}
           {settlement.status === 'FINAL' && canAccess('OWNER', 'ADMIN') && (
             <button
-              onClick={() => { setShowVoidModal(true); setVoidReason(''); setVoidError(null); }}
+              onClick={() => {
+                setShowVoidModal(true);
+                setVoidReason('');
+                setVoidError(null);
+              }}
               className="px-4 py-2 text-sm font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Anular Semana
@@ -162,84 +166,90 @@ export default function SettlementOverviewPage() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
             <p className="text-dark-400 mb-6">Nao existe fechamento importado para o periodo selecionado.</p>
-            <button
-              onClick={() => router.push('/import')}
-              className="btn-primary px-6 py-2"
-            >
+            <button onClick={() => router.push('/import')} className="btn-primary px-6 py-2">
               Importar Semana
             </button>
           </div>
         )}
-        {!weekNotFound && <>
-        {/* Global KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <KpiCard label="Jogadores" value={String(t.players)} borderColor="bg-blue-500" />
-          <KpiCard label="Agentes" value={String(t.agents)} borderColor="bg-purple-500" />
-          <KpiCard label="Rake Total" value={formatBRL(t.rake)} borderColor="bg-poker-500" />
-          <KpiCard label="GGR Total" value={formatBRL(t.ggr)} borderColor="bg-purple-500" />
-          <KpiCard
-            label="Resultado Total"
-            value={formatBRL(t.resultado)}
-            borderColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
-            textColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
-          />
-        </div>
+        {!weekNotFound && (
+          <>
+            {/* Global KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+              <KpiCard label="Jogadores" value={String(t.players)} borderColor="bg-blue-500" />
+              <KpiCard label="Agentes" value={String(t.agents)} borderColor="bg-purple-500" />
+              <KpiCard label="Rake Total" value={formatBRL(t.rake)} borderColor="bg-poker-500" />
+              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} borderColor="bg-purple-500" />
+              <KpiCard
+                label="Resultado Total"
+                value={formatBRL(t.resultado)}
+                borderColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+                textColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
+              />
+            </div>
 
-        {/* Subclub cards */}
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          Subclubes
-          <span className="text-sm font-normal text-dark-400">({subclubs.length})</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {subclubs.map((sc: any) => (
-            <Link
-              key={sc.id || sc.name}
-              href={`/s/${settlementId}/club/${sc.name}`}
-              className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
-            >
-              <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+            {/* Subclub cards */}
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              Subclubes
+              <span className="text-sm font-normal text-dark-400">({subclubs.length})</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {subclubs.map((sc: any) => (
+                <Link
+                  key={sc.id || sc.name}
+                  href={`/s/${settlementId}/club/${sc.name}`}
+                  className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
+                >
+                  <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <ClubLogo logoUrl={logoMap[sc.name.toLowerCase()]} name={sc.name} size="md" className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all" />
-                    <div>
-                      <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
-                        {sc.name}
-                      </h4>
-                      <p className="text-xs text-dark-400">
-                        {sc.totals.players} jogadores · {sc.totals.agents} agentes
-                      </p>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <ClubLogo
+                          logoUrl={logoMap[sc.name.toLowerCase()]}
+                          name={sc.name}
+                          size="md"
+                          className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
+                        />
+                        <div>
+                          <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
+                            {sc.name}
+                          </h4>
+                          <p className="text-xs text-dark-400">
+                            {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
+                      <div>
+                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
+                        <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
+                        <p
+                          className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                        >
+                          {formatBRL(sc.totals.resultado)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
+                        <p
+                          className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                        >
+                          {formatBRL(sc.acertoLiga)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">
-                    &rarr;
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
-                  <div>
-                    <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
-                    <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
-                    <p className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}>
-                      {formatBRL(sc.totals.resultado)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
-                    <p className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}>
-                      {formatBRL(sc.acertoLiga)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-        </>}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Lock Week Modal */}
@@ -250,12 +260,20 @@ export default function SettlementOverviewPage() {
         notes={settlement.notes || ''}
         subclubs={subclubs}
         onClose={() => setShowLockModal(false)}
-        onSuccess={() => { setShowLockModal(false); loadData(); }}
+        onSuccess={() => {
+          setShowLockModal(false);
+          loadData();
+        }}
       />
 
       {/* Void Modal */}
       {showVoidModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Anular fechamento">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Anular fechamento"
+        >
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => !voidLoading && setShowVoidModal(false)}
@@ -264,9 +282,8 @@ export default function SettlementOverviewPage() {
           <div className="relative bg-dark-900 border border-dark-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
             <h3 className="text-lg font-bold text-white mb-2">Anular Fechamento</h3>
             <p className="text-sm text-dark-400 mb-4">
-              Esta acao vai <span className="text-red-400 font-medium">anular permanentemente</span> este
-              fechamento. O status mudara para VOID e os dados de carry-forward serao revertidos.
-              Esta acao nao pode ser desfeita.
+              Esta acao vai <span className="text-red-400 font-medium">anular permanentemente</span> este fechamento. O
+              status mudara para VOID e os dados de carry-forward serao revertidos. Esta acao nao pode ser desfeita.
             </p>
 
             <label className="block text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5">
@@ -274,16 +291,14 @@ export default function SettlementOverviewPage() {
             </label>
             <textarea
               value={voidReason}
-              onChange={e => setVoidReason(e.target.value)}
+              onChange={(e) => setVoidReason(e.target.value)}
               placeholder="Descreva o motivo da anulacao (minimo 10 caracteres)..."
               aria-label="Motivo da anulacao"
               className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:border-red-500 focus:outline-none resize-y min-h-[80px]"
               rows={3}
               disabled={voidLoading}
             />
-            <p className="text-xs text-dark-500 mt-1">
-              {voidReason.trim().length}/10 caracteres minimos
-            </p>
+            <p className="text-xs text-dark-500 mt-1">{voidReason.trim().length}/10 caracteres minimos</p>
 
             {voidError && (
               <p className="text-sm text-red-400 mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
@@ -321,8 +336,16 @@ export default function SettlementOverviewPage() {
   );
 }
 
-function KpiCard({ label, value, borderColor, textColor }: {
-  label: string; value: string; borderColor: string; textColor?: string;
+function KpiCard({
+  label,
+  value,
+  borderColor,
+  textColor,
+}: {
+  label: string;
+  value: string;
+  borderColor: string;
+  textColor?: string;
 }) {
   return (
     <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
