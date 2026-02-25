@@ -184,4 +184,50 @@ describe('Import Routes', () => {
       mockChain.then = originalThen;
     });
   });
+
+  // ─── DELETE /api/imports/:id ────────────────────────────────────
+  describe('DELETE /api/imports/:id', () => {
+    it('import existente → 200', async () => {
+      // First call: select (find import) → returns found
+      // Second call: delete → returns success
+      let callCount = 0;
+      const originalThen = mockChain.then;
+      mockChain.then = (resolve: Function) => {
+        callCount++;
+        if (callCount <= 1) {
+          // select/single → found
+          resolve({ data: { id: 'imp-1', settlement_id: 's-1' }, error: null });
+        } else {
+          // delete → ok
+          resolve({ data: null, error: null });
+        }
+        return mockChain;
+      };
+
+      const { app } = createTestApp();
+      app.use('/api/imports', importRoutes);
+
+      const res = await request(app).delete('/api/imports/imp-1');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      mockChain.then = originalThen;
+    });
+
+    it('import nao encontrado → 404', async () => {
+      const originalThen = mockChain.then;
+      mockChain.then = (resolve: Function) => {
+        resolve({ data: null, error: { code: 'PGRST116', message: 'not found' } });
+        return mockChain;
+      };
+
+      const { app } = createTestApp();
+      app.use('/api/imports', importRoutes);
+
+      const res = await request(app).delete('/api/imports/not-found');
+      expect(res.status).toBe(404);
+
+      mockChain.then = originalThen;
+    });
+  });
 });
