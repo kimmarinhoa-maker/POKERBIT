@@ -5,7 +5,8 @@ import html2canvas from 'html2canvas';
 import { listLedger, getCarryForward, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
-import Spinner from '@/components/Spinner';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import { Users } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -388,11 +389,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   // ─── Loading ───────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <SettlementSkeleton kpis={4} />;
   }
 
   // ─── Statement view (print) ────────────────────────────────────────
@@ -448,20 +445,20 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-blue-500" />
           <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Agentes</p>
-            <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.total}</p>
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Agentes</p>
+            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{kpis.total}</p>
             <p className="text-[10px] text-dark-500">{activeTab === 'agencias' ? 'Agencias' : 'Diretos'}</p>
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-red-500" />
           <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Pagar</p>
-            <p className="text-xl font-bold mt-1 font-mono text-red-400">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo a Pagar</p>
+            <p className="text-xl font-bold mt-2 font-mono text-red-400">
               {kpis.totalPagar > 0 ? formatBRL(kpis.totalPagar) : '—'}
             </p>
           </div>
@@ -469,8 +466,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-emerald-500" />
           <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Receber</p>
-            <p className="text-xl font-bold mt-1 font-mono text-emerald-400">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo a Receber</p>
+            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">
               {kpis.totalReceber > 0 ? formatBRL(kpis.totalReceber) : '—'}
             </p>
           </div>
@@ -480,8 +477,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             className={`h-0.5 ${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`}
           />
           <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
-            <p className="text-sm font-bold mt-1 font-mono text-dark-200">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Status</p>
+            <p className="text-xl font-bold mt-2 font-mono text-dark-200">
               {
                 activeData.filter(
                   (d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01),
@@ -528,14 +525,14 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             aria-label="Buscar agente"
-            className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+            className="input w-full"
           />
         </div>
         <select
           value={resultFilter}
           onChange={(e) => setResultFilter(e.target.value as typeof resultFilter)}
           aria-label="Filtrar por status"
-          className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="all">Todos</option>
           <option value="pagar">A Pagar</option>
@@ -546,8 +543,11 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       {/* Agent cards */}
       {filteredData.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado com os filtros aplicados'}
+        <div className="card text-center py-12">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
+            {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado com os filtros aplicados'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -603,7 +603,7 @@ function AgentCard({
       {/* Main row */}
       <div className="flex items-center gap-2">
         {/* Col 1: Name + ID + jog count — fixed width */}
-        <div className="flex-shrink-0 min-w-0" style={{ width: '180px' }}>
+        <div className="flex-shrink-0 min-w-0 w-[180px]">
           <div className="flex items-center gap-1.5">
             <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
             <button
@@ -626,7 +626,7 @@ function AgentCard({
         </div>
 
         {/* Col 2: Tipo de Fechamento — fixed width */}
-        <div className="flex-shrink-0" style={{ width: '130px' }}>
+        <div className="flex-shrink-0 w-[130px]">
           <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">Tipo de Fechamento</p>
           <div className="flex items-center gap-1">
             <span

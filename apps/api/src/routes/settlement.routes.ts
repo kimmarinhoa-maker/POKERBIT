@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { settlementService } from '../services/settlement.service';
+import { supabaseAdmin } from '../config/supabase';
 
 const router = Router();
 
@@ -85,9 +86,7 @@ router.patch(
         return;
       }
 
-      const { data, error } = await (
-        await import('../config/supabase')
-      ).supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('settlements')
         .update({ notes: notes || null })
         .eq('id', req.params.id)
@@ -151,7 +150,7 @@ router.patch(
       }
 
       // Verificar se settlement existe e está em DRAFT
-      const { data: settlement, error: sErr } = await (await import('../config/supabase')).supabaseAdmin
+      const { data: settlement, error: sErr } = await supabaseAdmin
         .from('settlements')
         .select('status')
         .eq('id', settlementId)
@@ -172,7 +171,7 @@ router.patch(
       }
 
       // Atualizar payment_type no agent_week_metrics
-      const { data, error } = await (await import('../config/supabase')).supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('agent_week_metrics')
         .update({ payment_type })
         .eq('settlement_id', settlementId)
@@ -212,7 +211,6 @@ router.post(
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
-      const { supabaseAdmin } = await import('../config/supabase');
 
       // Buscar settlement + club_id
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -287,32 +285,48 @@ router.post(
         const subclubName = agentSubclubMap.get(agentName);
         const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
 
-        // Criar org AGENT se nao existe
+        // Criar org AGENT se nao existe (upsert seguro contra race condition)
         if (!orgId) {
-          const { data: newOrg, error: cErr } = await supabaseAdmin
+          // Primeiro tenta buscar (pode ter sido criado por request concorrente)
+          const { data: existing } = await supabaseAdmin
             .from('organizations')
-            .insert({
-              tenant_id: tenantId,
-              parent_id: correctParentId,
-              type: 'AGENT',
-              name: agentName,
-            })
             .select('id')
-            .single();
+            .eq('tenant_id', tenantId)
+            .eq('name', agentName)
+            .eq('type', 'AGENT')
+            .maybeSingle();
 
-          if (cErr) {
-            // Pode ser duplicata (race condition) — tentar buscar
-            const { data: found } = await supabaseAdmin
-              .from('organizations')
-              .select('id')
-              .eq('tenant_id', tenantId)
-              .eq('name', agentName)
-              .eq('type', 'AGENT')
-              .single();
-            orgId = found?.id;
+          if (existing) {
+            orgId = existing.id;
           } else {
-            orgId = newOrg.id;
-            created++;
+            const { data: newOrg, error: cErr } = await supabaseAdmin
+              .from('organizations')
+              .insert({
+                tenant_id: tenantId,
+                parent_id: correctParentId,
+                type: 'AGENT',
+                name: agentName,
+              })
+              .select('id')
+              .single();
+
+            if (cErr) {
+              // Race condition: criado entre o select e o insert — buscar novamente
+              const { data: found } = await supabaseAdmin
+                .from('organizations')
+                .select('id')
+                .eq('tenant_id', tenantId)
+                .eq('name', agentName)
+                .eq('type', 'AGENT')
+                .maybeSingle();
+              orgId = found?.id;
+              if (!orgId) {
+                console.warn(`[sync-agents] Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
+              }
+            } else {
+              orgId = newOrg.id;
+              created++;
+            }
           }
         } else {
           // Agente ja existe — corrigir parent_id se estiver apontando errado
@@ -384,8 +398,6 @@ router.patch(
       }
 
       // Verificar se settlement existe e está em DRAFT
-      const { supabaseAdmin } = await import('../config/supabase');
-
       const { data: settlement, error: sErr } = await supabaseAdmin
         .from('settlements')
         .select('status')

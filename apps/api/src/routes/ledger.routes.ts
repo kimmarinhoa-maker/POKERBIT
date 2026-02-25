@@ -61,9 +61,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       return;
     }
 
-    const all = await ledgerService.listEntries(tenantId, weekStart, entityId);
-    const total = all.length;
-    const paged = all.slice((page - 1) * limit, page * limit);
+    const { data: paged, total } = await ledgerService.listEntries(tenantId, weekStart, entityId, page, limit);
 
     res.json({
       success: true,

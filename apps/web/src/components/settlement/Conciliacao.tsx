@@ -27,7 +27,9 @@ import type { VerificadorStats } from './conciliacao/VerificadorConciliacao';
 import type { AutoMatchSuggestion } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
-import Spinner from '@/components/Spinner';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
+import { Upload, FileText, BookOpen } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -162,7 +164,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
             }`}
           >
             {tab.label}
-            {tab.count !== undefined && <span className="ml-1.5 text-xs text-dark-500">({tab.count})</span>}
+            {tab.count !== undefined && <span className="ml-1.5 text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{tab.count}</span>}
           </button>
         ))}
       </div>
@@ -708,11 +710,7 @@ function ChipPixTab({
   ];
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner />
-      </div>
-    );
+    return <SettlementSkeleton kpis={5} />;
   }
 
   return (
@@ -757,46 +755,46 @@ function ChipPixTab({
         </div>
       </div>
 
-      {/* ── KPIs (conc-summary style — matches HTML reference) ── */}
-      <div className="flex flex-wrap gap-4 py-3 mb-3 border-b border-dark-700">
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Jogadores</div>
-          <div className="font-extrabold text-sm text-dark-100">{kpis.jogadores}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Entradas</div>
-          <div className="font-extrabold text-sm text-emerald-500">{formatBRL(kpis.totalEntrada)}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Saídas</div>
-          <div className="font-extrabold text-sm text-red-500">{formatBRL(kpis.totalSaida)}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Impacto Líquido</div>
-          <div className={`font-extrabold text-sm ${kpis.impacto >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-            {formatBRL(kpis.impacto)}
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores</p>
+            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{kpis.jogadores}</p>
           </div>
         </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Staged</div>
-          <div className="font-extrabold text-sm text-yellow-400">
-            {kpis.pending}{' '}
-            <span className="text-[9px] font-normal opacity-60">pendente{kpis.pending !== 1 ? 's' : ''}</span>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-emerald-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Entradas</p>
+            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{formatBRL(kpis.totalEntrada)}</p>
           </div>
         </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Aplicado</div>
-          <div className="font-extrabold text-sm text-emerald-500">
-            {kpis.applied} <span className="text-[9px] font-normal opacity-60">({formatBRL(kpis.appliedAmount)})</span>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-red-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saidas</p>
+            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(kpis.totalSaida)}</p>
           </div>
         </div>
-        <div className="text-center">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-dark-500 mb-0.5">Não Vinculado</div>
-          <div className={`font-extrabold text-sm ${kpis.unlinked > 0 ? 'text-orange-400' : 'text-dark-400'}`}>
-            {kpis.unlinked}
-            {kpis.unlinked > 0 && (
-              <span className="text-[9px] font-normal opacity-60"> ({formatBRL(kpis.unlinkedAmount)})</span>
-            )}
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5 ${kpis.impacto >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Impacto Liquido</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${kpis.impacto >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatBRL(kpis.impacto)}
+            </p>
+          </div>
+        </div>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-yellow-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5 ${kpis.applied === kpis.jogadores ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Progresso</p>
+            <p className="text-xl font-bold mt-2 font-mono text-yellow-400">
+              {kpis.applied}<span className="text-dark-500 text-sm">/{kpis.jogadores}</span>
+            </p>
+            <p className="text-[10px] text-dark-500">{kpis.pending} pendente{kpis.pending !== 1 ? 's' : ''} · {kpis.unlinked} s/ vinculo</p>
           </div>
         </div>
       </div>
@@ -814,7 +812,7 @@ function ChipPixTab({
             placeholder="Buscar por ID ou nome..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-dark-800 border border-dark-700 text-dark-100 rounded-lg px-3 py-1.5 text-xs w-52 focus:border-poker-500 focus:outline-none"
+            className="input text-xs w-52"
           />
         </div>
         <div className="flex gap-1">
@@ -836,38 +834,39 @@ function ChipPixTab({
 
       {/* ── Content ─────────────────────────────────────────────── */}
       {txns.length === 0 ? (
-        <div className="text-center py-12 text-dark-500">
-          <h3 className="text-sm font-bold text-dark-300 mb-1">Nenhum extrato ChipPix carregado</h3>
-          <p className="text-xs leading-relaxed">
+        <div className="card text-center py-12">
+          <Upload className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400 mb-2">Nenhum extrato ChipPix carregado</p>
+          <p className="text-dark-500 text-xs">
             Clique em <strong className="text-emerald-500">Importar</strong> para carregar o extrato.
           </p>
         </div>
       ) : (
         <>
           {/* ── Table ──────────────────────────────────────────── */}
-          <div className="border border-dark-700 rounded-lg overflow-hidden">
-            <div>
+          <div className="card overflow-hidden p-0">
+            <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-dark-800/50">
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-dark-800/80 backdrop-blur-sm">
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       ID / Nome
                     </th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                    <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       Entrada
                     </th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                    <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       Saída
                     </th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                    <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       Impacto
                     </th>
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500 whitespace-nowrap">
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       Status
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-dark-800/30">
                   {filtered.map((tx) => {
                     const parsed = parseMemo(tx.memo);
                     const impacto = parsed.entrada - parsed.saida;
@@ -998,9 +997,9 @@ function ChipPixTab({
                 {kpis.jogadores > 0 ? Math.round(((kpis.linked + kpis.applied) / kpis.jogadores) * 100) : 0}%)
               </span>
             </div>
-            <div className="w-full bg-dark-800 rounded-full h-2">
+            <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
               <div
-                className={`h-2 rounded-full transition-all duration-500 ${
+                className={`h-2.5 rounded-full transition-all duration-500 shadow-glow-green ${
                   kpis.linked + kpis.applied === kpis.jogadores ? 'bg-green-500' : 'bg-poker-500'
                 }`}
                 style={{ width: `${kpis.jogadores > 0 ? ((kpis.linked + kpis.applied) / kpis.jogadores) * 100 : 0}%` }}
@@ -1272,25 +1271,40 @@ function OFXTab({
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-1">
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Transacoes</p>
-            <p className="font-mono text-lg font-bold text-dark-200">{kpis.total}</p>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5 bg-blue-500" />
+            <div className="p-4">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Transacoes</p>
+              <p className="text-xl font-bold mt-2 font-mono text-dark-200">{kpis.total}</p>
+            </div>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pendentes</p>
-            <p className="font-mono text-lg font-bold text-yellow-400">{kpis.pending}</p>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5 bg-yellow-500" />
+            <div className="p-4">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Pendentes</p>
+              <p className="text-xl font-bold mt-2 font-mono text-yellow-400">{kpis.pending}</p>
+            </div>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Vinculados</p>
-            <p className="font-mono text-lg font-bold text-blue-400">{kpis.linked}</p>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5 bg-blue-500" />
+            <div className="p-4">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Vinculados</p>
+              <p className="text-xl font-bold mt-2 font-mono text-blue-400">{kpis.linked}</p>
+            </div>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Aplicados</p>
-            <p className="font-mono text-lg font-bold text-emerald-400">{kpis.applied}</p>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5 bg-emerald-500" />
+            <div className="p-4">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Aplicados</p>
+              <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{kpis.applied}</p>
+            </div>
           </div>
-          <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-amber-500 rounded-lg p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Volume</p>
-            <p className="font-mono text-sm font-bold text-amber-400">{formatBRL(kpis.totalAmount)}</p>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+            <div className="h-0.5 bg-amber-500" />
+            <div className="p-4">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Volume</p>
+              <p className="text-xl font-bold mt-2 font-mono text-amber-400">{formatBRL(kpis.totalAmount)}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1495,7 +1509,7 @@ function OFXTab({
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   filter === mode
                     ? 'bg-poker-600/20 text-poker-400 border border-poker-700/40'
-                    : 'text-dark-300 hover:bg-dark-800'
+                    : 'bg-dark-800/50 text-dark-300 border border-dark-700/30 hover:bg-dark-800'
                 }`}
               >
                 {labels[mode]} ({counts[mode]})
@@ -1507,13 +1521,12 @@ function OFXTab({
 
       {/* Transaction table */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner />
-        </div>
+        <TableSkeleton columns={6} rows={8} />
       ) : txns.length === 0 ? (
-        <div className="card text-center py-16">
-          <h3 className="text-xl font-bold text-white mb-2">Nenhuma transacao OFX</h3>
-          <p className="text-dark-400 text-sm max-w-md mx-auto">
+        <div className="card text-center py-12">
+          <FileText className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400 mb-2">Nenhuma transacao OFX</p>
+          <p className="text-dark-500 text-sm max-w-md mx-auto">
             Importe um arquivo OFX do seu banco para comecar a conciliacao
           </p>
         </div>
@@ -1521,18 +1534,18 @@ function OFXTab({
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-dark-800/50">
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Data</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Banco / Descricao</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Dir</th>
-                  <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Valor</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Status</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Vinculado A</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400 w-24">Acoes</th>
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-dark-800/80 backdrop-blur-sm">
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Data</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Banco / Descricao</th>
+                  <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Dir</th>
+                  <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Valor</th>
+                  <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Vinculado A</th>
+                  <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider w-24">Acoes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dark-800/50">
+              <tbody className="divide-y divide-dark-800/30">
                 {filtered.map((tx) => {
                   const sc = statusCfg[tx.status] || statusCfg.pending;
                   const isLinking = linkingId === tx.id;
@@ -1770,29 +1783,42 @@ function LedgerTab({
     <div>
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Total</p>
-          <p className="font-mono text-lg font-bold text-dark-200">{kpis.total}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Total</p>
+            <p className="text-xl font-bold mt-2 font-mono text-dark-200">{kpis.total}</p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Entradas</p>
-          <p className="font-mono text-sm font-bold text-poker-400">{formatBRL(kpis.totalIn)}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-poker-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Entradas</p>
+            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(kpis.totalIn)}</p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-red-500 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saidas</p>
-          <p className="font-mono text-sm font-bold text-red-400">{formatBRL(kpis.totalOut)}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-red-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saidas</p>
+            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(kpis.totalOut)}</p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Conciliadas</p>
-          <p className="font-mono text-lg font-bold text-emerald-400">{kpis.reconciled}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-emerald-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Conciliadas</p>
+            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{kpis.reconciled}</p>
+          </div>
         </div>
-        <div
-          className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.pending > 0 ? 'border-t-yellow-500' : 'border-t-emerald-500'} rounded-lg p-3 text-center`}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pendentes</p>
-          <p className={`font-mono text-lg font-bold ${kpis.pending > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
-            {kpis.pending > 0 ? kpis.pending : '✓'}
-          </p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5 ${kpis.pending > 0 ? 'bg-yellow-500' : 'bg-emerald-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Pendentes</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${kpis.pending > 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+              {kpis.pending > 0 ? kpis.pending : '✓'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1823,12 +1849,11 @@ function LedgerTab({
 
       {/* Table */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner />
-        </div>
+        <TableSkeleton columns={5} rows={8} />
       ) : entries.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-dark-400 mb-2">
+          <BookOpen className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
             Nenhuma movimentacao {filter !== 'all' ? `${filter === 'reconciled' ? 'conciliada' : 'pendente'}` : ''}
           </p>
         </div>
@@ -1836,19 +1861,19 @@ function LedgerTab({
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-dark-800/50">
-                  <th className="px-4 py-3 text-center font-medium text-xs text-dark-400 w-10">✓</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Entidade</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Data</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Fonte</th>
-                  <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Dir</th>
-                  <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Valor</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Metodo</th>
-                  <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Descricao</th>
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-dark-800/80 backdrop-blur-sm">
+                  <th className="px-4 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider w-10">✓</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Entidade</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Data</th>
+                  <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Fonte</th>
+                  <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Dir</th>
+                  <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Valor</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Metodo</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Descricao</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dark-800/50">
+              <tbody className="divide-y divide-dark-800/30">
                 {entries.map((e) => {
                   const isToggling = toggling === e.id;
                   return (

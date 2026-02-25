@@ -5,7 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 
 const router = Router();
@@ -38,7 +38,13 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       .order('name', { ascending: true });
 
     if (type) {
-      query = query.eq('type', type.toUpperCase());
+      const validTypes = ['CLUB', 'SUBCLUB', 'AGENT'];
+      const normalizedType = type.toUpperCase();
+      if (!validTypes.includes(normalizedType)) {
+        res.status(400).json({ success: false, error: `Tipo invalido. Use: ${validTypes.join(', ')}` });
+        return;
+      }
+      query = query.eq('type', normalizedType);
     }
 
     const { data, error } = await query;
@@ -271,7 +277,7 @@ const createOrgSchema = z.object({
   external_id: z.string().optional(),
 });
 
-router.post('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const parsed = createOrgSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -331,7 +337,7 @@ const updateOrgSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const parsed = updateOrgSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -384,7 +390,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
 });
 
 // ─── DELETE /api/organizations/:id — Deletar subclube ───────────────
-router.delete('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -533,8 +539,8 @@ router.put('/:id/rate', requireAuth, requireTenant, async (req: Request, res: Re
     const agentId = req.params.id;
     const { rate, effective_from } = req.body;
 
-    if (rate == null || rate < 0 || rate > 100) {
-      res.status(400).json({ success: false, error: 'Rate deve ser entre 0 e 100' });
+    if (rate == null || typeof rate !== 'number' || isNaN(rate) || rate < 0 || rate > 100) {
+      res.status(400).json({ success: false, error: 'Rate deve ser um numero entre 0 e 100' });
       return;
     }
 

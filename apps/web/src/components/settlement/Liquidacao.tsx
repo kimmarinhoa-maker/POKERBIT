@@ -12,7 +12,8 @@ import {
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
-import Spinner from '@/components/Spinner';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import { Users } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ interface Props {
     id: string;
     name: string;
     agents: AgentMetric[];
-    players?: any[];
+    players?: { id: string; agent_name: string | null; nickname: string | null; resultado_brl: number; saldo_atual?: number; situacao?: string }[];
   };
   weekStart: string;
   clubId: string;
@@ -408,11 +409,7 @@ export default function Liquidacao({
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <SettlementSkeleton kpis={5} />;
   }
 
   return (
@@ -426,37 +423,50 @@ export default function Liquidacao({
       </div>
 
       {/* KPI cards - 5 columns like HTML */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Total</p>
-          <p className={`font-mono text-lg font-bold ${kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-            {formatBRL(kpis.totalResultado)}
-          </p>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5 ${kpis.totalResultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Total</p>
+            <p className={`text-xl font-bold mt-2 font-mono ${kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+              {formatBRL(kpis.totalResultado)}
+            </p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">RB Distribuido</p>
-          <p className="font-mono text-lg font-bold text-yellow-400">{formatBRL(kpis.totalRB)}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-yellow-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">RB Distribuido</p>
+            <p className="text-xl font-bold mt-2 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Recebido</p>
-          <p className="font-mono text-lg font-bold text-emerald-400">{formatBRL(kpis.totalRecebido)}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-emerald-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Recebido</p>
+            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{formatBRL(kpis.totalRecebido)}</p>
+          </div>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pago</p>
-          <p className="font-mono text-lg font-bold text-blue-400">{formatBRL(kpis.totalPago)}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Pago</p>
+            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{formatBRL(kpis.totalPago)}</p>
+          </div>
         </div>
-        <div
-          className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saldo Final</p>
-          <p
-            className={`font-mono text-lg font-bold ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}
-          >
-            {formatBRL(kpis.totalPendente)}
-          </p>
-          <p className="text-[9px] text-dark-500">
-            {kpis.quitados}/{kpis.comMov} quitados
-          </p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className={`h-0.5 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo Final</p>
+            <p
+              className={`text-xl font-bold mt-2 font-mono ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}
+            >
+              {formatBRL(kpis.totalPendente)}
+            </p>
+            <p className="text-[9px] text-dark-500 mt-0.5">
+              {kpis.quitados}/{kpis.comMov} quitados
+            </p>
+          </div>
         </div>
       </div>
 
@@ -539,13 +549,13 @@ export default function Liquidacao({
             placeholder="Buscar agente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+            className="input w-full"
           />
         </div>
         <select
           value={sortMode}
           onChange={(e) => setSortMode(e.target.value as SortMode)}
-          className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="devedor">Maior devedor</option>
           <option value="credor">Maior credor</option>
@@ -557,8 +567,11 @@ export default function Liquidacao({
 
       {/* Agent list */}
       {sorted.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
+        <div className="card text-center py-12">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
+            {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

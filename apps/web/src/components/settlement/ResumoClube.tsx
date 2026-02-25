@@ -4,10 +4,11 @@ import { useRef, useState } from 'react';
 import { formatBRL } from '@/lib/api';
 import { exportElementAsJpg } from '@/lib/exportJpg';
 import { useToast } from '@/components/Toast';
+import { SubclubData } from '@/types/settlement';
 import ClubLogo from '@/components/ClubLogo';
 
 interface Props {
-  subclub: any;
+  subclub: SubclubData;
   fees: Record<string, number>;
   weekStart?: string;
   weekEnd?: string;
@@ -72,7 +73,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         </div>
 
         {/* ── KPI Cards ── 5 cards com borda colorida no topo ────── */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
           <KpiCard
             label="Jogadores Ativos"
             value={String(totals.players)}
@@ -109,7 +110,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         </div>
 
         {/* ── Taxas + Lancamentos (side by side) ─────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
           {/* TAXAS AUTOMATICAS */}
           <div className="bg-dark-900 border border-dark-700 rounded-xl p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">Taxas Automáticas</h3>
@@ -205,7 +206,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default ${
+      className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ${
         highlight ? 'ring-1 ring-amber-700/30' : ''
       }`}
     >

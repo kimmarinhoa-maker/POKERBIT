@@ -46,10 +46,10 @@ export class LedgerService {
   }
 
   // ─── Listar movimentações por semana/entidade ────────────────────
-  async listEntries(tenantId: string, weekStart: string, entityId?: string) {
+  async listEntries(tenantId: string, weekStart: string, entityId?: string, page?: number, limit?: number) {
     let query = supabaseAdmin
       .from('ledger_entries')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart)
       .order('created_at', { ascending: true });
@@ -58,14 +58,19 @@ export class LedgerService {
       query = query.eq('entity_id', entityId);
     }
 
-    const { data, error } = await query;
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) throw new Error(`Erro ao listar movimentações: ${error.message}`);
-    return data || [];
+    return { data: data || [], total: count || 0 };
   }
 
   // ─── Calcular ledger net de uma entidade na semana ───────────────
   async calcEntityLedgerNet(tenantId: string, weekStart: string, entityId: string) {
-    const entries = await this.listEntries(tenantId, weekStart, entityId);
+    const { data: entries } = await this.listEntries(tenantId, weekStart, entityId);
 
     let entradas = 0;
     let saidas = 0;
@@ -94,6 +99,19 @@ export class LedgerService {
       .single();
 
     if (!existing) throw new Error('Movimentação não encontrada');
+
+    // Verificar se o settlement desta semana esta finalizado
+    const { data: settlement } = await supabaseAdmin
+      .from('settlements')
+      .select('status')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', existing.week_start)
+      .eq('status', 'FINAL')
+      .maybeSingle();
+
+    if (settlement) {
+      throw new Error('Não é possível deletar movimentação de uma semana finalizada');
+    }
 
     const { error } = await supabaseAdmin.from('ledger_entries').delete().eq('id', entryId).eq('tenant_id', tenantId);
 

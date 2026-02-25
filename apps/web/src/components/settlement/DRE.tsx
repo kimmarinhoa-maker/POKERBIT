@@ -82,7 +82,7 @@ export default function DRE({ subclub, fees }: Props) {
       </div>
 
       {/* ── KPI Strip ── 5 cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         <DreKpiCard
           icon="up"
           label="Receita Bruta"
@@ -359,7 +359,7 @@ function DreKpiCard({
       {/* Colored top border */}
       <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
       <div className="p-4">
-        <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium mb-1">{label}</p>
+        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">{label}</p>
         {sublabel && <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>}
         <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>{value}</p>
       </div>

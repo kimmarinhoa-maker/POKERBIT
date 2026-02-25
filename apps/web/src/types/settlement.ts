@@ -38,6 +38,8 @@ export interface PlayerMetric {
   pagamentos_detalhe?: PagamentoDetalhe[];
   saldo_atual?: number;
   situacao?: 'a_receber' | 'a_pagar' | 'quitado';
+  agent_is_direct?: boolean;
+  subclub_name?: string;
 }
 
 /** Row da tabela agent_week_metrics */
@@ -55,6 +57,8 @@ export interface AgentMetric {
   commission_brl: number;
   resultado_brl: number;
   external_agent_id?: string | null;
+  is_direct?: boolean;
+  payment_type?: 'fiado' | 'avista';
 }
 
 /** Subclub panel data retornada pelo GET /api/settlements/:id/full */

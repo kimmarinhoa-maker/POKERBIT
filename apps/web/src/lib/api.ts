@@ -6,13 +6,15 @@ const API_BASE = '/api';
 
 // Direct backend URL for file uploads (bypasses Next.js proxy which can fail on large multipart bodies)
 const API_DIRECT =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api';
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? (process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://localhost:3001') + '/api'
+    : '/api';
 
-interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
-  meta?: Record<string, any>;
+  meta?: Record<string, number | string>;
 }
 
 // ─── Auth storage ──────────────────────────────────────────────────
@@ -28,7 +30,7 @@ export function getStoredAuth() {
   }
 }
 
-export function setStoredAuth(auth: any) {
+export function setStoredAuth(auth: Record<string, unknown>) {
   localStorage.setItem('poker_auth', JSON.stringify(auth));
 }
 
