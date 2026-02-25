@@ -15,7 +15,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const search = req.query.search as string | undefined;
       const page = Math.max(1, Number(req.query.page) || 1);
       const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
@@ -60,7 +60,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       // Buscar métricas semanais do player
       const { data, error } = await supabaseAdmin
@@ -92,7 +92,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const today = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabaseAdmin
@@ -122,7 +122,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { rate, effective_from } = req.body;
 
       if (rate == null || rate < 0 || rate > 100) {

@@ -41,7 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`pointer-events-auto px-4 py-3 rounded-lg text-sm font-medium shadow-xl border animate-in slide-in-from-bottom duration-200 ${
+            className={`pointer-events-auto px-4 py-3 rounded-lg text-sm font-medium shadow-toast backdrop-blur-sm border animate-slide-up ${
               t.type === 'success'
                 ? 'bg-emerald-900/90 border-emerald-700/50 text-emerald-200'
                 : t.type === 'error'

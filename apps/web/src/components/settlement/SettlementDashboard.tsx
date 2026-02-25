@@ -60,7 +60,7 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
           <button
             key={sc.id || sc.name}
             onClick={() => onSelectSubclub(sc.name)}
-            className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 transition-all duration-200 cursor-pointer text-left group"
+            className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group"
           >
             {/* Borda superior colorida */}
             <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
@@ -114,7 +114,7 @@ function DashKpiCard({ label, value, icon, borderColor, textColor }: {
   label: string; value: string; icon: string; borderColor: string; textColor?: string;
 }) {
   return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
       <div className={`h-0.5 ${borderColor}`} />
       <div className="p-4">
         <div className="min-w-0">

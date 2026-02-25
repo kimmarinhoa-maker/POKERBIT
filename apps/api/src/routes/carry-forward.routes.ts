@@ -19,7 +19,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const weekStart = req.query.week_start as string;
       const clubId = req.query.club_id as string;
       const entityId = req.query.entity_id as string | undefined;
@@ -56,7 +56,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { settlement_id } = req.body;
 
       if (!settlement_id) {
@@ -73,7 +73,7 @@ router.post(
       const { supabaseAdmin } = await import('../config/supabase');
       await supabaseAdmin.from('audit_log').insert({
         tenant_id: tenantId,
-        user_id: (req as any).userId,
+        user_id: req.userId!,
         action: 'CLOSE_WEEK',
         entity_type: 'carry_forward',
         entity_id: settlement_id,

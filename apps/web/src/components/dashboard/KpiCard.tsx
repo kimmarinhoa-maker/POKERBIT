@@ -33,13 +33,21 @@ const ACCENT_VALUE: Record<string, string> = {
   purple: 'text-purple-400',
 };
 
+const ACCENT_GLOW: Record<string, string> = {
+  green: 'hover:shadow-glow-green',
+  blue: 'hover:shadow-glow-blue',
+  red: 'hover:shadow-glow-red',
+  yellow: 'hover:shadow-glow-amber',
+  purple: 'hover:shadow-glow-purple',
+};
+
 export default function KpiCard({ label, subtitle, value, accent, delta, breakdown }: KpiCardProps) {
   const filteredBreakdown = breakdown?.filter(item =>
     item.rawValue !== undefined ? item.rawValue !== 0 : true
   );
 
   return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-dark-600 transition-all duration-200 cursor-pointer">
+    <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px hover:border-dark-600 transition-all duration-200 cursor-pointer ${ACCENT_GLOW[accent]}`}>
       {/* Accent bar */}
       <div className={`h-[2px] ${ACCENT_BAR[accent]}`} />
 

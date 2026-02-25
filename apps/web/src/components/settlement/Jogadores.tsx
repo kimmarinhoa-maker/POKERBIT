@@ -164,7 +164,7 @@ export default function Jogadores({ subclub }: Props) {
     <div>
       {/* ═══ 5 KPI MINI CARDS ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Jogadores Ativos
           </div>
@@ -172,7 +172,7 @@ export default function Jogadores({ subclub }: Props) {
           <div className="text-[10px] text-dark-500 mt-0.5">de {players.length} total</div>
         </div>
 
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Profit / Loss
           </div>
@@ -184,7 +184,7 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-emerald-500 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-emerald-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Rake Gerado
           </div>
@@ -193,7 +193,7 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-lime-500 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-lime-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Rakeback Total
           </div>
@@ -202,7 +202,7 @@ export default function Jogadores({ subclub }: Props) {
           </div>
         </div>
 
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 ring-1 ring-amber-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">
             Resultado Semana
           </div>
@@ -639,9 +639,9 @@ function PaymentModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-dark-900 border border-dark-700 rounded-xl p-5 w-96 max-h-[80vh] overflow-y-auto shadow-2xl"
+        className="bg-dark-900 border border-dark-700 rounded-xl p-5 w-96 max-h-[80vh] overflow-y-auto shadow-modal animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">

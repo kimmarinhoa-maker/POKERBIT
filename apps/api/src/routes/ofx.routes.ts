@@ -18,7 +18,7 @@ router.post(
   upload.single('file'),
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const file = (req as any).file;
 
       if (!file) {
@@ -45,7 +45,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const weekStart = req.query.week_start as string | undefined;
       const status = req.query.status as string | undefined;
 
@@ -65,7 +65,7 @@ router.patch(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { entity_id, entity_name, category } = req.body;
 
       if (!entity_id || !entity_name) {
@@ -91,7 +91,7 @@ router.patch(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const data = await ofxService.unlinkTransaction(tenantId, req.params.id);
       res.json({ success: true, data });
     } catch (err: any) {
@@ -107,7 +107,7 @@ router.patch(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { ignore } = req.body;
       const data = await ofxService.ignoreTransaction(tenantId, req.params.id, ignore !== false);
       res.json({ success: true, data });
@@ -124,7 +124,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { week_start } = req.body;
 
       if (!week_start) {
@@ -147,7 +147,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { week_start } = req.body;
 
       if (!week_start) {
@@ -155,7 +155,7 @@ router.post(
         return;
       }
 
-      const data = await ofxService.applyLinked(tenantId, week_start, (req as any).userId);
+      const data = await ofxService.applyLinked(tenantId, week_start, req.userId!);
       res.json({ success: true, data });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -170,7 +170,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const data = await ofxService.deleteTransaction(tenantId, req.params.id);
       res.json({ success: true, data });
     } catch (err: any) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, listLedger, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
@@ -34,6 +35,7 @@ type GroupBy = 'none' | 'entity' | 'method' | 'source';
 // ─── Page ───────────────────────────────────────────────────────────
 
 export default function CaixaGeralPage() {
+  usePageTitle('Caixa Geral');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [entries, setEntries] = useState<LedgerEntry[]>([]);

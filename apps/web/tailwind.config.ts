@@ -8,6 +8,31 @@ const config: Config = {
         outfit: ['Outfit', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
+      boxShadow: {
+        'card': '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+        'card-hover': '0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3)',
+        'glow-green': '0 0 15px rgba(34,197,94,0.15)',
+        'glow-red': '0 0 15px rgba(239,68,68,0.15)',
+        'glow-blue': '0 0 15px rgba(59,130,246,0.15)',
+        'glow-amber': '0 0 15px rgba(245,158,11,0.15)',
+        'glow-purple': '0 0 15px rgba(168,85,247,0.15)',
+        'toast': '0 8px 30px rgba(0,0,0,0.5)',
+        'modal': '0 25px 50px rgba(0,0,0,0.5)',
+      },
+      keyframes: {
+        'slide-up': {
+          '0%': { transform: 'translateY(8px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        'slide-up': 'slide-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.15s ease-out',
+      },
       colors: {
         poker: {
           50:  '#f0fdf4',

@@ -37,7 +37,7 @@ router.post(
         return;
       }
 
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const data = await ledgerService.createEntry(tenantId, parsed.data, req.userId!);
 
       res.status(201).json({ success: true, data });
@@ -54,7 +54,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const weekStart = req.query.week_start as string;
       const entityId = req.query.entity_id as string | undefined;
 
@@ -79,7 +79,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const weekStart = req.query.week_start as string;
       const entityId = req.query.entity_id as string;
 
@@ -108,7 +108,7 @@ router.delete(
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const data = await ledgerService.deleteEntry(tenantId, req.params.id, req.userId!);
 
       res.json({ success: true, data });
@@ -126,7 +126,7 @@ router.patch(
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const entryId = req.params.id;
       const { is_reconciled } = req.body;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import {
   importPreview,
   importConfirm,
@@ -20,6 +21,7 @@ import ConfirmStep from '@/components/import/ConfirmStep';
 import SuccessStep, { ConfirmResult } from '@/components/import/SuccessStep';
 
 export default function ImportWizardPage() {
+  usePageTitle('Importar');
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);

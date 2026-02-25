@@ -108,8 +108,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       ]);
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     }
   }, [weekStart, settlementId, isDraft]);
@@ -307,8 +306,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         setEditingRate(null);
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setSavingRate(false);
@@ -325,8 +323,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         setEditingRate(null);
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setSavingRate(false);
@@ -342,8 +339,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         await loadExtras();
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     }
   }
@@ -357,8 +353,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         await loadExtras();
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     }
   }
@@ -377,8 +372,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       setApplyAllAgent(null);
       setApplyAllRate('');
       onDataChange();
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro na operacao de rakeback', 'error');
     } finally {
       setApplyingAll(false);
@@ -401,7 +395,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Rake Total</p>
@@ -409,7 +403,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
             <p className="text-[10px] text-dark-500">{players.length} jogadores</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-yellow-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Rakeback</p>
@@ -417,7 +411,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
             <p className="text-[10px] text-dark-500">Agentes + Diretos</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Taxas Liga</p>
@@ -425,7 +419,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
             <p className="text-[10px] text-dark-500">{taxLabel} sobre rake</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className={`h-0.5 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lucro Liquido</p>
@@ -694,7 +688,7 @@ function AgenciasTab({
                       {agentPlayers
                         .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''))
                         .map((p, i) => (
-                          <tr key={i} className="hover:bg-dark-800/20">
+                          <tr key={i} className="hover:bg-dark-800/20 transition-colors">
                             <td className="px-8 py-1.5 text-dark-200">{p.nickname}</td>
                             <td className="px-3 py-1.5 text-dark-500 text-xs font-mono">{p.external_player_id}</td>
                             <td className="px-3 py-1.5 text-right font-mono text-dark-300">{formatBRL(Number(p.rake_total_brl))}</td>
@@ -953,7 +947,7 @@ function JogadoresTab({
                             const isEditingPlayer = editingRate === `player-${p.player_id}`;
 
                             return (
-                              <tr key={i} className="hover:bg-dark-800/20">
+                              <tr key={i} className="hover:bg-dark-800/20 transition-colors">
                                 <td className="px-8 py-1.5">
                                   <span className="text-dark-200 font-medium">{p.nickname}</span>
                                   <span className="text-dark-600 text-xs ml-2">#{p.external_player_id}</span>

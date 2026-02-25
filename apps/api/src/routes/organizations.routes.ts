@@ -30,7 +30,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const type = req.query.type as string | undefined;
 
       let query = supabaseAdmin
@@ -62,7 +62,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data: orgs, error } = await supabaseAdmin
         .from('organizations')
@@ -102,7 +102,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('agent_prefix_map')
@@ -145,7 +145,7 @@ router.post(
         return;
       }
 
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('agent_prefix_map')
@@ -181,7 +181,7 @@ router.post(
   logoUpload.single('logo'),
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const orgId = req.params.id;
       const file = req.file;
 
@@ -257,7 +257,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const orgId = req.params.id;
 
       // Buscar org
@@ -321,7 +321,7 @@ router.post(
         return;
       }
 
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       // Validar que parent existe e e tipo CLUB
       const { data: parent } = await supabaseAdmin
@@ -386,7 +386,7 @@ router.put(
         return;
       }
 
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const orgId = req.params.id;
 
       // Validar que org pertence ao tenant e e SUBCLUB
@@ -434,7 +434,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const orgId = req.params.id;
 
       // Validar que org pertence ao tenant e e SUBCLUB
@@ -506,7 +506,7 @@ router.put(
         return;
       }
 
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const ruleId = req.params.id;
 
       const updates: any = {};
@@ -549,7 +549,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const ruleId = req.params.id;
 
       const { error } = await supabaseAdmin
@@ -573,7 +573,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const today = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabaseAdmin
@@ -603,7 +603,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const agentId = req.params.id;
       const { rate, effective_from } = req.body;
 
@@ -647,7 +647,7 @@ router.put(
           agent_id: agentId,
           rate,
           effective_from: dateFrom,
-          created_by: (req as any).userId,
+          created_by: req.userId!,
         })
         .select()
         .single();
@@ -657,7 +657,7 @@ router.put(
       // Audit
       await supabaseAdmin.from('audit_log').insert({
         tenant_id: tenantId,
-        user_id: (req as any).userId,
+        user_id: req.userId!,
         action: 'UPDATE',
         entity_type: 'agent_rb_rate',
         entity_id: agentId,
@@ -678,7 +678,7 @@ router.patch(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const orgId = req.params.id;
       const { is_direct } = req.body;
 

@@ -17,7 +17,7 @@ router.get(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin.rpc('get_tenant_users', {
         p_tenant_id: tenantId,
@@ -89,7 +89,7 @@ router.patch(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
       const { role } = req.body;
 
@@ -146,7 +146,7 @@ router.delete(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
 
       // Buscar o user_tenant para verificar se e o proprio usuario
@@ -191,7 +191,7 @@ router.post(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { email, role } = req.body;
 
       if (!email || typeof email !== 'string') {
@@ -274,7 +274,7 @@ router.get(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
 
       // Verify user belongs to tenant
@@ -323,7 +323,7 @@ router.put(
   ...adminOnly,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
       const { org_ids } = req.body;
 

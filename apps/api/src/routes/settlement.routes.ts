@@ -339,14 +339,14 @@ router.post(
 
         // Vincular metrics sem agent_id
         if (orgId) {
-          const { count } = await supabaseAdmin
+          const { data: updated } = await supabaseAdmin
             .from('agent_week_metrics')
             .update({ agent_id: orgId })
             .eq('settlement_id', settlementId)
             .eq('agent_name', agentName)
             .is('agent_id', null)
-            .select('id', { count: 'exact', head: true });
-          linked += (count || 0);
+            .select('id');
+          linked += (updated?.length || 0);
         }
 
         // Corrigir subclub_id em agent_week_metrics que tem subclub_name mas nao tem subclub_id

@@ -197,7 +197,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                           href={item.href}
                           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                             isActive
-                              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
+                              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
                               : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
                           }`}
                         >

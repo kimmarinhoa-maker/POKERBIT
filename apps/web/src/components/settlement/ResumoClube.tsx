@@ -30,8 +30,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         `resumo_${safeName}_${weekStart || 'semana'}`,
         { backgroundColor: '#0f0f13' }
       );
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao exportar JPG', 'error');
     } finally {
       setExporting(false);

@@ -98,7 +98,7 @@ export default function LockWeekModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" aria-hidden="true">
-      <div className="bg-dark-900 border border-dark-700 rounded-xl shadow-2xl w-full max-w-lg mx-4" role="dialog" aria-modal="true" aria-label="Finalizar semana">
+      <div className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal animate-slide-up w-full max-w-lg mx-4" role="dialog" aria-modal="true" aria-label="Finalizar semana">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700">
           <div>

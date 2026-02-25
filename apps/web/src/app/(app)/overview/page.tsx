@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, getSettlementFull, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
@@ -33,6 +34,7 @@ type SortDir = 'asc' | 'desc';
 // ─── Page ───────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
+  usePageTitle('Visao Geral');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [allPlayers, setAllPlayers] = useState<PlayerRow[]>([]);

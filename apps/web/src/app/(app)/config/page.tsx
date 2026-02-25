@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import ConfigEstrutura from '@/components/config/ConfigEstrutura';
 import ConfigPagamentos from '@/components/config/ConfigPagamentos';
 import ConfigTaxas from '@/components/config/ConfigTaxas';
@@ -14,6 +15,7 @@ const tabs: { key: ConfigTab; label: string }[] = [
 ];
 
 export default function ConfigPage() {
+  usePageTitle('Configuracao');
   const [activeTab, setActiveTab] = useState<ConfigTab>('estrutura');
 
   return (

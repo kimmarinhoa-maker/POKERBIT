@@ -106,10 +106,10 @@ export default function SubNavTabs({ activeTab, onTabChange }: Props) {
                     aria-selected={activeTab === item.key}
                     aria-label={item.label}
                     onClick={() => onTabChange(item.key)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       activeTab === item.key
-                        ? 'bg-poker-600/15 text-poker-400 font-medium'
-                        : 'text-dark-300 hover:bg-dark-800/50 hover:text-dark-100'
+                        ? 'bg-poker-600/15 text-poker-400 font-medium shadow-glow-green border-l-2 border-poker-500'
+                        : 'text-dark-300 hover:bg-dark-800/50 hover:text-dark-100 border-l-2 border-transparent'
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />

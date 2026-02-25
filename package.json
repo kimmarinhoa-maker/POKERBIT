@@ -13,13 +13,19 @@
     "golden:inspect": "node tools/run_golden.js --inspect",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:golden": "node tools/compare.js"
+    "test:golden": "node tools/compare.js",
+    "lint": "eslint apps/web/src apps/api/src --ext .ts,.tsx --max-warnings 100",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "pg": "^8.18.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.0",
     "vitest": "^4.0.18"
   }
 }

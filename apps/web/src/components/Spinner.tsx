@@ -13,7 +13,7 @@ const sizeMap = {
 };
 
 const variantMap = {
-  primary: 'border-poker-500 border-t-transparent',
+  primary: 'border-poker-500 border-t-transparent drop-shadow-[0_0_8px_rgba(34,197,94,0.4)]',
   white: 'border-white/30 border-t-white',
 };
 

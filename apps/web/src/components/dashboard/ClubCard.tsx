@@ -21,7 +21,7 @@ export default function ClubCard({ clube, enabled = true, onToggle }: ClubCardPr
   const acertoColor = clube.acertoLiga >= 0 ? 'text-poker-500' : 'text-red-400';
 
   return (
-    <div className={`bg-dark-900 border border-dark-700 rounded-xl p-4 hover:border-dark-600 transition-all duration-200 flex flex-col ${!enabled ? 'opacity-40' : 'cursor-pointer'}`}>
+    <div className={`bg-dark-900 border border-dark-700 rounded-xl p-4 shadow-card hover:shadow-card-hover hover:-translate-y-px hover:border-dark-600 transition-all duration-200 flex flex-col ${!enabled ? 'opacity-40' : 'cursor-pointer'}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">

@@ -25,7 +25,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const settlementId = req.query.settlement_id as string;
 
       // Se não passar settlement_id, pega o mais recente
@@ -114,7 +114,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('agent_manual_links')
@@ -142,7 +142,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const parsed = agentLinkSchema.safeParse(req.body);
 
       if (!parsed.success) {
@@ -190,7 +190,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const parsed = playerLinkSchema.safeParse(req.body);
 
       if (!parsed.success) {
@@ -242,7 +242,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const parsed = bulkPlayerLinkSchema.safeParse(req.body);
 
       if (!parsed.success) {
@@ -284,7 +284,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { error } = await supabaseAdmin
         .from('agent_manual_links')
@@ -307,7 +307,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { error } = await supabaseAdmin
         .from('player_links')

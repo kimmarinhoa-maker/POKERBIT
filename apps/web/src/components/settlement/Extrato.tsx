@@ -50,8 +50,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     try {
       const res = await listLedger(weekStart);
       if (res.success) setEntries(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar extrato', 'error');
     } finally {
       setLoading(false);
@@ -135,8 +134,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
         onDataChange();
         toast('Movimentacao excluida', 'success');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao excluir movimentacao', 'error');
     }
   }
@@ -259,7 +257,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       {/* KPI Cards */}
       {!loading && entries.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
             <div className="h-0.5 bg-blue-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Movimentacoes</p>
@@ -267,7 +265,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
               <p className="text-[10px] text-dark-500">{totals.inCount} IN / {totals.outCount} OUT</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
             <div className="h-0.5 bg-poker-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Entradas (IN)</p>
@@ -275,7 +273,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
               <p className="text-[10px] text-dark-500">{totals.inCount} movimentacoes</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
             <div className="h-0.5 bg-red-500" />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saidas (OUT)</p>
@@ -283,7 +281,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
               <p className="text-[10px] text-dark-500">{totals.outCount} movimentacoes</p>
             </div>
           </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
             <div className={`h-0.5 ${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
             <div className="p-4">
               <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo Liquido</p>

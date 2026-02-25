@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
 import { getSettlementFull, getOrgTree } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
@@ -58,6 +59,7 @@ export default function SubclubPanelPage() {
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const fetchedTabs = useRef(new Set([activeTab]));
+  usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
     setLoading(true);

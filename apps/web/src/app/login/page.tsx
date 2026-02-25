@@ -35,14 +35,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background pattern */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="absolute inset-0 opacity-[0.05]" style={{
         backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)`,
         backgroundSize: '32px 32px',
       }} />
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-poker-500 to-poker-700 mb-5 shadow-lg shadow-poker-900/30">
             <span className="text-2xl font-bold text-white">PM</span>
           </div>
@@ -51,7 +51,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="card space-y-5">
+        <form onSubmit={handleSubmit} className="card space-y-5 animate-slide-up">
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-1.5">
               Email
@@ -92,7 +92,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm flex items-center gap-2">
+            <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm flex items-center gap-2 animate-slide-up">
               <span className="shrink-0">✕</span>
               {error}
             </div>

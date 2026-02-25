@@ -126,8 +126,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       ]);
       if (ledgerRes.success) setEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar comprovantes', 'error');
     } finally {
       setLoading(false);
@@ -412,7 +411,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-blue-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Agentes</p>
@@ -420,7 +419,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             <p className="text-[10px] text-dark-500">{activeTab === 'agencias' ? 'Agencias' : 'Diretos'}</p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-red-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Pagar</p>
@@ -429,7 +428,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             </p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-emerald-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Receber</p>
@@ -438,7 +437,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             </p>
           </div>
         </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className={`h-0.5 ${activeData.filter(d => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
@@ -814,8 +813,7 @@ function StatementView({ data, subclubName, weekStart, weekEnd, onBack }: {
       link.download = `comprovante_${safeName}_${weekStart}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao exportar JPG', 'error');
     } finally {
       setExporting(false);

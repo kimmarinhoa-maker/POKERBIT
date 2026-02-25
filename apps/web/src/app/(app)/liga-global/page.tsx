@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
@@ -28,6 +29,7 @@ interface SubclubData {
 // ─── Page ───────────────────────────────────────────────────────────
 
 export default function LigaGlobalPage() {
+  usePageTitle('Liga Global');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [subclubs, setSubclubs] = useState<SubclubData[]>([]);

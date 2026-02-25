@@ -74,8 +74,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     try {
       const res = await listLedger(weekStart);
       if (res.success) setEntries(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar movimentacoes do ledger', 'error');
     } finally {
       setLoading(false);
@@ -113,8 +112,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           prev.map(e => e.id === entryId ? { ...e, is_reconciled: !currentValue } : e)
         );
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao alterar conciliacao', 'error');
     } finally {
       setToggling(null);
@@ -423,8 +421,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
     try {
       const res = await getChipPixLedgerSummary(weekStart);
       if (res.success && res.data) setLedgerStats(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       /* silent — verificador just won't show */
     }
   }, [weekStart]);
@@ -434,8 +431,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
     try {
       const res = await listChipPixTransactions(weekStart);
       if (res.success) setTxns(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar transações ChipPix', 'error');
     } finally {
       setLoading(false);
@@ -580,8 +576,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
               match.nickname || match.external_player_id
             );
             if (res.success) count++;
-          } catch (err) {
-            console.error(err);
+          } catch {
             /* continue */
           }
         }
@@ -593,8 +588,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
       } else {
         toast('Nenhum jogador encontrado para vincular', 'info');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao auto-vincular', 'error');
     } finally {
       setAutoLinking(false);
@@ -610,8 +604,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
         setLinkForm({ entity_id: '', entity_name: '' });
         loadTxns();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao vincular', 'error');
     }
   }
@@ -637,8 +630,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
         loadLedgerSummary();
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao aplicar', 'error');
     } finally {
       setApplying(false);
@@ -652,8 +644,7 @@ function ChipPixTab({ weekStart, clubId, isDraft, canEdit, onDataChange, agents,
     for (const tx of deletable) {
       try {
         await deleteChipPixTransaction(tx.id);
-      } catch (err) {
-        console.error(err);
+      } catch {
         /* continue */
       }
     }
@@ -975,8 +966,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
     try {
       const res = await listOFXTransactions(weekStart);
       if (res.success) setTxns(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar transacoes OFX', 'error');
     } finally {
       setLoading(false);
@@ -1031,8 +1021,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
         setLinkForm({ entity_id: '', entity_name: '' });
         loadTxns();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao vincular transacao OFX', 'error');
     }
   }
@@ -1063,8 +1052,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
         loadTxns();
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao aplicar transacoes OFX', 'error');
     } finally {
       setApplying(false);
@@ -1105,8 +1093,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
         setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
         loadTxns();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao aceitar sugestao', 'error');
     } finally {
       setAcceptingId(null);
@@ -1133,8 +1120,7 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
           accepted++;
           setSuggestions(prev => prev.filter(x => x.transaction_id !== s.transaction_id));
         }
-      } catch (err) {
-        console.error(err);
+      } catch {
         /* continue on error */
       }
     }
@@ -1534,10 +1520,10 @@ function OFXTab({ weekStart, isDraft, canEdit, onDataChange, agents, players }: 
               {kpis.linked + kpis.applied}/{kpis.total} ({kpis.total > 0 ? Math.round((kpis.linked + kpis.applied) / kpis.total * 100) : 0}%)
             </span>
           </div>
-          <div className="w-full bg-dark-800 rounded-full h-2.5">
+          <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                kpis.linked + kpis.applied === kpis.total ? 'bg-green-500' : 'bg-poker-500'
+              className={`h-2.5 rounded-full transition-all duration-500 shadow-glow-green ${
+                kpis.linked + kpis.applied === kpis.total ? 'bg-green-500' : 'bg-gradient-to-r from-poker-600 to-poker-400'
               }`}
               style={{ width: `${kpis.total > 0 ? ((kpis.linked + kpis.applied) / kpis.total) * 100 : 0}%` }}
             />
@@ -1744,10 +1730,10 @@ function LedgerTab({ entries, kpis, filter, setFilter, loading, isDraft, canEdit
               {kpis.reconciled}/{kpis.total} ({kpis.total > 0 ? Math.round(kpis.reconciled / kpis.total * 100) : 0}%)
             </span>
           </div>
-          <div className="w-full bg-dark-800 rounded-full h-2.5">
+          <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                kpis.reconciled === kpis.total ? 'bg-green-500' : 'bg-poker-500'
+              className={`h-2.5 rounded-full transition-all duration-500 shadow-glow-green ${
+                kpis.reconciled === kpis.total ? 'bg-green-500' : 'bg-gradient-to-r from-poker-600 to-poker-400'
               }`}
               style={{ width: `${kpis.total > 0 ? (kpis.reconciled / kpis.total) * 100 : 0}%` }}
             />

@@ -15,7 +15,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('fee_config')
@@ -38,7 +38,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { fees } = req.body;
 
       if (!fees || !Array.isArray(fees)) {
@@ -84,7 +84,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const weekStart = req.query.week_start as string;
       const subclubId = req.query.subclub_id as string;
 
@@ -113,7 +113,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { subclub_id, week_start, overlay, compras, security, outros, obs } = req.body;
 
       if (!subclub_id || !week_start) {
@@ -160,7 +160,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('payment_methods')
@@ -184,7 +184,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { name, is_default, sort_order } = req.body;
 
       if (!name || typeof name !== 'string') {
@@ -226,7 +226,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
       const { name, is_default, is_active, sort_order } = req.body;
 
@@ -271,7 +271,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
 
       const { error } = await supabaseAdmin
@@ -299,7 +299,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('bank_accounts')
@@ -322,7 +322,7 @@ router.post(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { name, bank_code, agency, account_nr, is_default } = req.body;
 
       if (!name || typeof name !== 'string') {
@@ -365,7 +365,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
       const { name, bank_code, agency, account_nr, is_default, is_active } = req.body;
 
@@ -411,7 +411,7 @@ router.delete(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { id } = req.params;
 
       const { error } = await supabaseAdmin
@@ -439,7 +439,7 @@ router.get(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
 
       const { data, error } = await supabaseAdmin
         .from('rb_defaults')
@@ -462,7 +462,7 @@ router.put(
   requireTenant,
   async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).tenantId;
+      const tenantId = req.tenantId!;
       const { defaults } = req.body;
 
       if (!defaults || !Array.isArray(defaults)) {

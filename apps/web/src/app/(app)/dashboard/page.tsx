@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { formatCurrency, calcDelta, round2 } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
@@ -55,6 +56,7 @@ interface WeekData {
 
 // ─── Component ────────────────────────────────────────────────────
 export default function DashboardPage() {
+  usePageTitle('Dashboard');
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 

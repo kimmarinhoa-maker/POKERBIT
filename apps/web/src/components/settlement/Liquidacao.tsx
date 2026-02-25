@@ -83,8 +83,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
       ]);
       if (ledgerRes.success) setAllEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao carregar dados de liquidacao', 'error');
     } finally {
       setLoading(false);
@@ -333,8 +332,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
         onDataChange();
         toast('Pagamento registrado', 'success');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao registrar pagamento', 'error');
     } finally {
       setSaving(false);
@@ -350,8 +348,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
         onDataChange();
         toast('Movimentacao excluida', 'success');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao excluir movimentacao', 'error');
     }
   }
@@ -365,8 +362,7 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
         setPaymentTypeOverrides(prev => ({ ...prev, [agentId]: newType }));
         onDataChange();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast('Erro ao alterar tipo de pagamento', 'error');
     } finally {
       setPaymentTypeLoading(prev => {
@@ -403,25 +399,25 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
 
       {/* KPI cards - 5 columns like HTML */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Total</p>
           <p className={`font-mono text-lg font-bold ${kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
             {formatBRL(kpis.totalResultado)}
           </p>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">RB Distribuido</p>
           <p className="font-mono text-lg font-bold text-yellow-400">{formatBRL(kpis.totalRB)}</p>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Recebido</p>
           <p className="font-mono text-lg font-bold text-emerald-400">{formatBRL(kpis.totalRecebido)}</p>
         </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center transition-all duration-200 hover:border-dark-600 cursor-default">
+        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pago</p>
           <p className="font-mono text-lg font-bold text-blue-400">{formatBRL(kpis.totalPago)}</p>
         </div>
-        <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center transition-all duration-200 hover:border-dark-600 cursor-default`}>
+        <div className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}>
           <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saldo Final</p>
           <p className={`font-mono text-lg font-bold ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}>
             {formatBRL(kpis.totalPendente)}
@@ -439,12 +435,12 @@ export default function Liquidacao({ subclub, weekStart, clubId, settlementId, s
               {kpis.quitados}/{kpis.comMov} quitados ({pctQuit}%)
             </span>
           </div>
-          <div className="w-full bg-dark-800 rounded-full h-2.5">
+          <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
-              className={`h-2.5 rounded-full transition-all duration-700 ${
+              className={`h-2.5 rounded-full transition-all duration-700 shadow-glow-green ${
                 pctQuit === 100
                   ? 'bg-emerald-500'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                  : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
               }`}
               style={{ width: `${pctQuit}%` }}
             />

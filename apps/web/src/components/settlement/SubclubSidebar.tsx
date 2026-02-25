@@ -45,9 +45,9 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
       <div className="p-2">
         <button
           onClick={() => onSelect(null)}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
             selected === null
-              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
+              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
               : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
           }`}
         >
@@ -66,9 +66,9 @@ export default function SubclubSidebar({ subclubs, selected, onSelect, weekStart
             <button
               key={sc.id || sc.name}
               onClick={() => onSelect(sc.name)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                 selected === sc.name
-                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
+                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
                   : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
               }`}
             >

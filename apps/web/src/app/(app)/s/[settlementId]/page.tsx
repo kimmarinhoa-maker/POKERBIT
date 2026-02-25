@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { getSettlementFull, voidSettlement, formatDate, formatBRL, getOrgTree } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
@@ -17,6 +18,7 @@ export default function SettlementOverviewPage() {
   const settlementId = params.settlementId as string;
 
   const [data, setData] = useState<any>(null);
+  usePageTitle(data?.settlement?.week_start ? `Fechamento ${data.settlement.week_start}` : 'Fechamento');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
@@ -193,7 +195,7 @@ export default function SettlementOverviewPage() {
             <Link
               key={sc.id || sc.name}
               href={`/s/${settlementId}/club/${sc.name}`}
-              className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 transition-all duration-200 cursor-pointer text-left group block"
+              className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
             >
               <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
