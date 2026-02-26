@@ -395,6 +395,7 @@ export default function DashboardPage() {
       semana: formatDDMM(w.settlement.week_start),
       anterior: i > 0 ? allWeekData[i - 1].jogadoresAtivos : w.jogadoresAtivos,
       atual: w.jogadoresAtivos,
+      rakeAnterior: i > 0 ? allWeekData[i - 1].rakeTotal : w.rakeTotal,
       rake: w.rakeTotal,
     }));
   }, [allWeekData]);

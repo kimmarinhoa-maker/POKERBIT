@@ -1,14 +1,30 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import KpiCard from '@/components/dashboard/KpiCard';
 import { formatCurrency } from '@/lib/formatters';
-import { formatBRL } from '@/lib/api';
+import { formatBRL, listSettlements, getSettlementFull } from '@/lib/api';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
+
+/* ══════════════════════════════════════════════════════════════════════
+   Types
+   ══════════════════════════════════════════════════════════════════════ */
 
 interface Props {
   subclub: SubclubData;
   fees: Record<string, number>;
+  settlementId: string;
+  subclubName: string;
 }
 
 interface AgentSummary {
@@ -28,18 +44,106 @@ interface PlayerSummary {
   resultado: number;
 }
 
-const MEDAL = ['🥇', '🥈', '🥉'];
-const PODIUM_BG = [
-  'from-amber-500/20 to-amber-900/5 border-amber-500/30',
-  'from-slate-300/15 to-slate-700/5 border-slate-400/25',
-  'from-orange-600/15 to-orange-900/5 border-orange-500/20',
-];
-const BAR_COLORS_RAKE = ['bg-poker-500', 'bg-poker-600', 'bg-poker-700'];
-const BAR_COLORS_WIN = ['bg-emerald-500', 'bg-emerald-600', 'bg-emerald-700'];
-const BAR_COLORS_LOSS = ['bg-red-500', 'bg-red-600', 'bg-red-700'];
+interface RakeWeekPoint {
+  semana: string;
+  rake: number;
+  isCurrent: boolean;
+}
 
-export default function DashboardClube({ subclub, fees }: Props) {
+const BAR_COLORS_RAKE = ['bg-poker-500', 'bg-poker-500', 'bg-poker-600', 'bg-poker-600', 'bg-poker-700'];
+const MEDAL = ['🥇', '🥈', '🥉'];
+
+/* ══════════════════════════════════════════════════════════════════════
+   Main Component
+   ══════════════════════════════════════════════════════════════════════ */
+
+export default function DashboardClube({ subclub, fees, settlementId, subclubName }: Props) {
   const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, name, players, agents } = subclub;
+
+  // ── Historical data (8 weeks) ──────────────────────────────────────
+  const [rakeHistory, setRakeHistory] = useState<RakeWeekPoint[]>([]);
+  const [prevPlayers, setPrevPlayers] = useState<number | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHistory() {
+      try {
+        const res = await listSettlements();
+        if (cancelled || !res?.data) return;
+
+        // Take up to 8 most recent settlements
+        const settlements = res.data.slice(0, 8);
+        if (settlements.length === 0) {
+          setHistoryLoading(false);
+          return;
+        }
+
+        // Load full data for each settlement in parallel
+        const fullData = await Promise.all(
+          settlements.map(async (s: any) => {
+            try {
+              const full = await getSettlementFull(s.id);
+              return { settlement: s, full };
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        if (cancelled) return;
+
+        // Sort by week_start ascending
+        const sorted = fullData
+          .filter(Boolean)
+          .sort((a: any, b: any) => a.settlement.week_start.localeCompare(b.settlement.week_start));
+
+        // Extract rake per week for this subclub
+        const points: RakeWeekPoint[] = [];
+        let prevPlayerCount: number | null = null;
+
+        for (const item of sorted) {
+          if (!item) continue;
+          const { settlement, full } = item as any;
+          const weekStart = settlement.week_start;
+          const dt = new Date(weekStart + 'T00:00:00');
+          const label = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+
+          const isCurrent = settlement.id === settlementId;
+          const sc = full?.subclubs?.find((sc: any) => sc.name === subclubName || sc.id === subclubName);
+
+          if (sc) {
+            points.push({
+              semana: label,
+              rake: Number(sc.totals?.rake || 0),
+              isCurrent,
+            });
+
+            // Track previous week's player count
+            if (!isCurrent) {
+              prevPlayerCount = Number(sc.totals?.players || 0);
+            }
+          } else {
+            points.push({ semana: label, rake: 0, isCurrent });
+          }
+        }
+
+        if (!cancelled) {
+          setRakeHistory(points);
+          setPrevPlayers(prevPlayerCount);
+          setHistoryLoading(false);
+        }
+      } catch {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    }
+
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [settlementId, subclubName]);
 
   // ── Agent summaries ──────────────────────────────────────────────
   const agentSummaries: AgentSummary[] = useMemo(() => {
@@ -71,14 +175,14 @@ export default function DashboardClube({ subclub, fees }: Props) {
     }));
   }, [players]);
 
-  // ── Rankings ─────────────────────────────────────────────────────
+  // ── Rankings (top 5) ───────────────────────────────────────────
   const topAgentsRake = useMemo(
-    () => [...agentSummaries].sort((a, b) => b.rake - a.rake).slice(0, 3),
+    () => [...agentSummaries].sort((a, b) => b.rake - a.rake).slice(0, 5),
     [agentSummaries],
   );
 
   const topPlayersRake = useMemo(
-    () => [...playerSummaries].sort((a, b) => b.rake - a.rake).slice(0, 3),
+    () => [...playerSummaries].sort((a, b) => b.rake - a.rake).slice(0, 5),
     [playerSummaries],
   );
 
@@ -87,7 +191,7 @@ export default function DashboardClube({ subclub, fees }: Props) {
       [...playerSummaries]
         .filter((p) => p.ganhos > 0)
         .sort((a, b) => b.ganhos - a.ganhos)
-        .slice(0, 3),
+        .slice(0, 5),
     [playerSummaries],
   );
 
@@ -96,49 +200,25 @@ export default function DashboardClube({ subclub, fees }: Props) {
       [...playerSummaries]
         .filter((p) => p.ganhos < 0)
         .sort((a, b) => a.ganhos - b.ganhos)
-        .slice(0, 3),
+        .slice(0, 5),
     [playerSummaries],
   );
-
-  const topAgentWinners = useMemo(
-    () => [...agentSummaries].sort((a, b) => b.resultado - a.resultado).slice(0, 3),
-    [agentSummaries],
-  );
-
-  const topAgentLosers = useMemo(
-    () =>
-      [...agentSummaries]
-        .filter((a) => a.resultado < 0)
-        .sort((a, b) => a.resultado - b.resultado)
-        .slice(0, 3),
-    [agentSummaries],
-  );
-
-  // Agent distribution for donut-style chart
-  const agentDistribution = useMemo(() => {
-    const sorted = [...agentSummaries].sort((a, b) => b.players - a.players);
-    const colors = [
-      'bg-poker-500',
-      'bg-blue-500',
-      'bg-purple-500',
-      'bg-amber-500',
-      'bg-emerald-500',
-      'bg-red-400',
-      'bg-pink-500',
-      'bg-cyan-500',
-    ];
-    return sorted.map((a, i) => ({
-      label: a.agentName,
-      value: a.players,
-      color: colors[i % colors.length],
-    }));
-  }, [agentSummaries]);
 
   // ── Derived ──────────────────────────────────────────────────────
   const totalTaxas = Math.abs(feesComputed.totalTaxasSigned || 0);
   const absLancamentos = Math.abs(totalLancamentos || 0);
   const totalDespesas = totalTaxas + absLancamentos;
   const totalRakeback = (agents || []).reduce((s: number, a: AgentMetric) => s + Number(a.commission_brl || 0), 0);
+
+  // ── Player delta ─────────────────────────────────────────────────
+  const playerDelta = useMemo(() => {
+    if (prevPlayers === null) return undefined;
+    const current = totals.players;
+    const diff = current - prevPlayers;
+    if (diff === 0) return { pct: '0', isUp: false, isZero: true };
+    const pct = prevPlayers > 0 ? Math.abs(Math.round((diff / prevPlayers) * 100)) : 100;
+    return { pct: String(pct), isUp: diff > 0, isZero: false };
+  }, [prevPlayers, totals.players]);
 
   return (
     <div>
@@ -148,9 +228,14 @@ export default function DashboardClube({ subclub, fees }: Props) {
         <p className="text-xs text-dark-500">Visao consolidada do subclube</p>
       </div>
 
-      {/* ── 7 KPI Cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
-        <KpiCard label="Jogadores Ativos" value={String(totals.players)} accent="blue" />
+      {/* ── 6 KPI Cards ────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        <KpiCard
+          label="Jogadores Ativos"
+          value={String(totals.players)}
+          accent="blue"
+          delta={playerDelta}
+        />
         <KpiCard
           label="Profit / Loss"
           subtitle="Ganhos e Perdas"
@@ -158,7 +243,6 @@ export default function DashboardClube({ subclub, fees }: Props) {
           accent={totals.ganhos < 0 ? 'red' : 'green'}
         />
         <KpiCard label="Rake Total" value={formatCurrency(totals.rake)} accent="green" />
-        <KpiCard label="GGR Rodeio" value={formatCurrency(totals.ggr)} accent="purple" />
         <KpiCard
           label="Resultado Final"
           subtitle="P/L + Rake + GGR"
@@ -213,9 +297,9 @@ export default function DashboardClube({ subclub, fees }: Props) {
         />
       </div>
 
-      {/* ── Row: Top Rake (Agentes + Jogadores) ────────────────────── */}
+      {/* ── Row: Top 5 Rake (Agentes + Jogadores) ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <ChartCard title="Top Agentes — Rake" subtitle="Maiores geradores de rake">
+        <ChartCard title="Top 5 Agentes — Rake" subtitle="Maiores geradores de rake">
           <RankingList
             items={topAgentsRake.map((a) => ({
               name: a.agentName,
@@ -225,7 +309,7 @@ export default function DashboardClube({ subclub, fees }: Props) {
             barColors={BAR_COLORS_RAKE}
           />
         </ChartCard>
-        <ChartCard title="Top Jogadores — Rake" subtitle="Maiores geradores de rake">
+        <ChartCard title="Top 5 Jogadores — Rake" subtitle="Maiores geradores de rake">
           <RankingList
             items={topPlayersRake.map((p) => ({ name: p.nickname, value: p.rake, sub: p.agentName }))}
             barColors={BAR_COLORS_RAKE}
@@ -233,9 +317,9 @@ export default function DashboardClube({ subclub, fees }: Props) {
         </ChartCard>
       </div>
 
-      {/* ── Row: Winners + Losers (Jogadores) ──────────────────────── */}
+      {/* ── Row: Top 5 Ganhadores + Perdedores ────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <ChartCard title="Top Ganhadores" subtitle="Jogadores mais lucrativos">
+        <ChartCard title="Top 5 Ganhadores" subtitle="Jogadores mais lucrativos">
           {topWinners.length === 0 ? (
             <EmptyState text="Nenhum jogador com ganho positivo" />
           ) : (
@@ -245,7 +329,7 @@ export default function DashboardClube({ subclub, fees }: Props) {
             />
           )}
         </ChartCard>
-        <ChartCard title="Top Perdedores" subtitle="Jogadores com maior perda">
+        <ChartCard title="Top 5 Perdedores" subtitle="Jogadores com maior perda">
           {topLosers.length === 0 ? (
             <EmptyState text="Nenhum jogador com perda" />
           ) : (
@@ -257,49 +341,18 @@ export default function DashboardClube({ subclub, fees }: Props) {
         </ChartCard>
       </div>
 
-      {/* ── Row: Agent Winners/Losers + Distribution ───────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <ChartCard title="Resultado por Agente" subtitle="Ranking de performance">
-          <RankingBarChart
-            items={[...agentSummaries]
-              .sort((a, b) => b.resultado - a.resultado)
-              .map((a) => ({ name: a.agentName, value: a.resultado }))}
-          />
-        </ChartCard>
-        <ChartCard title="Jogadores por Agente" subtitle="Distribuicao da base">
-          <DistributionChart items={agentDistribution} total={totals.players} />
-        </ChartCard>
-      </div>
-
-      {/* ── Row: Top Agent Winners + Losers ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <ChartCard title="Top Agentes Ganhadores" subtitle="Melhor resultado semanal">
-          {topAgentWinners.length === 0 ? (
-            <EmptyState text="Sem dados" />
+      {/* ── Row: Comparativo Rake 8 Semanas ───────────────────────── */}
+      <div className="mt-4">
+        <ChartCard title="Comparativo Rake — Ultimas Semanas" subtitle="Evolucao do rake gerado pelo subclube">
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-5 h-5 border-2 border-poker-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-dark-500 text-xs ml-3">Carregando historico...</span>
+            </div>
+          ) : rakeHistory.length === 0 ? (
+            <EmptyState text="Sem historico disponivel" />
           ) : (
-            <RankingList
-              items={topAgentWinners.map((a) => ({
-                name: a.agentName,
-                value: a.resultado,
-                sub: `${a.players} jogador${a.players !== 1 ? 'es' : ''}`,
-              }))}
-              barColors={BAR_COLORS_WIN}
-            />
-          )}
-        </ChartCard>
-        <ChartCard title="Top Agentes Perdedores" subtitle="Pior resultado semanal">
-          {topAgentLosers.length === 0 ? (
-            <EmptyState text="Nenhum agente negativo" />
-          ) : (
-            <RankingList
-              items={topAgentLosers.map((a) => ({
-                name: a.agentName,
-                value: a.resultado,
-                sub: `${a.players} jogador${a.players !== 1 ? 'es' : ''}`,
-              }))}
-              barColors={BAR_COLORS_LOSS}
-              invertBar
-            />
+            <RakeHistoryChart data={rakeHistory} />
           )}
         </ChartCard>
       </div>
@@ -331,7 +384,7 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-/* ── Ranking List (horizontal bars with medals) ───────────────────── */
+/* ── Ranking List (horizontal bars) ─────────────────────────────── */
 function RankingList({
   items,
   barColors,
@@ -378,6 +431,12 @@ function RankingList({
 }
 
 /* ── Podium Cards (winner/loser highlight) ────────────────────────── */
+const PODIUM_BG = [
+  'from-amber-500/20 to-amber-900/5 border-amber-500/30',
+  'from-slate-300/15 to-slate-700/5 border-slate-400/25',
+  'from-orange-600/15 to-orange-900/5 border-orange-500/20',
+];
+
 function PodiumCards({
   items,
   variant,
@@ -390,10 +449,10 @@ function PodiumCards({
       {items.map((item, i) => (
         <div
           key={item.name + i}
-          className={`bg-gradient-to-r ${PODIUM_BG[i]} border rounded-lg p-3.5 flex items-center justify-between transition-all duration-200 hover:scale-[1.01]`}
+          className={`bg-gradient-to-r ${PODIUM_BG[i] || 'from-dark-800/50 to-dark-900/30 border-dark-700'} border rounded-lg p-3.5 flex items-center justify-between transition-all duration-200 hover:scale-[1.01]`}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xl flex-shrink-0">{MEDAL[i]}</span>
+            <span className="text-xl flex-shrink-0">{MEDAL[i] || `#${i + 1}`}</span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{item.name}</p>
               {item.sub && <p className="text-[10px] text-dark-400">{item.sub}</p>}
@@ -412,103 +471,65 @@ function PodiumCards({
   );
 }
 
-/* ── Ranking Bar Chart (bidirectional, pos/neg) ───────────────────── */
-function RankingBarChart({ items }: { items: { name: string; value: number }[] }) {
-  const maxAbs = Math.max(...items.map((i) => Math.abs(i.value)), 1);
-
-  if (items.length === 0) return <EmptyState text="Sem dados" />;
-
+/* ── Rake History Chart (Recharts BarChart) ───────────────────────── */
+function RakeTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="space-y-2.5">
-      {items.map((item, i) => {
-        const pct = (Math.abs(item.value) / maxAbs) * 50; // max 50% each side
-        const isPositive = item.value >= 0;
-        return (
-          <div key={item.name + i}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-dark-300 truncate">{item.name}</span>
-              <span className={`font-mono text-xs font-semibold ${isPositive ? 'text-poker-500' : 'text-red-400'}`}>
-                {formatBRL(item.value)}
-              </span>
-            </div>
-            <div className="flex h-2 bg-dark-800 rounded-full overflow-hidden">
-              {/* Negative bar (left side) */}
-              <div className="w-1/2 flex justify-end">
-                {!isPositive && (
-                  <div
-                    className="h-full bg-red-500 rounded-l-full transition-all duration-700 ease-out"
-                    style={{ width: `${Math.max(pct, 2)}%` }}
-                  />
-                )}
-              </div>
-              {/* Center divider */}
-              <div className="w-px bg-dark-600 flex-shrink-0" />
-              {/* Positive bar (right side) */}
-              <div className="w-1/2">
-                {isPositive && (
-                  <div
-                    className="h-full bg-poker-500 rounded-r-full transition-all duration-700 ease-out"
-                    style={{ width: `${Math.max(pct, 2)}%` }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="bg-dark-800 border border-dark-700 rounded-lg p-2 text-xs font-mono shadow-lg">
+      <p className="text-dark-400 mb-1">Semana {label}</p>
+      <p className="text-poker-500 font-semibold">{formatBRL(payload[0].value)}</p>
     </div>
   );
 }
 
-/* ── Distribution Chart (segmented bar + legend) ──────────────────── */
-function DistributionChart({
-  items,
-  total,
-}: {
-  items: { label: string; value: number; color: string }[];
-  total: number;
-}) {
-  if (items.length === 0) return <EmptyState text="Sem dados" />;
-
+function RakeHistoryChart({ data }: { data: RakeWeekPoint[] }) {
   return (
-    <div className="space-y-4">
-      {/* Segmented bar */}
-      <div className="flex h-8 rounded-lg overflow-hidden bg-dark-800">
-        {items.map((item) => {
-          const pct = total > 0 ? (item.value / total) * 100 : 0;
-          if (pct < 1) return null;
-          return (
-            <div
-              key={item.label}
-              className={`${item.color} flex items-center justify-center relative group transition-all duration-500`}
-              style={{ width: `${pct}%` }}
-            >
-              {pct > 12 && <span className="text-[10px] font-bold text-white/90 truncate px-1">{item.value}</span>}
-              <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-dark-700 border border-dark-600 rounded-lg px-2.5 py-1 text-[10px] font-mono text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                {item.label}: {item.value} ({Math.round(pct)}%)
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div>
       {/* Legend */}
-      <div className="space-y-1.5">
-        {items.map((item) => {
-          const pct = total > 0 ? (item.value / total) * 100 : 0;
-          return (
-            <div key={item.label} className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
-                <span className="text-xs text-dark-300 truncate">{item.label}</span>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-mono text-xs text-dark-200">{item.value}</span>
-                <span className="text-[10px] text-dark-500 w-10 text-right">{Math.round(pct)}%</span>
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-poker-500" />
+          <span className="text-[11px] text-dark-400">Semana atual</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-dark-600" />
+          <span className="text-[11px] text-dark-400">Semanas anteriores</span>
+        </div>
       </div>
+
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} barCategoryGap="20%" barSize={28} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
+          <defs>
+            <linearGradient id="rakeBarCurrent" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" />
+              <stop offset="100%" stopColor="#15803d" />
+            </linearGradient>
+            <linearGradient id="rakeBarDefault" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="100%" stopColor="#334155" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <XAxis dataKey="semana" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis
+            tick={{ fill: '#475569', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v: number) =>
+              v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`
+            }
+          />
+          <Tooltip content={<RakeTooltip />} />
+          <Bar dataKey="rake" radius={[4, 4, 0, 0]}>
+            {data.map((entry, index) => (
+              <Cell
+                key={index}
+                fill={entry.isCurrent ? 'url(#rakeBarCurrent)' : 'url(#rakeBarDefault)'}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

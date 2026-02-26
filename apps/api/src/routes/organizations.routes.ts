@@ -72,6 +72,33 @@ router.get('/tree', requireAuth, requireTenant, async (req: Request, res: Respon
 
     if (error) throw error;
 
+    // Enrich AGENT orgs with external_agent_id from player_week_metrics
+    const agentOrgs = (orgs || []).filter((o) => o.type === 'AGENT' && !o.external_id);
+    if (agentOrgs.length > 0) {
+      const agentNames = agentOrgs.map((a) => a.name);
+      const { data: pwmIds } = await supabaseAdmin
+        .from('player_week_metrics')
+        .select('agent_name, external_agent_id')
+        .eq('tenant_id', tenantId)
+        .in('agent_name', agentNames)
+        .not('external_agent_id', 'eq', '')
+        .limit(1000);
+
+      const nameToExtId = new Map<string, string>();
+      for (const row of pwmIds || []) {
+        if (row.external_agent_id && !nameToExtId.has(row.agent_name)) {
+          nameToExtId.set(row.agent_name, row.external_agent_id);
+        }
+      }
+
+      for (const org of orgs || []) {
+        if (org.type === 'AGENT' && !org.external_id) {
+          const extId = nameToExtId.get(org.name);
+          if (extId) org.external_id = extId;
+        }
+      }
+    }
+
     // Montar árvore: CLUB → SUBCLUB → AGENT
     const tree = (orgs || [])
       .filter((o) => o.type === 'CLUB')
@@ -534,13 +561,14 @@ router.get('/agent-rates', requireAuth, requireTenant, async (req: Request, res:
 });
 
 // ─── PUT /api/organizations/:id/rate — Atualizar rate de agente ────
-router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const agentId = req.params.id;
     const { rate, effective_from } = req.body;
 
-    if (rate == null || typeof rate !== 'number' || isNaN(rate) || rate < 0 || rate > 100) {
+    const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+    if (numRate == null || isNaN(numRate) || numRate < 0 || numRate > 100) {
       res.status(400).json({ success: false, error: 'Rate deve ser um numero entre 0 e 100' });
       return;
     }
@@ -564,28 +592,50 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     const dateFrom = effective_from || new Date().toISOString().split('T')[0];
 
-    // Fechar rate anterior
-    await supabaseAdmin
+    // Check if there's already a rate for this agent on this date — update it instead of insert
+    const { data: existing } = await supabaseAdmin
       .from('agent_rb_rates')
-      .update({ effective_to: dateFrom })
+      .select('id')
       .eq('tenant_id', tenantId)
       .eq('agent_id', agentId)
-      .is('effective_to', null);
+      .eq('effective_from', dateFrom)
+      .maybeSingle();
 
-    // Criar nova rate
-    const { data, error } = await supabaseAdmin
-      .from('agent_rb_rates')
-      .insert({
-        tenant_id: tenantId,
-        agent_id: agentId,
-        rate,
-        effective_from: dateFrom,
-        created_by: req.userId!,
-      })
-      .select()
-      .single();
+    let data;
+    if (existing) {
+      // Update existing rate for same date
+      const { data: updated, error } = await supabaseAdmin
+        .from('agent_rb_rates')
+        .update({ rate: numRate, effective_to: null })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      data = updated;
+    } else {
+      // Fechar rate anterior
+      await supabaseAdmin
+        .from('agent_rb_rates')
+        .update({ effective_to: dateFrom })
+        .eq('tenant_id', tenantId)
+        .eq('agent_id', agentId)
+        .is('effective_to', null);
 
-    if (error) throw error;
+      // Criar nova rate
+      const { data: inserted, error } = await supabaseAdmin
+        .from('agent_rb_rates')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          rate: numRate,
+          effective_from: dateFrom,
+          created_by: req.userId!,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      data = inserted;
+    }
 
     // Audit (non-blocking — don't fail the request if audit insert fails)
     try {
@@ -595,12 +645,52 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
         action: 'UPDATE',
         entity_type: 'agent_rb_rate',
         entity_id: agentId,
-        new_data: { rate, effective_from: dateFrom },
+        new_data: { rate: numRate, effective_from: dateFrom },
       });
     } catch (auditErr) {
       console.warn('[audit] Failed to log:', auditErr);
     }
 
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    console.error('[PUT /:id/rate] Error:', err);
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── PATCH /api/organizations/:id/metadata — Dados de contato ───────
+router.patch('/:id/metadata', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const orgId = req.params.id;
+    const { full_name, phone, email } = req.body;
+
+    const { data: org } = await supabaseAdmin
+      .from('organizations')
+      .select('id, type, metadata')
+      .eq('id', orgId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (!org) {
+      res.status(404).json({ success: false, error: 'Organizacao nao encontrada' });
+      return;
+    }
+
+    const meta = { ...(org.metadata || {}) } as Record<string, any>;
+    if (full_name !== undefined) meta.full_name = full_name || null;
+    if (phone !== undefined) meta.phone = phone || null;
+    if (email !== undefined) meta.email = email || null;
+
+    const { data, error } = await supabaseAdmin
+      .from('organizations')
+      .update({ metadata: meta })
+      .eq('id', orgId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw error;
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });

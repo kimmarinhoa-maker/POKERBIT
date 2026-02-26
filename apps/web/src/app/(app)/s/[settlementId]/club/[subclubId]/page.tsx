@@ -174,7 +174,7 @@ export default function SubclubPanelPage() {
       case 'detalhamento':
         return <TabErrorBoundary tabName="Detalhamento"><Detalhamento subclub={subclub} /></TabErrorBoundary>;
       case 'dashboard':
-        return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={subclub} fees={fees} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={subclub} fees={fees} settlementId={settlementId} subclubName={subclubId} /></TabErrorBoundary>;
       case 'jogadores':
         return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} weekStart={settlement.week_start} clubId={settlement.club_id} /></TabErrorBoundary>;
 

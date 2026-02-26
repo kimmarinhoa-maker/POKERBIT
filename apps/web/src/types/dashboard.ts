@@ -30,6 +30,7 @@ export interface ChartDataPoint {
   anterior: number;
   atual: number;
   rake: number;
+  rakeAnterior: number;
 }
 
 export interface DashboardData {

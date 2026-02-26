@@ -343,12 +343,20 @@ export async function syncSettlementAgents(settlementId: string) {
   });
 }
 
+export async function syncSettlementRates(settlementId: string) {
+  return apiFetch(`/settlements/${settlementId}/sync-rates`, {
+    method: 'POST',
+  });
+}
+
 // ─── Players ───────────────────────────────────────────────────────
 
-export async function listPlayers(search?: string, page?: number) {
+export async function listPlayers(search?: string, page?: number, subclubId?: string, isDirect?: boolean) {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   if (page) params.set('page', String(page));
+  if (subclubId) params.set('subclub_id', subclubId);
+  if (isDirect !== undefined) params.set('is_direct', String(isDirect));
   return apiFetch(`/players?${params}`);
 }
 
@@ -361,6 +369,13 @@ export async function listOrganizations(type?: string) {
 
 export async function getOrgTree() {
   return apiFetch('/organizations/tree');
+}
+
+export async function updateOrgMetadata(orgId: string, data: { full_name?: string; phone?: string; email?: string }) {
+  return apiFetch(`/organizations/${orgId}/metadata`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function createOrganization(data: {

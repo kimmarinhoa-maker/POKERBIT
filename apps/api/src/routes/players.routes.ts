@@ -14,9 +14,57 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
   try {
     const tenantId = req.tenantId!;
     const search = req.query.search as string | undefined;
+    const subclubId = req.query.subclub_id as string | undefined;
+    const isDirect = req.query.is_direct as string | undefined;
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const offset = (page - 1) * limit;
+
+    // If subclub_id provided, filter players linked to agents of that subclub
+    let playerIdFilter: string[] | null = null;
+    if (subclubId) {
+      const { data: agents } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name, metadata')
+        .eq('tenant_id', tenantId)
+        .eq('parent_id', subclubId)
+        .eq('type', 'AGENT')
+        .eq('is_active', true);
+
+      let filteredAgents = agents || [];
+
+      // Filter by is_direct flag in metadata
+      if (isDirect === 'true') {
+        filteredAgents = filteredAgents.filter(
+          (a) => (a.metadata as any)?.is_direct === true,
+        );
+      } else if (isDirect === 'false') {
+        filteredAgents = filteredAgents.filter(
+          (a) => !(a.metadata as any)?.is_direct,
+        );
+      }
+
+      const agentNames = filteredAgents.map((a) => a.name).filter(Boolean);
+
+      if (agentNames.length === 0) {
+        res.json({ success: true, data: [], meta: { total: 0, page, limit, pages: 0 } });
+        return;
+      }
+
+      // Match via agent_name (text) — agent_id UUID is often NULL in imported data
+      const { data: metrics } = await supabaseAdmin
+        .from('player_week_metrics')
+        .select('player_id')
+        .eq('tenant_id', tenantId)
+        .in('agent_name', agentNames);
+
+      playerIdFilter = [...new Set((metrics || []).map((m) => m.player_id).filter(Boolean))];
+
+      if (playerIdFilter.length === 0) {
+        res.json({ success: true, data: [], meta: { total: 0, page, limit, pages: 0 } });
+        return;
+      }
+    }
 
     let query = supabaseAdmin
       .from('players')
@@ -25,6 +73,10 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       .eq('is_active', true)
       .order('nickname', { ascending: true })
       .range(offset, offset + limit - 1);
+
+    if (playerIdFilter) {
+      query = query.in('id', playerIdFilter);
+    }
 
     if (search) {
       const escaped = search.replace(/[%_\\]/g, '\\$&').replace(/[,.()[\]]/g, '');
@@ -171,35 +223,58 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
     const tenantId = req.tenantId!;
     const { rate, effective_from } = req.body;
 
-    if (rate == null || typeof rate !== 'number' || isNaN(rate) || rate < 0 || rate > 100) {
+    const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+    if (numRate == null || isNaN(numRate) || numRate < 0 || numRate > 100) {
       res.status(400).json({ success: false, error: 'Rate deve ser um numero entre 0 e 100' });
       return;
     }
 
     const dateFrom = effective_from || new Date().toISOString().split('T')[0];
 
-    // Fechar rate anterior
-    await supabaseAdmin
+    // Check if there's already a rate for this player on this date
+    const { data: existing } = await supabaseAdmin
       .from('player_rb_rates')
-      .update({ effective_to: dateFrom })
+      .select('id')
       .eq('tenant_id', tenantId)
       .eq('player_id', req.params.id)
-      .is('effective_to', null);
+      .eq('effective_from', dateFrom)
+      .maybeSingle();
 
-    // Criar nova rate
-    const { data, error } = await supabaseAdmin
-      .from('player_rb_rates')
-      .insert({
-        tenant_id: tenantId,
-        player_id: req.params.id,
-        rate,
-        effective_from: dateFrom,
-        created_by: req.userId,
-      })
-      .select()
-      .single();
+    let data;
+    if (existing) {
+      // Update existing rate for same date
+      const { data: updated, error } = await supabaseAdmin
+        .from('player_rb_rates')
+        .update({ rate: numRate, effective_to: null })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      data = updated;
+    } else {
+      // Fechar rate anterior
+      await supabaseAdmin
+        .from('player_rb_rates')
+        .update({ effective_to: dateFrom })
+        .eq('tenant_id', tenantId)
+        .eq('player_id', req.params.id)
+        .is('effective_to', null);
 
-    if (error) throw error;
+      // Criar nova rate
+      const { data: inserted, error } = await supabaseAdmin
+        .from('player_rb_rates')
+        .insert({
+          tenant_id: tenantId,
+          player_id: req.params.id,
+          rate: numRate,
+          effective_from: dateFrom,
+          created_by: req.userId,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      data = inserted;
+    }
 
     // Audit (non-blocking — don't fail the request if audit insert fails)
     try {
@@ -209,7 +284,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
         action: 'UPDATE',
         entity_type: 'player_rb_rate',
         entity_id: req.params.id,
-        new_data: { rate, effective_from: dateFrom },
+        new_data: { rate: numRate, effective_from: dateFrom },
       });
     } catch (auditErr) {
       console.warn('[audit] Failed to log:', auditErr);
@@ -217,6 +292,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     res.json({ success: true, data });
   } catch (err: unknown) {
+    console.error('[PUT player/:id/rate] Error:', err);
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });

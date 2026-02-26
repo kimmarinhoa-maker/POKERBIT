@@ -414,6 +414,7 @@ class ImportConfirmService {
       player_id: playerUuidMap[p.id] || playerUuidMap[p.externalId] || null,
       external_player_id: p.id,
       nickname: p.nick,
+      agent_id: orgNameMap[p.agentName] || orgNameMap[(p.agentName || '').toUpperCase()] || null,
       external_agent_id: p.agentId || '',
       agent_name: p.agentName || '',
       subclub_name: p.clube || null,

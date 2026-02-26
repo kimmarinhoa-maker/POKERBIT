@@ -578,7 +578,7 @@ router.patch(
       // Buscar agent metric para recalcular commission
       const { data: metric, error: mErr } = await supabaseAdmin
         .from('agent_week_metrics')
-        .select('id, rake_total_brl')
+        .select('id, agent_id, agent_name, rake_total_brl')
         .eq('settlement_id', settlementId)
         .eq('id', agentId)
         .single();
@@ -591,7 +591,7 @@ router.patch(
       const rakeTotal = Number(metric.rake_total_brl) || 0;
       const commission_brl = Math.round(((rakeTotal * rb_rate) / 100 + Number.EPSILON) * 100) / 100;
 
-      // Atualizar rb_rate e commission_brl
+      // Atualizar rb_rate e commission_brl no snapshot
       const { data, error } = await supabaseAdmin
         .from('agent_week_metrics')
         .update({ rb_rate, commission_brl })
@@ -602,7 +602,183 @@ router.patch(
 
       if (error) throw error;
 
+      // Also persist rate to agent_rb_rates (non-blocking)
+      const orgId = metric.agent_id || await (async () => {
+        const { data: org } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('type', 'AGENT')
+          .eq('name', metric.agent_name)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+        return org?.id || null;
+      })();
+
+      if (orgId) {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          await supabaseAdmin
+            .from('agent_rb_rates')
+            .update({ effective_to: today })
+            .eq('tenant_id', tenantId)
+            .eq('agent_id', orgId)
+            .is('effective_to', null);
+
+          await supabaseAdmin.from('agent_rb_rates').insert({
+            tenant_id: tenantId,
+            agent_id: orgId,
+            rate: rb_rate,
+            effective_from: today,
+            created_by: req.userId,
+          });
+        } catch (persistErr) {
+          console.warn('[rb-rate] Failed to persist agent rate:', persistErr);
+        }
+      }
+
       res.json({ success: true, data });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
+    }
+  },
+);
+
+// ─── POST /api/settlements/:id/sync-rates — Sync persistent rates ──
+// Always applies current rates from agent_rb_rates/player_rb_rates (Cadastro is source of truth)
+router.post(
+  '/:id/sync-rates',
+  requireAuth,
+  requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.tenantId!;
+      const settlementId = req.params.id;
+
+      // Only DRAFT settlements
+      const { data: settlement, error: sErr } = await supabaseAdmin
+        .from('settlements')
+        .select('status')
+        .eq('id', settlementId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (sErr || !settlement) {
+        res.status(404).json({ success: false, error: 'Settlement nao encontrado' });
+        return;
+      }
+      if (settlement.status !== 'DRAFT') {
+        res.json({ success: true, data: { agentsUpdated: 0, playersUpdated: 0 } });
+        return;
+      }
+
+      let agentsUpdated = 0;
+      let playersUpdated = 0;
+
+      // ── Sync agent rates ──────────────────────────────────────────
+      const { data: agentMetrics } = await supabaseAdmin
+        .from('agent_week_metrics')
+        .select('id, agent_id, agent_name, rb_rate, rake_total_brl')
+        .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      if (agentMetrics && agentMetrics.length > 0) {
+        // Fetch current active agent rates (effective_to IS NULL = current rate)
+        const { data: agentRates } = await supabaseAdmin
+          .from('agent_rb_rates')
+          .select('agent_id, rate')
+          .eq('tenant_id', tenantId)
+          .is('effective_to', null);
+
+        const agentRateMap = new Map<string, number>();
+        for (const r of agentRates || []) {
+          agentRateMap.set(r.agent_id, Number(r.rate));
+        }
+
+        // Build name→orgId map for agents without agent_id
+        const { data: agentOrgs } = await supabaseAdmin
+          .from('organizations')
+          .select('id, name')
+          .eq('tenant_id', tenantId)
+          .eq('type', 'AGENT')
+          .eq('is_active', true);
+
+        const nameToOrgId = new Map<string, string>();
+        for (const org of agentOrgs || []) {
+          nameToOrgId.set(org.name.toLowerCase(), org.id);
+        }
+
+        for (const m of agentMetrics) {
+          const orgId = m.agent_id || nameToOrgId.get((m.agent_name || '').toLowerCase());
+          if (!orgId) continue;
+          const persistentRate = agentRateMap.get(orgId);
+          if (persistentRate == null || persistentRate < 0) continue;
+
+          // Skip if rate is already the same
+          if (Number(m.rb_rate) === persistentRate) continue;
+
+          const rake = Number(m.rake_total_brl) || 0;
+          const commission = Math.round(((rake * persistentRate) / 100 + Number.EPSILON) * 100) / 100;
+
+          await supabaseAdmin
+            .from('agent_week_metrics')
+            .update({ rb_rate: persistentRate, commission_brl: commission })
+            .eq('id', m.id);
+          agentsUpdated++;
+        }
+      }
+
+      // ── Sync player rates ─────────────────────────────────────────
+      const { data: playerMetrics } = await supabaseAdmin
+        .from('player_week_metrics')
+        .select('id, player_id, rb_rate, rake_total_brl')
+        .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      if (playerMetrics && playerMetrics.length > 0) {
+        const playerIds = playerMetrics
+          .filter((m) => m.player_id)
+          .map((m) => m.player_id);
+
+        if (playerIds.length > 0) {
+          // Fetch current active player rates (effective_to IS NULL = current rate)
+          const { data: playerRates } = await supabaseAdmin
+            .from('player_rb_rates')
+            .select('player_id, rate')
+            .eq('tenant_id', tenantId)
+            .in('player_id', playerIds)
+            .is('effective_to', null);
+
+          const playerRateMap = new Map<string, number>();
+          for (const r of playerRates || []) {
+            if (!playerRateMap.has(r.player_id)) {
+              playerRateMap.set(r.player_id, Number(r.rate));
+            }
+          }
+
+          for (const m of playerMetrics) {
+            if (!m.player_id) continue;
+            const persistentRate = playerRateMap.get(m.player_id);
+            if (persistentRate == null || persistentRate < 0) continue;
+
+            // Skip if rate is already the same
+            if (Number(m.rb_rate) === persistentRate) continue;
+
+            const rake = Number(m.rake_total_brl) || 0;
+            const rbValue = Math.round(((rake * persistentRate) / 100 + Number.EPSILON) * 100) / 100;
+
+            await supabaseAdmin
+              .from('player_week_metrics')
+              .update({ rb_rate: persistentRate, rb_value_brl: rbValue })
+              .eq('id', m.id);
+            playersUpdated++;
+          }
+        }
+      }
+
+      res.json({ success: true, data: { agentsUpdated, playersUpdated } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
