@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { Router, Request, Response } from 'express';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 
 const router = Router();
@@ -23,7 +23,7 @@ router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Respon
 });
 
 // ─── PUT /api/config/fees — Atualiza taxas ───────────────────────────
-router.put('/fees', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { fees } = req.body;
@@ -82,7 +82,7 @@ router.get('/adjustments', requireAuth, requireTenant, async (req: Request, res:
 });
 
 // ─── PUT /api/config/adjustments — Upsert lançamentos ────────────────
-router.put('/adjustments', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { subclub_id, week_start, overlay, compras, security, outros, obs } = req.body;
@@ -146,7 +146,7 @@ router.get('/payment-methods', requireAuth, requireTenant, async (req: Request, 
 });
 
 // ─── POST /api/config/payment-methods — Criar método de pagamento ───
-router.post('/payment-methods', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/payment-methods', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { name, is_default, sort_order } = req.body;
@@ -180,7 +180,7 @@ router.post('/payment-methods', requireAuth, requireTenant, async (req: Request,
 });
 
 // ─── PUT /api/config/payment-methods/:id — Atualizar ────────────────
-router.put('/payment-methods/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/payment-methods/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -217,7 +217,7 @@ router.put('/payment-methods/:id', requireAuth, requireTenant, async (req: Reque
 });
 
 // ─── DELETE /api/config/payment-methods/:id — Deletar ───────────────
-router.delete('/payment-methods/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/payment-methods/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -254,7 +254,7 @@ router.get('/bank-accounts', requireAuth, requireTenant, async (req: Request, re
 });
 
 // ─── POST /api/config/bank-accounts — Criar conta bancária ──────────
-router.post('/bank-accounts', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/bank-accounts', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { name, bank_code, agency, account_nr, is_default } = req.body;
@@ -289,7 +289,7 @@ router.post('/bank-accounts', requireAuth, requireTenant, async (req: Request, r
 });
 
 // ─── PUT /api/config/bank-accounts/:id — Atualizar ──────────────────
-router.put('/bank-accounts/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/bank-accounts/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -327,7 +327,7 @@ router.put('/bank-accounts/:id', requireAuth, requireTenant, async (req: Request
 });
 
 // ─── DELETE /api/config/bank-accounts/:id — Deletar ─────────────────
-router.delete('/bank-accounts/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/bank-accounts/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -364,7 +364,7 @@ router.get('/rakeback-defaults', requireAuth, requireTenant, async (req: Request
 });
 
 // ─── PUT /api/config/rakeback-defaults — Upsert RB defaults ────────
-router.put('/rakeback-defaults', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/rakeback-defaults', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { defaults } = req.body;

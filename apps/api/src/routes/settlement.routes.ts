@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { settlementService } from '../services/settlement.service';
 import { supabaseAdmin } from '../config/supabase';
+import { normName } from '../utils/normName';
 
 const router = Router();
 
@@ -191,14 +192,6 @@ router.patch(
     }
   },
 );
-
-// Helper: normalize name (lowercase + remove accents)
-function normName(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
 
 // ─── POST /api/settlements/:id/sync-agents ──────────────────────────
 // Auto-cria organizacoes AGENT a partir dos agentes do settlement

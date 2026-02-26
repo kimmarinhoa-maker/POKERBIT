@@ -26,7 +26,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       .range(offset, offset + limit - 1);
 
     if (search) {
-      query = query.or(`nickname.ilike.%${search}%,external_id.ilike.%${search}%`);
+      const sanitized = search.replace(/[,.()\[\]]/g, '');
+      query = query.or(`nickname.ilike.%${sanitized}%,external_id.ilike.%${sanitized}%`);
     }
 
     const { data, error, count } = await query;

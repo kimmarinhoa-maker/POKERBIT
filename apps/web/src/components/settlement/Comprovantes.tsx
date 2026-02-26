@@ -25,9 +25,12 @@ interface AgentMetric {
 }
 
 interface PlayerMetric {
+  id?: string;
+  player_id?: string;
   nickname: string | null;
   external_player_id: string | null;
   agent_name: string | null;
+  agent_is_direct?: boolean;
   winnings_brl: number;
   rake_total_brl: number;
   ggr_brl: number;
@@ -143,10 +146,10 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of players) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');
@@ -208,8 +211,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       if (agent.agent_id) add(ledgerByEntity.get(agent.agent_id));
       // Player-level keys (ChipPix stores as cp_<id>, OFX by player_id, etc.)
       for (const p of agPlayers) {
-        if ((p as any).id) add(ledgerByEntity.get((p as any).id));
-        if ((p as any).player_id) add(ledgerByEntity.get((p as any).player_id));
+        if (p.id) add(ledgerByEntity.get(p.id));
+        if (p.player_id) add(ledgerByEntity.get(p.player_id));
         if (p.external_player_id) {
           const eid = String(p.external_player_id);
           add(ledgerByEntity.get(eid));
@@ -288,8 +291,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           }
         }
       };
-      if ((p as any).id) addP(ledgerByEntity.get((p as any).id));
-      if ((p as any).player_id) addP(ledgerByEntity.get((p as any).player_id));
+      if (p.id) addP(ledgerByEntity.get(p.id));
+      if (p.player_id) addP(ledgerByEntity.get(p.player_id));
       if (p.external_player_id) {
         const eid = String(p.external_player_id);
         addP(ledgerByEntity.get(eid));
@@ -298,7 +301,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       // Carry-forward for this player
       let saldoAnterior = 0;
-      const carryKeys = [(p as any).player_id, (p as any).id, p.external_player_id].filter(Boolean);
+      const carryKeys = [p.player_id, p.id, p.external_player_id].filter((k): k is string => !!k);
       for (const k of carryKeys) {
         if (carryMap[k]) {
           saldoAnterior = carryMap[k];
@@ -317,8 +320,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       // Build a synthetic "agent" object representing this player
       const playerAsAgent: AgentMetric = {
-        id: (p as any).id || `p_${p.external_player_id}`,
-        agent_id: (p as any).player_id || null,
+        id: p.id || `p_${p.external_player_id}`,
+        agent_id: p.player_id || null,
         agent_name: p.nickname || p.external_player_id || '???',
         player_count: 1,
         rake_total_brl: rakeTotal,
@@ -390,20 +393,6 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
   if (loading) {
     return <SettlementSkeleton kpis={4} />;
-  }
-
-  // ─── Statement view (print) ────────────────────────────────────────
-
-  if (selectedAgent) {
-    return (
-      <StatementView
-        data={selectedAgent}
-        subclubName={subclub.name}
-        weekStart={weekStart}
-        weekEnd={weekEnd}
-        onBack={() => setSelectedAgent(null)}
-      />
-    );
   }
 
   // ─── List view ─────────────────────────────────────────────────────
@@ -562,6 +551,45 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           ))}
         </div>
       )}
+
+      {/* ─── Preview Modal ────────────────────────────────────────── */}
+      {selectedAgent && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedAgent(null);
+          }}
+        >
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+
+          {/* Modal content */}
+          <div className="relative w-full max-w-4xl mx-4 my-8 animate-slide-up">
+            {/* Close bar */}
+            <div className="flex items-center justify-between mb-3 relative z-10">
+              <button
+                onClick={() => setSelectedAgent(null)}
+                className="text-dark-400 hover:text-white text-sm flex items-center gap-1.5 transition-colors bg-dark-800/80 backdrop-blur px-3 py-1.5 rounded-lg border border-dark-700"
+              >
+                ✕ Fechar Preview
+              </button>
+              <div className="flex items-center gap-2 text-[10px] text-dark-500 uppercase tracking-wider font-bold">
+                <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-1 rounded-full">
+                  Preview
+                </span>
+              </div>
+            </div>
+
+            <StatementView
+              data={selectedAgent}
+              subclubName={subclub.name}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+              onBack={() => setSelectedAgent(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -596,93 +624,86 @@ function AgentCard({
 
   return (
     <div
-      className={`card overflow-hidden transition-all border-l-4 ${
-        (agent.payment_type || 'fiado') === 'avista' ? 'border-l-emerald-500' : 'border-l-yellow-500'
-      } ${!hasMov ? 'opacity-50' : ''}`}
+      className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 ${!hasMov ? 'opacity-40' : ''}`}
     >
-      {/* Main row */}
-      <div className="flex items-center gap-2">
-        {/* Col 1: Name + ID + jog count — fixed width */}
-        <div className="flex-shrink-0 min-w-0 w-[180px]">
-          <div className="flex items-center gap-1.5">
-            <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(agent.id);
-              }}
-              title="Clique para copiar ID"
-              className="text-[10px] font-mono text-dark-600 hover:text-dark-400 transition-colors cursor-pointer flex-shrink-0"
-            >
-              {agent.id.slice(0, 6)}
-            </button>
-            {isDirect && (
-              <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-bold flex-shrink-0">
-                DIR
-              </span>
-            )}
-          </div>
-          <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
-        </div>
+      {/* Main row — clickable to expand */}
+      <div
+        className="flex items-center cursor-pointer hover:bg-dark-800/30 transition-colors"
+        onClick={onToggleExpand}
+      >
+        {/* Left accent bar */}
+        <div
+          className={`w-1 self-stretch flex-shrink-0 ${
+            (agent.payment_type || 'fiado') === 'avista' ? 'bg-emerald-500' : 'bg-yellow-500'
+          }`}
+        />
 
-        {/* Col 2: Tipo de Fechamento — fixed width */}
-        <div className="flex-shrink-0 w-[130px]">
-          <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">Tipo de Fechamento</p>
-          <div className="flex items-center gap-1">
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
-                (agent.payment_type || 'fiado') === 'avista'
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                  : 'bg-red-500/20 text-red-400 border-red-500/40'
-              }`}
-            >
-              {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
-            </span>
-            {statusBadge && (
+        {/* Content */}
+        <div className="flex items-center gap-3 flex-1 px-4 py-3 min-w-0">
+          {/* Col 1: Name + badges */}
+          <div className="flex-shrink-0 min-w-0 w-[220px]">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
+              {isDirect && (
+                <span className="text-[9px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
+                  DIRETO
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
               <span
-                className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}
+                className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${
+                  (agent.payment_type || 'fiado') === 'avista'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                    : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                }`}
               >
-                {statusBadge.label}
+                {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
               </span>
-            )}
+              {statusBadge && (
+                <span
+                  className={`text-[9px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded-full font-bold`}
+                >
+                  {statusBadge.label}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Col 3: Data columns — fixed equal widths */}
-        <div className="flex items-center flex-1 justify-end">
-          <DataCol label="GANHOS" value={ganhos} w={100} />
-          <DataCol
-            label={isDirect ? 'RB (Ind.)' : `RB AG. (${agent.rb_rate}%)`}
-            value={rbAgente}
-            customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
-            w={100}
-          />
-          <DataCol label="SALDO ANT." value={saldoAnterior} customColor="text-yellow-400" showZero w={100} />
-          <DataCol label="PAGO" value={pago} customColor="text-sky-400" w={100} />
-          <DataCol label="SALDO" value={pendente} isFinal w={100} />
-        </div>
+          {/* Col 2: Key financial data */}
+          <div className="flex items-center flex-1 justify-end gap-1">
+            <DataCol label="GANHOS" value={ganhos} w={95} />
+            <DataCol
+              label={isDirect ? 'RB' : `RB ${agent.rb_rate}%`}
+              value={rbAgente}
+              customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
+              w={85}
+            />
+            <DataCol label="SALDO ANT." value={saldoAnterior} customColor="text-amber-400" showZero w={95} />
+            <DataCol label="PAGO" value={pago} customColor="text-sky-400" w={90} />
+            <DataCol label="SALDO" value={pendente} isFinal w={105} />
+          </div>
 
-        {/* Col 4: Actions — fixed */}
-        <div className="flex items-center gap-2 flex-shrink-0 ml-1">
-          {hasMov && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onGenerateStatement();
-              }}
-              className="text-xs px-3 py-1.5 whitespace-nowrap border border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+          {/* Col 3: Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {hasMov && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateStatement();
+                }}
+                className="text-xs px-3 py-1.5 whitespace-nowrap rounded-lg transition-all duration-200 flex items-center gap-1.5 border border-poker-500/40 text-poker-400 bg-poker-500/10 hover:bg-poker-500/20 hover:border-poker-500/60"
+              >
+                📄 Preview
+              </button>
+            )}
+            <span
+              className={`text-dark-500 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
             >
-              {Math.abs(pendente) < 0.01 && hasMov ? 'Comprovante Gerado' : 'Gerar Comprovante'}
-            </button>
-          )}
-          <button
-            onClick={onToggleExpand}
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
-            className="text-xs text-dark-400 hover:text-dark-200 whitespace-nowrap transition-colors"
-          >
-            ▶ Detalhes
-          </button>
+              ▶
+            </span>
+          </div>
         </div>
       </div>
 

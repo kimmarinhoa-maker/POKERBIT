@@ -116,6 +116,19 @@ router.post(
       const { club_id, week_start } = parsed.data;
       const tenantId = req.tenantId!;
 
+      // Validate club belongs to this tenant
+      const { data: club } = await supabaseAdmin
+        .from('organizations')
+        .select('id')
+        .eq('id', club_id)
+        .eq('tenant_id', tenantId)
+        .eq('type', 'CLUB')
+        .single();
+      if (!club) {
+        res.status(400).json({ success: false, error: 'Club nao pertence a este tenant' });
+        return;
+      }
+
       const result = await importConfirmService.confirm({
         tenantId,
         clubId: club_id,
@@ -271,7 +284,33 @@ router.delete(
         return;
       }
 
-      // Delete import record (cascades handled by DB if configured)
+      // Cascade: clean up related data if settlement exists
+      if (imp.settlement_id) {
+        const sid = imp.settlement_id;
+
+        // 1) Delete player_week_metrics for this settlement
+        const { error: pwmErr } = await supabaseAdmin
+          .from('player_week_metrics')
+          .delete()
+          .eq('settlement_id', sid);
+        if (pwmErr) throw pwmErr;
+
+        // 2) Delete agent_week_metrics for this settlement
+        const { error: awmErr } = await supabaseAdmin
+          .from('agent_week_metrics')
+          .delete()
+          .eq('settlement_id', sid);
+        if (awmErr) throw awmErr;
+
+        // 3) Delete the settlement itself
+        const { error: setErr } = await supabaseAdmin
+          .from('settlements')
+          .delete()
+          .eq('id', sid);
+        if (setErr) throw setErr;
+      }
+
+      // Delete import record
       const { error: delErr } = await supabaseAdmin
         .from('imports')
         .delete()

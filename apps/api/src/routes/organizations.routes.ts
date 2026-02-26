@@ -121,7 +121,7 @@ const prefixRuleSchema = z.object({
   priority: z.number().int().default(0),
 });
 
-router.post('/prefix-rules', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const parsed = prefixRuleSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -443,7 +443,7 @@ const updatePrefixSchema = z.object({
   priority: z.number().int().optional(),
 });
 
-router.put('/prefix-rules/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const parsed = updatePrefixSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -491,7 +491,7 @@ router.put('/prefix-rules/:id', requireAuth, requireTenant, async (req: Request,
 });
 
 // ─── DELETE /api/organizations/prefix-rules/:id — Deletar regra ────
-router.delete('/prefix-rules/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const ruleId = req.params.id;
@@ -533,7 +533,7 @@ router.get('/agent-rates', requireAuth, requireTenant, async (req: Request, res:
 });
 
 // ─── PUT /api/organizations/:id/rate — Atualizar rate de agente ────
-router.put('/:id/rate', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const agentId = req.params.id;
@@ -603,7 +603,7 @@ router.put('/:id/rate', requireAuth, requireTenant, async (req: Request, res: Re
 });
 
 // ─── PATCH /api/organizations/:id/direct — Toggle agencia direta ───
-router.patch('/:id/direct', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.patch('/:id/direct', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;

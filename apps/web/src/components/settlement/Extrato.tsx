@@ -105,7 +105,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     setError(null);
     try {
       const res = await createLedgerEntry({
-        entity_id: crypto.randomUUID(),
+        entity_id: `manual_${form.entity_name.trim().toLowerCase().replace(/\s+/g, '_')}`,
         entity_name: form.entity_name.trim(),
         week_start: weekStart,
         dir: form.dir,

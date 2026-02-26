@@ -342,7 +342,7 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
               {/* Agents section */}
               {filtered.agents.length > 0 && (
                 <>
-                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-500 bg-dark-850 sticky top-0">
+                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-500 bg-dark-800 sticky top-0">
                     Agentes ({filtered.agents.length})
                   </div>
                   {filtered.agents.map((a, i) => {
@@ -374,7 +374,7 @@ function EntityPicker({ agents, players, value, onChange, autoFocus }: EntityPic
               {/* Players section */}
               {filtered.players.length > 0 && (
                 <>
-                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-500 bg-dark-850 sticky top-0">
+                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-dark-500 bg-dark-800 sticky top-0">
                     Jogadores ({filtered.players.length})
                   </div>
                   {filtered.players.map((p, i) => {

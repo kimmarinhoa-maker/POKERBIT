@@ -27,6 +27,7 @@ interface AgentMetric {
   rb_rate: number;
   commission_brl: number;
   resultado_brl: number;
+  is_direct?: boolean;
 }
 
 interface PlayerMetric {
@@ -36,6 +37,7 @@ interface PlayerMetric {
   nickname: string | null;
   agent_name: string | null;
   agent_id: string | null;
+  agent_is_direct?: boolean;
   winnings_brl: number;
   rake_total_brl: number;
   ggr_brl: number;
@@ -119,10 +121,10 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of players) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');
@@ -194,7 +196,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     const nonDirect: AgentMetric[] = [];
     const direct: AgentMetric[] = [];
     for (const a of agents) {
-      if ((a as any).is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
+      if (a.is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
         direct.push(a);
       } else {
         nonDirect.push(a);

@@ -46,7 +46,7 @@ interface Props {
     id: string;
     name: string;
     agents: AgentMetric[];
-    players?: { id: string; agent_name: string | null; nickname: string | null; resultado_brl: number; saldo_atual?: number; situacao?: string }[];
+    players?: { id: string; player_id?: string; agent_name: string | null; nickname: string | null; resultado_brl: number; saldo_atual?: number; situacao?: string; agent_is_direct?: boolean }[];
   };
   weekStart: string;
   clubId: string;
@@ -106,10 +106,10 @@ export default function Liquidacao({
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of allPlayers) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');

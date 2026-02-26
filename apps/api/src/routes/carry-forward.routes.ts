@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { Router, Request, Response } from 'express';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { carryForwardService } from '../services/carry-forward.service';
 
 const router = Router();
@@ -43,7 +43,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 // ─── POST /api/carry-forward/close-week — Fechar semana ─────────────
 // Body: { settlement_id: string }
 // Computa saldoFinal de cada agente e grava carry para próxima semana
-router.post('/close-week', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { settlement_id } = req.body;
