@@ -54,25 +54,40 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [directDropdown, setDirectDropdown] = useState('');
   const mountedRef = useRef(true);
+  const hasSyncedRef = useRef(false);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Load orgs (for is_direct) and ledger (for badge status)
   const loadExtras = useCallback(async () => {
     setLoading(true);
     try {
-      // Auto-sync agents and rates on first load (DRAFT only)
-      if (isDraft) {
-        await syncSettlementAgents(settlementId).catch(() => {});
-        const syncResult = await syncSettlementRates(settlementId).catch(() => null);
-        if (syncResult?.success && (syncResult.data?.agentsUpdated > 0 || syncResult.data?.playersUpdated > 0)) {
-          // Rates were synced from Cadastro — reload parent data
-          onDataChange();
-        }
-      }
+      // Sync runs once per mount, in parallel with data fetch (non-blocking)
+      const needsSync = isDraft && !hasSyncedRef.current;
+      if (needsSync) hasSyncedRef.current = true;
+
+      const syncPromise = needsSync
+        ? Promise.all([
+            syncSettlementAgents(settlementId).catch(() => null),
+            syncSettlementRates(settlementId).catch(() => null),
+          ])
+        : Promise.resolve(null);
+
+      // Data fetch runs in parallel with sync
       const [orgsRes, ledgerRes] = await Promise.all([listOrganizations('AGENT'), listLedger(weekStart)]);
       if (!mountedRef.current) return;
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
+
+      // Check sync result in background — reload parent if rates changed
+      if (needsSync) {
+        syncPromise.then((results) => {
+          if (!mountedRef.current || !results) return;
+          const syncResult = results[1];
+          if (syncResult?.success && (syncResult.data?.agentsUpdated > 0 || syncResult.data?.playersUpdated > 0)) {
+            onDataChange();
+          }
+        });
+      }
     } catch {
       if (!mountedRef.current) return;
       toast('Erro na operacao de rakeback', 'error');
