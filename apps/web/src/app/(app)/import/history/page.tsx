@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { listImports, deleteImport, formatDate } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
 
 interface ImportRecord {
@@ -30,6 +31,7 @@ export default function ImportHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   useEffect(() => {
     loadImports();
@@ -52,7 +54,8 @@ export default function ImportHistoryPage() {
   }
 
   async function handleDelete(imp: ImportRecord) {
-    if (!confirm(`Remover importacao "${imp.file_name}"?\nIsso nao remove o fechamento associado.`)) return;
+    const ok = await confirm({ title: 'Remover Importacao', message: `Remover importacao "${imp.file_name}"?\nIsso nao remove o fechamento associado.`, variant: 'danger' });
+    if (!ok) return;
     setDeleting(imp.id);
     try {
       const res = await deleteImport(imp.id);
@@ -159,6 +162,8 @@ export default function ImportHistoryPage() {
           </table>
         </div>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

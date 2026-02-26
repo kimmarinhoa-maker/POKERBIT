@@ -19,17 +19,13 @@ import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
 import { env } from '../config/env';
 import type { ImportProcessResult } from '../types';
+import { round2 } from '../utils/round2';
 
 // Importa os pacotes core (CommonJS) — eslint-disable necessário pois são módulos CJS sem typing
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { parseWorkbook, validateReadiness } = require('../../../../packages/importer/coreSuprema');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { calculateWeek } = require('../../../../packages/engine/calculateWeek');
-
-// ─── round2: REGRA DE OURO para valores monetários ──────────────────
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
 
 interface ProcessOptions {
   tenantId: string;

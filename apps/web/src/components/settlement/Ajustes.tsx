@@ -3,14 +3,11 @@
 import { useState, useMemo } from 'react';
 import { saveClubAdjustments, formatBRL } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
+import KpiCard from '@/components/ui/KpiCard';
+import { SubclubData } from '@/types/settlement';
 
 interface Props {
-  subclub: {
-    id: string;
-    name: string;
-    adjustments: { overlay: number; compras: number; security: number; outros: number; obs: string | null };
-    totalLancamentos: number;
-  };
+  subclub: Pick<SubclubData, 'id' | 'name' | 'adjustments' | 'totalLancamentos'>;
   weekStart: string;
   settlementStatus: string;
   onDataChange: () => void;
@@ -85,8 +82,8 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
       } else {
         setError(res.error || 'Erro ao salvar');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setSaving(false);
     }
@@ -118,40 +115,33 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lancamentos</p>
-            <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.nonZero}</p>
-            <p className="text-[10px] text-dark-500">de {fields.length} campos</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Positivos</p>
-            <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(kpis.positive)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Negativos</p>
-            <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(kpis.negative)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total</p>
-            <p
-              className={`text-xl font-bold mt-1 font-mono ${kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}`}
-            >
-              {formatBRL(kpis.total)}
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <KpiCard
+          label="Lancamentos"
+          value={kpis.nonZero}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={`de ${fields.length} campos`}
+        />
+        <KpiCard
+          label="Positivos"
+          value={formatBRL(kpis.positive)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+        />
+        <KpiCard
+          label="Negativos"
+          value={formatBRL(kpis.negative)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+        />
+        <KpiCard
+          label="Total"
+          value={formatBRL(kpis.total)}
+          accentColor={kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+          valueColor={kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {error && (

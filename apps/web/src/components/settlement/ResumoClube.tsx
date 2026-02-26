@@ -4,10 +4,12 @@ import { useRef, useState } from 'react';
 import { formatBRL } from '@/lib/api';
 import { exportElementAsJpg } from '@/lib/exportJpg';
 import { useToast } from '@/components/Toast';
+import { SubclubData } from '@/types/settlement';
 import ClubLogo from '@/components/ClubLogo';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
-  subclub: any;
+  subclub: SubclubData;
   fees: Record<string, number>;
   weekStart?: string;
   weekEnd?: string;
@@ -72,44 +74,44 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         </div>
 
         {/* ── KPI Cards ── 5 cards com borda colorida no topo ────── */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
           <KpiCard
             label="Jogadores Ativos"
             value={String(totals.players)}
-            borderColor="border-blue-500"
-            textColor="text-blue-400"
+            accentColor="bg-blue-500"
+            valueColor="text-blue-400"
           />
           <KpiCard
             label="Profit/Loss"
-            sublabel="Ganhos e Perdas"
             value={formatBRL(totals.ganhos)}
-            borderColor={totals.ganhos < 0 ? 'border-red-500' : 'border-poker-500'}
-            textColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
+            accentColor={totals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
+            valueColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
+            subtitle="Ganhos e Perdas"
           />
           <KpiCard
             label="Rake Gerado"
             value={formatBRL(totals.rake)}
-            borderColor="border-poker-500"
-            textColor="text-poker-400"
+            accentColor="bg-poker-500"
+            valueColor="text-poker-400"
           />
           <KpiCard
             label="GGR Rodeo P/L"
             value={formatBRL(totals.ggr)}
-            borderColor="border-purple-500"
-            textColor="text-purple-400"
+            accentColor="bg-purple-500"
+            valueColor="text-purple-400"
           />
           <KpiCard
             label="Resultado do Clube"
-            sublabel="P/L + Rake + GGR"
             value={formatBRL(totals.resultado)}
-            borderColor={totals.resultado >= 0 ? 'border-amber-500' : 'border-red-500'}
-            textColor={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
-            highlight
+            accentColor={totals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+            valueColor={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
+            subtitle="P/L + Rake + GGR"
+            ring="ring-1 ring-amber-700/30"
           />
         </div>
 
         {/* ── Taxas + Lancamentos (side by side) ─────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
           {/* TAXAS AUTOMATICAS */}
           <div className="bg-dark-900 border border-dark-700 rounded-xl p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">Taxas Automáticas</h3>
@@ -187,37 +189,6 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 }
 
 // ─── Sub-components ──────────────────────────────────────────────
-
-function KpiCard({
-  label,
-  sublabel,
-  value,
-  borderColor,
-  textColor,
-  highlight,
-}: {
-  label: string;
-  sublabel?: string;
-  value: string;
-  borderColor: string;
-  textColor: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 cursor-default ${
-        highlight ? 'ring-1 ring-amber-700/30' : ''
-      }`}
-    >
-      <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
-      <div className="p-4">
-        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">{label}</p>
-        {sublabel && <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>}
-        <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>{value}</p>
-      </div>
-    </div>
-  );
-}
 
 function TaxaRow({
   label,

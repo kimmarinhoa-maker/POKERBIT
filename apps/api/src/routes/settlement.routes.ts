@@ -5,6 +5,8 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { settlementService } from '../services/settlement.service';
+import { supabaseAdmin } from '../config/supabase';
+import { normName } from '../utils/normName';
 
 const router = Router();
 
@@ -85,9 +87,7 @@ router.patch(
         return;
       }
 
-      const { data, error } = await (
-        await import('../config/supabase')
-      ).supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('settlements')
         .update({ notes: notes || null })
         .eq('id', req.params.id)
@@ -151,7 +151,7 @@ router.patch(
       }
 
       // Verificar se settlement existe e está em DRAFT
-      const { data: settlement, error: sErr } = await (await import('../config/supabase')).supabaseAdmin
+      const { data: settlement, error: sErr } = await supabaseAdmin
         .from('settlements')
         .select('status')
         .eq('id', settlementId)
@@ -172,7 +172,7 @@ router.patch(
       }
 
       // Atualizar payment_type no agent_week_metrics
-      const { data, error } = await (await import('../config/supabase')).supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('agent_week_metrics')
         .update({ payment_type })
         .eq('settlement_id', settlementId)
@@ -193,14 +193,6 @@ router.patch(
   },
 );
 
-// Helper: normalize name (lowercase + remove accents)
-function normName(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
 // ─── POST /api/settlements/:id/sync-agents ──────────────────────────
 // Auto-cria organizacoes AGENT a partir dos agentes do settlement
 router.post(
@@ -212,7 +204,6 @@ router.post(
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
-      const { supabaseAdmin } = await import('../config/supabase');
 
       // Buscar settlement + club_id
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -280,80 +271,165 @@ router.post(
       let linked = 0;
       const uniqueNames = [...new Set(allMetrics.map((m) => m.agent_name))];
 
-      for (const agentName of uniqueNames) {
-        let orgId = orgNameMap.get(normName(agentName));
+      // ── Fase 1: Classificar agentes em "existentes" vs "a criar" ──────
+      const toCreate: { agentName: string; correctParentId: string }[] = [];
+      const toFixParent: { orgId: string; correctParentId: string }[] = [];
+      // agentName -> orgId (sera populado para todos)
+      const resolvedOrgMap = new Map<string, string>();
 
-        // Determinar parent_id correto (SUBCLUB, fallback CLUB)
+      for (const agentName of uniqueNames) {
+        const orgId = orgNameMap.get(normName(agentName));
         const subclubName = agentSubclubMap.get(agentName);
         const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
 
-        // Criar org AGENT se nao existe
-        if (!orgId) {
-          const { data: newOrg, error: cErr } = await supabaseAdmin
-            .from('organizations')
-            .insert({
-              tenant_id: tenantId,
-              parent_id: correctParentId,
-              type: 'AGENT',
-              name: agentName,
-            })
-            .select('id')
-            .single();
-
-          if (cErr) {
-            // Pode ser duplicata (race condition) — tentar buscar
-            const { data: found } = await supabaseAdmin
-              .from('organizations')
-              .select('id')
-              .eq('tenant_id', tenantId)
-              .eq('name', agentName)
-              .eq('type', 'AGENT')
-              .single();
-            orgId = found?.id;
-          } else {
-            orgId = newOrg.id;
-            created++;
-          }
-        } else {
-          // Agente ja existe — corrigir parent_id se estiver apontando errado
+        if (orgId) {
+          resolvedOrgMap.set(agentName, orgId);
+          // Verificar se parent_id precisa correcao
           const currentParent = orgParentMap.get(orgId);
           if (currentParent && currentParent !== correctParentId && correctParentId !== settlement.club_id) {
-            await supabaseAdmin.from('organizations').update({ parent_id: correctParentId }).eq('id', orgId);
-            fixed++;
+            toFixParent.push({ orgId, correctParentId });
           }
+        } else {
+          toCreate.push({ agentName, correctParentId });
         }
+      }
+
+      // ── Fase 2: Batch insert novas orgs AGENT ────────────────────────
+      if (toCreate.length > 0) {
+        const insertRows = toCreate.map(({ agentName, correctParentId }) => ({
+          tenant_id: tenantId,
+          parent_id: correctParentId,
+          type: 'AGENT' as const,
+          name: agentName,
+        }));
+
+        const { data: newOrgs, error: batchErr } = await supabaseAdmin
+          .from('organizations')
+          .insert(insertRows)
+          .select('id, name');
+
+        if (batchErr) {
+          // Batch insert falhou (possivelmente duplicatas por race condition)
+          // Fallback: buscar todos AGENT orgs novamente e resolver
+          const { data: refreshedOrgs } = await supabaseAdmin
+            .from('organizations')
+            .select('id, name')
+            .eq('tenant_id', tenantId)
+            .eq('type', 'AGENT')
+            .eq('is_active', true);
+
+          const refreshedMap = new Map<string, string>();
+          for (const org of refreshedOrgs || []) {
+            refreshedMap.set(normName(org.name), org.id);
+          }
+
+          // Tentar inserir individualmente apenas os que ainda nao existem
+          for (const { agentName, correctParentId } of toCreate) {
+            let orgId = refreshedMap.get(normName(agentName));
+            if (orgId) {
+              resolvedOrgMap.set(agentName, orgId);
+              continue;
+            }
+            // Insert individual como fallback
+            const { data: newOrg, error: cErr } = await supabaseAdmin
+              .from('organizations')
+              .insert({ tenant_id: tenantId, parent_id: correctParentId, type: 'AGENT', name: agentName })
+              .select('id')
+              .single();
+
+            if (cErr) {
+              const { data: found } = await supabaseAdmin
+                .from('organizations')
+                .select('id')
+                .eq('tenant_id', tenantId)
+                .eq('name', agentName)
+                .eq('type', 'AGENT')
+                .maybeSingle();
+              orgId = found?.id;
+              if (!orgId) {
+                console.warn(`[sync-agents] Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
+              } else {
+                resolvedOrgMap.set(agentName, orgId);
+              }
+            } else {
+              resolvedOrgMap.set(agentName, newOrg.id);
+              created++;
+            }
+          }
+        } else {
+          // Batch insert OK — mapear resultados
+          for (const org of newOrgs || []) {
+            resolvedOrgMap.set(org.name, org.id);
+          }
+          created = newOrgs?.length || 0;
+        }
+      }
+
+      // ── Fase 3: Batch fix parent_id (paralelo) ──────────────────────
+      if (toFixParent.length > 0) {
+        await Promise.all(
+          toFixParent.map(({ orgId, correctParentId }) =>
+            supabaseAdmin.from('organizations').update({ parent_id: correctParentId }).eq('id', orgId),
+          ),
+        );
+        fixed = toFixParent.length;
+      }
+
+      // ── Fase 4: Batch link metrics + fix subclub_id (paralelo) ──────
+      const allPromises: Promise<any>[] = [];
+      const processedSubclubNames = new Set<string>();
+
+      for (const agentName of uniqueNames) {
+        const orgId = resolvedOrgMap.get(agentName);
+        const subclubName = agentSubclubMap.get(agentName);
+        const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
 
         // Vincular metrics sem agent_id
         if (orgId) {
-          const { data: updated } = await supabaseAdmin
+          const linkP = supabaseAdmin
             .from('agent_week_metrics')
             .update({ agent_id: orgId })
             .eq('settlement_id', settlementId)
             .eq('agent_name', agentName)
             .is('agent_id', null)
             .select('id');
-          linked += updated?.length || 0;
+          allPromises.push(
+            Promise.resolve(linkP).then(({ data: updated }) => {
+              linked += updated?.length || 0;
+            }),
+          );
         }
 
-        // Corrigir subclub_id em agent_week_metrics que tem subclub_name mas nao tem subclub_id
+        // Corrigir subclub_id em metrics (agent + player)
         if (correctParentId !== settlement.club_id) {
-          await supabaseAdmin
-            .from('agent_week_metrics')
-            .update({ subclub_id: correctParentId })
-            .eq('settlement_id', settlementId)
-            .eq('agent_name', agentName)
-            .is('subclub_id', null);
-          // Tambem corrigir player_week_metrics com mesmo subclub_name
-          if (subclubName) {
-            await supabaseAdmin
-              .from('player_week_metrics')
-              .update({ subclub_id: correctParentId })
-              .eq('settlement_id', settlementId)
-              .eq('subclub_name', subclubName)
-              .is('subclub_id', null);
+          allPromises.push(
+            Promise.resolve(
+              supabaseAdmin
+                .from('agent_week_metrics')
+                .update({ subclub_id: correctParentId })
+                .eq('settlement_id', settlementId)
+                .eq('agent_name', agentName)
+                .is('subclub_id', null),
+            ),
+          );
+          // player_week_metrics: fix once per subclub_name (avoid duplicate updates)
+          if (subclubName && !processedSubclubNames.has(subclubName)) {
+            processedSubclubNames.add(subclubName);
+            allPromises.push(
+              Promise.resolve(
+                supabaseAdmin
+                  .from('player_week_metrics')
+                  .update({ subclub_id: correctParentId })
+                  .eq('settlement_id', settlementId)
+                  .eq('subclub_name', subclubName)
+                  .is('subclub_id', null),
+              ),
+            );
           }
         }
       }
+
+      await Promise.all(allPromises);
 
       res.json({ success: true, data: { created, fixed, linked } });
     } catch (err: any) {
@@ -384,8 +460,6 @@ router.patch(
       }
 
       // Verificar se settlement existe e está em DRAFT
-      const { supabaseAdmin } = await import('../config/supabase');
-
       const { data: settlement, error: sErr } = await supabaseAdmin
         .from('settlements')
         .select('status')

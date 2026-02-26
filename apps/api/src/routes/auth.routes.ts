@@ -82,8 +82,9 @@ router.post('/login', async (req: Request, res: Response) => {
         })),
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
+    res.status(500).json({ success: false, error: message });
   }
 });
 
@@ -113,8 +114,9 @@ router.post('/refresh', async (req: Request, res: Response) => {
         expires_at: data.session.expires_at,
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
+    res.status(500).json({ success: false, error: message });
   }
 });
 
@@ -167,8 +169,9 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         })),
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
+    res.status(500).json({ success: false, error: message });
   }
 });
 

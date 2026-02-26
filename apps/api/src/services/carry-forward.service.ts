@@ -106,15 +106,51 @@ export class CarryForwardService {
     // 5. Calcular próxima semana (destino do carry)
     const nextWeek = this.addDays(week_start, 7);
 
-    // 6. Para cada agente: computar saldoFinal e upsert
+    // 6. Buscar TODOS ledger entries da semana em UMA query (evita N+1)
+    const allEntityIds: string[] = [];
+    for (const [agentId, info] of agentMap) {
+      allEntityIds.push(agentId, ...info.metricIds);
+    }
+
+    const { data: allLedger, error: ledgerErr } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('entity_id, dir, amount')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', week_start)
+      .in('entity_id', allEntityIds);
+
+    if (ledgerErr) throw new Error(`Erro ao buscar ledger: ${ledgerErr.message}`);
+
+    // Indexar ledger por entity_id para lookup rapido
+    const ledgerByEntity = new Map<string, { entradas: number; saidas: number }>();
+    for (const e of allLedger || []) {
+      if (!ledgerByEntity.has(e.entity_id)) {
+        ledgerByEntity.set(e.entity_id, { entradas: 0, saidas: 0 });
+      }
+      const acc = ledgerByEntity.get(e.entity_id)!;
+      if (e.dir === 'IN') acc.entradas += Number(e.amount) || 0;
+      else acc.saidas += Number(e.amount) || 0;
+    }
+
+    // 7. Computar saldoFinal para cada agente (in-memory, sem queries)
     const results: CarryForwardResult[] = [];
+    const upsertRows: any[] = [];
 
     for (const [agentId, info] of agentMap) {
       const saldoAnterior = carryMap[agentId] || 0;
 
-      // LedgerNet: buscar por agent_id (org UUID) E por metric IDs
-      const allEntityIds = [agentId, ...info.metricIds];
-      const ledgerNet = await this.calcLedgerNet(tenantId, week_start, allEntityIds);
+      // Calcular ledgerNet somando de todos entity_ids do agente (org UUID + metric IDs)
+      const entityKeys = [agentId, ...info.metricIds];
+      let entradas = 0;
+      let saidas = 0;
+      for (const key of entityKeys) {
+        const acc = ledgerByEntity.get(key);
+        if (acc) {
+          entradas += acc.entradas;
+          saidas += acc.saidas;
+        }
+      }
+      const ledgerNet = entradas - saidas;
 
       // Fórmula canônica: saldoFinal = saldoAnterior + resultado - ledgerNet
       const saldoFinal = saldoAnterior + info.resultado - ledgerNet;
@@ -128,23 +164,24 @@ export class CarryForwardService {
         saldo_final: saldoFinal,
       });
 
-      // Upsert carry-forward para a PRÓXIMA semana
-      const { error: upsertErr } = await supabaseAdmin.from('carry_forward').upsert(
-        {
-          tenant_id: tenantId,
-          club_id,
-          entity_id: agentId,
-          week_start: nextWeek,
-          amount: saldoFinal,
-          source_settlement_id: settlementId,
-        },
-        {
-          onConflict: 'tenant_id,club_id,entity_id,week_start',
-        },
-      );
+      upsertRows.push({
+        tenant_id: tenantId,
+        club_id,
+        entity_id: agentId,
+        week_start: nextWeek,
+        amount: saldoFinal,
+        source_settlement_id: settlementId,
+      });
+    }
+
+    // 8. Batch upsert TODOS carry-forward em UMA query (evita N upserts)
+    if (upsertRows.length > 0) {
+      const { error: upsertErr } = await supabaseAdmin.from('carry_forward').upsert(upsertRows, {
+        onConflict: 'tenant_id,club_id,entity_id,week_start',
+      });
 
       if (upsertErr) {
-        throw new Error(`Erro ao gravar carry-forward para ${info.agent_name}: ${upsertErr.message}`);
+        throw new Error(`Erro ao gravar carry-forward em batch: ${upsertErr.message}`);
       }
     }
 

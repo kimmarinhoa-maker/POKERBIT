@@ -21,6 +21,9 @@ const envSchema = z.object({
 
   // Storage
   STORAGE_BUCKET: z.string().default('imports'),
+
+  // Security
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { finalizeSettlement, updateSettlementNotes, closeWeek } from '@/lib/api';
-import Spinner from '@/components/Spinner';
+import { SubclubData } from '@/types/settlement';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Lock Week Modal — Checklist pre-finalizacao (reusable)
@@ -28,7 +28,7 @@ interface LockWeekModalProps {
   settlementId: string;
   weekStart: string;
   notes?: string;
-  subclubs?: any[];
+  subclubs?: SubclubData[];
   onSuccess: () => void;
 }
 
@@ -52,7 +52,7 @@ export default function LockWeekModal({
   });
 
   const allChecked = CHECKLIST.every((c) => checked.has(c.key));
-  const totalAgents = subclubs.reduce((s: number, sc: any) => s + (sc.agents?.length || 0), 0);
+  const totalAgents = subclubs.reduce((s: number, sc: SubclubData) => s + (sc.agents?.length || 0), 0);
 
   function toggle(key: string) {
     setChecked((prev) => {
@@ -198,7 +198,7 @@ export default function LockWeekModal({
 
           {step === 'processing' && (
             <div className="py-8 text-center">
-              <Spinner size="xl" className="mx-auto mb-4" />
+              <div className="mx-auto mb-4 w-10 h-10 border-4 border-poker-500/30 border-t-poker-500 rounded-full animate-spin" />
               <p className="text-dark-300 text-sm">Finalizando semana...</p>
               <p className="text-dark-500 text-xs mt-1">Calculando carry-forward e bloqueando edicoes</p>
             </div>

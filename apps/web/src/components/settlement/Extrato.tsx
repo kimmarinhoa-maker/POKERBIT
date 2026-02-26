@@ -1,21 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
-import Spinner from '@/components/Spinner';
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  created_at: string;
-}
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { LedgerEntry } from '@/types/settlement';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import { BookOpen } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   weekStart: string;
@@ -28,6 +22,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +31,9 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const [error, setError] = useState<string | null>(null);
   const [dirFilter, setDirFilter] = useState<'all' | 'IN' | 'OUT'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const [form, setForm] = useState({
     entity_name: '',
@@ -49,11 +47,13 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     setLoading(true);
     try {
       const res = await listLedger(weekStart);
+      if (!mountedRef.current) return;
       if (res.success) setEntries(res.data || []);
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar extrato', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart]);
 
@@ -76,8 +76,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const filteredEntries = useMemo(() => {
     let result = entries;
     if (dirFilter !== 'all') result = result.filter((e) => e.dir === dirFilter);
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (e) =>
           (e.entity_name || '').toLowerCase().includes(q) ||
@@ -86,7 +86,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       );
     }
     return result;
-  }, [entries, dirFilter, searchTerm]);
+  }, [entries, dirFilter, debouncedSearch]);
 
   function resetForm() {
     setForm({ entity_name: '', dir: 'IN', amount: '', method: '', description: '' });
@@ -104,7 +104,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     setError(null);
     try {
       const res = await createLedgerEntry({
-        entity_id: crypto.randomUUID(),
+        entity_id: `manual_${form.entity_name.trim().toLowerCase().replace(/\s+/g, '_')}`,
         entity_name: form.entity_name.trim(),
         week_start: weekStart,
         dir: form.dir,
@@ -120,15 +120,16 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       } else {
         setError(res.error || 'Erro ao criar');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta movimentacao?')) return;
+    const ok = await confirm({ title: 'Excluir Movimentacao', message: 'Tem certeza que deseja excluir esta movimentacao?', variant: 'danger' });
+    if (!ok) return;
     try {
       const res = await deleteLedgerEntry(id);
       if (res.success) {
@@ -148,6 +149,10 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  if (loading) {
+    return <SettlementSkeleton kpis={4} />;
   }
 
   return (
@@ -262,51 +267,40 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       )}
 
       {/* KPI Cards */}
-      {!loading && entries.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5 bg-blue-500" />
-            <div className="p-4">
-              <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Movimentacoes</p>
-              <p className="text-xl font-bold mt-1 font-mono text-blue-400">{entries.length}</p>
-              <p className="text-[10px] text-dark-500">
-                {totals.inCount} IN / {totals.outCount} OUT
-              </p>
-            </div>
-          </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5 bg-poker-500" />
-            <div className="p-4">
-              <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Entradas (IN)</p>
-              <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(totals.totalIn)}</p>
-              <p className="text-[10px] text-dark-500">{totals.inCount} movimentacoes</p>
-            </div>
-          </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className="h-0.5 bg-red-500" />
-            <div className="p-4">
-              <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saidas (OUT)</p>
-              <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(totals.totalOut)}</p>
-              <p className="text-[10px] text-dark-500">{totals.outCount} movimentacoes</p>
-            </div>
-          </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-            <div className={`h-0.5 ${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
-            <div className="p-4">
-              <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo Liquido</p>
-              <p
-                className={`text-xl font-bold mt-1 font-mono ${totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}`}
-              >
-                {formatBRL(totals.net)}
-              </p>
-              <p className="text-[10px] text-dark-500">Entradas - Saidas</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <KpiCard
+          label="Movimentacoes"
+          value={entries.length}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={`${totals.inCount} IN / ${totals.outCount} OUT`}
+        />
+        <KpiCard
+          label="Entradas (IN)"
+          value={formatBRL(totals.totalIn)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+          subtitle={`${totals.inCount} movimentacoes`}
+        />
+        <KpiCard
+          label="Saidas (OUT)"
+          value={formatBRL(totals.totalOut)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+          subtitle={`${totals.outCount} movimentacoes`}
+        />
+        <KpiCard
+          label="Saldo Liquido"
+          value={formatBRL(totals.net)}
+          accentColor={totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor={totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}
+          subtitle="Entradas - Saidas"
+          ring="ring-1 ring-emerald-700/30"
+        />
+      </div>
 
       {/* Filter buttons + Search */}
-      {!loading && entries.length > 0 && (
+      {entries.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="flex gap-2">
             {[
@@ -332,18 +326,15 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
             placeholder="Buscar entidade..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 max-w-xs bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-1.5 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+            className="input flex-1 max-w-xs"
           />
         </div>
       )}
 
-      {/* Loading */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner />
-        </div>
-      ) : entries.length === 0 ? (
+      {/* Content */}
+      {entries.length === 0 ? (
         <div className="card text-center py-12">
+          <BookOpen className="w-8 h-8 text-dark-600 mx-auto mb-3" />
           <p className="text-dark-400 mb-2">Nenhuma movimentacao registrada</p>
           <p className="text-dark-500 text-sm">
             {isDraft ? 'Clique em "Nova Movimentacao" para adicionar' : 'Nenhum pagamento nesta semana'}
@@ -355,23 +346,23 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           <div className="card overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-dark-800/50">
-                    <th className="px-4 py-3 text-left font-medium text-xs text-dark-400">Data</th>
-                    <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Entidade</th>
-                    <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Dir</th>
-                    <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Valor</th>
-                    <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Metodo</th>
-                    <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Descricao</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-dark-800/80 backdrop-blur-sm">
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Data</th>
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Entidade</th>
+                    <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Dir</th>
+                    <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Valor</th>
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Metodo</th>
+                    <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Descricao</th>
                     {isDraft && canEdit && (
-                      <th className="px-3 py-3 text-center font-medium text-xs text-dark-400 w-10" />
+                      <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 w-10" />
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dark-800/50">
+                <tbody className="divide-y divide-dark-800/30">
                   {filteredEntries.map((e) => (
                     <tr key={e.id} className="hover:bg-dark-800/20 transition-colors">
-                      <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at)}</td>
+                      <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
                       <td className="px-3 py-2.5 text-white font-medium">{e.entity_name || '—'}</td>
                       <td className="px-3 py-2.5 text-center">
                         <span
@@ -421,6 +412,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           </div>
         </>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

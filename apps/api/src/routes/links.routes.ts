@@ -13,7 +13,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 
 const router = Router();
@@ -126,7 +126,7 @@ const agentLinkSchema = z.object({
   subclub_id: z.string().uuid(),
 });
 
-router.post('/agent', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/agent', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const parsed = agentLinkSchema.safeParse(req.body);
@@ -172,7 +172,7 @@ const playerLinkSchema = z.object({
   agent_name: z.string().optional(),
 });
 
-router.post('/player', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/player', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const parsed = playerLinkSchema.safeParse(req.body);
@@ -224,7 +224,7 @@ const bulkPlayerLinkSchema = z.object({
   ),
 });
 
-router.post('/bulk-players', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/bulk-players', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const parsed = bulkPlayerLinkSchema.safeParse(req.body);
@@ -261,7 +261,7 @@ router.post('/bulk-players', requireAuth, requireTenant, async (req: Request, re
 });
 
 // ─── DELETE /api/links/agent/:id — Remove vínculo de agente ────────────────
-router.delete('/agent/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/agent/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 
@@ -279,7 +279,7 @@ router.delete('/agent/:id', requireAuth, requireTenant, async (req: Request, res
 });
 
 // ─── DELETE /api/links/player/:id — Remove vínculo de jogador ──────────────
-router.delete('/player/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/player/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 

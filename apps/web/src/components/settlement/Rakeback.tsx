@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   listOrganizations,
   listLedger,
@@ -13,48 +13,16 @@ import {
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import { round2 } from '@/lib/formatters';
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  rb_rate: number;
-  commission_brl: number;
-  resultado_brl: number;
-}
-
-interface PlayerMetric {
-  id: string;
-  player_id: string;
-  external_player_id: string | null;
-  nickname: string | null;
-  agent_name: string | null;
-  agent_id: string | null;
-  winnings_brl: number;
-  rake_total_brl: number;
-  ggr_brl: number;
-  rb_rate: number;
-  rb_value_brl: number;
-  resultado_brl: number;
-}
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  dir: 'IN' | 'OUT';
-  amount: number;
-}
+import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
+import { Percent, Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 
 interface OrgData {
   id: string;
   name: string;
   type: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 interface Props {
@@ -82,6 +50,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const { canAccess } = useAuth();
   const canEditRates = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
+  const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [search, setSearch] = useState('');
   const [orgs, setOrgs] = useState<OrgData[]>([]);
@@ -94,19 +63,26 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const [applyAllRate, setApplyAllRate] = useState('');
   const [applyingAll, setApplyingAll] = useState(false);
   const [directDropdown, setDirectDropdown] = useState('');
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Load orgs (for is_direct) and ledger (for badge status)
   const loadExtras = useCallback(async () => {
+    setLoading(true);
     try {
       // Auto-sync agents to organizations on first load
       if (isDraft) {
         await syncSettlementAgents(settlementId).catch(() => {});
       }
       const [orgsRes, ledgerRes] = await Promise.all([listOrganizations('AGENT'), listLedger(weekStart)]);
+      if (!mountedRef.current) return;
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro na operacao de rakeback', 'error');
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, settlementId, isDraft]);
 
@@ -118,10 +94,10 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of players) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');
@@ -193,7 +169,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     const nonDirect: AgentMetric[] = [];
     const direct: AgentMetric[] = [];
     for (const a of agents) {
-      if ((a as any).is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
+      if (a.is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
         direct.push(a);
       } else {
         nonDirect.push(a);
@@ -382,6 +358,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
   // ─── Render ───────────────────────────────────────────────────────
 
+  if (loading) return <SettlementSkeleton kpis={4} />;
+
   const taxLabel = `${fees.taxaApp || 0}%+${fees.taxaLiga || 0}%`;
 
   return (
@@ -393,58 +371,40 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Rake Total</p>
-            <p className="text-xl font-bold mt-1 font-mono text-poker-400">{formatBRL(kpis.rakeTotal)}</p>
-            <p className="text-[10px] text-dark-500">{players.length} jogadores</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-yellow-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Rakeback</p>
-            <p className="text-xl font-bold mt-1 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
-            <p className="text-[10px] text-dark-500">Agentes + Diretos</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Taxas Liga</p>
-            <p className="text-xl font-bold mt-1 font-mono text-red-400">{formatBRL(kpis.taxesOnRake)}</p>
-            <p className="text-[10px] text-dark-500">{taxLabel} sobre rake</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lucro Liquido</p>
-            <p
-              className={`text-xl font-bold mt-1 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-            >
-              {formatBRL(kpis.lucroLiquido)}
-            </p>
-            <p className="text-[10px] text-dark-500">Rake - RB - Taxas</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Search + Sub-tabs */}
-      <div className="flex items-center gap-4 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar agente ou jogador..."
-          aria-label="Buscar agente ou jogador"
-          className="input flex-1 max-w-md"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <KpiCard
+          label="Rake Total"
+          value={formatBRL(kpis.rakeTotal)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+          subtitle={`${players.length} jogadores`}
+        />
+        <KpiCard
+          label="Total Rakeback"
+          value={formatBRL(kpis.totalRB)}
+          accentColor="bg-yellow-500"
+          valueColor="text-yellow-400"
+          subtitle="Agentes + Diretos"
+        />
+        <KpiCard
+          label="Taxas Liga"
+          value={formatBRL(kpis.taxesOnRake)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+          subtitle={`${taxLabel} sobre rake`}
+        />
+        <KpiCard
+          label="Lucro Liquido"
+          value={formatBRL(kpis.lucroLiquido)}
+          accentColor={kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
+          valueColor={kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          subtitle="Rake - RB - Taxas"
+          ring="ring-1 ring-emerald-700/30"
         />
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
+      {/* Sub-tabs */}
+      <div className="flex items-center gap-1 mb-4">
         <button
           onClick={() => setActiveSubTab('agencias')}
           role="tab"
@@ -456,7 +416,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
               : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          Agencias ({filteredNonDirect.length})
+          Agencias
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{filteredNonDirect.length}</span>
         </button>
         <button
           onClick={() => setActiveSubTab('jogadores')}
@@ -469,8 +430,21 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
               : 'bg-dark-800 border-dark-700 text-dark-400 hover:border-poker-500/50 hover:text-poker-400'
           }`}
         >
-          Jogadores ({filteredDirect.length})
+          Jogadores
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{filteredDirect.length}</span>
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar agente ou jogador..."
+          aria-label="Buscar agente ou jogador"
+          className="input w-full max-w-md"
+        />
       </div>
 
       {/* Tab content */}
@@ -569,7 +543,12 @@ function AgenciasTab({
   canEditRates: boolean;
 }) {
   if (agents.length === 0) {
-    return <div className="card text-center py-12 text-dark-400">Nenhuma agencia (nao-direta) neste subclube</div>;
+    return (
+      <div className="card text-center py-12">
+        <Percent className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+        <p className="text-dark-400">Nenhuma agencia (nao-direta) neste subclube</p>
+      </div>
+    );
   }
 
   // Totals
@@ -588,7 +567,8 @@ function AgenciasTab({
     <div>
       {/* Table header */}
       <div className="card p-0 overflow-hidden">
-        <div className="bg-dark-800/50 px-5 py-3 grid grid-cols-[1fr_120px_100px_120px_120px] text-xs text-dark-400 font-medium uppercase tracking-wider">
+        <div className="overflow-x-auto">
+        <div className="bg-dark-800/80 backdrop-blur-sm px-5 py-2 grid grid-cols-[1fr_120px_100px_120px_120px] text-[10px] text-dark-400 font-medium uppercase tracking-wider">
           <span>Agente</span>
           <span className="text-right">Rake</span>
           <span className="text-right">% RB Agente</span>
@@ -686,15 +666,15 @@ function AgenciasTab({
               {/* Expanded: player table */}
               {isExpanded && (
                 <div className="border-t border-dark-700/50 bg-dark-900/30">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-dark-500 text-[10px] uppercase">
-                        <th className="px-8 py-2 text-left font-medium">Jogador</th>
-                        <th className="px-3 py-2 text-left font-medium">ID</th>
-                        <th className="px-3 py-2 text-right font-medium">Rake</th>
-                        <th className="px-3 py-2 text-right font-medium">RB %</th>
-                        <th className="px-3 py-2 text-right font-medium">RB Valor</th>
-                        <th className="px-5 py-2 text-right font-medium">Resultado</th>
+                      <tr className="bg-dark-800/50">
+                        <th className="px-8 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>
+                        <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">ID</th>
+                        <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
+                        <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">RB %</th>
+                        <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">RB Valor</th>
+                        <th className="px-5 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Resultado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-dark-800/30">
@@ -729,16 +709,20 @@ function AgenciasTab({
         })}
 
         {/* Totals row */}
-        <div className="border-t-2 border-dark-600 grid grid-cols-[1fr_120px_100px_120px_120px] items-center px-5 py-3 bg-dark-800/30">
-          <span className="text-sm font-bold text-poker-400">TOTAL ({agents.length} agencias)</span>
-          <span className="text-right font-mono text-sm font-bold text-dark-200">{formatBRL(round2(totalRake))}</span>
-          <span className="text-right">—</span>
-          <span className="text-right font-mono text-sm font-bold text-yellow-400">{formatBRL(round2(totalRB))}</span>
+        <div className="border-t-2 border-dark-700 grid grid-cols-[1fr_120px_100px_120px_120px] items-center px-5 py-3 bg-dark-900">
+          <span className="text-xs font-extrabold text-amber-400">
+            TOTAL
+            <span className="text-dark-500 text-[10px] font-normal ml-2">{agents.length} agencias</span>
+          </span>
+          <span className="text-right font-mono text-xs font-extrabold text-dark-200">{formatBRL(round2(totalRake))}</span>
+          <span className="text-right text-dark-500">—</span>
+          <span className="text-right font-mono text-xs font-extrabold text-yellow-400">{formatBRL(round2(totalRB))}</span>
           <span
-            className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+            className={`text-right font-mono text-xs font-extrabold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
           >
             {formatBRL(round2(totalLucro))}
           </span>
+        </div>
         </div>
       </div>
     </div>
@@ -867,11 +851,15 @@ function JogadoresTab({
       </div>
 
       {agents.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">Nenhuma agencia direta definida</div>
+        <div className="card text-center py-12">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">Nenhuma agencia direta definida</p>
+        </div>
       ) : (
         <div className="card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
           {/* Table header */}
-          <div className="bg-dark-800/50 px-5 py-3 grid grid-cols-[1fr_120px_110px_120px_120px] text-xs text-dark-400 font-medium uppercase tracking-wider">
+          <div className="bg-dark-800/80 backdrop-blur-sm px-5 py-2 grid grid-cols-[1fr_120px_110px_120px_120px] text-[10px] text-dark-400 font-medium uppercase tracking-wider">
             <span>Agencia / Jogador</span>
             <span className="text-right">Rake</span>
             <span className="text-right">% RB Jogador</span>
@@ -981,14 +969,14 @@ function JogadoresTab({
                       </div>
                     )}
 
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs">
                       <thead>
-                        <tr className="text-dark-500 text-[10px] uppercase">
-                          <th className="px-8 py-2 text-left font-medium">Jogador</th>
-                          <th className="px-3 py-2 text-right font-medium">Rake</th>
-                          <th className="px-3 py-2 text-right font-medium">% RB Jogador</th>
-                          <th className="px-3 py-2 text-right font-medium">RB Jogador</th>
-                          <th className="px-5 py-2 text-right font-medium">Lucro Liq.</th>
+                        <tr className="bg-dark-800/50">
+                          <th className="px-8 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>
+                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
+                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">% RB Jogador</th>
+                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">RB Jogador</th>
+                          <th className="px-5 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Lucro Liq.</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-dark-800/30">
@@ -1022,12 +1010,12 @@ function JogadoresTab({
                                         className="input w-14 text-right text-xs font-mono py-0.5"
                                         autoFocus
                                         onKeyDown={(e) => {
-                                          if (e.key === 'Enter') savePlayerRate(p.player_id);
+                                          if (e.key === 'Enter') savePlayerRate(p.player_id!);
                                           if (e.key === 'Escape') setEditingRate(null);
                                         }}
                                       />
                                       <button
-                                        onClick={() => savePlayerRate(p.player_id)}
+                                        onClick={() => savePlayerRate(p.player_id!)}
                                         disabled={savingRate}
                                         aria-label={`Salvar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
                                         className="text-poker-400 text-xs"
@@ -1089,23 +1077,27 @@ function JogadoresTab({
               totalLucro += rake - playerRB - rake * taxRate;
             }
             return (
-              <div className="border-t-2 border-dark-600 grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 bg-dark-800/30">
-                <span className="text-sm font-bold text-poker-400">TOTAL ({agents.length} agencias)</span>
-                <span className="text-right font-mono text-sm font-bold text-dark-200">
+              <div className="border-t-2 border-dark-700 grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 bg-dark-900">
+                <span className="text-xs font-extrabold text-amber-400">
+                  TOTAL
+                  <span className="text-dark-500 text-[10px] font-normal ml-2">{agents.length} agencias</span>
+                </span>
+                <span className="text-right font-mono text-xs font-extrabold text-dark-200">
                   {formatBRL(round2(totalRake))}
                 </span>
-                <span className="text-right">—</span>
-                <span className="text-right font-mono text-sm font-bold text-yellow-400">
+                <span className="text-right text-dark-500">—</span>
+                <span className="text-right font-mono text-xs font-extrabold text-yellow-400">
                   {formatBRL(round2(totalRB))}
                 </span>
                 <span
-                  className={`text-right font-mono text-sm font-bold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+                  className={`text-right font-mono text-xs font-extrabold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
                 >
                   {formatBRL(round2(totalLucro))}
                 </span>
               </div>
             );
           })()}
+          </div>
         </div>
       )}
     </div>

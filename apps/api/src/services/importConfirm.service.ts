@@ -331,7 +331,10 @@ class ImportConfirmService {
       const { error } = await supabaseAdmin
         .from('players')
         .upsert(batch, { onConflict: 'tenant_id,external_id', ignoreDuplicates: false });
-      if (error) console.error(`[confirm] Erro upsert players batch ${i}:`, error);
+      if (error) {
+        console.warn(`[confirm] Erro upsert players batch ${i}: ${error.message}`);
+        throw new ConfirmError(500, `Erro ao upsert players (batch ${i}): ${error.message}`);
+      }
     }
   }
 

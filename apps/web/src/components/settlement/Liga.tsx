@@ -4,19 +4,11 @@ import { useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
-
-interface SubclubSummary {
-  id: string;
-  name: string;
-  totals: { resultado: number };
-  feesComputed: { totalTaxas: number; totalTaxasSigned: number };
-  totalLancamentos: number;
-  acertoLiga: number;
-  acertoDirecao: string;
-}
+import KpiCard from '@/components/ui/KpiCard';
+import { SubclubData } from '@/types/settlement';
 
 interface Props {
-  subclubs: SubclubSummary[];
+  subclubs: SubclubData[];
   currentSubclubName: string;
   logoMap?: Record<string, string | null>;
 }
@@ -43,64 +35,49 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
       </div>
 
       {/* KPI Cards - 4 columns */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Resultado Total</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotal.resultado)}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Total Taxas</p>
-            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(grandTotal.taxasSigned)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Lancamentos</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}`}
-            >
-              {formatBRL(grandTotal.lancamentos)}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Acerto Liga</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotal.acertoLiga)}
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <KpiCard
+          label="Resultado Total"
+          value={formatBRL(grandTotal.resultado)}
+          accentColor={grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+        />
+        <KpiCard
+          label="Total Taxas"
+          value={formatBRL(grandTotal.taxasSigned)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+        />
+        <KpiCard
+          label="Lancamentos"
+          value={formatBRL(grandTotal.lancamentos)}
+          accentColor={grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}
+          valueColor={grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}
+        />
+        <KpiCard
+          label="Acerto Liga"
+          value={formatBRL(grandTotal.acertoLiga)}
+          accentColor={grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+          valueColor={grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* Table */}
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-dark-800/50">
-                <th className="px-5 py-3 text-left font-medium text-xs text-dark-400">Subclube</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Resultado</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Taxas</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Lancamentos</th>
-                <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Acerto Liga</th>
-                <th className="px-5 py-3 text-left font-medium text-xs text-dark-400">Direcao</th>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-dark-800/80 backdrop-blur-sm">
+                <th className="px-5 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Subclube</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Resultado</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Taxas</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Lancamentos</th>
+                <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Acerto Liga</th>
+                <th className="px-5 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Direcao</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-dark-800/50">
+            <tbody className="divide-y divide-dark-800/30">
               {subclubs.map((sc) => {
                 const isCurrent = sc.name === currentSubclubName;
                 return (
@@ -171,8 +148,8 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
               })}
 
               {/* Total row */}
-              <tr className="bg-dark-800/50 font-semibold border-t-2 border-dark-600">
-                <td className="px-5 py-3 text-white">TOTAL</td>
+              <tr className="bg-dark-900 border-t-2 border-dark-700">
+                <td className="px-5 py-3 font-extrabold text-xs text-amber-400">TOTAL</td>
                 <td
                   className={`px-3 py-3 text-right font-mono ${
                     grandTotal.resultado < 0 ? 'text-red-400' : 'text-poker-400'

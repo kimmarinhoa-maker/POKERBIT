@@ -2,8 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
 import { SubclubData, PlayerMetric, PagamentoDetalhe } from '@/types/settlement';
+import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: SubclubData;
@@ -42,6 +46,7 @@ export default function Jogadores({ subclub }: Props) {
   const { players, agents } = subclub;
   const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search);
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [paymentModal, setPaymentModal] = useState<{
@@ -54,11 +59,11 @@ export default function Jogadores({ subclub }: Props) {
   const directAgents = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name?.toLowerCase() || '');
+      if (a.is_direct) set.add(a.agent_name?.toLowerCase() || '');
     }
     // Also check players for agent_is_direct (fallback)
     for (const p of players) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     return set;
   }, [agents, players]);
@@ -102,8 +107,8 @@ export default function Jogadores({ subclub }: Props) {
 
   // ── Search filter: agencies ──
   const filteredAgencyGroups = useMemo(() => {
-    if (!search.trim()) return agencyGroups;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return agencyGroups;
+    const q = debouncedSearch.toLowerCase();
     return agencyGroups
       .map((g) => ({
         ...g,
@@ -116,16 +121,16 @@ export default function Jogadores({ subclub }: Props) {
       }))
       .filter((g) => g.players.length > 0)
       .map((g) => ({ ...g, totals: sumTotals(g.players) }));
-  }, [agencyGroups, search]);
+  }, [agencyGroups, debouncedSearch]);
 
   // ── Search filter: direct players ──
   const filteredDirectPlayers = useMemo(() => {
-    if (!search.trim()) return directPlayers;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return directPlayers;
+    const q = debouncedSearch.toLowerCase();
     return directPlayers.filter(
       (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
     );
-  }, [directPlayers, search]);
+  }, [directPlayers, debouncedSearch]);
 
   // ── Grand totals (per active tab) ──
   const grandTotals = useMemo(() => {
@@ -169,40 +174,39 @@ export default function Jogadores({ subclub }: Props) {
     <div>
       {/* ═══ 5 KPI MINI CARDS ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Jogadores Ativos</div>
-          <div className="text-xl font-extrabold text-white font-mono">{activeCount}</div>
-          <div className="text-[10px] text-dark-500 mt-0.5">de {players.length} total</div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Profit / Loss</div>
-          <div className={`text-lg font-extrabold font-mono ${cc(grandTotals.ganhos)}`}>
-            {formatBRL(grandTotals.ganhos)}
-          </div>
-          <div className="text-[10px] text-dark-500 mt-0.5">
-            {grandTotals.ganhos >= 0 ? 'lucro jogadores' : 'loss jogadores'}
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-emerald-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Rake Gerado</div>
-          <div className="text-lg font-extrabold font-mono text-emerald-400">{formatBRL(grandTotals.rake)}</div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-lime-500 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Rakeback Total</div>
-          <div className="text-lg font-extrabold font-mono text-lime-400">
-            {grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Semana</div>
-          <div className={`text-lg font-extrabold font-mono ${cc(grandTotals.resultado)}`}>
-            {formatBRL(grandTotals.resultado)}
-          </div>
-        </div>
+        <KpiCard
+          label="Jogadores Ativos"
+          value={activeCount}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={`de ${players.length} total`}
+        />
+        <KpiCard
+          label="Profit / Loss"
+          value={formatBRL(grandTotals.ganhos)}
+          accentColor="bg-amber-500"
+          valueColor={cc(grandTotals.ganhos)}
+          subtitle={grandTotals.ganhos >= 0 ? 'lucro jogadores' : 'loss jogadores'}
+        />
+        <KpiCard
+          label="Rake Gerado"
+          value={formatBRL(grandTotals.rake)}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Rakeback Total"
+          value={grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
+          accentColor="bg-lime-500"
+          valueColor="text-lime-400"
+        />
+        <KpiCard
+          label="Resultado Semana"
+          value={formatBRL(grandTotals.resultado)}
+          accentColor="bg-amber-500"
+          valueColor={cc(grandTotals.resultado)}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* ═══ TAB BUTTONS ═══ */}
@@ -243,9 +247,9 @@ export default function Jogadores({ subclub }: Props) {
       </div>
 
       {/* ═══ TABLE ═══ */}
-      <div className="border border-dark-700 rounded-lg overflow-hidden">
+      <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs" style={{ minWidth: 950 }}>
+          <table className="w-full text-xs min-w-[950px]">
             <thead className="sticky top-0 z-10">
               <tr className="bg-dark-800/80 backdrop-blur-sm">
                 <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">
@@ -346,12 +350,15 @@ export default function Jogadores({ subclub }: Props) {
 
       {/* Empty state */}
       {currentPlayerCount === 0 && (
-        <div className="text-center py-10 text-dark-400 mt-4">
-          {search
-            ? 'Nenhum jogador encontrado'
-            : viewTab === 'agencias'
-              ? 'Nenhuma agência neste subclube'
-              : 'Nenhum jogador direto neste subclube'}
+        <div className="card text-center py-12 mt-4">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
+            {search
+              ? 'Nenhum jogador encontrado'
+              : viewTab === 'agencias'
+                ? 'Nenhuma agência neste subclube'
+                : 'Nenhum jogador direto neste subclube'}
+          </p>
         </div>
       )}
 
@@ -734,6 +741,4 @@ function r2(v: number) {
   return Math.round((v + Number.EPSILON) * 100) / 100;
 }
 
-function cc(val: number, pos = 'text-emerald-400', neg = 'text-red-400') {
-  return val < -0.01 ? neg : val > 0.01 ? pos : 'text-dark-400';
-}
+// cc() imported from @/lib/colorUtils

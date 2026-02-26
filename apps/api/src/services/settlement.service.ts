@@ -14,19 +14,8 @@
 
 import { supabaseAdmin } from '../config/supabase';
 import type { SettlementStatus } from '../types';
-
-// ─── normName: lowercase + remove acentos para matching robusto ──────
-function normName(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-// ─── round2: REGRA DE OURO ──────────────────────────────────────────
-function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
+import { round2 } from '../utils/round2';
+import { normName } from '../utils/normName';
 
 function sumArr(arr: any[], key: string): number {
   return arr.reduce((s, r) => s + (Number(r[key]) || 0), 0);

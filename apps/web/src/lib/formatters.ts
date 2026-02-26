@@ -9,6 +9,14 @@ export function formatCurrency(value: number): string {
   return value < 0 ? `-R$ ${formatted}` : `R$ ${formatted}`;
 }
 
+/** Format a number as BRL currency using Intl (R$ 1.234,56) */
+export function formatBRL(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
 export function calcDelta(current: number, previous: number): { pct: string; isUp: boolean; isZero: boolean } {
   if (previous === 0) return { pct: '0.0', isUp: current > 0, isZero: current === 0 };
   const diff = current - previous;

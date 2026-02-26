@@ -6,6 +6,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
@@ -28,9 +29,12 @@ const app = express();
 
 // ─── Middleware global ─────────────────────────────────────────────
 
+// Security headers
+app.use(helmet());
+
 // CORS: read ALLOWED_ORIGINS from env, fallback to pokermanager.com.br in production
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+const allowedOrigins = env.ALLOWED_ORIGINS
+  ? env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
   : ['https://pokermanager.com.br', 'https://www.pokermanager.com.br'];
 
 app.use(
@@ -43,6 +47,16 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 
 // ─── Rate Limiting ──────────────────────────────────────────────────
+
+// General limiter: 200 requests per minute for all /api/ routes
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas requisicoes. Tente novamente em 1 minuto.' },
+});
+app.use('/api', generalLimiter);
 
 // Auth endpoints: 20 requests per 15 minutes
 const authLimiter = rateLimit({

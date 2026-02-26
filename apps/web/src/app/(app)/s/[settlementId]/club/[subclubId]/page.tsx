@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys } from '@/components/settlement/SubNavTabs';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
+import TabErrorBoundary from '@/components/ui/TabErrorBoundary';
 
 import SubNavTabs from '@/components/settlement/SubNavTabs';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
@@ -160,84 +161,99 @@ export default function SubclubPanelPage() {
     switch (activeTab) {
       case 'resumo':
         return (
-          <ResumoClube
-            subclub={currentSubclub}
-            fees={fees}
-            weekStart={settlement.week_start}
-            weekEnd={weekEnd}
-            logoUrl={logoMap[subclubId.toLowerCase()] || null}
-          />
+          <TabErrorBoundary tabName="Resumo do Clube">
+            <ResumoClube
+              subclub={currentSubclub}
+              fees={fees}
+              weekStart={settlement.week_start}
+              weekEnd={weekEnd}
+              logoUrl={logoMap[subclubId.toLowerCase()] || null}
+            />
+          </TabErrorBoundary>
         );
       case 'detalhamento':
-        return <Detalhamento subclub={currentSubclub} />;
+        return <TabErrorBoundary tabName="Detalhamento"><Detalhamento subclub={currentSubclub} /></TabErrorBoundary>;
       case 'dashboard':
-        return <DashboardClube subclub={currentSubclub} fees={fees} />;
+        return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={currentSubclub} fees={fees} /></TabErrorBoundary>;
       case 'jogadores':
-        return <Jogadores subclub={currentSubclub} weekStart={settlement.week_start} clubId={settlement.club_id} />;
+        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={currentSubclub} weekStart={settlement.week_start} clubId={settlement.club_id} /></TabErrorBoundary>;
 
       // Tabs funcionais
       case 'ajustes':
         return (
-          <Ajustes
-            subclub={currentSubclub}
-            weekStart={settlement.week_start}
-            settlementStatus={settlement.status}
-            onDataChange={loadData}
-          />
+          <TabErrorBoundary tabName="Ajustes">
+            <Ajustes
+              subclub={currentSubclub}
+              weekStart={settlement.week_start}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+            />
+          </TabErrorBoundary>
         );
       case 'dre':
-        return <DRE subclub={currentSubclub} fees={fees} />;
+        return <TabErrorBoundary tabName="DRE"><DRE subclub={currentSubclub} fees={fees} /></TabErrorBoundary>;
       case 'liga':
-        return <Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} logoMap={logoMap} />;
+        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} logoMap={logoMap} /></TabErrorBoundary>;
       case 'extrato':
         return (
-          <Extrato weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
+          <TabErrorBoundary tabName="Extrato">
+            <Extrato weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
+          </TabErrorBoundary>
         );
       case 'liquidacao':
         return (
-          <Liquidacao
-            subclub={currentSubclub}
-            weekStart={settlement.week_start}
-            clubId={settlement.club_id}
-            settlementId={settlementId}
-            settlementStatus={settlement.status}
-            onDataChange={loadData}
-          />
+          <TabErrorBoundary tabName="Liquidacao">
+            <Liquidacao
+              subclub={currentSubclub}
+              weekStart={settlement.week_start}
+              clubId={settlement.club_id}
+              settlementId={settlementId}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+            />
+          </TabErrorBoundary>
         );
 
       case 'rakeback':
         return (
-          <Rakeback
-            subclub={currentSubclub}
-            weekStart={settlement.week_start}
-            fees={fees}
-            settlementId={settlementId}
-            settlementStatus={settlement.status}
-            onDataChange={loadData}
-          />
+          <TabErrorBoundary tabName="Rakeback">
+            <Rakeback
+              subclub={currentSubclub}
+              weekStart={settlement.week_start}
+              fees={fees}
+              settlementId={settlementId}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+            />
+          </TabErrorBoundary>
         );
       case 'comprovantes':
         return (
-          <Comprovantes
-            subclub={currentSubclub}
-            weekStart={settlement.week_start}
-            clubId={settlement.club_id}
-            fees={fees}
-          />
+          <TabErrorBoundary tabName="Comprovantes">
+            <Comprovantes
+              subclub={currentSubclub}
+              weekStart={settlement.week_start}
+              clubId={settlement.club_id}
+              fees={fees}
+              logoUrl={logoMap[subclubId.toLowerCase()] || null}
+            />
+          </TabErrorBoundary>
         );
       case 'conciliacao':
         return (
-          <Conciliacao
-            weekStart={settlement.week_start}
-            clubId={settlement.club_id}
-            settlementStatus={settlement.status}
-            onDataChange={loadData}
-            agents={(currentSubclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
-            players={(currentSubclub.players || []).map((p: any) => ({
-              external_player_id: p.external_player_id,
-              nickname: p.nickname,
-            }))}
-          />
+          <TabErrorBoundary tabName="Conciliacao">
+            <Conciliacao
+              weekStart={settlement.week_start}
+              clubId={settlement.club_id}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+              agents={(currentSubclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
+              players={(currentSubclub.players || []).map((p: any) => ({
+                external_player_id: p.external_player_id,
+                nickname: p.nickname,
+              }))}
+            />
+          </TabErrorBoundary>
         );
 
       default:

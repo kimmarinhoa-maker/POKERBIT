@@ -1,11 +1,15 @@
 import type { NextConfig } from 'next';
 
+const API_BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://localhost:3001';
+
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
+        destination: `${API_BACKEND_URL}/api/:path*`,
       },
     ];
   },

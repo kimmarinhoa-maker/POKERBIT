@@ -2,10 +2,19 @@
 
 import { formatBRL } from '@/lib/api';
 import ClubLogo from '@/components/ClubLogo';
+import { SubclubData } from '@/types/settlement';
+
+interface DashboardTotals {
+  players: number;
+  agents: number;
+  rake: number;
+  ggr: number;
+  resultado: number;
+}
 
 interface Props {
-  subclubs: any[];
-  dashboardTotals: any;
+  subclubs: SubclubData[];
+  dashboardTotals: DashboardTotals;
   onSelectSubclub: (name: string) => void;
   logoMap?: Record<string, string | null>;
 }

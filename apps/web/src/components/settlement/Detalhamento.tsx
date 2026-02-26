@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
+import { valueColor, ggrColor } from '@/lib/colorUtils';
+import { Search } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: SubclubData;
@@ -25,6 +29,7 @@ export default function Detalhamento({ subclub }: Props) {
   const { players, agents, name } = subclub;
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search);
 
   // Group players by agent
   const agentGroups: AgentGroup[] = useMemo(() => {
@@ -68,8 +73,8 @@ export default function Detalhamento({ subclub }: Props) {
 
   // Filter by search
   const filteredGroups = useMemo(() => {
-    if (!search.trim()) return agentGroups;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return agentGroups;
+    const q = debouncedSearch.toLowerCase();
     return agentGroups
       .map((g) => ({
         ...g,
@@ -81,7 +86,7 @@ export default function Detalhamento({ subclub }: Props) {
         ),
       }))
       .filter((g) => g.players.length > 0);
-  }, [agentGroups, search]);
+  }, [agentGroups, debouncedSearch]);
 
   // Grand totals (always from ALL players, not filtered)
   const grandTotals = useMemo(() => {
@@ -160,82 +165,44 @@ export default function Detalhamento({ subclub }: Props) {
     URL.revokeObjectURL(url);
   }
 
-  /** Color class for positive/negative values */
-  function valColor(v: number): string {
-    if (v > 0.01) return 'text-poker-400';
-    if (v < -0.01) return 'text-red-400';
-    return 'text-dark-400';
-  }
-
-  /** GGR column color: 0 = dash dark-600, >0 = poker-500, <0 = danger-500 */
-  function ggrColor(v: number): string {
-    if (v > 0.01) return 'text-poker-500';
-    if (v < -0.01) return 'text-danger-500';
-    return 'text-dark-600';
-  }
+  // Color functions imported from @/lib/colorUtils
+  const valColor = (v: number) => valueColor(v, 'text-poker-400', 'text-red-400');
 
   return (
     <div>
       {/* ── 5 KPI Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        {/* Jogadores Ativos */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores Ativos</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{grandTotals.ativos}</p>
-          </div>
-        </div>
-
-        {/* Profit / Loss */}
-        <div
-          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
-        >
-          <div className={`h-0.5 ${grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Profit/Loss</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}
-            >
-              {formatBRL(grandTotals.ganhos)}
-            </p>
-          </div>
-        </div>
-
-        {/* Rake Gerado */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Gerado</p>
-            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(grandTotals.rake)}</p>
-          </div>
-        </div>
-
-        {/* GGR Rodeio */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-purple-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">GGR Rodeio</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${ggrColor(grandTotals.ggr)}`}>
-              {Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
-            </p>
-          </div>
-        </div>
-
-        {/* Resultado Final */}
-        <div
-          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ring-1 ring-amber-700/30`}
-        >
-          <div className={`h-0.5 ${grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Final</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotals.resultado)}
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Jogadores Ativos"
+          value={grandTotals.ativos}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+        />
+        <KpiCard
+          label="Profit/Loss"
+          value={formatBRL(grandTotals.ganhos)}
+          accentColor={grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
+          valueColor={grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
+        />
+        <KpiCard
+          label="Rake Gerado"
+          value={formatBRL(grandTotals.rake)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+        />
+        <KpiCard
+          label="GGR Rodeio"
+          value={Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
+          accentColor="bg-purple-500"
+          valueColor={ggrColor(grandTotals.ggr)}
+        />
+        <KpiCard
+          label="Resultado Final"
+          value={formatBRL(grandTotals.resultado)}
+          accentColor={grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+          valueColor={grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* ── Toolbar ── */}
@@ -262,17 +229,18 @@ export default function Detalhamento({ subclub }: Props) {
 
       {/* ── Table ── */}
       <div className="card overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-dark-800/50 text-dark-500 text-left border-b border-dark-700">
-              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest">Agente</th>
-              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Rake</th>
-              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Ganhos</th>
-              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Rodeio GGR</th>
-              <th className="px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-right">Resultado Final</th>
+        <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-dark-800/80 backdrop-blur-sm">
+              <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Agente</th>
+              <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
+              <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Ganhos</th>
+              <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rodeio GGR</th>
+              <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Resultado Final</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-dark-800/30">
             {filteredGroups.map((group) => {
               const isExpanded = expandedAgents.has(group.agentName);
 
@@ -291,18 +259,23 @@ export default function Detalhamento({ subclub }: Props) {
             {/* ── TOTAL footer row ── */}
             {filteredGroups.length > 0 && (
               <tr className="border-t-2 border-dark-700 bg-dark-900">
-                <td className="px-3 py-2 font-bold text-dark-100 uppercase tracking-widest text-[10px]">TOTAL</td>
-                <td className="px-3 py-2 text-right font-mono text-xs font-bold text-emerald-400">
+                <td className="px-3 py-2 font-extrabold text-xs text-amber-400">
+                  TOTAL
+                  <span className="text-dark-500 text-[10px] font-normal ml-2">
+                    {filteredGroups.length} agencias &middot; {filteredGroups.reduce((s, g) => s + g.players.length, 0)} jogadores
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-xs font-extrabold text-emerald-400">
                   {formatBRL(filteredTotals.rake)}
                 </td>
-                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.ganhos)}`}>
+                <td className={`px-3 py-2 text-right font-mono text-xs font-extrabold ${valColor(filteredTotals.ganhos)}`}>
                   {formatBRL(filteredTotals.ganhos)}
                 </td>
-                <td className={`px-3 py-2 text-right font-mono text-xs font-bold ${ggrColor(filteredTotals.ggr)}`}>
+                <td className={`px-3 py-2 text-right font-mono text-xs font-extrabold ${ggrColor(filteredTotals.ggr)}`}>
                   {Math.abs(filteredTotals.ggr) > 0.001 ? formatBRL(filteredTotals.ggr) : '\u2014'}
                 </td>
                 <td
-                  className={`px-3 py-2 text-right font-mono text-xs font-bold ${valColor(filteredTotals.resultado)}`}
+                  className={`px-3 py-2 text-right font-mono text-xs font-extrabold ${valColor(filteredTotals.resultado)}`}
                 >
                   {formatBRL(filteredTotals.resultado)}
                 </td>
@@ -310,11 +283,15 @@ export default function Detalhamento({ subclub }: Props) {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Empty state */}
         {filteredGroups.length === 0 && (
-          <div className="text-center py-10 text-dark-400">
-            {search ? 'Nenhum resultado encontrado' : 'Nenhum jogador neste subclube'}
+          <div className="text-center py-10">
+            <Search className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+            <p className="text-dark-400">
+              {search ? 'Nenhum resultado encontrado' : 'Nenhum jogador neste subclube'}
+            </p>
           </div>
         )}
       </div>

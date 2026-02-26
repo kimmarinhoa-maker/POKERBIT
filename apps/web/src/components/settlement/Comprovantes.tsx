@@ -5,46 +5,10 @@ import html2canvas from 'html2canvas';
 import { listLedger, getCarryForward, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
-import Spinner from '@/components/Spinner';
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  rb_rate: number;
-  commission_brl: number;
-  resultado_brl: number;
-  is_direct?: boolean;
-  payment_type?: 'fiado' | 'avista';
-}
-
-interface PlayerMetric {
-  nickname: string | null;
-  external_player_id: string | null;
-  agent_name: string | null;
-  winnings_brl: number;
-  rake_total_brl: number;
-  ggr_brl: number;
-  rb_rate: number;
-  rb_value_brl: number;
-  resultado_brl: number;
-}
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  created_at: string;
-}
+import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: {
@@ -56,6 +20,7 @@ interface Props {
   weekStart: string;
   clubId: string;
   fees: Record<string, number>;
+  logoUrl?: string | null;
 }
 
 // ─── Computed Agent Data ─────────────────────────────────────────────
@@ -105,7 +70,7 @@ function clrPrint(v: number): string {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
+export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Props) {
   const agents = subclub.agents || [];
   const players = subclub.players || [];
   const { toast } = useToast();
@@ -118,18 +83,24 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const [resultFilter, setResultFilter] = useState<'all' | 'pagar' | 'receber' | 'zero'>('all');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [selectedAgent, setSelectedAgent] = useState<AgentFinancials | null>(null);
+  const [fechamentoTipo, setFechamentoTipo] = useState<'avista' | 'profitloss'>('profitloss');
+  const [hidePlayers, setHidePlayers] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Load ledger entries + carry-forward
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
+      if (!mountedRef.current) return;
       if (ledgerRes.success) setEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar comprovantes', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, clubId]);
 
@@ -142,10 +113,10 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of players) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');
@@ -207,8 +178,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       if (agent.agent_id) add(ledgerByEntity.get(agent.agent_id));
       // Player-level keys (ChipPix stores as cp_<id>, OFX by player_id, etc.)
       for (const p of agPlayers) {
-        if ((p as any).id) add(ledgerByEntity.get((p as any).id));
-        if ((p as any).player_id) add(ledgerByEntity.get((p as any).player_id));
+        if (p.id) add(ledgerByEntity.get(p.id));
+        if (p.player_id) add(ledgerByEntity.get(p.player_id));
         if (p.external_player_id) {
           const eid = String(p.external_player_id);
           add(ledgerByEntity.get(eid));
@@ -287,8 +258,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           }
         }
       };
-      if ((p as any).id) addP(ledgerByEntity.get((p as any).id));
-      if ((p as any).player_id) addP(ledgerByEntity.get((p as any).player_id));
+      if (p.id) addP(ledgerByEntity.get(p.id));
+      if (p.player_id) addP(ledgerByEntity.get(p.player_id));
       if (p.external_player_id) {
         const eid = String(p.external_player_id);
         addP(ledgerByEntity.get(eid));
@@ -297,7 +268,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       // Carry-forward for this player
       let saldoAnterior = 0;
-      const carryKeys = [(p as any).player_id, (p as any).id, p.external_player_id].filter(Boolean);
+      const carryKeys = [p.player_id, p.id, p.external_player_id].filter((k): k is string => !!k);
       for (const k of carryKeys) {
         if (carryMap[k]) {
           saldoAnterior = carryMap[k];
@@ -316,8 +287,8 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       // Build a synthetic "agent" object representing this player
       const playerAsAgent: AgentMetric = {
-        id: (p as any).id || `p_${p.external_player_id}`,
-        agent_id: (p as any).player_id || null,
+        id: p.id || `p_${p.external_player_id}`,
+        agent_id: p.player_id || null,
         agent_name: p.nickname || p.external_player_id || '???',
         player_count: 1,
         rake_total_brl: rakeTotal,
@@ -388,25 +359,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   // ─── Loading ───────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
-  }
-
-  // ─── Statement view (print) ────────────────────────────────────────
-
-  if (selectedAgent) {
-    return (
-      <StatementView
-        data={selectedAgent}
-        subclubName={subclub.name}
-        weekStart={weekStart}
-        weekEnd={weekEnd}
-        onBack={() => setSelectedAgent(null)}
-      />
-    );
+    return <SettlementSkeleton kpis={4} />;
   }
 
   // ─── List view ─────────────────────────────────────────────────────
@@ -448,49 +401,32 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Agentes</p>
-            <p className="text-xl font-bold mt-1 font-mono text-blue-400">{kpis.total}</p>
-            <p className="text-[10px] text-dark-500">{activeTab === 'agencias' ? 'Agencias' : 'Diretos'}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Pagar</p>
-            <p className="text-xl font-bold mt-1 font-mono text-red-400">
-              {kpis.totalPagar > 0 ? formatBRL(kpis.totalPagar) : '—'}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-emerald-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Saldo a Receber</p>
-            <p className="text-xl font-bold mt-1 font-mono text-emerald-400">
-              {kpis.totalReceber > 0 ? formatBRL(kpis.totalReceber) : '—'}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div
-            className={`h-0.5 ${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`}
-          />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-wider font-medium">Status</p>
-            <p className="text-sm font-bold mt-1 font-mono text-dark-200">
-              {
-                activeData.filter(
-                  (d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01),
-                ).length
-              }
-              /{kpis.total} quitados
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <KpiCard
+          label="Agentes"
+          value={kpis.total}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={activeTab === 'agencias' ? 'Agencias' : 'Diretos'}
+        />
+        <KpiCard
+          label="Saldo a Pagar"
+          value={kpis.totalPagar > 0 ? formatBRL(kpis.totalPagar) : '—'}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+        />
+        <KpiCard
+          label="Saldo a Receber"
+          value={kpis.totalReceber > 0 ? formatBRL(kpis.totalReceber) : '—'}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Status"
+          value={`${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length}/${kpis.total} quitados`}
+          accentColor={activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor="text-dark-200"
+        />
       </div>
 
       {/* Sub-tabs */}
@@ -528,14 +464,14 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             aria-label="Buscar agente"
-            className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+            className="input w-full"
           />
         </div>
         <select
           value={resultFilter}
           onChange={(e) => setResultFilter(e.target.value as typeof resultFilter)}
           aria-label="Filtrar por status"
-          className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="all">Todos</option>
           <option value="pagar">A Pagar</option>
@@ -544,209 +480,346 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         </select>
       </div>
 
-      {/* Agent cards */}
+      {/* Agent table */}
       {filteredData.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado com os filtros aplicados'}
+        <div className="card text-center py-12">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
+            {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado com os filtros aplicados'}
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredData.map((data) => (
-            <AgentCard
-              key={data.agent.id}
-              data={data}
-              isExpanded={expandedAgents.has(data.agent.id)}
-              onToggleExpand={() => toggleExpand(data.agent.id)}
-              onGenerateStatement={() => setSelectedAgent(data)}
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-dark-800/50 border-b border-dark-700">
+                <th className="py-2.5 px-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-bold">Agente</th>
+                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[70px]">Tipo</th>
+                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[80px]">Status</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Ganhos</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">RB Ag.</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo Ant.</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Pago</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[120px]"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-dark-800/50">
+              {filteredData.map((d) => (
+                <AgentRow
+                  key={d.agent.id}
+                  data={d}
+                  isExpanded={expandedAgents.has(d.agent.id)}
+                  onToggleExpand={() => toggleExpand(d.agent.id)}
+                  onPreview={() => setSelectedAgent(d)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ─── Preview Modal ────────────────────────────────────────── */}
+      {selectedAgent && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedAgent(null);
+          }}
+        >
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+
+          {/* Modal content */}
+          <div className="relative w-full max-w-3xl mx-4 my-8 animate-slide-up">
+            {/* ── Unified toolbar centered above comprovante ── */}
+            <div className="relative z-10 mb-4">
+              {/* Close X */}
+              <button
+                onClick={() => setSelectedAgent(null)}
+                className="absolute -top-1 -right-1 text-dark-500 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-dark-800/80 border border-dark-700 transition-colors"
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+
+              {/* Label */}
+              <p className="text-center text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-2">
+                Tipo de Fechamento
+              </p>
+
+              {/* Controls row */}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {/* Profit/Loss toggle */}
+                <div className="flex items-center gap-0.5 bg-dark-800/90 backdrop-blur rounded-lg border border-dark-700 p-0.5">
+                  <button
+                    onClick={() => setFechamentoTipo('profitloss')}
+                    className={`text-[11px] px-3 py-1.5 rounded-md font-bold transition-all ${
+                      fechamentoTipo === 'profitloss'
+                        ? 'bg-poker-500/20 text-poker-400 border border-poker-500/30'
+                        : 'text-dark-400 hover:text-dark-200 border border-transparent'
+                    }`}
+                  >
+                    Profit/Loss
+                  </button>
+                  <button
+                    onClick={() => setFechamentoTipo('avista')}
+                    className={`text-[11px] px-3 py-1.5 rounded-md font-bold transition-all ${
+                      fechamentoTipo === 'avista'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'text-dark-400 hover:text-dark-200 border border-transparent'
+                    }`}
+                  >
+                    A Vista
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="w-px h-6 bg-dark-700" />
+
+                {/* Esconder Jogadores */}
+                <label className="flex items-center gap-1.5 bg-dark-800/90 backdrop-blur px-3 py-1.5 rounded-lg border border-dark-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hidePlayers}
+                    onChange={(e) => setHidePlayers(e.target.checked)}
+                    className="accent-poker-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-[11px] text-dark-300 font-medium">Esconder Jogadores</span>
+                </label>
+
+                {/* Divider */}
+                <div className="w-px h-6 bg-dark-700" />
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      // Handled inside StatementView
+                      const evt = new CustomEvent('comprovante-export-jpg');
+                      window.dispatchEvent(evt);
+                    }}
+                    className="text-[11px] px-3 py-1.5 rounded-lg font-medium bg-dark-800/90 border border-dark-700 text-dark-300 hover:text-white hover:border-dark-500 transition-colors"
+                  >
+                    Exportar JPG
+                  </button>
+                  <button
+                    onClick={() => {
+                      const evt = new CustomEvent('comprovante-copy');
+                      window.dispatchEvent(evt);
+                    }}
+                    className="text-[11px] px-3 py-1.5 rounded-lg font-medium bg-dark-800/90 border border-dark-700 text-dark-300 hover:text-white hover:border-dark-500 transition-colors"
+                  >
+                    Copiar
+                  </button>
+                  <button
+                    onClick={() => window.print()}
+                    className="text-[11px] px-3 py-1.5 rounded-lg font-medium bg-poker-500/20 border border-poker-500/30 text-poker-400 hover:bg-poker-500/30 transition-colors"
+                  >
+                    Imprimir
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <StatementView
+              data={selectedAgent}
+              subclubName={subclub.name}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+              fechamentoTipo={fechamentoTipo}
+              hidePlayers={hidePlayers}
+              logoUrl={logoUrl}
+              onBack={() => setSelectedAgent(null)}
             />
-          ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ─── Agent Card ──────────────────────────────────────────────────────
+// ─── Agent Row (table-based) ─────────────────────────────────────────
 
-function AgentCard({
+function AgentRow({
   data,
   isExpanded,
   onToggleExpand,
-  onGenerateStatement,
+  onPreview,
 }: {
   data: AgentFinancials;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onGenerateStatement: () => void;
+  onPreview: () => void;
 }) {
   const { agent, players, ganhos, rbAgente, saldoAnterior, pago, pendente } = data;
   const isDirect = agent.is_direct;
   const hasMov = Math.abs(pendente) > 0.01 || Math.abs(data.totalDevido) > 0.01;
   const hasPago = Math.abs(pago) > 0.01;
+  const isQuitado = Math.abs(pendente) < 0.01 && hasMov;
 
-  // Status badge
-  const statusBadge =
-    Math.abs(pendente) < 0.01 && hasMov
-      ? { label: 'Quitado', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-      : pendente > 0.01
-        ? { label: 'A Receber', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-        : pendente < -0.01
-          ? { label: 'A Pagar', bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' }
-          : null;
+  const statusBadge = isQuitado
+    ? { label: 'Quitado', cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' }
+    : pendente > 0.01
+      ? { label: 'A Receber', cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' }
+      : pendente < -0.01
+        ? { label: 'A Pagar', cls: 'bg-red-500/10 border-red-500/20 text-red-400' }
+        : null;
+
+  function MoneyCell({ value, color }: { value: number; color?: string }) {
+    const hasVal = Math.abs(value) > 0.01;
+    return (
+      <span className={`font-mono text-xs ${hasVal ? (color || clr(value)) : 'text-dark-600'}`}>
+        {hasVal ? formatBRL(value) : '—'}
+      </span>
+    );
+  }
 
   return (
-    <div
-      className={`card overflow-hidden transition-all border-l-4 ${
-        (agent.payment_type || 'fiado') === 'avista' ? 'border-l-emerald-500' : 'border-l-yellow-500'
-      } ${!hasMov ? 'opacity-50' : ''}`}
-    >
+    <>
       {/* Main row */}
-      <div className="flex items-center gap-2">
-        {/* Col 1: Name + ID + jog count — fixed width */}
-        <div className="flex-shrink-0 min-w-0" style={{ width: '180px' }}>
+      <tr
+        className={`cursor-pointer hover:bg-dark-800/40 transition-colors ${!hasMov ? 'opacity-40' : ''}`}
+        onClick={onToggleExpand}
+      >
+        {/* Agent name */}
+        <td className="py-2.5 px-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(agent.id);
-              }}
-              title="Clique para copiar ID"
-              className="text-[10px] font-mono text-dark-600 hover:text-dark-400 transition-colors cursor-pointer flex-shrink-0"
-            >
-              {agent.id.slice(0, 6)}
-            </button>
-            {isDirect && (
-              <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1 py-0.5 rounded font-bold flex-shrink-0">
-                DIR
-              </span>
-            )}
+            <span className={`text-dark-500 text-[10px] transition-transform duration-150 inline-block ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+            <span className="text-white font-semibold text-sm truncate max-w-[180px]">{agent.agent_name}</span>
+            <span className="text-dark-600 text-[10px] font-mono">{agent.player_count}j</span>
           </div>
-          <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
-        </div>
+        </td>
 
-        {/* Col 2: Tipo de Fechamento — fixed width */}
-        <div className="flex-shrink-0" style={{ width: '130px' }}>
-          <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">Tipo de Fechamento</p>
-          <div className="flex items-center gap-1">
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
-                (agent.payment_type || 'fiado') === 'avista'
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                  : 'bg-red-500/20 text-red-400 border-red-500/40'
-              }`}
-            >
-              {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
+        {/* Tipo */}
+        <td className="py-2.5 px-2 text-center">
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${
+            (agent.payment_type || 'fiado') === 'avista'
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+          }`}>
+            {(agent.payment_type || 'fiado') === 'avista' ? 'VISTA' : 'FIADO'}
+          </span>
+        </td>
+
+        {/* Status */}
+        <td className="py-2.5 px-2 text-center">
+          {statusBadge ? (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${statusBadge.cls}`}>
+              {statusBadge.label}
             </span>
-            {statusBadge && (
-              <span
-                className={`text-[10px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded font-bold`}
-              >
-                {statusBadge.label}
-              </span>
-            )}
-          </div>
-        </div>
+          ) : (
+            <span className="text-dark-600 text-xs">—</span>
+          )}
+        </td>
 
-        {/* Col 3: Data columns — fixed equal widths */}
-        <div className="flex items-center flex-1 justify-end">
-          <DataCol label="GANHOS" value={ganhos} w={100} />
-          <DataCol
-            label={isDirect ? 'RB (Ind.)' : `RB AG. (${agent.rb_rate}%)`}
-            value={rbAgente}
-            customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
-            w={100}
-          />
-          <DataCol label="SALDO ANT." value={saldoAnterior} customColor="text-yellow-400" showZero w={100} />
-          <DataCol label="PAGO" value={pago} customColor="text-sky-400" w={100} />
-          <DataCol label="SALDO" value={pendente} isFinal w={100} />
-        </div>
+        {/* Ganhos */}
+        <td className="py-2.5 px-2 text-right"><MoneyCell value={ganhos} /></td>
 
-        {/* Col 4: Actions — fixed */}
-        <div className="flex items-center gap-2 flex-shrink-0 ml-1">
+        {/* RB */}
+        <td className="py-2.5 px-2 text-right">
+          <MoneyCell value={rbAgente} color={isDirect ? 'text-blue-400' : 'text-purple-400'} />
+        </td>
+
+        {/* Saldo Ant */}
+        <td className="py-2.5 px-2 text-right">
+          <span className={`font-mono text-xs ${Math.abs(saldoAnterior) > 0.01 ? 'text-amber-400' : 'text-dark-600'}`}>
+            {formatBRL(saldoAnterior)}
+          </span>
+        </td>
+
+        {/* Pago */}
+        <td className="py-2.5 px-2 text-right"><MoneyCell value={pago} color="text-sky-400" /></td>
+
+        {/* Saldo final */}
+        <td className="py-2.5 px-2 text-right">
+          <span className={`font-mono text-xs font-bold ${clr(pendente)}`}>
+            {formatBRL(pendente)}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className="py-2.5 px-2 text-right">
           {hasMov && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onGenerateStatement();
-              }}
-              className="text-xs px-3 py-1.5 whitespace-nowrap border border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+              onClick={(e) => { e.stopPropagation(); onPreview(); }}
+              className="text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border border-poker-500/30 text-poker-400 bg-poker-500/5 hover:bg-poker-500/15"
             >
-              {Math.abs(pendente) < 0.01 && hasMov ? 'Comprovante Gerado' : 'Gerar Comprovante'}
+              Gerar Comprovante
             </button>
           )}
-          <button
-            onClick={onToggleExpand}
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
-            className="text-xs text-dark-400 hover:text-dark-200 whitespace-nowrap transition-colors"
-          >
-            ▶ Detalhes
-          </button>
-        </div>
-      </div>
+        </td>
+      </tr>
 
-      {/* Expanded section */}
+      {/* Expanded detail */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-dark-700/30">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Financial summary */}
-            <div>
-              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">Resumo Financeiro</h4>
-              <div className="space-y-1.5 text-sm">
-                <FinRow label="Ganhos/Perdas" value={data.ganhos} />
-                <FinRow label="Rake Gerado" value={data.rakeTotal} muted />
-                {rbAgente > 0.01 && (
-                  <FinRow
-                    label={isDirect ? 'RB Individual (Σ jogadores)' : `RB Agente (${agent.rb_rate}%)`}
-                    value={rbAgente}
-                    customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
-                  />
-                )}
-                <div className="border-t border-dark-700/30 pt-1.5">
-                  <FinRow label="Resultado da Semana" value={data.resultado} bold />
+        <tr>
+          <td colSpan={9} className="px-3 pb-4 pt-1 bg-dark-800/20">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-5">
+              {/* Financial summary */}
+              <div>
+                <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">Resumo Financeiro</h4>
+                <div className="space-y-1 text-sm">
+                  <FinRow label="Ganhos/Perdas" value={data.ganhos} />
+                  <FinRow label="Rake Gerado" value={data.rakeTotal} muted />
+                  {rbAgente > 0.01 && (
+                    <FinRow
+                      label={isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}%)`}
+                      value={rbAgente}
+                      customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
+                    />
+                  )}
+                  <div className="border-t border-dark-700/30 pt-1">
+                    <FinRow label="Resultado" value={data.resultado} bold />
+                  </div>
+                  <FinRow label="Saldo Anterior" value={data.saldoAnterior} customColor="text-amber-400" />
+                  <div className="border-t border-dark-700/30 pt-1">
+                    <FinRow label="Total Devido" value={data.totalDevido} bold />
+                  </div>
+                  {hasPago && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-dark-300">Pagamentos</span>
+                          {data.entries.length > 0 && (
+                            <span className="text-[10px] text-dark-500">
+                              {data.entries.map(e => e.method).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || ''}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono font-bold text-sky-400">{formatBRL(data.pago)}</span>
+                      </div>
+                      <div className="border-t-2 border-dark-600/50 pt-1">
+                        <FinRow label="Saldo Final" value={data.pendente} bold large />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <FinRow label="Saldo Anterior" value={data.saldoAnterior} customColor="text-yellow-400" />
-                <div className="border-t border-dark-700/30 pt-1.5">
-                  <FinRow label="Total Devido" value={data.totalDevido} bold />
-                </div>
-                {hasPago && (
-                  <>
-                    <FinRow label="Pagamentos" value={data.pago} customColor="text-sky-400" />
-                    <div className="border-t-2 border-dark-700/30 pt-1.5">
-                      <FinRow label="Saldo Final" value={data.pendente} bold large />
-                    </div>
-                  </>
-                )}
               </div>
-            </div>
 
-            {/* Player table */}
-            <div>
-              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
-                Jogadores ({players.length})
-              </h4>
-              {players.length > 0 ? (
-                <div className="overflow-x-auto">
+              {/* Player mini-table */}
+              <div>
+                <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">
+                  Jogadores ({players.length})
+                </h4>
+                {players.length > 0 ? (
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-dark-700/50 text-dark-400">
-                        <th className="py-1.5 text-left font-medium">Nick</th>
-                        <th className="py-1.5 text-left font-medium">ID</th>
-                        <th className="py-1.5 text-right font-medium">P/L</th>
-                        <th className="py-1.5 text-right font-medium">Rake</th>
-                        <th className="py-1.5 text-right font-medium">Resultado</th>
+                      <tr className="border-b border-dark-700/50 text-dark-500">
+                        <th className="py-1 text-left font-medium">Nick</th>
+                        <th className="py-1 text-right font-medium">P/L</th>
+                        <th className="py-1 text-right font-medium">Rake</th>
+                        <th className="py-1 text-right font-medium">Resultado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-dark-800/30">
                       {players.map((p, i) => (
-                        <tr key={i} className={i % 2 ? 'bg-dark-800/10' : ''}>
-                          <td className="py-1 text-dark-200 font-medium">{p.nickname || '—'}</td>
-                          <td className="py-1 text-dark-500 text-[10px] font-mono">{p.external_player_id || '—'}</td>
+                        <tr key={i}>
+                          <td className="py-1 text-dark-300">{p.nickname || p.external_player_id || '—'}</td>
                           <td className={`py-1 text-right font-mono ${clr(Number(p.winnings_brl))}`}>
                             {formatBRL(Number(p.winnings_brl))}
                           </td>
-                          <td className="py-1 text-right font-mono text-dark-300">
+                          <td className="py-1 text-right font-mono text-dark-400">
                             {formatBRL(Number(p.rake_total_brl))}
                           </td>
                           <td className={`py-1 text-right font-mono font-bold ${clr(Number(p.resultado_brl))}`}>
@@ -756,51 +829,15 @@ function AgentCard({
                       ))}
                     </tbody>
                   </table>
-                </div>
-              ) : (
-                <p className="text-dark-500 text-xs">Nenhum jogador vinculado</p>
-              )}
+                ) : (
+                  <p className="text-dark-500 text-xs">Nenhum jogador</p>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </td>
+        </tr>
       )}
-    </div>
-  );
-}
-
-// ─── Data Column (card row) ──────────────────────────────────────────
-
-function DataCol({
-  label,
-  value,
-  customColor,
-  isFinal,
-  tooltip,
-  showZero,
-  w,
-}: {
-  label: string;
-  value: number;
-  customColor?: string;
-  isFinal?: boolean;
-  tooltip?: string;
-  showZero?: boolean;
-  w?: number;
-}) {
-  const hasValue = Math.abs(value) > 0.01 || showZero;
-  const color = customColor || clr(value);
-
-  return (
-    <div
-      className={`text-right flex-shrink-0 ${isFinal ? 'bg-dark-700/20 rounded-lg py-1 px-2' : 'px-1'}`}
-      style={{ width: w ? `${w}px` : undefined, minWidth: w ? undefined : '60px' }}
-      title={tooltip}
-    >
-      <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">{label}</p>
-      <p className={`font-mono text-sm font-bold ${hasValue ? color : 'text-dark-600'}`}>
-        {hasValue ? formatBRL(value) : '—'}
-      </p>
-    </div>
+    </>
   );
 }
 
@@ -832,307 +869,323 @@ function FinRow({
   );
 }
 
-// ─── Statement View (Print-Friendly) ─────────────────────────────────
+// ─── Statement View (Comprovante Simplificado) ───────────────────────
 
 function StatementView({
   data,
   subclubName,
   weekStart,
   weekEnd,
+  fechamentoTipo,
+  hidePlayers,
+  logoUrl,
   onBack,
 }: {
   data: AgentFinancials;
   subclubName: string;
   weekStart: string;
   weekEnd: string;
+  fechamentoTipo: 'avista' | 'profitloss';
+  hidePlayers: boolean;
+  logoUrl?: string | null;
   onBack: () => void;
 }) {
   const { agent, players, entries } = data;
   const isDirect = agent.is_direct;
   const statementRef = useRef<HTMLDivElement>(null);
-  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
-  async function handleExportJPG() {
-    if (!statementRef.current || exporting) return;
-    setExporting(true);
-    try {
-      const canvas = await html2canvas(statementRef.current, {
-        backgroundColor: '#0f0f13',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-      const link = document.createElement('a');
-      const safeName = agent.agent_name.replace(/[^a-zA-Z0-9_-]/g, '_');
-      link.download = `comprovante_${safeName}_${weekStart}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
-    } catch {
-      toast('Erro ao exportar JPG', 'error');
-    } finally {
-      setExporting(false);
+  const isAvista = fechamentoTipo === 'avista';
+
+  // ─── Formulas por tipo ───
+  const resultadoBase = isAvista ? data.rbAgente : data.resultado;
+  const totalDevido = round2(resultadoBase + data.saldoAnterior);
+  const pendente = round2(totalDevido + data.pago);
+
+  const isQuitado = Math.abs(pendente) < 0.01 && (Math.abs(totalDevido) > 0.01 || Math.abs(data.pago) > 0.01);
+  const isParcial = !isQuitado && Math.abs(data.pago) > 0.01;
+
+  const totalResultado = players.reduce((s, p) => s + Number(p.resultado_brl), 0);
+  const tipoLabel = isAvista ? 'A Vista' : 'Profit/Loss';
+
+  // ─── Export JPG via event ───
+  useEffect(() => {
+    async function handleExport() {
+      if (!statementRef.current) return;
+      try {
+        const canvas = await html2canvas(statementRef.current, {
+          backgroundColor: '#0f0f13',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        const link = document.createElement('a');
+        const safeName = agent.agent_name.replace(/[^a-zA-Z0-9_-]/g, '_');
+        link.download = `comprovante_${safeName}_${fechamentoTipo}_${weekStart}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+        toast('JPG exportado!', 'success');
+      } catch {
+        toast('Erro ao exportar JPG', 'error');
+      }
     }
-  }
+
+    async function handleCopy() {
+      if (!statementRef.current) return;
+      try {
+        const canvas = await html2canvas(statementRef.current, {
+          backgroundColor: '#0f0f13',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob }),
+            ]);
+            toast('Comprovante copiado!', 'success');
+          }
+        }, 'image/png');
+      } catch {
+        toast('Erro ao copiar', 'error');
+      }
+    }
+
+    window.addEventListener('comprovante-export-jpg', handleExport);
+    window.addEventListener('comprovante-copy', handleCopy);
+    return () => {
+      window.removeEventListener('comprovante-export-jpg', handleExport);
+      window.removeEventListener('comprovante-copy', handleCopy);
+    };
+  }, [agent.agent_name, fechamentoTipo, weekStart, toast]);
 
   return (
     <div>
-      {/* Controls (hidden on print) */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
-        <button
-          onClick={onBack}
-          className="text-dark-400 hover:text-dark-200 text-sm flex items-center gap-1 transition-colors"
-        >
-          ← Voltar para lista
-        </button>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportJPG}
-            disabled={exporting}
-            aria-label="Exportar como JPG"
-            className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
-          >
-            {exporting ? 'Exportando...' : 'Exportar JPG'}
-          </button>
-          <button
-            onClick={() => window.print()}
-            aria-label="Imprimir comprovante"
-            className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
-          >
-            Imprimir
-          </button>
-        </div>
-      </div>
-
-      {/* Statement */}
+      {/* ─── Comprovante Card ─── */}
       <div
         ref={statementRef}
-        className="card print:shadow-none print:border-none print:bg-white print:text-black max-w-4xl mx-auto"
+        className="bg-dark-900 border border-dark-700 rounded-xl p-6 print:bg-white print:text-black print:border-none print:shadow-none max-w-2xl mx-auto"
       >
-        {/* Header */}
-        <div className="text-center mb-6 pb-4 border-b border-dark-700/50 print:border-black/20">
-          <h2 className="text-xl font-bold text-white print:text-black">Demonstrativo de Rakeback</h2>
-          <p className="text-dark-400 print:text-gray-600 text-sm mt-1">
-            {subclubName} — Semana {fmtDate(weekStart)} a {fmtDate(weekEnd)}
-          </p>
-          <p className="text-lg font-semibold text-poker-400 print:text-black mt-2">
-            {agent.agent_name}
-            {isDirect && <span className="text-blue-400 text-xs ml-2 print:text-blue-700">(DIRETO)</span>}
-            <span
-              className={`text-xs ml-2 px-1.5 py-0.5 rounded font-bold border ${
-                (agent.payment_type || 'fiado') === 'avista'
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 print:text-green-700 print:border-green-600'
-                  : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40 print:text-yellow-700 print:border-yellow-600'
-              }`}
-            >
-              {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
-            </span>
-          </p>
-        </div>
-
-        {/* Summary grid */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <MiniStat label="Jogadores" value={String(agent.player_count)} />
-          <MiniStat label="Rake Total" value={formatBRL(data.rakeTotal)} />
-          <MiniStat label="RB Rate" value={`${agent.rb_rate}%`} />
-          <MiniStat label="Comissao RB" value={formatBRL(data.rbAgente)} />
-        </div>
-
-        {/* Financial summary */}
-        <div className="bg-dark-800/30 print:bg-gray-50 rounded-lg p-4 mb-6">
-          <h4 className="text-xs font-bold text-dark-400 print:text-gray-600 uppercase tracking-wider mb-3">
-            Resumo Financeiro
-          </h4>
-          <div className="space-y-2 text-sm">
-            <PrintFinRow label="Ganhos/Perdas" value={data.ganhos} />
-            <PrintFinRow label="Rake Gerado" value={data.rakeTotal} muted />
-            {data.rbAgente > 0.01 && (
-              <PrintFinRow label={isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}%)`} value={data.rbAgente} />
-            )}
-            <div className="border-t border-dark-700/30 print:border-gray-300 pt-2">
-              <PrintFinRow label="Resultado da Semana" value={data.resultado} bold />
+        {/* Header: Logo lateral + Info */}
+        <div className="flex items-center gap-5 mb-5">
+          {/* Logo grande na lateral */}
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={subclubName}
+              className="w-20 h-20 rounded-xl object-cover bg-dark-800 shrink-0"
+              crossOrigin="anonymous"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-xl bg-dark-800 flex items-center justify-center shrink-0">
+              <span className="text-2xl font-bold text-dark-500">{(subclubName || '?').charAt(0).toUpperCase()}</span>
             </div>
-            <PrintFinRow label="Saldo Anterior" value={data.saldoAnterior} />
-            <div className="border-t border-dark-700/30 print:border-gray-300 pt-2">
-              <PrintFinRow label="Total Devido" value={data.totalDevido} bold />
-            </div>
-            {Math.abs(data.pago) > 0.01 && (
-              <>
-                <PrintFinRow label="Pagamentos" value={data.pago} />
-                <div className="border-t-2 border-dark-700/30 print:border-gray-400 pt-2">
-                  <PrintFinRow label="Saldo Final" value={data.pendente} bold large />
-                </div>
-              </>
-            )}
+          )}
+
+          {/* Info ao lado */}
+          <div className="min-w-0">
+            <p className="text-[10px] text-dark-500 print:text-gray-400 uppercase tracking-wider font-bold">
+              Fechamento Semanal
+            </p>
+            <h2 className="text-lg font-bold text-poker-400 print:text-black mt-0.5">
+              {agent.agent_name}
+              <span className="text-dark-500 print:text-gray-500 text-xs font-mono ml-2">
+                {(() => {
+                  const extId = agent.external_agent_id || players[0]?.external_agent_id;
+                  return extId ? `#${extId}` : '';
+                })()}
+              </span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ml-2 align-middle ${
+                isAvista
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 print:text-green-700 print:border-green-600'
+                  : 'bg-poker-500/10 text-poker-400 border-poker-500/30 print:text-blue-700 print:border-blue-600'
+              }`}>
+                {tipoLabel}
+              </span>
+            </h2>
+            <p className="text-dark-400 print:text-gray-500 text-xs mt-0.5">
+              {fmtDate(weekStart)} a {fmtDate(weekEnd)} · {players.length} jogador{players.length !== 1 ? 'es' : ''} · {subclubName}
+            </p>
           </div>
         </div>
 
-        {/* Player table */}
-        <h4 className="text-xs text-dark-500 print:text-gray-600 uppercase tracking-wider font-semibold mb-2">
-          Jogadores ({players.length})
-        </h4>
-        <table className="w-full text-sm mb-6">
-          <thead>
-            <tr className="border-b border-dark-700/50 print:border-black/20 text-dark-400 print:text-gray-600 text-xs">
-              <th className="py-2 text-left font-medium">Jogador</th>
-              <th className="py-2 text-right font-medium">Ganhos</th>
-              <th className="py-2 text-right font-medium">Rake</th>
-              <th className="py-2 text-right font-medium">GGR</th>
-              <th className="py-2 text-right font-medium">RB %</th>
-              <th className="py-2 text-right font-medium">RB Valor</th>
-              <th className="py-2 text-right font-medium">Resultado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dark-800/30 print:divide-black/10">
-            {players.map((p, i) => (
-              <tr key={i}>
-                <td className="py-1.5 text-dark-200 print:text-black">
-                  {p.nickname}
-                  <span className="text-dark-500 print:text-gray-500 text-xs ml-1">#{p.external_player_id}</span>
-                </td>
-                <td className={`py-1.5 text-right font-mono ${clrPrint(Number(p.winnings_brl))}`}>
-                  {formatBRL(Number(p.winnings_brl))}
-                </td>
-                <td className="py-1.5 text-right font-mono text-dark-300 print:text-black">
-                  {formatBRL(Number(p.rake_total_brl))}
-                </td>
-                <td className="py-1.5 text-right font-mono text-dark-300 print:text-black">
-                  {Number(p.ggr_brl) !== 0 ? formatBRL(Number(p.ggr_brl)) : '—'}
-                </td>
-                <td className="py-1.5 text-right text-dark-400 print:text-gray-600">
-                  {Number(p.rb_rate) > 0 ? `${p.rb_rate}%` : '—'}
-                </td>
-                <td className="py-1.5 text-right font-mono text-dark-300 print:text-black">
-                  {Number(p.rb_value_brl) > 0 ? formatBRL(Number(p.rb_value_brl)) : '—'}
-                </td>
-                <td className={`py-1.5 text-right font-mono font-bold ${clrPrint(Number(p.resultado_brl))}`}>
-                  {formatBRL(Number(p.resultado_brl))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Divider */}
+        <div className="border-t border-dark-700/50 print:border-gray-300 mb-4" />
 
-        {/* Movements */}
-        {entries.length > 0 && (
-          <>
-            <h4 className="text-xs text-dark-500 print:text-gray-600 uppercase tracking-wider font-semibold mb-2">
-              Movimentacoes ({entries.length})
-            </h4>
-            <table className="w-full text-sm mb-6">
-              <thead>
-                <tr className="border-b border-dark-700/50 print:border-black/20 text-dark-400 print:text-gray-600 text-xs">
-                  <th className="py-2 text-left font-medium">Data</th>
-                  <th className="py-2 text-center font-medium">Dir</th>
-                  <th className="py-2 text-right font-medium">Valor</th>
-                  <th className="py-2 text-left font-medium">Metodo</th>
-                  <th className="py-2 text-left font-medium">Descricao</th>
+        {/* ─── Player Table ─── */}
+        {!hidePlayers && (
+          <table className="w-full text-sm mb-4">
+            <thead>
+              <tr className="border-b border-dark-700/50 print:border-gray-300">
+                <th className="py-1.5 text-left text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">Jogador</th>
+                <th className="py-1.5 text-center text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">ID</th>
+                {!isAvista && (
+                  <th className="py-1.5 text-right text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">Resultado</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-dark-800/30 print:divide-gray-200">
+              {players.map((p, i) => (
+                <tr key={i}>
+                  <td className="py-1.5 text-dark-200 print:text-black text-sm">
+                    {p.nickname || '—'}
+                  </td>
+                  <td className="py-1.5 text-center text-dark-400 print:text-gray-600 font-mono text-xs">
+                    {p.external_player_id || '—'}
+                  </td>
+                  {!isAvista && (
+                    <td className={`py-1.5 text-right font-mono font-bold text-sm ${clrPrint(Number(p.resultado_brl))}`}>
+                      {formatBRL(Number(p.resultado_brl))}
+                    </td>
+                  )}
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-800/30 print:divide-black/10">
-                {entries.map((e) => (
-                  <tr key={e.id}>
-                    <td className="py-1.5 text-dark-300 print:text-black text-xs font-mono">
-                      {fmtDateTime(e.created_at)}
-                    </td>
-                    <td className="py-1.5 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                          e.dir === 'IN'
-                            ? 'bg-poker-900/30 text-poker-400 print:text-green-700'
-                            : 'bg-red-900/30 text-red-400 print:text-red-700'
-                        }`}
-                      >
-                        {e.dir}
-                      </span>
-                    </td>
-                    <td
-                      className={`py-1.5 text-right font-mono ${e.dir === 'IN' ? 'text-poker-400 print:text-green-700' : 'text-red-400 print:text-red-700'}`}
-                    >
-                      {formatBRL(Number(e.amount))}
-                    </td>
-                    <td className="py-1.5 text-dark-400 print:text-gray-600 text-xs">{e.method || '—'}</td>
-                    <td className="py-1.5 text-dark-400 print:text-gray-600 text-xs">{e.description || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+              ))}
+            </tbody>
+            {/* Total row (only for Profit/Loss) */}
+            {!isAvista && (
+              <tfoot>
+                <tr className="border-t border-dark-600/50 print:border-gray-400">
+                  <td className="py-2 text-dark-300 print:text-black font-bold text-sm" colSpan={2}>TOTAL</td>
+                  <td className={`py-2 text-right font-mono font-extrabold text-sm ${clrPrint(totalResultado)}`}>
+                    {formatBRL(totalResultado)}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         )}
 
-        {/* Status footer */}
-        <div
-          className={`rounded-lg p-4 border-2 ${
-            Math.abs(data.pendente) < 0.01
-              ? 'bg-green-950/30 border-green-700/50 print:border-green-600'
-              : Math.abs(data.pago) > 0.01
-                ? 'bg-orange-950/20 border-orange-700/30 print:border-orange-600'
-                : 'bg-dark-800/50 border-dark-600/50 print:border-black/20'
-          }`}
-        >
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">Resultado</p>
-              <p className={`font-mono font-bold ${clrPrint(data.resultado)}`}>{formatBRL(data.resultado)}</p>
+        {/* ─── Financial Summary (compact) ─── */}
+        <div className="bg-dark-800/40 print:bg-gray-50 rounded-lg p-4 mb-4">
+          <div className="space-y-1.5 text-sm">
+            {/* Rake sempre informativo */}
+            <div className="flex justify-between">
+              <span className="text-dark-400 print:text-gray-500 text-xs">Rake Gerado <span className="text-dark-600 print:text-gray-400">(informativo)</span></span>
+              <span className="font-mono text-dark-400 print:text-gray-500 text-xs">{formatBRL(data.rakeTotal)}</span>
             </div>
-            <div>
-              <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">Total Pago</p>
-              <p className="font-mono font-bold text-sky-400 print:text-blue-700">{formatBRL(data.totalOut)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase mb-1">
-                {Math.abs(data.pendente) < 0.01 ? 'Quitado' : Math.abs(data.pago) > 0.01 ? 'Parcial' : 'Pendente'}
-              </p>
-              <p
-                className={`font-mono font-bold ${
-                  Math.abs(data.pendente) < 0.01
-                    ? 'text-green-400 print:text-green-700'
-                    : 'text-yellow-400 print:text-orange-600'
-                }`}
-              >
-                {formatBRL(data.pendente)}
-              </p>
+
+            {/* RB Agente */}
+            {data.rbAgente > 0.01 && (
+              <div className="flex justify-between">
+                <span className="text-dark-300 print:text-gray-600 text-xs">
+                  {isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}% do Rake)`}
+                </span>
+                <span className={`font-mono text-xs font-bold ${isDirect ? 'text-blue-400 print:text-blue-700' : 'text-purple-400 print:text-purple-700'}`}>
+                  {formatBRL(data.rbAgente)}
+                </span>
+              </div>
+            )}
+
+            {/* P/L — só aparece no Profit/Loss */}
+            {!isAvista && (
+              <div className="flex justify-between">
+                <span className="text-dark-300 print:text-gray-600 text-xs">P/L Jogadores</span>
+                <span className={`font-mono text-xs font-bold ${clrPrint(data.resultado - data.rbAgente)}`}>
+                  {formatBRL(data.resultado - data.rbAgente)}
+                </span>
+              </div>
+            )}
+
+            {/* Saldo anterior (se houver) */}
+            {Math.abs(data.saldoAnterior) > 0.01 && (
+              <div className="flex justify-between">
+                <span className="text-dark-300 print:text-gray-600 text-xs">Saldo Anterior</span>
+                <span className="font-mono text-xs font-bold text-amber-400 print:text-amber-700">
+                  {formatBRL(data.saldoAnterior)}
+                </span>
+              </div>
+            )}
+
+            {/* Resultado Final */}
+            <div className="border-t border-dark-700/30 print:border-gray-300 pt-2 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-dark-200 print:text-black font-bold text-sm">
+                  Resultado Final
+                  {isAvista && <span className="text-dark-500 text-[10px] ml-1 font-normal">(somente RB)</span>}
+                </span>
+                <span className={`font-mono font-extrabold text-base ${clrPrint(totalDevido)}`}>
+                  {formatBRL(totalDevido)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* ─── Pagamentos Registrados ─── */}
+        {entries.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">
+                Pagamentos Registrados
+              </h4>
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
+                isQuitado
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 print:text-green-700 print:border-green-600'
+                  : isParcial
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 print:text-amber-700 print:border-amber-600'
+                    : 'bg-dark-700 text-dark-400 border-dark-600 print:text-gray-600 print:border-gray-400'
+              }`}>
+                {isQuitado ? 'QUITADO' : isParcial ? 'PARCIALMENTE PAGO' : 'PENDENTE'}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {entries.map((e) => (
+                <div key={e.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    {e.method && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 print:bg-gray-200 text-dark-300 print:text-gray-600 font-bold uppercase">
+                        {e.method}
+                      </span>
+                    )}
+                    <span className="text-dark-500 print:text-gray-500 font-mono text-[10px]">
+                      {fmtDateTime(e.created_at!)}
+                    </span>
+                  </div>
+                  <span className={`font-mono font-bold ${
+                    e.dir === 'IN'
+                      ? 'text-emerald-400 print:text-green-700'
+                      : 'text-red-400 print:text-red-700'
+                  }`}>
+                    {e.dir === 'OUT' ? '-' : ''}{formatBRL(Number(e.amount))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Saldo Atual ─── */}
+        <div className={`rounded-lg p-3 border ${
+          isQuitado
+            ? 'bg-emerald-950/20 border-emerald-700/30 print:border-green-400 print:bg-green-50'
+            : 'bg-dark-800/30 border-dark-700/50 print:border-gray-300 print:bg-gray-50'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-dark-300 print:text-gray-600 text-sm font-medium">Saldo atual</span>
+            <div className="text-right">
+              <span className={`font-mono font-extrabold text-lg ${clrPrint(pendente)}`}>
+                {formatBRL(Math.abs(pendente))}
+              </span>
+              {Math.abs(pendente) > 0.01 && (
+                <span className={`block text-[10px] font-bold ${pendente > 0 ? 'text-emerald-500 print:text-green-700' : 'text-red-400 print:text-red-700'}`}>
+                  {pendente > 0 ? 'a receber' : 'a pagar'}
+                </span>
+              )}
+              {Math.abs(pendente) < 0.01 && (
+                <span className="block text-[10px] font-bold text-emerald-400 print:text-green-700">quitado</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Footer ─── */}
+        <div className="text-center mt-5 pt-3 border-t border-dark-800/50 print:border-gray-200">
+          <p className="text-[10px] text-dark-600 print:text-gray-400">
+            {subclubName} · {tipoLabel} · Gerado em {new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
       </div>
-    </div>
-  );
-}
-
-// ─── Sub-components ──────────────────────────────────────────────────
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-[10px] text-dark-500 print:text-gray-600 uppercase tracking-wider mb-1">{label}</p>
-      <p className="font-mono font-bold text-dark-200 print:text-black">{value}</p>
-    </div>
-  );
-}
-
-function PrintFinRow({
-  label,
-  value,
-  muted,
-  bold,
-  large,
-}: {
-  label: string;
-  value: number;
-  muted?: boolean;
-  bold?: boolean;
-  large?: boolean;
-}) {
-  const color = muted ? 'text-dark-400 print:text-gray-500' : clrPrint(value);
-  return (
-    <div className="flex items-center justify-between">
-      <span className={`${bold ? 'font-bold text-dark-200 print:text-black' : 'text-dark-300 print:text-gray-700'}`}>
-        {label}
-      </span>
-      <span className={`font-mono ${large ? 'text-lg' : ''} ${bold ? 'font-extrabold' : 'font-bold'} ${color}`}>
-        {formatBRL(value)}
-      </span>
     </div>
   );
 }

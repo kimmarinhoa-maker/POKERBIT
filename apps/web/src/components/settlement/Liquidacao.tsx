@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   listLedger,
   createLedgerEntry,
@@ -10,42 +10,21 @@ import {
   formatBRL,
 } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
-import Spinner from '@/components/Spinner';
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  created_at: string;
-}
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  commission_brl: number;
-  resultado_brl: number;
-  is_direct?: boolean;
-  payment_type?: 'fiado' | 'avista';
-}
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { LedgerEntry, AgentMetric } from '@/types/settlement';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
+import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: {
     id: string;
     name: string;
     agents: AgentMetric[];
-    players?: any[];
+    players?: { id: string; player_id?: string; agent_name: string | null; nickname: string | null; resultado_brl: number; saldo_atual?: number; situacao?: string; agent_is_direct?: boolean }[];
   };
   weekStart: string;
   clubId: string;
@@ -73,6 +52,7 @@ export default function Liquidacao({
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canPay = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   const [allEntries, setAllEntries] = useState<LedgerEntry[]>([]);
   const [carryMap, setCarryMap] = useState<Record<string, number>>({});
@@ -83,21 +63,26 @@ export default function Liquidacao({
   const [saving, setSaving] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('devedor');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
   const [statusFilter, setStatusFilter] = useState<'todos' | EntityStatus>('todos');
   const [paymentTypeLoading, setPaymentTypeLoading] = useState<Set<string>>(new Set());
   const [paymentTypeOverrides, setPaymentTypeOverrides] = useState<Record<string, 'fiado' | 'avista'>>({});
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const loadLedger = useCallback(async () => {
     setLoading(true);
     try {
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
+      if (!mountedRef.current) return;
       if (ledgerRes.success) setAllEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar dados de liquidacao', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, clubId]);
 
@@ -105,10 +90,10 @@ export default function Liquidacao({
   const directNameSet = useMemo(() => {
     const set = new Set<string>();
     for (const a of agents) {
-      if ((a as any).is_direct) set.add(a.agent_name.toLowerCase());
+      if (a.is_direct) set.add(a.agent_name.toLowerCase());
     }
     for (const p of allPlayers) {
-      if ((p as any).agent_is_direct) set.add((p.agent_name || '').toLowerCase());
+      if (p.agent_is_direct) set.add((p.agent_name || '').toLowerCase());
     }
     set.add('sem agente');
     set.add('(sem agente)');
@@ -257,12 +242,12 @@ export default function Liquidacao({
     if (statusFilter !== 'todos') {
       result = result.filter((a) => a.status === statusFilter);
     }
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase();
       result = result.filter((a) => a.agent.agent_name.toLowerCase().includes(term));
     }
     return result;
-  }, [agentLiq, viewTab, searchTerm, statusFilter, isAgentDirect]);
+  }, [agentLiq, viewTab, debouncedSearch, statusFilter, isAgentDirect]);
 
   // Sort
   const sorted = useMemo(() => {
@@ -370,7 +355,8 @@ export default function Liquidacao({
   }
 
   async function handleDeleteEntry(id: string) {
-    if (!confirm('Excluir esta movimentacao?')) return;
+    const ok = await confirm({ title: 'Excluir Movimentacao', message: 'Excluir esta movimentacao?', variant: 'danger' });
+    if (!ok) return;
     try {
       const res = await deleteLedgerEntry(id);
       if (res.success) {
@@ -408,11 +394,7 @@ export default function Liquidacao({
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <SettlementSkeleton kpis={5} />;
   }
 
   return (
@@ -426,38 +408,38 @@ export default function Liquidacao({
       </div>
 
       {/* KPI cards - 5 columns like HTML */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Total</p>
-          <p className={`font-mono text-lg font-bold ${kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-            {formatBRL(kpis.totalResultado)}
-          </p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">RB Distribuido</p>
-          <p className="font-mono text-lg font-bold text-yellow-400">{formatBRL(kpis.totalRB)}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Recebido</p>
-          <p className="font-mono text-lg font-bold text-emerald-400">{formatBRL(kpis.totalRecebido)}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Pago</p>
-          <p className="font-mono text-lg font-bold text-blue-400">{formatBRL(kpis.totalPago)}</p>
-        </div>
-        <div
-          className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'border-t-emerald-500' : 'border-t-yellow-500'} rounded-lg p-3 text-center shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saldo Final</p>
-          <p
-            className={`font-mono text-lg font-bold ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}
-          >
-            {formatBRL(kpis.totalPendente)}
-          </p>
-          <p className="text-[9px] text-dark-500">
-            {kpis.quitados}/{kpis.comMov} quitados
-          </p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <KpiCard
+          label="Resultado Total"
+          value={formatBRL(kpis.totalResultado)}
+          accentColor={kpis.totalResultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+        />
+        <KpiCard
+          label="RB Distribuido"
+          value={formatBRL(kpis.totalRB)}
+          accentColor="bg-yellow-500"
+          valueColor="text-yellow-400"
+        />
+        <KpiCard
+          label="Recebido"
+          value={formatBRL(kpis.totalRecebido)}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Pago"
+          value={formatBRL(kpis.totalPago)}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+        />
+        <KpiCard
+          label="Saldo Final"
+          value={formatBRL(kpis.totalPendente)}
+          accentColor={kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor={Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}
+          subtitle={`${kpis.quitados}/${kpis.comMov} quitados`}
+        />
       </div>
 
       {/* Progress bar */}
@@ -539,13 +521,13 @@ export default function Liquidacao({
             placeholder="Buscar agente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2 text-sm text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
+            className="input w-full"
           />
         </div>
         <select
           value={sortMode}
           onChange={(e) => setSortMode(e.target.value as SortMode)}
-          className="bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-dark-200 focus:border-poker-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="devedor">Maior devedor</option>
           <option value="credor">Maior credor</option>
@@ -557,8 +539,11 @@ export default function Liquidacao({
 
       {/* Agent list */}
       {sorted.length === 0 ? (
-        <div className="card text-center py-12 text-dark-400">
-          {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
+        <div className="card text-center py-12">
+          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+          <p className="text-dark-400">
+            {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -742,7 +727,7 @@ export default function Liquidacao({
                         {entries.map((e) => (
                           <div key={e.id} className="flex items-center justify-between py-1.5 text-xs">
                             <div className="flex items-center gap-3">
-                              <span className="text-dark-500 font-mono">{fmtDate(e.created_at)}</span>
+                              <span className="text-dark-500 font-mono">{fmtDate(e.created_at!)}</span>
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                   e.dir === 'IN' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
@@ -776,6 +761,8 @@ export default function Liquidacao({
           })}
         </div>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }
