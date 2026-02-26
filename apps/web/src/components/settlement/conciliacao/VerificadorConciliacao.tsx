@@ -54,7 +54,7 @@ export default function VerificadorConciliacao({ extrato, ledger, onVerificado }
       </div>
 
       {/* Table */}
-      <table className="w-full text-xs">
+      <table className="w-full text-xs data-table">
         <thead>
           <tr className="bg-dark-800/30">
             <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-dark-500">Item</th>

@@ -180,6 +180,7 @@ export default function Jogadores({ subclub }: Props) {
           accentColor="bg-blue-500"
           valueColor="text-blue-400"
           subtitle={`de ${players.length} total`}
+          tooltip="Jogadores com |winnings| > 0.01 na semana"
         />
         <KpiCard
           label="Profit / Loss"
@@ -187,18 +188,21 @@ export default function Jogadores({ subclub }: Props) {
           accentColor="bg-amber-500"
           valueColor={cc(grandTotals.ganhos)}
           subtitle={grandTotals.ganhos >= 0 ? 'lucro jogadores' : 'loss jogadores'}
+          tooltip={`Soma dos winnings de todos jogadores = ${formatBRL(grandTotals.ganhos)}`}
         />
         <KpiCard
           label="Rake Gerado"
           value={formatBRL(grandTotals.rake)}
           accentColor="bg-emerald-500"
           valueColor="text-emerald-400"
+          tooltip={`Soma do rake gerado por todos jogadores = ${formatBRL(grandTotals.rake)}`}
         />
         <KpiCard
           label="Rakeback Total"
           value={grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
           accentColor="bg-lime-500"
           valueColor="text-lime-400"
+          tooltip={`Soma do RB pago a agentes e jogadores = ${formatBRL(grandTotals.rbValue)}`}
         />
         <KpiCard
           label="Resultado Semana"
@@ -206,6 +210,7 @@ export default function Jogadores({ subclub }: Props) {
           accentColor="bg-amber-500"
           valueColor={cc(grandTotals.resultado)}
           ring="ring-1 ring-amber-700/30"
+          tooltip={`resultado = ganhos + rake = ${formatBRL(grandTotals.ganhos)} + ${formatBRL(grandTotals.rake)}`}
         />
       </div>
 
@@ -249,7 +254,7 @@ export default function Jogadores({ subclub }: Props) {
       {/* ═══ TABLE ═══ */}
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs min-w-[950px]">
+          <table className="w-full text-xs min-w-[950px] data-table">
             <thead className="sticky top-0 z-10">
               <tr className="bg-dark-800/80 backdrop-blur-sm">
                 <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">

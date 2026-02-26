@@ -44,14 +44,17 @@ export default function LockWeekModal({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState(initialNotes);
   const [processing, setProcessing] = useState(false);
-  const [step, setStep] = useState<'checklist' | 'processing' | 'done'>('checklist');
+  const [step, setStep] = useState<'checklist' | 'confirm' | 'processing' | 'done'>('checklist');
   const [error, setError] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState('');
   const [results, setResults] = useState<{ finalized: boolean; carryCount: number }>({
     finalized: false,
     carryCount: 0,
   });
 
+  const CONFIRM_WORD = 'FINALIZAR';
   const allChecked = CHECKLIST.every((c) => checked.has(c.key));
+  const confirmMatch = confirmText.trim().toUpperCase() === CONFIRM_WORD;
   const totalAgents = subclubs.reduce((s: number, sc: SubclubData) => s + (sc.agents?.length || 0), 0);
 
   function toggle(key: string) {
@@ -100,14 +103,16 @@ export default function LockWeekModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
     >
       <div
-        className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal animate-slide-up w-full max-w-lg mx-4"
+        className="bg-dark-900 border border-dark-700 rounded-2xl shadow-modal animate-scale-in w-full max-w-lg mx-4"
         role="dialog"
         aria-modal="true"
         aria-label="Finalizar semana"
       >
+        {/* Accent bar */}
+        <div className="h-1 rounded-t-2xl bg-amber-500" />
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700">
           <div>
@@ -195,6 +200,46 @@ export default function LockWeekModal({
             </>
           )}
 
+          {step === 'confirm' && (
+            <>
+              <div className="bg-red-900/10 border border-red-700/20 rounded-lg p-4 mb-4">
+                <p className="text-sm font-semibold text-red-300 mb-2">Esta acao e IRREVERSIVEL</p>
+                <ul className="text-xs text-dark-300 space-y-1.5 list-disc list-inside">
+                  <li>Carry-forward sera gerado para a proxima semana</li>
+                  <li>Rates de rakeback serao travados nos valores atuais</li>
+                  <li>O settlement ficara somente leitura</li>
+                  <li>Edicoes nao serao mais possiveis</li>
+                </ul>
+              </div>
+
+              <label className="block text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">
+                Digite <span className="text-red-400 font-mono">{CONFIRM_WORD}</span> para confirmar:
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={CONFIRM_WORD}
+                className={`input w-full text-sm font-mono tracking-widest text-center ${
+                  confirmText.length > 0 && !confirmMatch ? 'border-red-500/50 focus:ring-red-500/40' : ''
+                } ${confirmMatch ? 'border-poker-500/50 focus:ring-poker-500/40' : ''}`}
+                autoFocus
+              />
+              {confirmText.length > 0 && !confirmMatch && (
+                <p className="text-xs text-red-400 mt-1.5">Digite exatamente &quot;{CONFIRM_WORD}&quot;</p>
+              )}
+              {confirmMatch && (
+                <p className="text-xs text-poker-400 mt-1.5 flex items-center gap-1">Confirmacao aceita</p>
+              )}
+
+              {error && (
+                <div className="mt-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">
+                  {error}
+                </div>
+              )}
+            </>
+          )}
+
           {step === 'processing' && (
             <div className="py-8 text-center">
               <div className="mx-auto mb-4 w-10 h-10 border-4 border-poker-500/30 border-t-poker-500 rounded-full animate-spin" />
@@ -233,12 +278,34 @@ export default function LockWeekModal({
                 Cancelar
               </button>
               <button
-                onClick={handleLock}
+                onClick={() => { setConfirmText(''); setStep('confirm'); }}
                 disabled={!allChecked}
-                aria-label="Confirmar finalizacao"
+                aria-label="Prosseguir para confirmacao"
                 className={`text-sm px-5 py-2 rounded-lg font-semibold transition-colors ${
                   allChecked
                     ? 'bg-poker-600 hover:bg-poker-500 text-white'
+                    : 'bg-dark-700 text-dark-500 cursor-not-allowed'
+                }`}
+              >
+                Prosseguir
+              </button>
+            </>
+          )}
+          {step === 'confirm' && (
+            <>
+              <button
+                onClick={() => setStep('checklist')}
+                className="text-dark-400 hover:text-white text-sm transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={handleLock}
+                disabled={!confirmMatch}
+                aria-label="Confirmar finalizacao"
+                className={`text-sm px-5 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
+                  confirmMatch
+                    ? 'bg-red-600 hover:bg-red-500 text-white'
                     : 'bg-dark-700 text-dark-500 cursor-not-allowed'
                 }`}
               >

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
 import { getSettlementFull, getOrgTree } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
-import { getVisibleTabKeys } from '@/components/settlement/SubNavTabs';
+import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
 import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
@@ -92,6 +92,29 @@ export default function SubclubPanelPage() {
     loadData();
   }, [loadData]);
 
+  // Keyboard shortcuts: 1-9 for tab navigation
+  const tabList = getVisibleTabList(role);
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Skip if user is typing in an input/textarea/select
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      // Skip if modifier keys are held
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 9 && num <= tabList.length) {
+        e.preventDefault();
+        const targetTab = tabList[num - 1];
+        if (targetTab && targetTab !== activeTab) {
+          router.push(`/s/${settlementId}/club/${encodeURIComponent(subclubId)}?tab=${targetTab}`);
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [tabList, activeTab, settlementId, subclubId, router]);
+
   async function handleFinalize() {
     setShowLockModal(true);
   }
@@ -155,6 +178,12 @@ export default function SubclubPanelPage() {
     d.setDate(d.getDate() + 6);
     return d.toISOString().split('T')[0];
   })();
+
+  // Tab count badges
+  const tabCounts = useMemo(() => ({
+    jogadores: subclub.players?.length || 0,
+    liga: subclubs.length,
+  }), [subclub.players, subclubs.length]);
 
   // ─── Render content based on tab ──────────────────────────────────
   function renderContent() {
@@ -282,31 +311,48 @@ export default function SubclubPanelPage() {
         }}
       />
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push(`/s/${settlementId}`)}
-            className="text-dark-400 hover:text-dark-200 text-sm flex items-center gap-1 transition-colors"
-            aria-label="Voltar para visao geral"
-          >
-            ← Voltar
-          </button>
-          <div className="h-4 w-px bg-dark-700" />
-          <WeekSelector
-            currentSettlementId={settlementId}
-            weekStart={settlement.week_start}
-            weekEnd={weekEnd || ''}
-            status={settlement.status}
-            onNotFound={() => setWeekNotFound(true)}
-          />
-          <span className="text-dark-500 text-xs">v{settlement.version}</span>
-          <div className="h-4 w-px bg-dark-700" />
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 lg:px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 lg:gap-4 min-w-0">
+          {/* Breadcrumb */}
+          <nav className="flex items-center text-sm text-dark-400" aria-label="Breadcrumb">
+            <button
+              onClick={() => router.push('/s')}
+              className="hover:text-dark-200 transition-colors hidden sm:inline"
+            >
+              Fechamentos
+            </button>
+            <span className="mx-1.5 text-dark-600 hidden sm:inline">/</span>
+            <button
+              onClick={() => router.push(`/s/${settlementId}`)}
+              className="hover:text-dark-200 transition-colors"
+            >
+              <span className="sm:hidden">&larr;</span>
+              <span className="hidden sm:inline">Semana</span>
+            </button>
+            <span className="mx-1.5 text-dark-600">/</span>
+            <span className="text-white font-medium truncate max-w-[120px] lg:max-w-none">{subclub.name}</span>
+            <span className={`ml-2 badge-${settlement.status.toLowerCase()}`}>
+              {settlement.status}
+            </span>
+          </nav>
+          <div className="h-4 w-px bg-dark-700 hidden lg:block" />
+          <div className="hidden lg:flex items-center gap-4">
+            <WeekSelector
+              currentSettlementId={settlementId}
+              weekStart={settlement.week_start}
+              weekEnd={weekEnd || ''}
+              status={settlement.status}
+              onNotFound={() => setWeekNotFound(true)}
+            />
+            <span className="text-dark-500 text-xs">v{settlement.version}</span>
+          </div>
+          <div className="h-4 w-px bg-dark-700 hidden md:block" />
           <select
             value={subclub.name}
             onChange={(e) => {
               router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
             }}
-            className="bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5 text-sm text-white font-medium focus:border-poker-500 focus:outline-none cursor-pointer"
+            className="bg-dark-800 border border-dark-700 rounded-lg px-2 lg:px-3 py-1.5 text-sm text-white font-medium focus:border-poker-500 focus:outline-none cursor-pointer max-w-[140px] lg:max-w-none"
             aria-label="Selecionar subclube"
           >
             {subclubs.map((sc: any) => (
@@ -319,12 +365,36 @@ export default function SubclubPanelPage() {
 
         <div className="flex items-center gap-3">
           {settlement.status === 'DRAFT' && canAccess('OWNER', 'ADMIN') && (
-            <button onClick={handleFinalize} className="btn-primary text-sm flex items-center gap-2">
-              Finalizar Semana
+            <button onClick={handleFinalize} className="btn-primary text-xs lg:text-sm flex items-center gap-2">
+              <span className="hidden sm:inline">Finalizar Semana</span>
+              <span className="sm:hidden">Finalizar</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Status banner */}
+      {settlement.status === 'DRAFT' && (
+        <div className="flex items-center gap-2 px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/30 shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+          <span className="text-xs text-yellow-300 font-medium">RASCUNHO</span>
+          <span className="text-xs text-yellow-300/60">— Dados podem ser editados. Finalize para travar.</span>
+        </div>
+      )}
+      {settlement.status === 'FINAL' && (
+        <div className="flex items-center gap-2 px-6 py-2 bg-poker-900/20 border-b border-poker-700/30 shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-poker-400" />
+          <span className="text-xs text-poker-300 font-medium">FINALIZADO</span>
+          <span className="text-xs text-poker-300/60">— Semana travada. Somente leitura.</span>
+        </div>
+      )}
+      {settlement.status === 'VOID' && (
+        <div className="flex items-center gap-2 px-6 py-2 bg-red-900/20 border-b border-red-700/30 shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+          <span className="text-xs text-red-300 font-medium">ANULADO</span>
+          <span className="text-xs text-red-300/60">— Esta semana foi anulada.</span>
+        </div>
+      )}
 
       {/* 2-column layout */}
       {weekNotFound ? (
@@ -333,12 +403,33 @@ export default function SubclubPanelPage() {
           <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
         </div>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
-          {/* Col 1: Sub-nav tabs */}
-          <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+          {/* Mobile horizontal tab bar */}
+          <div className="lg:hidden overflow-x-auto border-b border-dark-700/50 bg-dark-900/50 shrink-0">
+            <div className="flex gap-1 px-3 py-2 min-w-max">
+              {tabList.map((tabKey) => (
+                <button
+                  key={tabKey}
+                  onClick={() => handleTabChange(tabKey)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    activeTab === tabKey
+                      ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
+                      : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+                  }`}
+                >
+                  {tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {/* Col 2: Content area */}
-          <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">{renderContent()}</div>
+          {/* Desktop sidebar tabs */}
+          <div className="hidden lg:block">
+            <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} counts={tabCounts} />
+          </div>
+
+          {/* Content area — fade on tab switch */}
+          <div key={activeTab} className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30 animate-tab-fade">{renderContent()}</div>
         </div>
       )}
     </div>

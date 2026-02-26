@@ -45,6 +45,41 @@
   .badge-void {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-700/50 shadow-sm;
   }
+  .badge-pending {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dark-800 text-dark-300 border border-dark-600 shadow-sm;
+  }
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-300 border border-emerald-700/50 shadow-sm;
+  }
+
+  /* Explainable value — cursor indicates tooltip available on hover */
+  .explainable {
+    @apply cursor-help;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply text-dark-300 hover:text-dark-100 hover:bg-dark-800 font-medium py-2 px-4 rounded-lg transition-all duration-200;
+  }
+
+  /* Shimmer skeleton placeholder */
+  .skeleton-shimmer {
+    @apply bg-dark-800 rounded;
+    background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Data table with zebra striping + hover */
+  .data-table tbody tr:nth-child(even) {
+    @apply bg-dark-800/20;
+  }
+  .data-table tbody tr:hover {
+    @apply bg-dark-800/40;
+  }
+  .data-table tbody tr {
+    @apply transition-colors duration-100;
+  }
 }
 
 /* Custom scrollbar */

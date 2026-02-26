@@ -452,7 +452,7 @@ export default function ChipPixTab({
           {/* ── Table ──────────────────────────────────────────── */}
           <div className="card overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs data-table">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-dark-800/80 backdrop-blur-sm">
                     <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
@@ -605,7 +605,7 @@ export default function ChipPixTab({
             </div>
             <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
               <div
-                className={`h-2.5 rounded-full transition-all duration-500 shadow-glow-green ${
+                className={`h-2.5 rounded-full animate-progress-fill shadow-glow-green ${
                   kpis.linked + kpis.applied === kpis.jogadores ? 'bg-green-500' : 'bg-poker-500'
                 }`}
                 style={{ width: `${kpis.jogadores > 0 ? ((kpis.linked + kpis.applied) / kpis.jogadores) * 100 : 0}%` }}

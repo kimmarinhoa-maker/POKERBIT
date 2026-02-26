@@ -9,7 +9,7 @@ export default function TableSkeleton({ columns = 5, rows = 8 }: { columns?: num
             <tr className="bg-dark-800/80">
               {[...Array(columns)].map((_, i) => (
                 <th key={i} className="px-3 py-3">
-                  <div className="h-3 bg-dark-700 rounded w-3/4 animate-pulse" />
+                  <div className="h-3 skeleton-shimmer w-3/4" style={{ animationDelay: `${i * 0.05}s` }} />
                 </th>
               ))}
             </tr>
@@ -20,8 +20,11 @@ export default function TableSkeleton({ columns = 5, rows = 8 }: { columns?: num
                 {[...Array(columns)].map((_, c) => (
                   <td key={c} className="px-3 py-3">
                     <div
-                      className="h-4 bg-dark-800 rounded animate-pulse"
-                      style={{ width: `${55 + ((r + c) % 3) * 15}%` }}
+                      className="h-4 skeleton-shimmer"
+                      style={{
+                        width: `${55 + ((r + c) % 3) * 15}%`,
+                        animationDelay: `${(r * columns + c) * 0.02}s`,
+                      }}
                     />
                   </td>
                 ))}

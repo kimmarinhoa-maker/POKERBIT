@@ -97,7 +97,7 @@ export default function ConfirmDialog({
 
   const content = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in"
       onClick={handleBackdropClick}
       role="presentation"
     >
@@ -112,10 +112,10 @@ export default function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
         onKeyDown={handleKeyDown}
-        className="relative bg-dark-900 border border-dark-700 rounded-xl shadow-2xl w-full max-w-md animate-in zoom-in-95 fade-in duration-150"
+        className="relative bg-dark-900 border border-dark-700 rounded-2xl shadow-2xl w-full max-w-md animate-scale-in"
       >
         {/* Top accent bar */}
-        <div className={`h-0.5 rounded-t-xl ${variant === 'danger' ? 'bg-red-500' : 'bg-poker-500'}`} />
+        <div className={`h-1 rounded-t-2xl ${variant === 'danger' ? 'bg-red-500' : 'bg-poker-500'}`} />
 
         <div className="p-6">
           {/* Title */}

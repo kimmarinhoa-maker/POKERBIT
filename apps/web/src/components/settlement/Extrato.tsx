@@ -10,6 +10,7 @@ import { LedgerEntry } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { BookOpen } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+import EmptyState from '@/components/ui/EmptyState';
 
 interface Props {
   weekStart: string;
@@ -274,6 +275,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           accentColor="bg-blue-500"
           valueColor="text-blue-400"
           subtitle={`${totals.inCount} IN / ${totals.outCount} OUT`}
+          tooltip={`Total de lancamentos no ledger = ${entries.length}`}
         />
         <KpiCard
           label="Entradas (IN)"
@@ -281,6 +283,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           accentColor="bg-poker-500"
           valueColor="text-poker-400"
           subtitle={`${totals.inCount} movimentacoes`}
+          tooltip={`Soma de todas movimentacoes dir=IN = ${formatBRL(totals.totalIn)}`}
         />
         <KpiCard
           label="Saidas (OUT)"
@@ -288,6 +291,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           accentColor="bg-red-500"
           valueColor="text-red-400"
           subtitle={`${totals.outCount} movimentacoes`}
+          tooltip={`Soma de todas movimentacoes dir=OUT = ${formatBRL(totals.totalOut)}`}
         />
         <KpiCard
           label="Saldo Liquido"
@@ -296,6 +300,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           valueColor={totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}
           subtitle="Entradas - Saidas"
           ring="ring-1 ring-emerald-700/30"
+          tooltip={`saldo = entradas - saidas = ${formatBRL(totals.totalIn)} - ${formatBRL(totals.totalOut)}`}
         />
       </div>
 
@@ -333,19 +338,19 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
 
       {/* Content */}
       {entries.length === 0 ? (
-        <div className="card text-center py-12">
-          <BookOpen className="w-8 h-8 text-dark-600 mx-auto mb-3" />
-          <p className="text-dark-400 mb-2">Nenhuma movimentacao registrada</p>
-          <p className="text-dark-500 text-sm">
-            {isDraft ? 'Clique em "Nova Movimentacao" para adicionar' : 'Nenhum pagamento nesta semana'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={BookOpen}
+            title="Nenhuma movimentacao registrada"
+            description={isDraft ? 'Clique em "Nova Movimentacao" para adicionar' : 'Nenhum pagamento nesta semana'}
+          />
         </div>
       ) : (
         <>
           {/* Table */}
           <div className="card overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm data-table">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-dark-800/80 backdrop-blur-sm">
                     <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Data</th>

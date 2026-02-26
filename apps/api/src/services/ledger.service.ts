@@ -32,15 +32,19 @@ export class LedgerService {
 
     if (error) throw new Error(`Erro ao criar movimentação: ${error.message}`);
 
-    // Audit
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'CREATE',
-      entity_type: 'ledger_entry',
-      entity_id: data.id,
-      new_data: { entity_id: dto.entity_id, dir: dto.dir, amount: dto.amount },
-    });
+    // Audit (non-critical)
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        action: 'CREATE',
+        entity_type: 'ledger_entry',
+        entity_id: data.id,
+        new_data: { entity_id: dto.entity_id, dir: dto.dir, amount: dto.amount },
+      });
+    } catch (auditErr) {
+      console.warn('[ledger] Audit log insert failed (CREATE):', auditErr);
+    }
 
     return data;
   }
@@ -117,14 +121,19 @@ export class LedgerService {
 
     if (error) throw new Error(`Erro ao deletar: ${error.message}`);
 
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'DELETE',
-      entity_type: 'ledger_entry',
-      entity_id: entryId,
-      old_data: existing,
-    });
+    // Audit (non-critical)
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        action: 'DELETE',
+        entity_type: 'ledger_entry',
+        entity_id: entryId,
+        old_data: existing,
+      });
+    } catch (auditErr) {
+      console.warn('[ledger] Audit log insert failed (DELETE):', auditErr);
+    }
 
     return { deleted: true };
   }

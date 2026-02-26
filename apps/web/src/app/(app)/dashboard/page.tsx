@@ -86,15 +86,15 @@ export default function DashboardPage() {
       const dt = fullRes.data.dashboardTotals || {};
 
       // Use actual API data from dashboardTotals
-      const rakeTotal = Number(dt.rake || 0);
-      const ganhosTotal = Number(dt.ganhos || 0);
-      const ggrTotal = Number(dt.ggr || 0);
-      const resultadoTotal = Number(dt.resultado || 0);
-      const totalPlayers = Number(dt.players || 0);
-      const rbTotal = Number(dt.rbTotal || 0);
-      const totalTaxas = Number(dt.totalTaxas || 0);
-      const dtTotalTaxasSigned = Number(dt.totalTaxasSigned || -totalTaxas);
-      const dtAcertoLiga = Number(dt.acertoLiga || 0);
+      const rakeTotal = Number(dt.rake ?? 0);
+      const ganhosTotal = Number(dt.ganhos ?? 0);
+      const ggrTotal = Number(dt.ggr ?? 0);
+      const resultadoTotal = Number(dt.resultado ?? 0);
+      const totalPlayers = Number(dt.players ?? 0);
+      const rbTotal = Number(dt.rbTotal ?? 0);
+      const totalTaxas = Number(dt.totalTaxas ?? 0);
+      const dtTotalTaxasSigned = Number(dt.totalTaxasSigned ?? -totalTaxas);
+      const dtAcertoLiga = Number(dt.acertoLiga ?? 0);
 
       // Build per-club data (enables toggle filtering)
       let totalLancamentos = 0;
@@ -484,6 +484,7 @@ export default function DashboardPage() {
               value={String(f?.jogadoresAtivos ?? 0)}
               accent="blue"
               delta={deltaJogadores || undefined}
+              tooltip="Total de jogadores com movimentacao em todos subclubes"
             />
             <KpiCard
               label="Profit / Loss"
@@ -491,18 +492,21 @@ export default function DashboardPage() {
               value={formatCurrency(f?.ganhosTotal ?? 0)}
               accent={(f?.ganhosTotal ?? 0) >= 0 ? 'green' : 'red'}
               delta={deltaGanhos || undefined}
+              tooltip="Soma dos ganhos/perdas de todos jogadores (winnings_brl)"
             />
             <KpiCard
               label="Rake Total"
               value={formatCurrency(f?.rakeTotal ?? 0)}
               accent="green"
               delta={deltaRake || undefined}
+              tooltip="Soma do rake gerado por todos jogadores em todos subclubes"
             />
             <KpiCard
               label="GGR Rodeio"
               value={formatCurrency(f?.ggrTotal ?? 0)}
               accent="purple"
               delta={deltaGGR || undefined}
+              tooltip="Gross Gaming Revenue consolidado do Rodeo"
             />
             <KpiCard
               label="Resultado Final"
@@ -510,12 +514,14 @@ export default function DashboardPage() {
               accent={(f?.resultadoFinal ?? 0) >= 0 ? 'green' : 'red'}
               delta={deltaResultado || undefined}
               breakdown={resultadoBreakdown}
+              tooltip="resultado = ganhos + rake + ggr (consolidado todos subclubes)"
             />
             <KpiCard
               label="Total Despesas"
               value={formatCurrency(-(f?.despesas.total ?? 0))}
               accent="red"
               breakdown={despesasBreakdown}
+              tooltip="Taxas automaticas + lancamentos manuais (overlay, compras, security, outros)"
             />
 
             {/* Card especial: Fechamento Semana */}
@@ -539,7 +545,8 @@ export default function DashboardPage() {
                     <div
                       className={`font-mono text-2xl font-semibold mb-1 ${
                         acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
-                      }`}
+                      } explainable inline-block`}
+                      title={`acertoLiga = resultado + totalTaxasSigned + lancamentos = ${formatCurrency(f?.resultadoFinal ?? 0)} + ${formatCurrency(f?.totalTaxasSigned ?? 0)} + ${formatCurrency(f?.totalLancamentos ?? 0)}`}
                     >
                       {formatCurrency(acerto)}
                     </div>

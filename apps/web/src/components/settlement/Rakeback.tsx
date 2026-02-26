@@ -191,6 +191,13 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     return { nonDirectAgents: nonDirect, directAgents: direct };
   }, [agents, directNameSet, playersByAgent]);
 
+  // Count players inside direct agents for badge (using backend annotation)
+  const directPlayerCount = useMemo(() => {
+    return players.filter(
+      (p) => p.agent_is_direct || directNameSet.has((p.agent_name || '').toLowerCase()),
+    ).length;
+  }, [players, directNameSet]);
+
   // Filter by search
   const filteredNonDirect = useMemo(() => {
     if (!search.trim()) return nonDirectAgents;
@@ -313,6 +320,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           accentColor="bg-poker-500"
           valueColor="text-poker-400"
           subtitle={`${players.length} jogadores`}
+          tooltip={`Soma do rake de todos jogadores = ${formatBRL(kpis.rakeTotal)}`}
         />
         <KpiCard
           label="Total Rakeback"
@@ -320,6 +328,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           accentColor="bg-yellow-500"
           valueColor="text-yellow-400"
           subtitle="Agentes + Diretos"
+          tooltip={`Soma do RB pago (agentes + diretos) = ${formatBRL(kpis.totalRB)}`}
         />
         <KpiCard
           label="Taxas Liga"
@@ -327,6 +336,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           accentColor="bg-red-500"
           valueColor="text-red-400"
           subtitle={`${taxLabel} sobre rake`}
+          tooltip={`taxas = rake × (${taxLabel}) = ${formatBRL(kpis.rakeTotal)} × ${taxLabel} = ${formatBRL(kpis.taxesOnRake)}`}
         />
         <KpiCard
           label="Lucro Liquido"
@@ -335,6 +345,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           valueColor={kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}
           subtitle="Rake - RB - Taxas"
           ring="ring-1 ring-emerald-700/30"
+          tooltip={`lucro = rake - rb - taxas = ${formatBRL(kpis.rakeTotal)} - ${formatBRL(kpis.totalRB)} - ${formatBRL(kpis.taxesOnRake)}`}
         />
       </div>
 
@@ -406,7 +417,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           }`}
         >
           Jogadores
-          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{filteredDirect.length}</span>
+          <span className="text-xs bg-dark-800 px-1.5 py-0.5 rounded font-mono">{directPlayerCount}</span>
         </button>
       </div>
 
@@ -545,7 +556,7 @@ function AgenciasTab({
               {/* Expanded: player table */}
               {isExpanded && (
                 <div className="border-t border-dark-700/50 bg-dark-900/30">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-xs data-table">
                     <thead>
                       <tr className="bg-dark-800/50">
                         <th className="px-8 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>
@@ -667,7 +678,7 @@ function JogadoresTab({
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
           {/* Table */}
-          <table className="w-full text-xs">
+          <table className="w-full text-xs data-table">
             <thead>
               <tr className="bg-dark-800/50">
                 <th className="px-5 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>

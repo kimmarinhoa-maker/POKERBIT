@@ -26,8 +26,10 @@ export default function SettlementOverviewPage() {
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [voidReason, setVoidReason] = useState('');
+  const [voidConfirmText, setVoidConfirmText] = useState('');
   const [voidLoading, setVoidLoading] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
+  const VOID_CONFIRM_WORD = 'ANULAR';
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
 
   const loadData = useCallback(async () => {
@@ -65,7 +67,7 @@ export default function SettlementOverviewPage() {
   }
 
   async function handleVoid() {
-    if (voidReason.trim().length < 10) return;
+    if (voidReason.trim().length < 10 || voidConfirmText.trim().toUpperCase() !== VOID_CONFIRM_WORD) return;
     setVoidLoading(true);
     setVoidError(null);
     try {
@@ -151,6 +153,7 @@ export default function SettlementOverviewPage() {
               onClick={() => {
                 setShowVoidModal(true);
                 setVoidReason('');
+                setVoidConfirmText('');
                 setVoidError(null);
               }}
               className="px-4 py-2 text-sm font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
@@ -176,15 +179,16 @@ export default function SettlementOverviewPage() {
           <>
             {/* Global KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-              <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" />
-              <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" />
-              <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" />
-              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" />
+              <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" tooltip="Total de jogadores na semana" />
+              <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" tooltip="Total de agentes ativos" />
+              <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" tooltip={`Soma do rake de todos subclubes = ${formatBRL(t.rake)}`} />
+              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" tooltip={`Soma do GGR de todos subclubes = ${formatBRL(t.ggr)}`} />
               <KpiCard
                 label="Resultado Total"
                 value={formatBRL(t.resultado)}
                 accentColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
                 valueColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
+                tooltip={`resultado = ganhos + rake + ggr (consolidado) = ${formatBRL(t.resultado)}`}
               />
             </div>
 
@@ -267,7 +271,7 @@ export default function SettlementOverviewPage() {
         }}
       />
 
-      {/* Void Modal */}
+      {/* Void Modal — Enhanced with carry-forward warning + typing confirmation */}
       {showVoidModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -280,55 +284,94 @@ export default function SettlementOverviewPage() {
             onClick={() => !voidLoading && setShowVoidModal(false)}
             aria-hidden="true"
           />
-          <div className="relative bg-dark-900 border border-dark-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-bold text-white mb-2">Anular Fechamento</h3>
-            <p className="text-sm text-dark-400 mb-4">
-              Esta acao vai <span className="text-red-400 font-medium">anular permanentemente</span> este fechamento. O
-              status mudara para VOID e os dados de carry-forward serao revertidos. Esta acao nao pode ser desfeita.
-            </p>
+          <div className="relative bg-dark-900 border border-red-700/30 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-scale-in">
+            {/* Red accent bar */}
+            <div className="h-1 bg-red-500 rounded-t-2xl" />
 
-            <label className="block text-xs font-medium text-dark-400 uppercase tracking-wider mb-1.5">
-              Motivo da anulacao <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={voidReason}
-              onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Descreva o motivo da anulacao (minimo 10 caracteres)..."
-              aria-label="Motivo da anulacao"
-              className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:border-red-500 focus:outline-none resize-y min-h-[80px]"
-              rows={3}
-              disabled={voidLoading}
-            />
-            <p className="text-xs text-dark-500 mt-1">{voidReason.trim().length}/10 caracteres minimos</p>
-
-            {voidError && (
-              <p className="text-sm text-red-400 mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                {voidError}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <span className="text-red-400">&#9888;</span> Anular Fechamento
+              </h3>
+              <p className="text-sm text-dark-300 mb-4">
+                Esta acao e <span className="text-red-400 font-bold">IRREVERSIVEL</span> e ficara registrada no log de auditoria.
               </p>
-            )}
 
-            <div className="flex items-center justify-end gap-3 mt-5">
-              <button
-                onClick={() => setShowVoidModal(false)}
+              {/* Carry-forward warning */}
+              <div className="bg-red-900/15 border border-red-700/30 rounded-xl p-4 mb-4">
+                <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2">Atencao: Carry-Forward</p>
+                <ul className="text-xs text-dark-300 space-y-1.5 list-disc list-inside">
+                  <li>O carry-forward gerado por este settlement <span className="text-red-400 font-medium">NAO sera revertido automaticamente</span></li>
+                  <li>Se a semana seguinte ja foi finalizada, os saldos transportados ficam incorretos</li>
+                  <li>Recomendacao: anule as semanas na ordem reversa (mais recente primeiro)</li>
+                </ul>
+              </div>
+
+              {/* Reason */}
+              <label className="block text-xs font-bold text-dark-400 uppercase tracking-wider mb-1.5">
+                Motivo da anulacao <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="Descreva o motivo da anulacao (minimo 10 caracteres)..."
+                aria-label="Motivo da anulacao"
+                className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 resize-y min-h-[70px] transition-all"
+                rows={2}
                 disabled={voidLoading}
-                className="px-4 py-2 text-sm text-dark-400 hover:text-dark-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleVoid}
-                disabled={voidLoading || voidReason.trim().length < 10}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                {voidLoading ? (
-                  <>
-                    <Spinner size="sm" variant="white" />
-                    Anulando...
-                  </>
-                ) : (
-                  'Confirmar Anulacao'
-                )}
-              </button>
+              />
+              <p className="text-xs text-dark-500 mt-1 mb-4">{voidReason.trim().length}/10 caracteres minimos</p>
+
+              {/* Typing confirmation */}
+              {voidReason.trim().length >= 10 && (
+                <div className="animate-fade-in">
+                  <label className="block text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">
+                    Digite <span className="text-red-400 font-mono">{VOID_CONFIRM_WORD}</span> para confirmar:
+                  </label>
+                  <input
+                    type="text"
+                    value={voidConfirmText}
+                    onChange={(e) => setVoidConfirmText(e.target.value)}
+                    placeholder={VOID_CONFIRM_WORD}
+                    className={`input w-full text-sm font-mono tracking-widest text-center ${
+                      voidConfirmText.length > 0 && voidConfirmText.trim().toUpperCase() !== VOID_CONFIRM_WORD
+                        ? 'border-red-500/50 focus:ring-red-500/40'
+                        : ''
+                    } ${voidConfirmText.trim().toUpperCase() === VOID_CONFIRM_WORD ? 'border-red-500/50 focus:ring-red-500/40' : ''}`}
+                    autoFocus
+                    disabled={voidLoading}
+                  />
+                </div>
+              )}
+
+              {voidError && (
+                <p className="text-sm text-red-400 mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  {voidError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-dark-700/50">
+                <button
+                  onClick={() => setShowVoidModal(false)}
+                  disabled={voidLoading}
+                  className="px-4 py-2 text-sm text-dark-400 hover:text-dark-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleVoid}
+                  disabled={voidLoading || voidReason.trim().length < 10 || voidConfirmText.trim().toUpperCase() !== VOID_CONFIRM_WORD}
+                  className="px-5 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  {voidLoading ? (
+                    <>
+                      <Spinner size="sm" variant="white" />
+                      Anulando...
+                    </>
+                  ) : (
+                    'Anular Fechamento'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

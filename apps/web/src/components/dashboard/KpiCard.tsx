@@ -15,6 +15,8 @@ interface KpiCardProps {
   accent: 'green' | 'blue' | 'red' | 'yellow' | 'purple';
   delta?: { pct: string; isUp: boolean; isZero: boolean; invert?: boolean };
   breakdown?: BreakdownItem[];
+  /** Formula tooltip — shows on hover over value */
+  tooltip?: string;
 }
 
 const ACCENT_BAR: Record<string, string> = {
@@ -41,7 +43,7 @@ const ACCENT_GLOW: Record<string, string> = {
   purple: 'hover:shadow-glow-purple',
 };
 
-export default function KpiCard({ label, subtitle, value, accent, delta, breakdown }: KpiCardProps) {
+export default function KpiCard({ label, subtitle, value, accent, delta, breakdown, tooltip }: KpiCardProps) {
   const filteredBreakdown = breakdown?.filter((item) => (item.rawValue !== undefined ? item.rawValue !== 0 : true));
 
   return (
@@ -58,7 +60,12 @@ export default function KpiCard({ label, subtitle, value, accent, delta, breakdo
         {!subtitle && <div className="mb-1.5" />}
 
         {/* Value */}
-        <p className={`font-mono text-2xl font-semibold ${ACCENT_VALUE[accent]}`}>{value}</p>
+        <p
+          className={`font-mono text-2xl font-semibold ${ACCENT_VALUE[accent]} ${tooltip ? 'explainable inline-block' : ''}`}
+          title={tooltip}
+        >
+          {value}
+        </p>
 
         {/* Delta badge */}
         {delta && !delta.isZero && (

@@ -83,19 +83,44 @@ export function getVisibleTabKeys(role: string): Set<string> {
   return keys;
 }
 
+/** Returns ordered array of visible tab keys (for keyboard shortcuts 1-9) */
+export function getVisibleTabList(role: string): string[] {
+  const keys: string[] = [];
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.roles.includes(role)) keys.push(item.key);
+    }
+  }
+  return keys;
+}
+
 interface Props {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  /** Optional count badges per tab key (e.g., { jogadores: 94, extrato: 12 }) */
+  counts?: Record<string, number>;
 }
 
-export default function SubNavTabs({ activeTab, onTabChange }: Props) {
+export default function SubNavTabs({ activeTab, onTabChange, counts = {} }: Props) {
   const { role } = useAuth();
+
+  // Build global shortcut index (1-9)
+  let globalIdx = 0;
+  const shortcutMap = new Map<string, number>();
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.roles.includes(role)) {
+        globalIdx++;
+        if (globalIdx <= 9) shortcutMap.set(item.key, globalIdx);
+      }
+    }
+  }
 
   return (
     <div
       className="w-[200px] min-w-[200px] bg-dark-900/50 border-r border-dark-700/50 overflow-y-auto py-4"
       role="tablist"
-      aria-label="Navegacao do settlement"
+      aria-label="Navegacao do settlement (atalhos: 1-9)"
     >
       {sections.map((section) => {
         const visibleItems = section.items.filter((item) => item.roles.includes(role));
@@ -108,12 +133,13 @@ export default function SubNavTabs({ activeTab, onTabChange }: Props) {
             <div className="space-y-0.5 px-2">
               {visibleItems.map((item) => {
                 const Icon = item.icon;
+                const shortcut = shortcutMap.get(item.key);
                 return (
                   <button
                     key={item.key}
                     role="tab"
                     aria-selected={activeTab === item.key}
-                    aria-label={item.label}
+                    aria-label={`${item.label}${shortcut ? ` (atalho: ${shortcut})` : ''}`}
                     onClick={() => onTabChange(item.key)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       activeTab === item.key
@@ -122,7 +148,17 @@ export default function SubNavTabs({ activeTab, onTabChange }: Props) {
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{item.label}</span>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {counts[item.key] != null && counts[item.key]! > 0 && (
+                      <span className="text-[10px] font-mono text-dark-500 bg-dark-800 px-1.5 py-0.5 rounded-full border border-dark-700 shrink-0">
+                        {counts[item.key]}
+                      </span>
+                    )}
+                    {shortcut && (
+                      <kbd className="hidden lg:inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-mono bg-dark-800 text-dark-500 border border-dark-700 shrink-0">
+                        {shortcut}
+                      </kbd>
+                    )}
                   </button>
                 );
               })}

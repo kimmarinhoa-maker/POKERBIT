@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import html2canvas from 'html2canvas';
 import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
@@ -490,7 +489,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Pr
         </div>
       ) : (
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm data-table">
             <thead>
               <tr className="bg-dark-800/50 border-b border-dark-700">
                 <th className="py-2.5 px-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-bold">Agente</th>
@@ -931,6 +930,7 @@ function StatementView({
     async function handleExport() {
       if (!statementRef.current) return;
       try {
+        const html2canvas = (await import('html2canvas')).default;
         const canvas = await html2canvas(statementRef.current, {
           backgroundColor: '#0f0f13',
           scale: 2,
@@ -951,6 +951,7 @@ function StatementView({
     async function handleCopy() {
       if (!statementRef.current) return;
       try {
+        const html2canvas = (await import('html2canvas')).default;
         const canvas = await html2canvas(statementRef.current, {
           backgroundColor: '#0f0f13',
           scale: 2,
@@ -979,6 +980,7 @@ function StatementView({
       }
       try {
         toast('Enviando comprovante via WhatsApp...', 'info');
+        const html2canvas = (await import('html2canvas')).default;
         const canvas = await html2canvas(statementRef.current, {
           backgroundColor: '#0f0f13',
           scale: 2,

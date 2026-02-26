@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTenantName(tenant?.name || null);
     // allowed_subclubs: array of subclub IDs or null/undefined for full access
     const subclubs = tenant?.allowed_subclubs;
-    setAllowedSubclubs(Array.isArray(subclubs) && subclubs.length > 0 ? subclubs.map((s: any) => s.id || s) : null);
+    setAllowedSubclubs(Array.isArray(subclubs) && subclubs.length > 0 ? subclubs.map((s: any) => typeof s === 'string' ? s : s?.id) : null);
     setLoading(false);
 
     // Start proactive refresh cycle

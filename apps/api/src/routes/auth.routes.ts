@@ -121,7 +121,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     // Buscar profile
-    const { data: profile } = await supabaseAdmin.from('user_profiles').select('*').eq('id', req.userId!).single();
+    const { data: profile, error: profileErr } = await supabaseAdmin.from('user_profiles').select('*').eq('id', req.userId!).maybeSingle();
+    if (profileErr) console.warn('[auth/me] Profile fetch error:', profileErr.message);
 
     // Buscar tenants
     const { data: tenants } = await supabaseAdmin

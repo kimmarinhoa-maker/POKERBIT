@@ -101,6 +101,19 @@ router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADM
       return;
     }
 
+    // Validate subclub_id belongs to tenant
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .eq('id', subclub_id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (orgErr || !org) {
+      res.status(403).json({ success: false, error: 'subclub_id nao pertence ao tenant' });
+      return;
+    }
+
     const { data, error } = await supabaseAdmin
       .from('club_adjustments')
       .upsert(

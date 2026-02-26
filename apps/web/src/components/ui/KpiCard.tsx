@@ -7,6 +7,8 @@ interface KpiCardProps {
   valueColor?: string;
   subtitle?: string;
   ring?: string;
+  /** Formula tooltip — shows on hover over value to explain the calculation */
+  tooltip?: string;
 }
 
 export default function KpiCard({
@@ -16,6 +18,7 @@ export default function KpiCard({
   valueColor,
   subtitle,
   ring,
+  tooltip,
 }: KpiCardProps) {
   return (
     <div
@@ -26,7 +29,10 @@ export default function KpiCard({
         <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">
           {label}
         </p>
-        <p className={`text-xl font-bold mt-2 font-mono ${valueColor || 'text-white'}`}>
+        <p
+          className={`text-xl font-bold mt-2 font-mono ${valueColor || 'text-white'} ${tooltip ? 'explainable inline-block' : ''}`}
+          title={tooltip}
+        >
           {value}
         </p>
         {subtitle && <p className="text-[10px] text-dark-500 mt-0.5">{subtitle}</p>}

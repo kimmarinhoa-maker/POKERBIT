@@ -80,6 +80,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
             value={String(totals.players)}
             accentColor="bg-blue-500"
             valueColor="text-blue-400"
+            tooltip="Total de jogadores com movimentacao nesta semana"
           />
           <KpiCard
             label="Profit/Loss"
@@ -87,18 +88,21 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
             accentColor={totals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
             valueColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
             subtitle="Ganhos e Perdas"
+            tooltip="Soma dos ganhos/perdas de todos jogadores (winnings_brl)"
           />
           <KpiCard
             label="Rake Gerado"
             value={formatBRL(totals.rake)}
             accentColor="bg-poker-500"
             valueColor="text-poker-400"
+            tooltip="Soma do rake de todos jogadores (rake_total_brl)"
           />
           <KpiCard
             label="GGR Rodeo P/L"
             value={formatBRL(totals.ggr)}
             accentColor="bg-purple-500"
             valueColor="text-purple-400"
+            tooltip="Gross Gaming Revenue do Rodeo (ggr_brl)"
           />
           <KpiCard
             label="Resultado do Clube"
@@ -107,6 +111,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
             valueColor={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
             subtitle="P/L + Rake + GGR"
             ring="ring-1 ring-amber-700/30"
+            tooltip={`resultado = ganhos + rake + ggr = ${formatBRL(totals.ganhos)} + ${formatBRL(totals.rake)} + ${formatBRL(totals.ggr)}`}
           />
         </div>
 
@@ -132,7 +137,10 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
               {/* Total */}
               <div className="border-t-2 border-danger-500/30 mt-1 pt-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-dark-100">Total Taxas</span>
-                <span className="font-mono text-danger-500 font-bold text-sm">
+                <span
+                  className="font-mono text-danger-500 font-bold text-sm explainable"
+                  title={`totalTaxasSigned = -(taxaApp + taxaLiga + taxaRodeoGGR + taxaRodeoApp) = -(${formatBRL(feesComputed.taxaApp)} + ${formatBRL(feesComputed.taxaLiga)} + ${formatBRL(feesComputed.taxaRodeoGGR)} + ${formatBRL(feesComputed.taxaRodeoApp)})`}
+                >
                   {formatBRL(feesComputed.totalTaxasSigned)}
                 </span>
               </div>
@@ -174,7 +182,10 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
             <div className="text-xs text-dark-400">Resultado + Taxas + Lançamentos</div>
           </div>
           <div className="text-right">
-            <div className={`font-mono text-3xl font-bold ${acertoLiga < 0 ? 'text-danger-500' : 'text-poker-500'}`}>
+            <div
+              className={`font-mono text-3xl font-bold ${acertoLiga < 0 ? 'text-danger-500' : 'text-poker-500'} explainable inline-block`}
+              title={`acertoLiga = resultado + totalTaxasSigned + lancamentos = ${formatBRL(totals.resultado)} + ${formatBRL(feesComputed.totalTaxasSigned)} + ${formatBRL(totalLancamentos)}`}
+            >
               {formatBRL(acertoLiga)}
             </div>
             <div className={`text-xs mt-1 ${acertoLiga < 0 ? 'text-danger-500' : 'text-poker-500'}`}>

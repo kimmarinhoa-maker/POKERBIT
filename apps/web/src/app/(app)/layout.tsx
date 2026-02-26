@@ -21,6 +21,8 @@ import {
   Spade,
   Menu,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -94,6 +96,15 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, role, tenantName, logout, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+  });
+
+  // Persist collapsed state
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(collapsed));
+  }, [collapsed]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -143,19 +154,20 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         role="navigation"
         className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-dark-900 border-r border-dark-700 flex flex-col
-        transform transition-transform duration-200 ease-in-out
+        fixed inset-y-0 left-0 z-50 bg-dark-900 border-r border-dark-700 flex flex-col
+        transform transition-all duration-200 ease-in-out
         lg:relative lg:translate-x-0 lg:shrink-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${collapsed ? 'lg:w-[68px] w-64' : 'w-64'}
       `}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-dark-700">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-poker-600 flex items-center justify-center">
+        <div className={`border-b border-dark-700 ${collapsed ? 'lg:p-3 p-6' : 'p-6'}`}>
+          <Link href="/dashboard" className="flex items-center gap-3" title={collapsed ? 'Poker Manager' : undefined}>
+            <div className="w-10 h-10 rounded-xl bg-poker-600 flex items-center justify-center shrink-0">
               <Spade className="w-5 h-5 text-white" />
             </div>
-            <div>
+            <div className={collapsed ? 'lg:hidden' : ''}>
               <h1 className="font-bold text-white text-lg leading-tight">Poker Manager</h1>
               <p className="text-xs text-dark-400">{tenantName || 'SaaS'}</p>
             </div>
@@ -163,7 +175,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-5 overflow-y-auto" aria-label="Menu principal">
+        <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-5' : 'p-4 space-y-5'}`} aria-label="Menu principal">
           {navSections
             .filter((section) => !section.roles || section.roles.includes(role))
             .map((section) => {
@@ -171,7 +183,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               if (visibleItems.length === 0) return null;
               return (
                 <div key={section.label}>
-                  <p className="px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                  <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
                     {section.label}
                   </p>
                   <div className="space-y-0.5">
@@ -182,11 +194,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                         return (
                           <span
                             key={item.label}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-dark-600 cursor-not-allowed"
+                            className={`flex items-center gap-3 rounded-lg text-sm text-dark-600 cursor-not-allowed ${collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'}`}
+                            title={collapsed ? item.label : undefined}
                           >
                             <Icon className="w-4 h-4 flex-shrink-0" />
-                            {item.label}
-                            <span className="ml-auto text-[9px] text-dark-600 uppercase">Em breve</span>
+                            <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                            <span className={`ml-auto text-[9px] text-dark-600 uppercase ${collapsed ? 'lg:hidden' : ''}`}>Em breve</span>
                           </span>
                         );
                       }
@@ -196,14 +209,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                          title={collapsed ? item.label : undefined}
+                          className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
+                            collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
+                          } ${
                             isActive
                               ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
                               : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
                           }`}
                         >
                           <Icon className="w-4 h-4 flex-shrink-0" />
-                          {item.label}
+                          <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
                         </Link>
                       );
                     })}
@@ -213,16 +229,28 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             })}
         </nav>
 
+        {/* Collapse toggle (desktop only) */}
+        <div className="hidden lg:flex justify-center py-2 border-t border-dark-700">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="text-dark-400 hover:text-white p-2 rounded-lg hover:bg-dark-800 transition-colors"
+            title={collapsed ? 'Expandir menu' : 'Colapsar menu'}
+            aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
+          >
+            {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
+        </div>
+
         {/* User */}
-        <div className="p-4 border-t border-dark-700">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
+        <div className={`border-t border-dark-700 ${collapsed ? 'lg:p-2 p-4' : 'p-4'}`}>
+          <div className={`flex items-center ${collapsed ? 'lg:justify-center' : 'justify-between'}`}>
+            <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
               <p className="text-sm font-medium text-dark-200 truncate">{user.email}</p>
               <p className="text-xs text-dark-500">{role}</p>
             </div>
             <button
               onClick={logout}
-              className="text-dark-400 hover:text-red-400 transition-colors"
+              className="text-dark-400 hover:text-red-400 transition-colors p-1"
               title="Sair"
               aria-label="Sair da conta"
             >

@@ -13,7 +13,7 @@ export default function SemanaRedirectPage() {
     (async () => {
       try {
         const res = await listSettlements();
-        if (res.success && res.data?.length > 0) {
+        if (res.success && res.data && res.data.length > 0) {
           router.replace(`/s/${res.data[0].id}`);
         } else {
           setError(true);

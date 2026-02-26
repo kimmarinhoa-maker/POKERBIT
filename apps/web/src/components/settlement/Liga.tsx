@@ -41,18 +41,21 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
           value={formatBRL(grandTotal.resultado)}
           accentColor={grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
           valueColor={grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+          tooltip={`Soma dos resultados de ${subclubs.length} subclubes = ${formatBRL(grandTotal.resultado)}`}
         />
         <KpiCard
           label="Total Taxas"
           value={formatBRL(grandTotal.taxasSigned)}
           accentColor="bg-red-500"
           valueColor="text-red-400"
+          tooltip={`totalTaxasSigned = -(taxaApp + taxaLiga + taxaRodeoGGR + taxaRodeoApp) consolidado = ${formatBRL(grandTotal.taxasSigned)}`}
         />
         <KpiCard
           label="Lancamentos"
           value={formatBRL(grandTotal.lancamentos)}
           accentColor={grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}
           valueColor={grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}
+          tooltip={`Soma dos lancamentos (overlay + compras + security + outros) = ${formatBRL(grandTotal.lancamentos)}`}
         />
         <KpiCard
           label="Acerto Liga"
@@ -60,13 +63,14 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
           accentColor={grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}
           valueColor={grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}
           ring="ring-1 ring-amber-700/30"
+          tooltip={`acertoLiga = resultado + taxas + lancamentos = ${formatBRL(grandTotal.resultado)} + ${formatBRL(grandTotal.taxasSigned)} + ${formatBRL(grandTotal.lancamentos)}`}
         />
       </div>
 
       {/* Table */}
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm data-table">
             <thead className="sticky top-0 z-10">
               <tr className="bg-dark-800/80 backdrop-blur-sm">
                 <th className="px-5 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Subclube</th>
@@ -205,7 +209,8 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
                 : grandTotal.acertoLiga < -0.01
                   ? 'text-red-400'
                   : 'text-dark-300'
-            }`}
+            } explainable inline-block`}
+            title={`acertoLiga = resultado + taxas + lancamentos = ${formatBRL(grandTotal.resultado)} + ${formatBRL(grandTotal.taxasSigned)} + ${formatBRL(grandTotal.lancamentos)}`}
           >
             {formatBRL(grandTotal.acertoLiga)}
           </p>

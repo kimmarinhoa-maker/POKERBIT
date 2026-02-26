@@ -73,8 +73,9 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
         const res = await listSettlements();
         if (cancelled || !res?.data) return;
 
-        // Take up to 8 most recent settlements
-        const settlements = res.data.slice(0, 8);
+        // Take up to 4 most recent settlements (limit API calls)
+        // TODO: replace with dedicated GET /api/settlements/rake-history?subclub=X endpoint
+        const settlements = res.data.slice(0, 4);
         if (settlements.length === 0) {
           setHistoryLoading(false);
           return;
@@ -111,7 +112,8 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
           const label = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
 
           const isCurrent = settlement.id === settlementId;
-          const sc = full?.subclubs?.find((sc: any) => sc.name === subclubName || sc.id === subclubName);
+          const subclubs = full?.data?.subclubs || full?.subclubs || [];
+          const sc = subclubs.find((sc: any) => sc.name === subclubName || sc.id === subclubName);
 
           if (sc) {
             points.push({

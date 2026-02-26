@@ -93,6 +93,7 @@ export default function DRE({ subclub, fees }: Props) {
           accentColor="bg-blue-500"
           valueColor="text-blue-400"
           subtitle={`Rake ${formatBRL(totals.rake)}`}
+          tooltip={`receita = rake + ggr = ${formatBRL(totals.rake)} + ${formatBRL(totals.ggr)}`}
         />
         <KpiCard
           label="Custos (RB)"
@@ -100,12 +101,14 @@ export default function DRE({ subclub, fees }: Props) {
           accentColor="bg-red-500"
           valueColor={nz(custos) ? 'text-red-400' : 'text-dark-400'}
           subtitle={custos > 0 && receita > 0.01 ? `${((custos / receita) * 100).toFixed(0)}% da receita` : undefined}
+          tooltip="Soma do rakeback pago a agentes e jogadores"
         />
         <KpiCard
           label="Res. Liquido"
           value={formatBRL(resultadoAposTaxas + totalLancamentos)}
           accentColor={(resultadoAposTaxas + totalLancamentos) >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
           valueColor={(resultadoAposTaxas + totalLancamentos) >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          tooltip={`resultado apos taxas + lancamentos = ${formatBRL(resultadoAposTaxas)} + ${formatBRL(totalLancamentos)}`}
         />
       </div>
 
@@ -195,9 +198,12 @@ export default function DRE({ subclub, fees }: Props) {
               {acertoDirecao}
             </p>
           </div>
-          <p className={`text-3xl font-extrabold font-mono ${
-            acertoLiga > 0.01 ? 'text-emerald-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-300'
-          }`}>
+          <p
+            className={`text-3xl font-extrabold font-mono ${
+              acertoLiga > 0.01 ? 'text-emerald-400' : acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-300'
+            } explainable inline-block`}
+            title={`acertoLiga = resultado + totalTaxasSigned + lancamentos = ${formatBRL(totals.resultado)} + ${formatBRL(feesComputed.totalTaxasSigned)} + ${formatBRL(totalLancamentos)}`}
+          >
             {formatBRL(acertoLiga)}
           </p>
         </div>

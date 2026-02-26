@@ -16,6 +16,7 @@ const config: Config = {
         'glow-blue': '0 0 15px rgba(59,130,246,0.15)',
         'glow-amber': '0 0 15px rgba(245,158,11,0.15)',
         'glow-purple': '0 0 15px rgba(168,85,247,0.15)',
+        'glow-emerald': '0 0 15px rgba(16,185,129,0.15)',
         'toast': '0 8px 30px rgba(0,0,0,0.5)',
         'modal': '0 25px 50px rgba(0,0,0,0.5)',
       },
@@ -28,10 +29,29 @@ const config: Config = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        'scale-in': {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'tab-fade': {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'progress-fill': {
+          '0%': { width: '0%' },
+        },
       },
       animation: {
         'slide-up': 'slide-up 0.2s ease-out',
         'fade-in': 'fade-in 0.15s ease-out',
+        'scale-in': 'scale-in 0.2s ease-out',
+        'tab-fade': 'tab-fade 0.15s ease-out',
+        'shimmer': 'shimmer 1.5s ease-in-out infinite',
+        'progress-fill': 'progress-fill 0.8s ease-out',
       },
       colors: {
         poker: {
@@ -54,6 +74,16 @@ const config: Config = {
         warning: {
           500: '#f59e0b',
           900: '#451a03',
+        },
+        info: {
+          400: '#60a5fa',
+          500: '#3b82f6',
+          900: '#1e3a5f',
+        },
+        success: {
+          400: '#34d399',
+          500: '#10b981',
+          900: '#064e3b',
         },
         dark: {
           50:  '#f8fafc',

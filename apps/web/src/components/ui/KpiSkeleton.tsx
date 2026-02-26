@@ -14,12 +14,12 @@ export default function KpiSkeleton({ count = 5 }: { count?: number }) {
       {[...Array(count)].map((_, i) => (
         <div
           key={i}
-          className="animate-pulse bg-dark-900 border border-dark-700 rounded-xl overflow-hidden"
+          className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden"
         >
-          <div className="h-0.5 bg-dark-700" />
+          <div className="h-0.5 skeleton-shimmer" />
           <div className="p-4">
-            <div className="h-3 bg-dark-800 rounded w-1/2 mb-3" />
-            <div className="h-7 bg-dark-800 rounded w-2/3" />
+            <div className="h-3 skeleton-shimmer w-1/2 mb-3" style={{ animationDelay: `${i * 0.1}s` }} />
+            <div className="h-7 skeleton-shimmer w-2/3" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
           </div>
         </div>
       ))}

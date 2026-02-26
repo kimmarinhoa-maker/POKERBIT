@@ -435,9 +435,16 @@ router.post(
         }
       }
 
+      let phase4Errors = 0;
       const checked = allPromises.map((p) =>
-        p.then(({ error }: any) => {
-          if (error) console.error('[sync-agents] Phase 4 error:', error);
+        p.then((result: any) => {
+          if (result?.error) {
+            phase4Errors++;
+            console.warn('[sync-agents] Phase 4 error:', result.error);
+          }
+        }).catch((err: any) => {
+          phase4Errors++;
+          console.warn('[sync-agents] Phase 4 exception:', err);
         }),
       );
       await Promise.all(checked);
@@ -526,7 +533,7 @@ router.post(
         console.warn('[sync-agents] Phase 5 (rate auto-populate) error:', rateErr);
       }
 
-      res.json({ success: true, data: { created, fixed, linked, ratesPopulated } });
+      res.json({ success: true, data: { created, fixed, linked, ratesPopulated, phase4Errors } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }

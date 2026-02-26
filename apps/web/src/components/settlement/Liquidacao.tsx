@@ -18,6 +18,7 @@ import { LedgerEntry, AgentMetric, SubclubData } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+import EmptyState from '@/components/ui/EmptyState';
 
 interface Props {
   subclub: Pick<SubclubData, 'id' | 'name' | 'agents' | 'players'>;
@@ -221,9 +222,12 @@ export default function Liquidacao({
   // Tab counts
   const tabCounts = useMemo(() => {
     const agencias = agentLiq.filter((a) => !isAgentDirect(a.agent)).length;
-    const jogadores = agentLiq.filter((a) => isAgentDirect(a.agent)).length;
+    // Count players inside direct agents using backend annotation
+    const jogadores = allPlayers.filter(
+      (p) => p.agent_is_direct || directNameSet.has((p.agent_name || '').toLowerCase()),
+    ).length;
     return { agencias, jogadores };
-  }, [agentLiq, isAgentDirect]);
+  }, [agentLiq, isAgentDirect, allPlayers, directNameSet]);
 
   // Search + status + tab filter
   const filtered = useMemo(() => {
@@ -409,24 +413,28 @@ export default function Liquidacao({
           value={formatBRL(kpis.totalResultado)}
           accentColor={kpis.totalResultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
           valueColor={kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+          tooltip={`Soma dos resultados de todos agentes = ${formatBRL(kpis.totalResultado)}`}
         />
         <KpiCard
           label="RB Distribuido"
           value={formatBRL(kpis.totalRB)}
           accentColor="bg-yellow-500"
           valueColor="text-yellow-400"
+          tooltip={`Soma das comissoes de todos agentes = ${formatBRL(kpis.totalRB)}`}
         />
         <KpiCard
           label="Recebido"
           value={formatBRL(kpis.totalRecebido)}
           accentColor="bg-emerald-500"
           valueColor="text-emerald-400"
+          tooltip={`Total de entradas (IN) no ledger = ${formatBRL(kpis.totalRecebido)}`}
         />
         <KpiCard
           label="Pago"
           value={formatBRL(kpis.totalPago)}
           accentColor="bg-blue-500"
           valueColor="text-blue-400"
+          tooltip={`Total de saidas (OUT) no ledger = ${formatBRL(kpis.totalPago)}`}
         />
         <KpiCard
           label="Saldo Final"
@@ -434,6 +442,7 @@ export default function Liquidacao({
           accentColor={kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'bg-emerald-500' : 'bg-yellow-500'}
           valueColor={Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}
           subtitle={`${kpis.quitados}/${kpis.comMov} quitados`}
+          tooltip={`saldo = soma dos pendentes por agente = ${formatBRL(kpis.totalPendente)}`}
         />
       </div>
 
@@ -448,7 +457,7 @@ export default function Liquidacao({
           </div>
           <div className="w-full bg-dark-800 rounded-full h-2.5 shadow-inner">
             <div
-              className={`h-2.5 rounded-full transition-all duration-700 shadow-glow-green ${
+              className={`h-2.5 rounded-full animate-progress-fill shadow-glow-green ${
                 pctQuit === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
               }`}
               style={{ width: `${pctQuit}%` }}
@@ -534,11 +543,12 @@ export default function Liquidacao({
 
       {/* Agent list */}
       {sorted.length === 0 ? (
-        <div className="card text-center py-12">
-          <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
-          <p className="text-dark-400">
-            {agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={Users}
+            title={agents.length === 0 ? 'Nenhum agente neste subclube' : 'Nenhum agente encontrado'}
+            description={agents.length === 0 ? 'Importe dados para popular os agentes' : 'Tente ajustar os filtros de busca'}
+          />
         </div>
       ) : (
         <div className="space-y-2">

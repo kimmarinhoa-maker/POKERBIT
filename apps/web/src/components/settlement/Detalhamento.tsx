@@ -177,24 +177,28 @@ export default function Detalhamento({ subclub }: Props) {
           value={grandTotals.ativos}
           accentColor="bg-blue-500"
           valueColor="text-blue-400"
+          tooltip={`Jogadores com movimentacao (|ganhos| > 0.01) de ${players.length} total`}
         />
         <KpiCard
           label="Profit/Loss"
           value={formatBRL(grandTotals.ganhos)}
           accentColor={grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
           valueColor={grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
+          tooltip="Soma dos ganhos/perdas de todos jogadores (winnings_brl)"
         />
         <KpiCard
           label="Rake Gerado"
           value={formatBRL(grandTotals.rake)}
           accentColor="bg-poker-500"
           valueColor="text-poker-400"
+          tooltip="Soma do rake de todos jogadores (rake_total_brl)"
         />
         <KpiCard
           label="GGR Rodeio"
           value={Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
           accentColor="bg-purple-500"
           valueColor={ggrColor(grandTotals.ggr)}
+          tooltip="Gross Gaming Revenue do Rodeo (ggr_brl)"
         />
         <KpiCard
           label="Resultado Final"
@@ -202,6 +206,7 @@ export default function Detalhamento({ subclub }: Props) {
           accentColor={grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
           valueColor={grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
           ring="ring-1 ring-amber-700/30"
+          tooltip={`resultado = ganhos + rake + ggr = ${formatBRL(grandTotals.ganhos)} + ${formatBRL(grandTotals.rake)} + ${formatBRL(grandTotals.ggr)}`}
         />
       </div>
 
@@ -229,8 +234,8 @@ export default function Detalhamento({ subclub }: Props) {
 
       {/* ── Table ── */}
       <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table className="w-full text-xs data-table">
           <thead className="sticky top-0 z-10">
             <tr className="bg-dark-800/80 backdrop-blur-sm">
               <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Agente</th>
@@ -255,10 +260,11 @@ export default function Detalhamento({ subclub }: Props) {
                 />
               );
             })}
-
-            {/* ── TOTAL footer row ── */}
-            {filteredGroups.length > 0 && (
-              <tr className="border-t-2 border-dark-700 bg-dark-900">
+          </tbody>
+          {/* ── TOTAL footer (sticky bottom) ── */}
+          {filteredGroups.length > 0 && (
+            <tfoot className="sticky bottom-0 z-10">
+              <tr className="border-t-2 border-dark-700 bg-dark-900/95 backdrop-blur-sm">
                 <td className="px-3 py-2 font-extrabold text-xs text-amber-400">
                   TOTAL
                   <span className="text-dark-500 text-[10px] font-normal ml-2">
@@ -280,8 +286,8 @@ export default function Detalhamento({ subclub }: Props) {
                   {formatBRL(filteredTotals.resultado)}
                 </td>
               </tr>
-            )}
-          </tbody>
+            </tfoot>
+          )}
         </table>
         </div>
 
