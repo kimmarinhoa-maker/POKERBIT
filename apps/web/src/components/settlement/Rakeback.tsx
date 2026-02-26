@@ -42,8 +42,8 @@ interface Props {
 
 export default function Rakeback({ subclub, weekStart, fees, settlementId, settlementStatus, onDataChange }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
-  const agents = subclub.agents || [];
-  const players = subclub.players || [];
+  const agents = useMemo(() => subclub.agents || [], [subclub.agents]);
+  const players = useMemo(() => subclub.players || [], [subclub.players]);
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, settlementId, isDraft]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart, settlementId, isDraft, toast]);
 
   useEffect(() => {
     loadExtras();
@@ -133,7 +134,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   }, [players]);
 
   /** Lookup players for a given agent_name, with fallback for "(sem agente)" */
-  function getPlayersForAgent(agentName: string): PlayerMetric[] {
+  const getPlayersForAgent = useCallback((agentName: string): PlayerMetric[] => {
     const direct = playersByAgent.get(agentName);
     if (direct && direct.length > 0) return direct;
     // Fallback only for "sem agente" variants
@@ -148,7 +149,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       );
     }
     return [];
-  }
+  }, [playersByAgent]);
 
   // Resolve org ID for an agent (by agent_id or name fallback)
   function resolveOrgId(agent: AgentMetric): string | null {
@@ -209,9 +210,9 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
       );
     });
-  }, [nonDirectAgents, search, playersByAgent]);
+  }, [nonDirectAgents, search, getPlayersForAgent]);
 
-  const filteredDirect = useMemo(() => {
+  const _filteredDirect = useMemo(() => {
     if (!search.trim()) return directAgents;
     const q = search.toLowerCase();
     return directAgents.filter((a) => {
@@ -221,7 +222,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
       );
     });
-  }, [directAgents, search, playersByAgent]);
+  }, [directAgents, search, getPlayersForAgent]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -241,7 +242,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     const taxesOnRake = round2(rakeTotal * taxRate);
     const lucroLiquido = round2(rakeTotal - totalRB - taxesOnRake);
     return { rakeTotal, totalRB, taxesOnRake, lucroLiquido };
-  }, [players, nonDirectAgents, directAgents, playersByAgent, taxRate]);
+  }, [players, nonDirectAgents, directAgents, getPlayersForAgent, taxRate]);
 
   // ─── Handlers ───────────────────────────────────────────────────
 
@@ -270,7 +271,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     return 'pendente';
   }
 
-  async function handleMarkDirect() {
+  async function _handleMarkDirect() {
     if (!directDropdown) return;
     try {
       const res = await toggleAgentDirect(directDropdown, true);
@@ -284,7 +285,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     }
   }
 
-  async function handleRemoveDirect(agent: AgentMetric) {
+  async function _handleRemoveDirect(agent: AgentMetric) {
     const orgId = resolveOrgId(agent);
     if (!orgId) return;
     try {
@@ -348,46 +349,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           tooltip={`lucro = rake - rb - taxas = ${formatBRL(kpis.rakeTotal)} - ${formatBRL(kpis.totalRB)} - ${formatBRL(kpis.taxesOnRake)}`}
         />
       </div>
-
-      {/* Alert: agents/players without rates */}
-      {(() => {
-        const agentsWithoutRate = nonDirectAgents.filter((a) => !Number(a.rb_rate));
-        const directPlayersWithoutRate: string[] = [];
-        for (const da of directAgents) {
-          const dPlayers = getPlayersForAgent(da.agent_name);
-          for (const p of dPlayers) {
-            if (!Number(p.rb_rate)) directPlayersWithoutRate.push(p.nickname || p.external_player_id || '?');
-          }
-        }
-        const total = agentsWithoutRate.length + directPlayersWithoutRate.length;
-        if (total === 0) return null;
-        return (
-          <div className="mb-5 bg-amber-900/20 border border-amber-600/30 rounded-xl px-4 py-3 flex items-start gap-3">
-            <span className="text-amber-400 text-lg mt-0.5">&#9888;</span>
-            <div className="text-sm">
-              <p className="text-amber-300 font-medium mb-1">
-                {total} {total === 1 ? 'entidade sem' : 'entidades sem'} rate de rakeback definido
-              </p>
-              {agentsWithoutRate.length > 0 && (
-                <p className="text-amber-400/80 text-xs">
-                  <span className="font-bold">Agentes:</span>{' '}
-                  {agentsWithoutRate.map((a) => a.agent_name).join(', ')}
-                </p>
-              )}
-              {directPlayersWithoutRate.length > 0 && (
-                <p className="text-amber-400/80 text-xs mt-0.5">
-                  <span className="font-bold">Jogadores diretos:</span>{' '}
-                  {directPlayersWithoutRate.slice(0, 10).join(', ')}
-                  {directPlayersWithoutRate.length > 10 && ` (+${directPlayersWithoutRate.length - 10})`}
-                </p>
-              )}
-              <p className="text-amber-500/60 text-[10px] mt-1.5">
-                Defina rates padrao em <span className="font-mono">Cadastro {'>'} Agentes/Jogadores</span> para auto-preencher
-              </p>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Sub-tabs */}
       <div className="flex items-center gap-1 mb-4">
@@ -460,7 +421,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
 function AgenciasTab({
   agents,
-  playersByAgent,
+  playersByAgent: _playersByAgent,
   getPlayersForAgent,
   expandedAgents,
   toggleAgent,
