@@ -15,6 +15,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -97,8 +98,8 @@ router.get('/unlinked', requireAuth, requireTenant, async (req: Request, res: Re
         existingPlayerLinks: existingPlayerLinks || [],
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -115,8 +116,8 @@ router.get('/agents', requireAuth, requireTenant, async (req: Request, res: Resp
 
     if (error) throw error;
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -159,8 +160,8 @@ router.post('/agent', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'),
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -207,8 +208,8 @@ router.post('/player', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN')
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -255,8 +256,8 @@ router.post('/bulk-players', requireAuth, requireTenant, requireRole('OWNER', 'A
 
     if (error) throw error;
     res.json({ success: true, data, count: (data || []).length });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -273,8 +274,8 @@ router.delete('/agent/:id', requireAuth, requireTenant, requireRole('OWNER', 'AD
 
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -291,8 +292,8 @@ router.delete('/player/:id', requireAuth, requireTenant, requireRole('OWNER', 'A
 
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

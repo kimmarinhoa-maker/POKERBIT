@@ -37,9 +37,9 @@ export function detectWeekStart(
 
   // 3) Fallback: week_start fornecido ou última segunda-feira
   if (fallbackWeekStart) {
-    const start = new Date(fallbackWeekStart + 'T00:00:00');
+    const start = new Date(fallbackWeekStart + 'T00:00:00Z');
     const end = new Date(start);
-    end.setDate(end.getDate() + 6);
+    end.setUTCDate(end.getUTCDate() + 6);
     return {
       week_start: fallbackWeekStart,
       week_end: formatDate(end),
@@ -51,7 +51,7 @@ export function detectWeekStart(
   // Último recurso: última segunda-feira
   const lastMonday = getLastMonday();
   const lastSunday = new Date(lastMonday);
-  lastSunday.setDate(lastSunday.getDate() + 6);
+  lastSunday.setUTCDate(lastSunday.getUTCDate() + 6);
   return {
     week_start: formatDate(lastMonday),
     week_end: formatDate(lastSunday),
@@ -90,7 +90,7 @@ function detectFromXlsx(workbook: XLSX.WorkBook): WeekDetectionResult | null {
           // Garantir que é segunda-feira
           const monday = adjustToMonday(start);
           const sunday = new Date(monday);
-          sunday.setDate(sunday.getDate() + 6);
+          sunday.setUTCDate(sunday.getUTCDate() + 6);
           return {
             week_start: formatDate(monday),
             week_end: formatDate(sunday),
@@ -106,7 +106,7 @@ function detectFromXlsx(workbook: XLSX.WorkBook): WeekDetectionResult | null {
           if (start) {
             const monday = adjustToMonday(formatDate(start));
             const sunday = new Date(monday);
-            sunday.setDate(sunday.getDate() + 6);
+            sunday.setUTCDate(sunday.getUTCDate() + 6);
             return {
               week_start: formatDate(monday),
               week_end: formatDate(sunday),
@@ -145,7 +145,7 @@ function detectFromFilename(filename: string): WeekDetectionResult | null {
   const start = d1 < d2 ? d1 : d2;
   const monday = adjustToMonday(formatDate(start));
   const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
 
   return {
     week_start: formatDate(monday),
@@ -164,31 +164,32 @@ function parseCompactDate(str: string): Date | null {
   const m = parseInt(str.substring(4, 6), 10) - 1;
   const d = parseInt(str.substring(6, 8), 10);
 
-  const date = new Date(y, m, d);
+  const date = new Date(Date.UTC(y, m, d));
   if (isNaN(date.getTime())) return null;
-  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) return null;
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m || date.getUTCDate() !== d) return null;
   return date;
 }
 
 function adjustToMonday(dateStr: string): Date {
-  const d = new Date(dateStr + 'T00:00:00');
-  const day = d.getDay(); // 0=domingo, 1=segunda
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const day = d.getUTCDay(); // 0=domingo, 1=segunda
   const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  d.setUTCDate(d.getUTCDate() + diff);
   return d;
 }
 
 function getLastMonday(): Date {
   const now = new Date();
-  const day = now.getDay();
+  const day = now.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  now.setDate(now.getDate() + diff);
+  now.setUTCDate(now.getUTCDate() + diff);
+  now.setUTCHours(0, 0, 0, 0);
   return now;
 }
 
 function formatDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }

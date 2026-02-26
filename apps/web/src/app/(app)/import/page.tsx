@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -45,17 +45,17 @@ export default function ImportWizardPage() {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadClubs();
-  }, []);
-
-  async function loadClubs() {
+  const loadClubs = useCallback(async () => {
     const res = await listOrganizations('CLUB');
     if (res.success) {
       setClubs(res.data || []);
       if (res.data?.length > 0) setClubId(res.data[0].id);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadClubs();
+  }, [loadClubs]);
 
   // Removed showToast wrapper — use toast(msg, type) directly
 

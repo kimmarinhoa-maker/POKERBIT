@@ -20,6 +20,9 @@ Todas as migrations devem ser executadas **manualmente** no Supabase SQL Editor,
 | 12 | `012_club_logos_storage.sql` | Cria bucket Supabase Storage (club-logos) | Storage API |
 | 13 | `013_fix_multiclub_constraints.sql` | Corrige UNIQUE para multi-club (settlement+player+subclub) | 009 |
 | 14 | `014_performance_indexes.sql` | 9 indexes de performance | Todas anteriores |
+| 15 | `015_rls_storage_indexes.sql` | RLS policies, storage bucket fix, performance indexes | 001, 008 |
+| 16 | `016_whatsapp_config.sql` | WhatsApp config table, RLS policies | 001 |
+| 17 | `017_user_rls.sql` | RLS policies for user_profiles and user_tenants | 001 |
 
 > **Nota:** Migration 002 nao existe (gap na numeracao).
 

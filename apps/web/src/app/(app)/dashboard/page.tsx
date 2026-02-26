@@ -241,7 +241,7 @@ export default function DashboardPage() {
       }
     }
     init();
-  }, []);
+  }, [loadWeekData, toast]);
 
   // Week selector handlers
   function handleStartChange(date: string) {

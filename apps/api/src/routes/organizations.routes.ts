@@ -7,6 +7,7 @@ import { z } from 'zod';
 import multer from 'multer';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -51,8 +52,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     if (error) throw error;
 
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -85,8 +86,8 @@ router.get('/tree', requireAuth, requireTenant, async (req: Request, res: Respon
       }));
 
     res.json({ success: true, data: tree });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -109,8 +110,8 @@ router.get('/prefix-rules', requireAuth, requireTenant, async (req: Request, res
     if (error) throw error;
 
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -155,8 +156,8 @@ router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'A
     }
 
     res.status(201).json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -222,8 +223,8 @@ router.post('/:id/logo', requireAuth, requireTenant, logoUpload.single('logo'), 
     if (updateError) throw updateError;
 
     res.json({ success: true, logo_url: logoUrl, data: updated });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -264,8 +265,8 @@ router.delete('/:id/logo', requireAuth, requireTenant, async (req: Request, res:
     if (updateError) throw updateError;
 
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -325,8 +326,8 @@ router.post('/', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), asyn
     }
 
     res.status(201).json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -384,8 +385,8 @@ router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), as
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -431,8 +432,8 @@ router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'),
 
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -485,8 +486,8 @@ router.put('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER',
     }
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -500,8 +501,8 @@ router.delete('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNE
 
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -527,8 +528,8 @@ router.get('/agent-rates', requireAuth, requireTenant, async (req: Request, res:
     if (error) throw error;
 
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -597,8 +598,8 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
     });
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -643,8 +644,8 @@ router.patch('/:id/direct', requireAuth, requireTenant, requireRole('OWNER', 'AD
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

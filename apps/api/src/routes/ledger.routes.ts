@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { ledgerService } from '../services/ledger.service';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -41,8 +42,8 @@ router.post(
       const data = await ledgerService.createEntry(tenantId, parsed.data, req.userId!);
 
       res.status(201).json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -61,6 +62,11 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
     const { data: paged, total } = await ledgerService.listEntries(tenantId, weekStart, entityId, page, limit);
 
     res.json({
@@ -68,8 +74,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       data: paged,
       meta: { total, page, limit, pages: Math.ceil(total / limit) },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -88,11 +94,16 @@ router.get('/net', requireAuth, requireTenant, async (req: Request, res: Respons
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
     const data = await ledgerService.calcEntityLedgerNet(tenantId, weekStart, entityId);
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -108,8 +119,8 @@ router.delete(
       const data = await ledgerService.deleteEntry(tenantId, req.params.id, req.userId!);
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -134,8 +145,8 @@ router.patch(
       const data = await ledgerService.toggleReconciled(tenantId, entryId, is_reconciled);
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );

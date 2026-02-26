@@ -20,7 +20,7 @@
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "no-console": ["warn", { "allow": ["warn"] }]
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
   },
   "ignorePatterns": ["dist/", ".next/", "node_modules/", "*.config.js", "*.config.ts"]
 }

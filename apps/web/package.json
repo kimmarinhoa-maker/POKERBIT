@@ -24,7 +24,6 @@
     "@types/node": "^20.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/recharts": "^1.8.29",
     "autoprefixer": "^10.4.20",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
@@ -32,5 +31,8 @@
     "typescript": "^5.5.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18.18.0"
   }
 }

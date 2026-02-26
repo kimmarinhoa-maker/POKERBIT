@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -26,8 +27,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       .range(offset, offset + limit - 1);
 
     if (search) {
-      const sanitized = search.replace(/[,.()\[\]]/g, '');
-      query = query.or(`nickname.ilike.%${sanitized}%,external_id.ilike.%${sanitized}%`);
+      const escaped = search.replace(/[%_\\]/g, '\\$&').replace(/[,.()\[\]]/g, '');
+      query = query.or(`nickname.ilike.%${escaped}%,external_id.ilike.%${escaped}%`);
     }
 
     const { data, error, count } = await query;
@@ -44,8 +45,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         pages: Math.ceil((count || 0) / limit),
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -73,8 +74,8 @@ router.get('/:id/history', requireAuth, requireTenant, async (req: Request, res:
     if (error) throw error;
 
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -100,8 +101,63 @@ router.get('/rates/current', requireAuth, requireTenant, async (req: Request, re
     if (error) throw error;
 
     res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── PATCH /api/players/:id — Atualizar dados do player ─────────────
+router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const playerId = req.params.id;
+    const { full_name, phone, email } = req.body;
+
+    // Build update object
+    const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (full_name !== undefined) updates.full_name = full_name || null;
+
+    // Store phone/email in metadata JSONB (merge with existing)
+    if (phone !== undefined || email !== undefined) {
+      // Fetch current metadata
+      const { data: current, error: fetchErr } = await supabaseAdmin
+        .from('players')
+        .select('metadata')
+        .eq('id', playerId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (fetchErr) throw fetchErr;
+
+      const meta = (current?.metadata as Record<string, any>) || {};
+      if (phone !== undefined) meta.phone = phone || null;
+      if (email !== undefined) meta.email = email || null;
+      updates.metadata = meta;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('players')
+      .update(updates)
+      .eq('id', playerId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Audit
+    await supabaseAdmin.from('audit_log').insert({
+      tenant_id: tenantId,
+      user_id: req.userId,
+      action: 'UPDATE',
+      entity_type: 'player',
+      entity_id: playerId,
+      new_data: { full_name, phone, email },
+    });
+
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -152,8 +208,8 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
     });
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

@@ -31,5 +31,8 @@ export async function exportElementAsJpg(
   const link = document.createElement('a');
   link.download = `${fileName}.jpg`;
   link.href = dataUrl;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(dataUrl);
 }

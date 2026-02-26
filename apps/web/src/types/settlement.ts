@@ -129,3 +129,11 @@ export interface SettlementFull {
   updated_at: string;
   subclubs: SubclubData[];
 }
+
+/** Shape returned by GET /api/settlements/:id/full */
+export interface SettlementFullResponse {
+  settlement: SettlementFull;
+  fees: Record<string, number>;
+  subclubs: SubclubData[];
+  dashboardTotals?: Record<string, number>;
+}

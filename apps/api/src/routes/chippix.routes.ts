@@ -4,14 +4,15 @@
 
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { requireAuth, requireTenant } from '../middleware/auth';
+import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { chipPixService } from '../services/chippix.service';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ─── POST /api/chippix/upload — Upload + parse XLSX ChipPix ──────
-router.post('/upload', requireAuth, requireTenant, upload.single('file'), async (req: Request, res: Response) => {
+router.post('/upload', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const file = (req as any).file;
@@ -33,8 +34,8 @@ router.post('/upload', requireAuth, requireTenant, upload.single('file'), async 
     );
 
     res.json({ success: true, data: result });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -43,6 +44,7 @@ router.post(
   '/import-extrato',
   requireAuth,
   requireTenant,
+  requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
   upload.single('file'),
   async (req: Request, res: Response) => {
     try {
@@ -58,9 +60,10 @@ router.post(
       const result = await chipPixService.importExtrato(tenantId, file.buffer, userId);
 
       res.json({ success: true, data: result });
-    } catch (err: any) {
-      const status = err.message?.includes('Semana incorreta') ? 400 : 500;
-      res.status(status).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      const msg = safeErrorMessage(err);
+      const status = msg.includes('Semana incorreta') ? 400 : 500;
+      res.status(status).json({ success: false, error: msg });
     }
   },
 );
@@ -76,10 +79,15 @@ router.get('/summary', requireAuth, requireTenant, async (req: Request, res: Res
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
     const data = await chipPixService.getLedgerSummary(tenantId, weekStart);
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -92,22 +100,25 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
 
-    const all = await chipPixService.listTransactions(tenantId, weekStart, status);
-    const total = all.length;
-    const paged = all.slice((page - 1) * limit, page * limit);
+    if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
+    const { data, total } = await chipPixService.listTransactions(tenantId, weekStart, status, page, limit);
 
     res.json({
       success: true,
-      data: paged,
+      data,
       meta: { total, page, limit, pages: Math.ceil(total / limit) },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
 // ─── PATCH /api/chippix/:id/link — Vincular a entidade ───────────
-router.patch('/:id/link', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { entity_id, entity_name } = req.body;
@@ -120,36 +131,36 @@ router.patch('/:id/link', requireAuth, requireTenant, async (req: Request, res: 
     const data = await chipPixService.linkTransaction(tenantId, req.params.id, entity_id, entity_name);
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
 // ─── PATCH /api/chippix/:id/unlink — Desvincular ─────────────────
-router.patch('/:id/unlink', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.unlinkTransaction(tenantId, req.params.id);
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
 // ─── PATCH /api/chippix/:id/ignore — Ignorar/restaurar ───────────
-router.patch('/:id/ignore', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { ignore } = req.body;
     const data = await chipPixService.ignoreTransaction(tenantId, req.params.id, ignore !== false);
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
 // ─── POST /api/chippix/apply — Aplicar vinculadas → ledger ───────
-router.post('/apply', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { week_start } = req.body;
@@ -161,19 +172,19 @@ router.post('/apply', requireAuth, requireTenant, async (req: Request, res: Resp
 
     const data = await chipPixService.applyLinked(tenantId, week_start, req.userId!);
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
 // ─── DELETE /api/chippix/:id — Deletar transação ─────────────────
-router.delete('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.deleteTransaction(tenantId, req.params.id);
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

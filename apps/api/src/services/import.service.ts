@@ -379,7 +379,11 @@ export class ImportService {
 
   private async buildPlayerUuidMap(tenantId: string): Promise<Record<string, string>> {
     const map: Record<string, string> = {};
-    const { data } = await supabaseAdmin.from('players').select('id, external_id').eq('tenant_id', tenantId);
+    const { data } = await supabaseAdmin
+      .from('players')
+      .select('id, external_id')
+      .eq('tenant_id', tenantId)
+      .limit(10000);
 
     (data || []).forEach((p) => {
       map[p.external_id] = p.id;

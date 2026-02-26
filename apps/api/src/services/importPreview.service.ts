@@ -133,6 +133,7 @@ class ImportPreviewService {
 
     // 2.5) Check for existing settlement on same week
     let existingSettlement: ImportPreviewResponse['existing_settlement'] = undefined;
+    let existingAgentNamesSet: Set<string> = new Set();
     const { data: existingRows } = await supabaseAdmin
       .from('settlements')
       .select('id, version, status')
@@ -155,7 +156,7 @@ class ImportPreviewService {
         .select('id, agent_name, subclub_name, rake_total_brl, ggr_total_brl')
         .eq('settlement_id', existing.id);
 
-      const existingAgentNames = new Set((agentMetrics || []).map((a: any) => a.agent_name));
+      existingAgentNamesSet = new Set((agentMetrics || []).map((a: any) => a.agent_name));
 
       existingSettlement = {
         id: existing.id,
@@ -172,9 +173,6 @@ class ImportPreviewService {
         },
         agents: (agentMetrics || []).map((a: any) => a.agent_name),
       };
-
-      // Store for later mode detection (after parse)
-      (existingSettlement as any)._existingAgentNames = existingAgentNames;
     }
 
     // 3) Carregar config do tenant (prefix_map, overrides, player_links, etc)
@@ -270,7 +268,6 @@ class ImportPreviewService {
 
     // Detect merge vs reimport mode
     if (existingSettlement) {
-      const existingAgentSet: Set<string> = (existingSettlement as any)._existingAgentNames || new Set();
       const newAgentNames = new Set(
         allPlayers.filter((p: any) => p.aname && p.aname !== 'None').map((p: any) => p.aname),
       );
@@ -278,13 +275,12 @@ class ImportPreviewService {
       // If most new agents don't exist in current settlement, it's a merge (different club)
       let newAgentsNotInExisting = 0;
       for (const a of newAgentNames) {
-        if (!existingAgentSet.has(a)) newAgentsNotInExisting++;
+        if (!existingAgentNamesSet.has(a)) newAgentsNotInExisting++;
       }
       const overlapRatio =
         newAgentNames.size > 0 ? (newAgentNames.size - newAgentsNotInExisting) / newAgentNames.size : 1;
 
       existingSettlement.mode = overlapRatio < 0.5 ? 'merge' : 'reimport';
-      delete (existingSettlement as any)._existingAgentNames;
     }
 
     return {

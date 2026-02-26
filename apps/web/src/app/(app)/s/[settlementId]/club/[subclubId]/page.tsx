@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
 import { getSettlementFull, getOrgTree } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys } from '@/components/settlement/SubNavTabs';
+import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
 import TabErrorBoundary from '@/components/ui/TabErrorBoundary';
@@ -53,13 +54,12 @@ export default function SubclubPanelPage() {
   const visibleTabs = getVisibleTabKeys(role);
   const activeTab = visibleTabs.has(requestedTab) ? requestedTab : 'resumo';
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<SettlementFullResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
-  const fetchedTabs = useRef(new Set([activeTab]));
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -97,9 +97,6 @@ export default function SubclubPanelPage() {
   }
 
   function handleTabChange(tab: string) {
-    if (!fetchedTabs.current.has(tab)) {
-      fetchedTabs.current.add(tab);
-    }
     router.push(`/s/${settlementId}/club/${encodeURIComponent(subclubId)}?tab=${tab}`);
   }
 
@@ -133,9 +130,9 @@ export default function SubclubPanelPage() {
   const { settlement, fees, subclubs } = data;
 
   // Find current subclub
-  const currentSubclub = subclubs.find((sc: any) => sc.name === subclubId || sc.id === subclubId);
+  const foundSubclub = subclubs.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId);
 
-  if (!currentSubclub) {
+  if (!foundSubclub) {
     return (
       <div className="p-8">
         <div className="card text-center py-16">
@@ -147,6 +144,9 @@ export default function SubclubPanelPage() {
       </div>
     );
   }
+
+  // Narrow type after guard — TS can't narrow in nested closures
+  const subclub: SubclubData = foundSubclub;
 
   // Calculate week_end
   const weekEnd = (() => {
@@ -163,7 +163,7 @@ export default function SubclubPanelPage() {
         return (
           <TabErrorBoundary tabName="Resumo do Clube">
             <ResumoClube
-              subclub={currentSubclub}
+              subclub={subclub}
               fees={fees}
               weekStart={settlement.week_start}
               weekEnd={weekEnd}
@@ -172,18 +172,18 @@ export default function SubclubPanelPage() {
           </TabErrorBoundary>
         );
       case 'detalhamento':
-        return <TabErrorBoundary tabName="Detalhamento"><Detalhamento subclub={currentSubclub} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Detalhamento"><Detalhamento subclub={subclub} /></TabErrorBoundary>;
       case 'dashboard':
-        return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={currentSubclub} fees={fees} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={subclub} fees={fees} /></TabErrorBoundary>;
       case 'jogadores':
-        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={currentSubclub} weekStart={settlement.week_start} clubId={settlement.club_id} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} weekStart={settlement.week_start} clubId={settlement.club_id} /></TabErrorBoundary>;
 
       // Tabs funcionais
       case 'ajustes':
         return (
           <TabErrorBoundary tabName="Ajustes">
             <Ajustes
-              subclub={currentSubclub}
+              subclub={subclub}
               weekStart={settlement.week_start}
               settlementStatus={settlement.status}
               onDataChange={loadData}
@@ -191,9 +191,9 @@ export default function SubclubPanelPage() {
           </TabErrorBoundary>
         );
       case 'dre':
-        return <TabErrorBoundary tabName="DRE"><DRE subclub={currentSubclub} fees={fees} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} /></TabErrorBoundary>;
       case 'liga':
-        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={currentSubclub.name} logoMap={logoMap} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} /></TabErrorBoundary>;
       case 'extrato':
         return (
           <TabErrorBoundary tabName="Extrato">
@@ -204,7 +204,7 @@ export default function SubclubPanelPage() {
         return (
           <TabErrorBoundary tabName="Liquidacao">
             <Liquidacao
-              subclub={currentSubclub}
+              subclub={subclub}
               weekStart={settlement.week_start}
               clubId={settlement.club_id}
               settlementId={settlementId}
@@ -218,7 +218,7 @@ export default function SubclubPanelPage() {
         return (
           <TabErrorBoundary tabName="Rakeback">
             <Rakeback
-              subclub={currentSubclub}
+              subclub={subclub}
               weekStart={settlement.week_start}
               fees={fees}
               settlementId={settlementId}
@@ -231,7 +231,7 @@ export default function SubclubPanelPage() {
         return (
           <TabErrorBoundary tabName="Comprovantes">
             <Comprovantes
-              subclub={currentSubclub}
+              subclub={subclub}
               weekStart={settlement.week_start}
               clubId={settlement.club_id}
               fees={fees}
@@ -247,8 +247,8 @@ export default function SubclubPanelPage() {
               clubId={settlement.club_id}
               settlementStatus={settlement.status}
               onDataChange={loadData}
-              agents={(currentSubclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
-              players={(currentSubclub.players || []).map((p: any) => ({
+              agents={(subclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
+              players={(subclub.players || []).map((p: any) => ({
                 external_player_id: p.external_player_id,
                 nickname: p.nickname,
               }))}
@@ -302,7 +302,7 @@ export default function SubclubPanelPage() {
           <span className="text-dark-500 text-xs">v{settlement.version}</span>
           <div className="h-4 w-px bg-dark-700" />
           <select
-            value={currentSubclub.name}
+            value={subclub.name}
             onChange={(e) => {
               router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
             }}

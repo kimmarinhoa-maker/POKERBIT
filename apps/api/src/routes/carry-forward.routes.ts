@@ -5,6 +5,8 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { carryForwardService } from '../services/carry-forward.service';
+import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -28,6 +30,11 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
     if (entityId) {
       const amount = await carryForwardService.getCarryForEntity(tenantId, clubId, weekStart, entityId);
       res.json({ success: true, data: { entity_id: entityId, amount } });
@@ -35,8 +42,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       const map = await carryForwardService.getCarryMap(tenantId, clubId, weekStart);
       res.json({ success: true, data: map });
     }
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -59,7 +66,6 @@ router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADM
     const result = await carryForwardService.computeAndPersist(tenantId, settlement_id);
 
     // Audit log
-    const { supabaseAdmin } = await import('../config/supabase');
     await supabaseAdmin.from('audit_log').insert({
       tenant_id: tenantId,
       user_id: req.userId!,
@@ -74,8 +80,8 @@ router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADM
     });
 
     res.json({ success: true, data: result });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

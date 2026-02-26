@@ -74,13 +74,17 @@ export default function ChipPixTab({
     setLoading(true);
     try {
       const res = await listChipPixTransactions(weekStart);
-      if (res.success) setTxns(res.data || []);
+      if (!res.success) {
+        toast('Erro ao carregar transacoes ChipPix', 'error');
+        return;
+      }
+      setTxns(res.data || []);
     } catch {
       toast('Erro ao carregar transacoes ChipPix', 'error');
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, toast]);
 
   useEffect(() => {
     loadTxns();

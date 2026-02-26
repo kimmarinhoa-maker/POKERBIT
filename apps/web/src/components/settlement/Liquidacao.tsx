@@ -14,18 +14,13 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
-import { LedgerEntry, AgentMetric } from '@/types/settlement';
+import { LedgerEntry, AgentMetric, SubclubData } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
-  subclub: {
-    id: string;
-    name: string;
-    agents: AgentMetric[];
-    players?: { id: string; player_id?: string; agent_name: string | null; nickname: string | null; resultado_brl: number; saldo_atual?: number; situacao?: string; agent_is_direct?: boolean }[];
-  };
+  subclub: Pick<SubclubData, 'id' | 'name' | 'agents' | 'players'>;
   weekStart: string;
   clubId: string;
   settlementId: string;

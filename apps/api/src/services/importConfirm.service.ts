@@ -287,15 +287,19 @@ class ImportConfirmService {
   // ─── Helpers (reutilizados do import.service original) ──────────
 
   private async cleanPreviousImport(tenantId: string, importId: string) {
-    // Buscar settlement deste import
-    const { data: settlements } = await supabaseAdmin.from('settlements').select('id').eq('import_id', importId);
+    // Buscar settlement deste import (scoped by tenant_id)
+    const { data: settlements } = await supabaseAdmin
+      .from('settlements')
+      .select('id')
+      .eq('import_id', importId)
+      .eq('tenant_id', tenantId);
 
     for (const s of settlements || []) {
       await supabaseAdmin.from('player_week_metrics').delete().eq('settlement_id', s.id);
       await supabaseAdmin.from('agent_week_metrics').delete().eq('settlement_id', s.id);
     }
 
-    await supabaseAdmin.from('settlements').delete().eq('import_id', importId);
+    await supabaseAdmin.from('settlements').delete().eq('import_id', importId).eq('tenant_id', tenantId);
   }
 
   private async getNextVersion(tenantId: string, weekStart: string): Promise<number> {
@@ -340,7 +344,11 @@ class ImportConfirmService {
 
   private async buildPlayerUuidMap(tenantId: string): Promise<Record<string, string>> {
     const map: Record<string, string> = {};
-    const { data } = await supabaseAdmin.from('players').select('id, external_id').eq('tenant_id', tenantId);
+    const { data } = await supabaseAdmin
+      .from('players')
+      .select('id, external_id')
+      .eq('tenant_id', tenantId)
+      .limit(10000);
     (data || []).forEach((p) => {
       map[p.external_id] = p.id;
     });
