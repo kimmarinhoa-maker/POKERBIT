@@ -70,8 +70,8 @@ function clrPrint(v: number): string {
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Props) {
-  const agents = subclub.agents || [];
-  const players = subclub.players || [];
+  const agents = useMemo(() => subclub.agents || [], [subclub.agents]);
+  const players = useMemo(() => subclub.players || [], [subclub.players]);
   const { toast } = useToast();
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -101,7 +101,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Pr
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, clubId]);
+  }, [weekStart, clubId, toast]);
 
   useEffect(() => {
     loadEntries();
@@ -191,7 +191,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Pr
       const rbAgente = Number(agent.commission_brl) || 0;
       const resultado = Number(agent.resultado_brl) || 0;
       const saldoAnterior = (agent.agent_id && carryMap[agent.agent_id]) || 0;
-      const totalDevido = round2(resultado + saldoAnterior);
+      const totalDevido = round2(ganhos + rbAgente + saldoAnterior);
 
       const totalIn = agEntries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
       const totalOut = agEntries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
@@ -214,7 +214,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Pr
         pendente,
       };
     });
-  }, [agents, playersByAgent, ledgerByEntity, directNameSet]);
+  }, [agents, playersByAgent, ledgerByEntity, directNameSet, carryMap]);
 
   // Helper: check if agent is "direct" (same logic as Jogadores tab)
   const isDirectAgent = useCallback(
@@ -275,7 +275,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl }: Pr
         }
       }
 
-      const totalDevido = round2(resultado + saldoAnterior);
+      const totalDevido = round2(ganhos + rbJogador + saldoAnterior);
       const totalIn = playerEntries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
       const totalOut = playerEntries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
       const pago = round2(totalIn - totalOut);
@@ -787,7 +787,7 @@ function AgentRow({
                     />
                   )}
                   <div className="border-t border-dark-700/30 pt-1">
-                    <FinRow label="Resultado" value={data.resultado} bold />
+                    <FinRow label="Resultado" value={round2(data.ganhos + data.rbAgente)} bold />
                   </div>
                   <FinRow label="Saldo Anterior" value={data.saldoAnterior} customColor="text-amber-400" />
                   <div className="border-t border-dark-700/30 pt-1">
@@ -896,7 +896,7 @@ function StatementView({
   fechamentoTipo,
   hidePlayers,
   logoUrl,
-  onBack,
+  onBack: _onBack,
 }: {
   data: AgentFinancials;
   subclubName: string;
@@ -915,7 +915,7 @@ function StatementView({
   const isAvista = fechamentoTipo === 'avista';
 
   // ─── Formulas por tipo ───
-  const resultadoBase = isAvista ? data.rbAgente : data.resultado;
+  const resultadoBase = isAvista ? data.rbAgente : round2(data.ganhos + data.rbAgente);
   const totalDevido = round2(resultadoBase + data.saldoAnterior);
   const pendente = round2(totalDevido + data.pago);
 
@@ -1125,11 +1125,15 @@ function StatementView({
         {/* ─── Financial Summary (compact) ─── */}
         <div className="bg-dark-800/40 print:bg-gray-50 rounded-lg p-4 mb-4">
           <div className="space-y-1.5 text-sm">
-            {/* Rake sempre informativo */}
-            <div className="flex justify-between">
-              <span className="text-dark-400 print:text-gray-500 text-xs">Rake Gerado <span className="text-dark-600 print:text-gray-400">(informativo)</span></span>
-              <span className="font-mono text-dark-400 print:text-gray-500 text-xs">{formatBRL(data.rakeTotal)}</span>
-            </div>
+            {/* Ganhos (P/L) */}
+            {!isAvista && (
+              <div className="flex justify-between">
+                <span className="text-dark-300 print:text-gray-600 text-xs">Ganhos (P/L)</span>
+                <span className={`font-mono text-xs font-bold ${clrPrint(data.ganhos)}`}>
+                  {formatBRL(data.ganhos)}
+                </span>
+              </div>
+            )}
 
             {/* RB Agente */}
             {data.rbAgente > 0.01 && (
@@ -1143,15 +1147,11 @@ function StatementView({
               </div>
             )}
 
-            {/* P/L — só aparece no Profit/Loss */}
-            {!isAvista && (
-              <div className="flex justify-between">
-                <span className="text-dark-300 print:text-gray-600 text-xs">P/L Jogadores</span>
-                <span className={`font-mono text-xs font-bold ${clrPrint(data.resultado - data.rbAgente)}`}>
-                  {formatBRL(data.resultado - data.rbAgente)}
-                </span>
-              </div>
-            )}
+            {/* Rake informativo */}
+            <div className="flex justify-between">
+              <span className="text-dark-400 print:text-gray-500 text-xs">Rake Gerado <span className="text-dark-600 print:text-gray-400">(informativo)</span></span>
+              <span className="font-mono text-dark-400 print:text-gray-500 text-xs">{formatBRL(data.rakeTotal)}</span>
+            </div>
 
             {/* Saldo anterior (se houver) */}
             {Math.abs(data.saldoAnterior) > 0.01 && (
