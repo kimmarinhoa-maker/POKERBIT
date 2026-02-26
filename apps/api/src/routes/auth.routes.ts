@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabaseAdmin } from '../config/supabase';
 import { requireAuth } from '../middleware/auth';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -83,8 +84,7 @@ router.post('/login', async (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
-    res.status(500).json({ success: false, error: message });
+    res.status(500).json({ success: false, error: safeErrorMessage(err, 'Erro interno do servidor') });
   }
 });
 
@@ -115,8 +115,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
-    res.status(500).json({ success: false, error: message });
+    res.status(500).json({ success: false, error: safeErrorMessage(err, 'Erro interno do servidor') });
   }
 });
 
@@ -170,8 +169,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : (err as Error).message;
-    res.status(500).json({ success: false, error: message });
+    res.status(500).json({ success: false, error: safeErrorMessage(err, 'Erro interno do servidor') });
   }
 });
 

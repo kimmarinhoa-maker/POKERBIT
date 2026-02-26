@@ -101,7 +101,6 @@ export default function LockWeekModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      aria-hidden="true"
     >
       <div
         className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal animate-slide-up w-full max-w-lg mx-4"

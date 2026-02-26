@@ -23,7 +23,28 @@ function sumArr(arr: any[], key: string): number {
 
 export class SettlementService {
   // ─── Listar semanas disponíveis ──────────────────────────────────
-  async listWeeks(tenantId: string, clubId?: string, startDate?: string, endDate?: string) {
+  async listWeeks(
+    tenantId: string,
+    clubId?: string,
+    startDate?: string,
+    endDate?: string,
+    page: number = 1,
+    limit: number = 50,
+  ) {
+    // Count query for total
+    let countQuery = supabaseAdmin
+      .from('settlements')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    if (clubId) countQuery = countQuery.eq('club_id', clubId);
+    if (startDate) countQuery = countQuery.gte('week_start', startDate);
+    if (endDate) countQuery = countQuery.lte('week_start', endDate);
+
+    const { count: total } = await countQuery;
+
+    // Data query with .range()
+    const offset = (page - 1) * limit;
     let query = supabaseAdmin
       .from('settlements')
       .select(
@@ -34,7 +55,8 @@ export class SettlementService {
       `,
       )
       .eq('tenant_id', tenantId)
-      .order('week_start', { ascending: false });
+      .order('week_start', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (clubId) {
       query = query.eq('club_id', clubId);
@@ -48,7 +70,7 @@ export class SettlementService {
 
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar settlements: ${error.message}`);
-    return data || [];
+    return { data: data || [], total: total || 0 };
   }
 
   // ─── Settlement básico (mantido para compatibilidade) ────────────

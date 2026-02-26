@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -74,8 +75,8 @@ router.get('/', ...adminOnly, async (req: Request, res: Response) => {
             try {
               const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
               enriched[index].email = authUser?.user?.email || null;
-            } catch (authErr: any) {
-              console.warn(`[users] Failed to fetch email for user ${userId}:`, authErr?.message);
+            } catch (authErr: unknown) {
+              console.warn(`[users] Failed to fetch email for user ${userId}:`, safeErrorMessage(authErr));
             }
           }),
         );
@@ -86,8 +87,8 @@ router.get('/', ...adminOnly, async (req: Request, res: Response) => {
     }
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -139,8 +140,8 @@ router.patch('/:id/role', ...adminOnly, async (req: Request, res: Response) => {
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -176,8 +177,8 @@ router.delete('/:id', ...adminOnly, async (req: Request, res: Response) => {
 
     if (error) throw error;
     res.json({ success: true, data: { deleted: true } });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -286,8 +287,8 @@ router.post('/invite', ...adminOnly, async (req: Request, res: Response) => {
       data,
       message: 'Membro adicionado com sucesso',
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -331,8 +332,8 @@ router.get('/:id/org-access', ...adminOnly, async (req: Request, res: Response) 
         org_ids: (rows || []).map((r: any) => r.org_id),
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -392,8 +393,8 @@ router.put('/:id/org-access', ...adminOnly, async (req: Request, res: Response) 
       success: true,
       data: { org_ids },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

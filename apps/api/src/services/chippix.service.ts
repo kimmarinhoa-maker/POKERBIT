@@ -282,25 +282,61 @@ export class ChipPixService {
   }
 
   // ─── Listar transações ChipPix de uma semana ─────────────────────
-  async listTransactions(tenantId: string, weekStart?: string, status?: string): Promise<ChipPixRow[]> {
+  async listTransactions(
+    tenantId: string,
+    weekStart?: string,
+    status?: string,
+    page: number = 1,
+    limit: number = 100,
+  ): Promise<{ data: ChipPixRow[]; total: number }> {
+    // When status filter is used, we need JS filtering because status is virtual.
+    // Otherwise, push pagination to database.
+    if (status) {
+      // Virtual status requires fetching all and filtering in JS
+      let query = supabaseAdmin
+        .from('ledger_entries')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .in('source', ['chippix', 'chippix_ignored'])
+        .order('amount', { ascending: false });
+
+      if (weekStart) query = query.eq('week_start', weekStart);
+
+      const { data, error } = await query;
+      if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
+
+      const allRows = (data || []).map((r) => this.enrichRow(r)).filter((r) => r.status === status);
+      const total = allRows.length;
+      const offset = (page - 1) * limit;
+      return { data: allRows.slice(offset, offset + limit), total };
+    }
+
+    // No status filter — push pagination to database
+    let countQuery = supabaseAdmin
+      .from('ledger_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .in('source', ['chippix', 'chippix_ignored']);
+
+    if (weekStart) countQuery = countQuery.eq('week_start', weekStart);
+
+    const { count: total } = await countQuery;
+
+    const offset = (page - 1) * limit;
     let query = supabaseAdmin
       .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
       .in('source', ['chippix', 'chippix_ignored'])
-      .order('amount', { ascending: false });
+      .order('amount', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (weekStart) query = query.eq('week_start', weekStart);
 
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
 
-    let rows = (data || []).map((r) => this.enrichRow(r));
-
-    // Filter by virtual status if requested
-    if (status) rows = rows.filter((r) => r.status === status);
-
-    return rows;
+    return { data: (data || []).map((r) => this.enrichRow(r)), total: total || 0 };
   }
 
   // ─── Import Extrato → parse + link + insert direto em ledger ────
@@ -557,14 +593,14 @@ export class ChipPixService {
     }
 
     // Use earliest date to find its Monday
-    const earliest = new Date(dates[0] + 'T00:00:00');
-    const day = earliest.getDay(); // 0=dom, 1=seg
+    const earliest = new Date(dates[0] + 'T00:00:00Z');
+    const day = earliest.getUTCDay(); // 0=dom, 1=seg
     const diff = day === 0 ? -6 : 1 - day;
-    earliest.setDate(earliest.getDate() + diff);
+    earliest.setUTCDate(earliest.getUTCDate() + diff);
 
-    const y = earliest.getFullYear();
-    const m = String(earliest.getMonth() + 1).padStart(2, '0');
-    const d = String(earliest.getDate()).padStart(2, '0');
+    const y = earliest.getUTCFullYear();
+    const m = String(earliest.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(earliest.getUTCDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
 

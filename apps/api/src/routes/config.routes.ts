@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -17,8 +18,8 @@ router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Respon
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -55,8 +56,8 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), a
     const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).order('name');
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -67,6 +68,11 @@ router.get('/adjustments', requireAuth, requireTenant, async (req: Request, res:
     const weekStart = req.query.week_start as string;
     const subclubId = req.query.subclub_id as string;
 
+    if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
     let query = supabaseAdmin.from('club_adjustments').select('*, organizations!inner(name)').eq('tenant_id', tenantId);
 
     if (weekStart) query = query.eq('week_start', weekStart);
@@ -76,8 +82,8 @@ router.get('/adjustments', requireAuth, requireTenant, async (req: Request, res:
     if (error) throw error;
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -117,8 +123,8 @@ router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADM
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -140,8 +146,8 @@ router.get('/payment-methods', requireAuth, requireTenant, async (req: Request, 
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -174,8 +180,8 @@ router.post('/payment-methods', requireAuth, requireTenant, requireRole('OWNER',
 
     if (error) throw error;
     res.status(201).json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -211,8 +217,8 @@ router.put('/payment-methods/:id', requireAuth, requireTenant, requireRole('OWNE
       return;
     }
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -226,8 +232,8 @@ router.delete('/payment-methods/:id', requireAuth, requireTenant, requireRole('O
 
     if (error) throw error;
     res.json({ success: true, data: { deleted: true } });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -248,8 +254,8 @@ router.get('/bank-accounts', requireAuth, requireTenant, async (req: Request, re
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -283,8 +289,8 @@ router.post('/bank-accounts', requireAuth, requireTenant, requireRole('OWNER', '
 
     if (error) throw error;
     res.status(201).json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -321,8 +327,8 @@ router.put('/bank-accounts/:id', requireAuth, requireTenant, requireRole('OWNER'
       return;
     }
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -336,8 +342,8 @@ router.delete('/bank-accounts/:id', requireAuth, requireTenant, requireRole('OWN
 
     if (error) throw error;
     res.json({ success: true, data: { deleted: true } });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -358,8 +364,8 @@ router.get('/rakeback-defaults', requireAuth, requireTenant, async (req: Request
 
     if (error) throw error;
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -398,8 +404,56 @@ router.put('/rakeback-defaults', requireAuth, requireTenant, requireRole('OWNER'
       .order('created_at');
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── GET /api/config/whatsapp — Config Evolution API ──────────────
+router.get('/whatsapp', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_config')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({ success: true, data: data || { api_url: '', api_key: '', instance_name: '', is_active: false } });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── PUT /api/config/whatsapp — Upsert config Evolution API ──────
+router.put('/whatsapp', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { api_url, api_key, instance_name, is_active } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_config')
+      .upsert(
+        {
+          tenant_id: tenantId,
+          api_url: api_url || '',
+          api_key: api_key || '',
+          instance_name: instance_name || '',
+          is_active: is_active ?? false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id' },
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 

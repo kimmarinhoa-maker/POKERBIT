@@ -18,10 +18,10 @@
     "test:watch": "vitest",
     "test:golden": "node tools/compare.js",
     "lint": "eslint apps/web/src apps/api/src --ext .ts,.tsx --max-warnings 100",
-    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\""
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "pg": "^8.18.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
@@ -33,6 +33,10 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.3.0",
+    "concurrently": "^9.0.0",
     "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18.18.0"
   }
 }

@@ -65,13 +65,17 @@ export default function OFXTab({
     setLoading(true);
     try {
       const res = await listOFXTransactions(weekStart);
-      if (res.success) setTxns(res.data || []);
+      if (!res.success) {
+        toast('Erro ao carregar transacoes OFX', 'error');
+        return;
+      }
+      setTxns(res.data || []);
     } catch {
       toast('Erro ao carregar transacoes OFX', 'error');
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, toast]);
 
   useEffect(() => {
     loadTxns();

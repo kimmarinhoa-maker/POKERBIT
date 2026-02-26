@@ -7,6 +7,7 @@ import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { settlementService } from '../services/settlement.service';
 import { supabaseAdmin } from '../config/supabase';
 import { normName } from '../utils/normName';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -20,17 +21,21 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
 
-    const data = await settlementService.listWeeks(tenantId, clubId, startDate, endDate);
-    const total = data.length;
-    const paged = data.slice((page - 1) * limit, page * limit);
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if ((startDate && !dateRe.test(startDate)) || (endDate && !dateRe.test(endDate))) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
+    const { data, total } = await settlementService.listWeeks(tenantId, clubId, startDate, endDate, page, limit);
 
     res.json({
       success: true,
-      data: paged,
+      data,
       meta: { total, page, limit, pages: Math.ceil(total / limit) },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -46,8 +51,8 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     }
 
     res.json({ success: true, data: detail });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -65,9 +70,9 @@ router.get('/:id/full', requireAuth, requireTenant, async (req: Request, res: Re
     }
 
     res.json({ success: true, data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[settlement/full]', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -102,8 +107,8 @@ router.patch(
       }
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -121,9 +126,10 @@ router.post(
       const data = await settlementService.finalizeSettlement(tenantId, req.params.id, req.userId!);
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      const status = err.message.includes('não pode') ? 422 : 500;
-      res.status(status).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      const msg = safeErrorMessage(err);
+      const status = msg.includes('não pode') ? 422 : 500;
+      res.status(status).json({ success: false, error: msg });
     }
   },
 );
@@ -187,8 +193,8 @@ router.patch(
       }
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -432,8 +438,8 @@ router.post(
       await Promise.all(allPromises);
 
       res.json({ success: true, data: { created, fixed, linked } });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -508,8 +514,8 @@ router.patch(
       if (error) throw error;
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -533,9 +539,10 @@ router.post(
       const data = await settlementService.voidSettlement(tenantId, req.params.id, req.userId!, reason);
 
       res.json({ success: true, data });
-    } catch (err: any) {
-      const status = err.message.includes('Apenas') ? 422 : 500;
-      res.status(status).json({ success: false, error: err.message });
+    } catch (err: unknown) {
+      const msg = safeErrorMessage(err);
+      const status = msg.includes('Apenas') ? 422 : 500;
+      res.status(status).json({ success: false, error: msg });
     }
   },
 );

@@ -17,6 +17,7 @@ import { importService } from '../services/import.service';
 import { importPreviewService } from '../services/importPreview.service';
 import { importConfirmService, ConfirmError } from '../services/importConfirm.service';
 import { supabaseAdmin } from '../config/supabase';
+import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
 
@@ -73,9 +74,9 @@ router.post('/preview', requireAuth, requireTenant, upload.single('file'), async
         available_subclubs: subclubs || [],
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[POST /api/imports/preview]', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -139,7 +140,7 @@ router.post(
       });
 
       res.status(201).json({ success: true, data: result });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof ConfirmError) {
         res.status(err.status).json({
           success: false,
@@ -149,7 +150,7 @@ router.post(
       }
 
       console.error('[POST /api/imports/confirm]', err);
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -188,6 +189,19 @@ router.post(
       const { club_id, week_start } = parsed.data;
       const tenantId = req.tenantId!;
 
+      // Validate club belongs to this tenant
+      const { data: club } = await supabaseAdmin
+        .from('organizations')
+        .select('id')
+        .eq('id', club_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      if (!club) {
+        res.status(400).json({ success: false, error: 'Clube nao encontrado neste tenant' });
+        return;
+      }
+
       const result = await importService.processImport({
         tenantId,
         clubId: club_id,
@@ -203,9 +217,9 @@ router.post(
         success: result.status !== 'error',
         data: result,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[POST /api/imports]', err);
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -232,8 +246,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       data: data || [],
       meta: { total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit) },
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -255,8 +269,8 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     }
 
     res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
 
@@ -287,6 +301,18 @@ router.delete(
       // Cascade: clean up related data if settlement exists
       if (imp.settlement_id) {
         const sid = imp.settlement_id;
+
+        // Guard: block deletion if settlement is finalized or voided
+        const { data: settlement } = await supabaseAdmin
+          .from('settlements')
+          .select('status')
+          .eq('id', sid)
+          .single();
+
+        if (settlement?.status === 'FINAL' || settlement?.status === 'VOID') {
+          res.status(422).json({ success: false, error: 'Nao e possivel excluir: settlement ja finalizado' });
+          return;
+        }
 
         // 1) Delete player_week_metrics for this settlement
         const { error: pwmErr } = await supabaseAdmin
@@ -320,9 +346,9 @@ router.delete(
       if (delErr) throw delErr;
 
       res.json({ success: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[DELETE /api/imports/:id]', err);
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );

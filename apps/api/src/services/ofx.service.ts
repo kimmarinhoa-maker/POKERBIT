@@ -153,20 +153,41 @@ export class OFXService {
   }
 
   // ─── Listar transações de uma semana ──────────────────────────────
-  async listTransactions(tenantId: string, weekStart?: string, status?: string): Promise<BankTransaction[]> {
+  async listTransactions(
+    tenantId: string,
+    weekStart?: string,
+    status?: string,
+    page: number = 1,
+    limit: number = 100,
+  ): Promise<{ data: BankTransaction[]; total: number }> {
+    // Count query for total
+    let countQuery = supabaseAdmin
+      .from('bank_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('source', 'ofx');
+
+    if (weekStart) countQuery = countQuery.eq('week_start', weekStart);
+    if (status) countQuery = countQuery.eq('status', status);
+
+    const { count: total } = await countQuery;
+
+    // Data query with .range()
+    const offset = (page - 1) * limit;
     let query = supabaseAdmin
       .from('bank_transactions')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('source', 'ofx')
-      .order('tx_date', { ascending: false });
+      .order('tx_date', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (weekStart) query = query.eq('week_start', weekStart);
     if (status) query = query.eq('status', status);
 
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar transações: ${error.message}`);
-    return data || [];
+    return { data: data || [], total: total || 0 };
   }
 
   // ─── Vincular transação a uma entidade ────────────────────────────
@@ -233,49 +254,79 @@ export class OFXService {
 
     if (fetchErr) throw new Error(`Erro ao buscar vinculadas: ${fetchErr.message}`);
     if (!linked || linked.length === 0) {
-      return { applied: 0 };
+      return { applied: 0, errors: [] };
     }
 
-    let applied = 0;
+    // Filter to only those with entity_id and build all ledger entries at once
+    const validTxns = linked.filter((tx) => tx.entity_id);
+    if (validTxns.length === 0) {
+      return { applied: 0, errors: [] };
+    }
 
-    for (const tx of linked) {
-      if (!tx.entity_id) continue;
+    const allEntries = validTxns.map((tx) => ({
+      tenant_id: tenantId,
+      entity_id: tx.entity_id,
+      entity_name: tx.entity_name || null,
+      week_start: weekStart,
+      dir: tx.dir === 'in' ? 'IN' : 'OUT',
+      amount: Math.abs(Number(tx.amount)),
+      method: tx.bank_name || 'OFX',
+      description: tx.memo || `OFX: ${tx.fitid}`,
+      source: 'ofx',
+      external_ref: tx.fitid,
+      created_by: userId,
+    }));
 
-      // Create ledger entry
-      const { data: entry, error: ledgerErr } = await supabaseAdmin
-        .from('ledger_entries')
-        .insert({
-          tenant_id: tenantId,
-          entity_id: tx.entity_id,
-          entity_name: tx.entity_name || null,
-          week_start: weekStart,
-          dir: tx.dir === 'in' ? 'IN' : 'OUT',
-          amount: Math.abs(Number(tx.amount)),
-          method: tx.bank_name || 'OFX',
-          description: tx.memo || `OFX: ${tx.fitid}`,
-          source: 'ofx',
-          external_ref: tx.fitid,
-          created_by: userId,
-        })
-        .select()
-        .single();
+    // Batch insert all ledger entries
+    const { data: insertedEntries, error: ledgerErr } = await supabaseAdmin
+      .from('ledger_entries')
+      .insert(allEntries)
+      .select('id, external_ref');
 
-      if (ledgerErr) {
-        console.error(`Erro ao criar ledger para ${tx.fitid}:`, ledgerErr);
-        continue;
+    const errors: string[] = [];
+    if (ledgerErr) {
+      errors.push(`Erro ao criar ledger entries em batch: ${ledgerErr.message}`);
+      // Audit even on failure
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        action: 'APPLY_OFX',
+        entity_type: 'bank_transaction',
+        new_data: { week_start: weekStart, applied: 0, error: ledgerErr.message },
+      });
+      return { applied: 0, errors };
+    }
+
+    // Build fitid → ledger_id map for the status update
+    const fitidToLedgerId = new Map<string, string>();
+    for (const entry of insertedEntries || []) {
+      if (entry.external_ref) fitidToLedgerId.set(entry.external_ref, entry.id);
+    }
+
+    // Batch update all bank_transactions to 'applied'
+    const txIds = validTxns.map((tx) => tx.id);
+    const { error: updateErr } = await supabaseAdmin
+      .from('bank_transactions')
+      .update({ status: 'applied' })
+      .eq('tenant_id', tenantId)
+      .in('id', txIds);
+
+    if (updateErr) {
+      errors.push(`Ledger entries criados, mas erro ao atualizar bank_transactions: ${updateErr.message}`);
+    }
+
+    // Update applied_ledger_id individually (different value per row)
+    for (const tx of validTxns) {
+      const ledgerId = fitidToLedgerId.get(tx.fitid);
+      if (ledgerId) {
+        await supabaseAdmin
+          .from('bank_transactions')
+          .update({ applied_ledger_id: ledgerId })
+          .eq('id', tx.id);
       }
-
-      // Update bank_transaction status
-      await supabaseAdmin
-        .from('bank_transactions')
-        .update({
-          status: 'applied',
-          applied_ledger_id: entry.id,
-        })
-        .eq('id', tx.id);
-
-      applied++;
     }
+
+    const applied = insertedEntries?.length || 0;
 
     // Audit
     await supabaseAdmin.from('audit_log').insert({
@@ -286,7 +337,7 @@ export class OFXService {
       new_data: { week_start: weekStart, applied },
     });
 
-    return { applied };
+    return { applied, errors };
   }
 
   // ─── Auto-Match: 5-tier matching for pending OFX transactions ──────
