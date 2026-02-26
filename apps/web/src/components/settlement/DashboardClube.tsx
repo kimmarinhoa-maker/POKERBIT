@@ -4,9 +4,10 @@ import { useMemo } from 'react';
 import KpiCard from '@/components/dashboard/KpiCard';
 import { formatCurrency } from '@/lib/formatters';
 import { formatBRL } from '@/lib/api';
+import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
 
 interface Props {
-  subclub: any;
+  subclub: SubclubData;
   fees: Record<string, number>;
 }
 
@@ -61,7 +62,7 @@ export default function DashboardClube({ subclub, fees }: Props) {
 
   // ── Player summaries ─────────────────────────────────────────────
   const playerSummaries: PlayerSummary[] = useMemo(() => {
-    return (players || []).map((p: any) => ({
+    return (players || []).map((p: PlayerMetric) => ({
       nickname: p.nickname || p.external_player_id || '???',
       agentName: p.agent_name || 'SEM AGENTE',
       rake: Number(p.rake_total_brl || 0),
@@ -137,7 +138,7 @@ export default function DashboardClube({ subclub, fees }: Props) {
   const totalTaxas = Math.abs(feesComputed.totalTaxasSigned || 0);
   const absLancamentos = Math.abs(totalLancamentos || 0);
   const totalDespesas = totalTaxas + absLancamentos;
-  const totalRakeback = (agents || []).reduce((s: number, a: any) => s + Number(a.rb_value || 0), 0);
+  const totalRakeback = (agents || []).reduce((s: number, a: AgentMetric) => s + Number(a.commission_brl || 0), 0);
 
   return (
     <div>

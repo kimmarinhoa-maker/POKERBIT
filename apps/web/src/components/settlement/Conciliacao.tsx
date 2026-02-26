@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, toggleReconciled } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
@@ -35,16 +35,20 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>('all');
   const [toggling, setToggling] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
       const res = await listLedger(weekStart);
+      if (!mountedRef.current) return;
       if (res.success) setEntries(res.data || []);
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar movimentacoes do ledger', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart]);
 

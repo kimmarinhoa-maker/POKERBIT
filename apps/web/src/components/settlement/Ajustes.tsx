@@ -4,14 +4,10 @@ import { useState, useMemo } from 'react';
 import { saveClubAdjustments, formatBRL } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import KpiCard from '@/components/ui/KpiCard';
+import { SubclubData } from '@/types/settlement';
 
 interface Props {
-  subclub: {
-    id: string;
-    name: string;
-    adjustments: { overlay: number; compras: number; security: number; outros: number; obs: string | null };
-    totalLancamentos: number;
-  };
+  subclub: Pick<SubclubData, 'id' | 'name' | 'adjustments' | 'totalLancamentos'>;
   weekStart: string;
   settlementStatus: string;
   onDataChange: () => void;
@@ -86,8 +82,8 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
       } else {
         setError(res.error || 'Erro ao salvar');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setSaving(false);
     }

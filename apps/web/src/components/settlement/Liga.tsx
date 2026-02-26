@@ -5,19 +5,10 @@ import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 import KpiCard from '@/components/ui/KpiCard';
-
-interface SubclubSummary {
-  id: string;
-  name: string;
-  totals: { resultado: number };
-  feesComputed: { totalTaxas: number; totalTaxasSigned: number };
-  totalLancamentos: number;
-  acertoLiga: number;
-  acertoDirecao: string;
-}
+import { SubclubData } from '@/types/settlement';
 
 interface Props {
-  subclubs: SubclubSummary[];
+  subclubs: SubclubData[];
   currentSubclubName: string;
   logoMap?: Record<string, string | null>;
 }

@@ -16,12 +16,13 @@ import { round2 } from '@/lib/formatters';
 import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
 import { Percent, Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 
 interface OrgData {
   id: string;
   name: string;
   type: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 interface Props {
@@ -49,6 +50,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const { canAccess } = useAuth();
   const canEditRates = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
+  const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [search, setSearch] = useState('');
   const [orgs, setOrgs] = useState<OrgData[]>([]);
@@ -66,6 +68,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
   // Load orgs (for is_direct) and ledger (for badge status)
   const loadExtras = useCallback(async () => {
+    setLoading(true);
     try {
       // Auto-sync agents to organizations on first load
       if (isDraft) {
@@ -78,6 +81,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     } catch {
       if (!mountedRef.current) return;
       toast('Erro na operacao de rakeback', 'error');
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, settlementId, isDraft]);
 
@@ -352,6 +357,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   }
 
   // ─── Render ───────────────────────────────────────────────────────
+
+  if (loading) return <SettlementSkeleton kpis={4} />;
 
   const taxLabel = `${fees.taxaApp || 0}%+${fees.taxaLiga || 0}%`;
 

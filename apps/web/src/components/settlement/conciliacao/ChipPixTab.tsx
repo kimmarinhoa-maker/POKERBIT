@@ -200,8 +200,8 @@ export default function ChipPixTab({
       } else {
         toast(res.error || 'Erro ao importar', 'error');
       }
-    } catch (err: any) {
-      toast(err.message, 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro ao importar', 'error');
     } finally {
       setUploading(false);
       e.target.value = '';

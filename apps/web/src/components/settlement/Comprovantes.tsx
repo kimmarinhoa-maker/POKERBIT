@@ -779,15 +779,15 @@ function AgentRow({
                   {hasPago && (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-dark-300">Pagamentos</span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-sky-400">{formatBRL(data.pago)}</span>
+                          <span className="text-dark-300">Pagamentos</span>
                           {data.entries.length > 0 && (
                             <span className="text-[10px] text-dark-500">
                               {data.entries.map(e => e.method).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || ''}
                             </span>
                           )}
                         </div>
+                        <span className="font-mono font-bold text-sky-400">{formatBRL(data.pago)}</span>
                       </div>
                       <div className="border-t-2 border-dark-600/50 pt-1">
                         <FinRow label="Saldo Final" value={data.pendente} bold large />
@@ -967,46 +967,51 @@ function StatementView({
         ref={statementRef}
         className="bg-dark-900 border border-dark-700 rounded-xl p-6 print:bg-white print:text-black print:border-none print:shadow-none max-w-2xl mx-auto"
       >
-        {/* Header: Logo + Club + Fechamento Semanal */}
-        <div className="flex flex-col items-center mb-5">
-          {logoUrl && (
+        {/* Header: Logo lateral + Info */}
+        <div className="flex items-center gap-5 mb-5">
+          {/* Logo grande na lateral */}
+          {logoUrl ? (
             <img
               src={logoUrl}
               alt={subclubName}
-              className="w-12 h-12 rounded-lg object-cover mb-2 bg-dark-800"
+              className="w-20 h-20 rounded-xl object-cover bg-dark-800 shrink-0"
               crossOrigin="anonymous"
             />
+          ) : (
+            <div className="w-20 h-20 rounded-xl bg-dark-800 flex items-center justify-center shrink-0">
+              <span className="text-2xl font-bold text-dark-500">{(subclubName || '?').charAt(0).toUpperCase()}</span>
+            </div>
           )}
-          <h2 className="text-lg font-bold text-white print:text-black uppercase tracking-wide">
-            {subclubName}
-          </h2>
-          <p className="text-dark-400 print:text-gray-500 text-xs mt-0.5">
-            Fechamento Semanal — {fmtDate(weekStart)} a {fmtDate(weekEnd)}
-          </p>
+
+          {/* Info ao lado */}
+          <div className="min-w-0">
+            <p className="text-[10px] text-dark-500 print:text-gray-400 uppercase tracking-wider font-bold">
+              Fechamento Semanal
+            </p>
+            <h2 className="text-lg font-bold text-poker-400 print:text-black mt-0.5">
+              {agent.agent_name}
+              <span className="text-dark-500 print:text-gray-500 text-xs font-mono ml-2">
+                {(() => {
+                  const extId = agent.external_agent_id || players[0]?.external_agent_id;
+                  return extId ? `#${extId}` : '';
+                })()}
+              </span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ml-2 align-middle ${
+                isAvista
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 print:text-green-700 print:border-green-600'
+                  : 'bg-poker-500/10 text-poker-400 border-poker-500/30 print:text-blue-700 print:border-blue-600'
+              }`}>
+                {tipoLabel}
+              </span>
+            </h2>
+            <p className="text-dark-400 print:text-gray-500 text-xs mt-0.5">
+              {fmtDate(weekStart)} a {fmtDate(weekEnd)} · {players.length} jogador{players.length !== 1 ? 'es' : ''} · {subclubName}
+            </p>
+          </div>
         </div>
 
         {/* Divider */}
         <div className="border-t border-dark-700/50 print:border-gray-300 mb-4" />
-
-        {/* Agent Name + Subtitle */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-poker-400 print:text-black">
-              {agent.agent_name}
-              {isDirect && <span className="text-blue-400 text-[10px] ml-1.5 print:text-blue-700">(Direto)</span>}
-            </h3>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${
-              isAvista
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 print:text-green-700 print:border-green-600'
-                : 'bg-poker-500/10 text-poker-400 border-poker-500/30 print:text-blue-700 print:border-blue-600'
-            }`}>
-              {tipoLabel}
-            </span>
-          </div>
-          <p className="text-dark-500 print:text-gray-500 text-[11px] mt-0.5">
-            Extrato de fechamento · {players.length} jogador{players.length !== 1 ? 'es' : ''}
-          </p>
-        </div>
 
         {/* ─── Player Table ─── */}
         {!hidePlayers && (

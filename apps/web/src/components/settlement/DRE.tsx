@@ -4,24 +4,10 @@ import { useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import KpiCard from '@/components/ui/KpiCard';
+import { SubclubData } from '@/types/settlement';
 
 interface Props {
-  subclub: {
-    name: string;
-    totals: { ganhos: number; rake: number; ggr: number; resultado: number; rbTotal?: number };
-    feesComputed: {
-      taxaApp: number;
-      taxaLiga: number;
-      taxaRodeoGGR: number;
-      taxaRodeoApp: number;
-      totalTaxas: number;
-      totalTaxasSigned: number;
-    };
-    adjustments: { overlay: number; compras: number; security: number; outros: number };
-    totalLancamentos: number;
-    acertoLiga: number;
-    acertoDirecao: string;
-  };
+  subclub: Pick<SubclubData, 'name' | 'totals' | 'feesComputed' | 'adjustments' | 'totalLancamentos' | 'acertoLiga' | 'acertoDirecao'>;
   fees: Record<string, number>;
 }
 

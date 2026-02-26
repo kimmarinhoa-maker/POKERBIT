@@ -109,8 +109,8 @@ export default function OFXTab({
       } else {
         setFeedback({ type: 'error', msg: res.error || 'Erro ao importar' });
       }
-    } catch (err: any) {
-      setFeedback({ type: 'error', msg: err.message });
+    } catch (err: unknown) {
+      setFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Erro ao importar' });
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -184,8 +184,8 @@ export default function OFXTab({
       } else {
         setFeedback({ type: 'error', msg: res.error || 'Erro na auto-classificacao' });
       }
-    } catch (err: any) {
-      setFeedback({ type: 'error', msg: err.message });
+    } catch (err: unknown) {
+      setFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Erro na auto-classificacao' });
     } finally {
       setAutoMatching(false);
     }
