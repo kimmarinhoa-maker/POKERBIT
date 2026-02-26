@@ -7,6 +7,7 @@ import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -122,18 +123,22 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   const [resultFilter, setResultFilter] = useState<'all' | 'pagar' | 'receber' | 'zero'>('all');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [selectedAgent, setSelectedAgent] = useState<AgentFinancials | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   // Load ledger entries + carry-forward
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
+      if (!mountedRef.current) return;
       if (ledgerRes.success) setEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar comprovantes', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, clubId]);
 
@@ -435,48 +440,31 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Agentes</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{kpis.total}</p>
-            <p className="text-[10px] text-dark-500">{activeTab === 'agencias' ? 'Agencias' : 'Diretos'}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo a Pagar</p>
-            <p className="text-xl font-bold mt-2 font-mono text-red-400">
-              {kpis.totalPagar > 0 ? formatBRL(kpis.totalPagar) : '—'}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-emerald-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo a Receber</p>
-            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">
-              {kpis.totalReceber > 0 ? formatBRL(kpis.totalReceber) : '—'}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div
-            className={`h-0.5 ${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}`}
-          />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Status</p>
-            <p className="text-xl font-bold mt-2 font-mono text-dark-200">
-              {
-                activeData.filter(
-                  (d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01),
-                ).length
-              }
-              /{kpis.total} quitados
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Agentes"
+          value={kpis.total}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={activeTab === 'agencias' ? 'Agencias' : 'Diretos'}
+        />
+        <KpiCard
+          label="Saldo a Pagar"
+          value={kpis.totalPagar > 0 ? formatBRL(kpis.totalPagar) : '—'}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+        />
+        <KpiCard
+          label="Saldo a Receber"
+          value={kpis.totalReceber > 0 ? formatBRL(kpis.totalReceber) : '—'}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Status"
+          value={`${activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length}/${kpis.total} quitados`}
+          accentColor={activeData.filter((d) => Math.abs(d.pendente) < 0.01 && (Math.abs(d.totalDevido) > 0.01 || Math.abs(d.pago) > 0.01)).length === activeData.length ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor="text-dark-200"
+        />
       </div>
 
       {/* Sub-tabs */}
@@ -530,7 +518,7 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
         </select>
       </div>
 
-      {/* Agent cards */}
+      {/* Agent table */}
       {filteredData.length === 0 ? (
         <div className="card text-center py-12">
           <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
@@ -539,16 +527,33 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredData.map((data) => (
-            <AgentCard
-              key={data.agent.id}
-              data={data}
-              isExpanded={expandedAgents.has(data.agent.id)}
-              onToggleExpand={() => toggleExpand(data.agent.id)}
-              onGenerateStatement={() => setSelectedAgent(data)}
-            />
-          ))}
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-dark-800/50 border-b border-dark-700">
+                <th className="py-2.5 px-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-bold">Agente</th>
+                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[70px]">Tipo</th>
+                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[80px]">Status</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Ganhos</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">RB Ag.</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo Ant.</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Pago</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[120px]"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-dark-800/50">
+              {filteredData.map((d) => (
+                <AgentRow
+                  key={d.agent.id}
+                  data={d}
+                  isExpanded={expandedAgents.has(d.agent.id)}
+                  onToggleExpand={() => toggleExpand(d.agent.id)}
+                  onPreview={() => setSelectedAgent(d)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -594,180 +599,177 @@ export default function Comprovantes({ subclub, weekStart, clubId }: Props) {
   );
 }
 
-// ─── Agent Card ──────────────────────────────────────────────────────
+// ─── Agent Row (table-based) ─────────────────────────────────────────
 
-function AgentCard({
+function AgentRow({
   data,
   isExpanded,
   onToggleExpand,
-  onGenerateStatement,
+  onPreview,
 }: {
   data: AgentFinancials;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onGenerateStatement: () => void;
+  onPreview: () => void;
 }) {
   const { agent, players, ganhos, rbAgente, saldoAnterior, pago, pendente } = data;
   const isDirect = agent.is_direct;
   const hasMov = Math.abs(pendente) > 0.01 || Math.abs(data.totalDevido) > 0.01;
   const hasPago = Math.abs(pago) > 0.01;
+  const isQuitado = Math.abs(pendente) < 0.01 && hasMov;
 
-  // Status badge
-  const statusBadge =
-    Math.abs(pendente) < 0.01 && hasMov
-      ? { label: 'Quitado', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-      : pendente > 0.01
-        ? { label: 'A Receber', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400' }
-        : pendente < -0.01
-          ? { label: 'A Pagar', bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' }
-          : null;
+  const statusBadge = isQuitado
+    ? { label: 'Quitado', cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' }
+    : pendente > 0.01
+      ? { label: 'A Receber', cls: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' }
+      : pendente < -0.01
+        ? { label: 'A Pagar', cls: 'bg-red-500/10 border-red-500/20 text-red-400' }
+        : null;
+
+  function MoneyCell({ value, color }: { value: number; color?: string }) {
+    const hasVal = Math.abs(value) > 0.01;
+    return (
+      <span className={`font-mono text-xs ${hasVal ? (color || clr(value)) : 'text-dark-600'}`}>
+        {hasVal ? formatBRL(value) : '—'}
+      </span>
+    );
+  }
 
   return (
-    <div
-      className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden transition-all duration-200 hover:border-dark-600 ${!hasMov ? 'opacity-40' : ''}`}
-    >
-      {/* Main row — clickable to expand */}
-      <div
-        className="flex items-center cursor-pointer hover:bg-dark-800/30 transition-colors"
+    <>
+      {/* Main row */}
+      <tr
+        className={`cursor-pointer hover:bg-dark-800/40 transition-colors ${!hasMov ? 'opacity-40' : ''}`}
         onClick={onToggleExpand}
       >
-        {/* Left accent bar */}
-        <div
-          className={`w-1 self-stretch flex-shrink-0 ${
-            (agent.payment_type || 'fiado') === 'avista' ? 'bg-emerald-500' : 'bg-yellow-500'
-          }`}
-        />
-
-        {/* Content */}
-        <div className="flex items-center gap-3 flex-1 px-4 py-3 min-w-0">
-          {/* Col 1: Name + badges */}
-          <div className="flex-shrink-0 min-w-0 w-[220px]">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-white font-semibold text-sm truncate">{agent.agent_name}</span>
-              {isDirect && (
-                <span className="text-[9px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
-                  DIRETO
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-dark-500 text-xs">{agent.player_count} jog.</span>
-              <span
-                className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${
-                  (agent.payment_type || 'fiado') === 'avista'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                }`}
-              >
-                {(agent.payment_type || 'fiado') === 'avista' ? 'A VISTA' : 'FIADO'}
-              </span>
-              {statusBadge && (
-                <span
-                  className={`text-[9px] ${statusBadge.bg} border ${statusBadge.border} ${statusBadge.text} px-1.5 py-0.5 rounded-full font-bold`}
-                >
-                  {statusBadge.label}
-                </span>
-              )}
-            </div>
+        {/* Agent name */}
+        <td className="py-2.5 px-3">
+          <div className="flex items-center gap-1.5">
+            <span className={`text-dark-500 text-[10px] transition-transform duration-150 inline-block ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+            <span className="text-white font-semibold text-sm truncate max-w-[180px]">{agent.agent_name}</span>
+            <span className="text-dark-600 text-[10px] font-mono">{agent.player_count}j</span>
           </div>
+        </td>
 
-          {/* Col 2: Key financial data */}
-          <div className="flex items-center flex-1 justify-end gap-1">
-            <DataCol label="GANHOS" value={ganhos} w={95} />
-            <DataCol
-              label={isDirect ? 'RB' : `RB ${agent.rb_rate}%`}
-              value={rbAgente}
-              customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
-              w={85}
-            />
-            <DataCol label="SALDO ANT." value={saldoAnterior} customColor="text-amber-400" showZero w={95} />
-            <DataCol label="PAGO" value={pago} customColor="text-sky-400" w={90} />
-            <DataCol label="SALDO" value={pendente} isFinal w={105} />
-          </div>
+        {/* Tipo */}
+        <td className="py-2.5 px-2 text-center">
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${
+            (agent.payment_type || 'fiado') === 'avista'
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+          }`}>
+            {(agent.payment_type || 'fiado') === 'avista' ? 'VISTA' : 'FIADO'}
+          </span>
+        </td>
 
-          {/* Col 3: Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            {hasMov && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGenerateStatement();
-                }}
-                className="text-xs px-3 py-1.5 whitespace-nowrap rounded-lg transition-all duration-200 flex items-center gap-1.5 border border-poker-500/40 text-poker-400 bg-poker-500/10 hover:bg-poker-500/20 hover:border-poker-500/60"
-              >
-                📄 Preview
-              </button>
-            )}
-            <span
-              className={`text-dark-500 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-            >
-              ▶
+        {/* Status */}
+        <td className="py-2.5 px-2 text-center">
+          {statusBadge ? (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${statusBadge.cls}`}>
+              {statusBadge.label}
             </span>
-          </div>
-        </div>
-      </div>
+          ) : (
+            <span className="text-dark-600 text-xs">—</span>
+          )}
+        </td>
 
-      {/* Expanded section */}
+        {/* Ganhos */}
+        <td className="py-2.5 px-2 text-right"><MoneyCell value={ganhos} /></td>
+
+        {/* RB */}
+        <td className="py-2.5 px-2 text-right">
+          <MoneyCell value={rbAgente} color={isDirect ? 'text-blue-400' : 'text-purple-400'} />
+        </td>
+
+        {/* Saldo Ant */}
+        <td className="py-2.5 px-2 text-right">
+          <span className={`font-mono text-xs ${Math.abs(saldoAnterior) > 0.01 ? 'text-amber-400' : 'text-dark-600'}`}>
+            {formatBRL(saldoAnterior)}
+          </span>
+        </td>
+
+        {/* Pago */}
+        <td className="py-2.5 px-2 text-right"><MoneyCell value={pago} color="text-sky-400" /></td>
+
+        {/* Saldo final */}
+        <td className="py-2.5 px-2 text-right">
+          <span className={`font-mono text-xs font-bold ${clr(pendente)}`}>
+            {formatBRL(pendente)}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className="py-2.5 px-2 text-right">
+          {hasMov && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPreview(); }}
+              className="text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border border-poker-500/30 text-poker-400 bg-poker-500/5 hover:bg-poker-500/15"
+            >
+              📄 Preview
+            </button>
+          )}
+        </td>
+      </tr>
+
+      {/* Expanded detail */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-dark-700/30">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Financial summary */}
-            <div>
-              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">Resumo Financeiro</h4>
-              <div className="space-y-1.5 text-sm">
-                <FinRow label="Ganhos/Perdas" value={data.ganhos} />
-                <FinRow label="Rake Gerado" value={data.rakeTotal} muted />
-                {rbAgente > 0.01 && (
-                  <FinRow
-                    label={isDirect ? 'RB Individual (Σ jogadores)' : `RB Agente (${agent.rb_rate}%)`}
-                    value={rbAgente}
-                    customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
-                  />
-                )}
-                <div className="border-t border-dark-700/30 pt-1.5">
-                  <FinRow label="Resultado da Semana" value={data.resultado} bold />
+        <tr>
+          <td colSpan={9} className="px-3 pb-4 pt-1 bg-dark-800/20">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-5">
+              {/* Financial summary */}
+              <div>
+                <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">Resumo Financeiro</h4>
+                <div className="space-y-1 text-sm">
+                  <FinRow label="Ganhos/Perdas" value={data.ganhos} />
+                  <FinRow label="Rake Gerado" value={data.rakeTotal} muted />
+                  {rbAgente > 0.01 && (
+                    <FinRow
+                      label={isDirect ? 'RB Individual' : `RB Agente (${agent.rb_rate}%)`}
+                      value={rbAgente}
+                      customColor={isDirect ? 'text-blue-400' : 'text-purple-400'}
+                    />
+                  )}
+                  <div className="border-t border-dark-700/30 pt-1">
+                    <FinRow label="Resultado" value={data.resultado} bold />
+                  </div>
+                  <FinRow label="Saldo Anterior" value={data.saldoAnterior} customColor="text-amber-400" />
+                  <div className="border-t border-dark-700/30 pt-1">
+                    <FinRow label="Total Devido" value={data.totalDevido} bold />
+                  </div>
+                  {hasPago && (
+                    <>
+                      <FinRow label="Pagamentos" value={data.pago} customColor="text-sky-400" />
+                      <div className="border-t-2 border-dark-600/50 pt-1">
+                        <FinRow label="Saldo Final" value={data.pendente} bold large />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <FinRow label="Saldo Anterior" value={data.saldoAnterior} customColor="text-yellow-400" />
-                <div className="border-t border-dark-700/30 pt-1.5">
-                  <FinRow label="Total Devido" value={data.totalDevido} bold />
-                </div>
-                {hasPago && (
-                  <>
-                    <FinRow label="Pagamentos" value={data.pago} customColor="text-sky-400" />
-                    <div className="border-t-2 border-dark-700/30 pt-1.5">
-                      <FinRow label="Saldo Final" value={data.pendente} bold large />
-                    </div>
-                  </>
-                )}
               </div>
-            </div>
 
-            {/* Player table */}
-            <div>
-              <h4 className="text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
-                Jogadores ({players.length})
-              </h4>
-              {players.length > 0 ? (
-                <div className="overflow-x-auto">
+              {/* Player mini-table */}
+              <div>
+                <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">
+                  Jogadores ({players.length})
+                </h4>
+                {players.length > 0 ? (
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-dark-700/50 text-dark-400">
-                        <th className="py-1.5 text-left font-medium">Nick</th>
-                        <th className="py-1.5 text-left font-medium">ID</th>
-                        <th className="py-1.5 text-right font-medium">P/L</th>
-                        <th className="py-1.5 text-right font-medium">Rake</th>
-                        <th className="py-1.5 text-right font-medium">Resultado</th>
+                      <tr className="border-b border-dark-700/50 text-dark-500">
+                        <th className="py-1 text-left font-medium">Nick</th>
+                        <th className="py-1 text-right font-medium">P/L</th>
+                        <th className="py-1 text-right font-medium">Rake</th>
+                        <th className="py-1 text-right font-medium">Resultado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-dark-800/30">
                       {players.map((p, i) => (
-                        <tr key={i} className={i % 2 ? 'bg-dark-800/10' : ''}>
-                          <td className="py-1 text-dark-200 font-medium">{p.nickname || '—'}</td>
-                          <td className="py-1 text-dark-500 text-[10px] font-mono">{p.external_player_id || '—'}</td>
+                        <tr key={i}>
+                          <td className="py-1 text-dark-300">{p.nickname || p.external_player_id || '—'}</td>
                           <td className={`py-1 text-right font-mono ${clr(Number(p.winnings_brl))}`}>
                             {formatBRL(Number(p.winnings_brl))}
                           </td>
-                          <td className="py-1 text-right font-mono text-dark-300">
+                          <td className="py-1 text-right font-mono text-dark-400">
                             {formatBRL(Number(p.rake_total_brl))}
                           </td>
                           <td className={`py-1 text-right font-mono font-bold ${clr(Number(p.resultado_brl))}`}>
@@ -777,51 +779,15 @@ function AgentCard({
                       ))}
                     </tbody>
                   </table>
-                </div>
-              ) : (
-                <p className="text-dark-500 text-xs">Nenhum jogador vinculado</p>
-              )}
+                ) : (
+                  <p className="text-dark-500 text-xs">Nenhum jogador</p>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </td>
+        </tr>
       )}
-    </div>
-  );
-}
-
-// ─── Data Column (card row) ──────────────────────────────────────────
-
-function DataCol({
-  label,
-  value,
-  customColor,
-  isFinal,
-  tooltip,
-  showZero,
-  w,
-}: {
-  label: string;
-  value: number;
-  customColor?: string;
-  isFinal?: boolean;
-  tooltip?: string;
-  showZero?: boolean;
-  w?: number;
-}) {
-  const hasValue = Math.abs(value) > 0.01 || showZero;
-  const color = customColor || clr(value);
-
-  return (
-    <div
-      className={`text-right flex-shrink-0 ${isFinal ? 'bg-dark-700/20 rounded-lg py-1 px-2' : 'px-1'}`}
-      style={{ width: w ? `${w}px` : undefined, minWidth: w ? undefined : '60px' }}
-      title={tooltip}
-    >
-      <p className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-0.5">{label}</p>
-      <p className={`font-mono text-sm font-bold ${hasValue ? color : 'text-dark-600'}`}>
-        {hasValue ? formatBRL(value) : '—'}
-      </p>
-    </div>
+    </>
   );
 }
 

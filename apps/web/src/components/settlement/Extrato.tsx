@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { BookOpen } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface LedgerEntry {
   id: string;
@@ -37,6 +39,9 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const [error, setError] = useState<string | null>(null);
   const [dirFilter, setDirFilter] = useState<'all' | 'IN' | 'OUT'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   const [form, setForm] = useState({
     entity_name: '',
@@ -50,11 +55,13 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     setLoading(true);
     try {
       const res = await listLedger(weekStart);
+      if (!mountedRef.current) return;
       if (res.success) setEntries(res.data || []);
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar extrato', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart]);
 
@@ -77,8 +84,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const filteredEntries = useMemo(() => {
     let result = entries;
     if (dirFilter !== 'all') result = result.filter((e) => e.dir === dirFilter);
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (e) =>
           (e.entity_name || '').toLowerCase().includes(q) ||
@@ -87,7 +94,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
       );
     }
     return result;
-  }, [entries, dirFilter, searchTerm]);
+  }, [entries, dirFilter, debouncedSearch]);
 
   function resetForm() {
     setForm({ entity_name: '', dir: 'IN', amount: '', method: '', description: '' });
@@ -268,44 +275,35 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Movimentacoes</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{entries.length}</p>
-            <p className="text-[10px] text-dark-500">
-              {totals.inCount} IN / {totals.outCount} OUT
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Entradas (IN)</p>
-            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(totals.totalIn)}</p>
-            <p className="text-[10px] text-dark-500">{totals.inCount} movimentacoes</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saidas (OUT)</p>
-            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(totals.totalOut)}</p>
-            <p className="text-[10px] text-dark-500">{totals.outCount} movimentacoes</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo Liquido</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}`}
-            >
-              {formatBRL(totals.net)}
-            </p>
-            <p className="text-[10px] text-dark-500">Entradas - Saidas</p>
-          </div>
-        </div>
+        <KpiCard
+          label="Movimentacoes"
+          value={entries.length}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={`${totals.inCount} IN / ${totals.outCount} OUT`}
+        />
+        <KpiCard
+          label="Entradas (IN)"
+          value={formatBRL(totals.totalIn)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+          subtitle={`${totals.inCount} movimentacoes`}
+        />
+        <KpiCard
+          label="Saidas (OUT)"
+          value={formatBRL(totals.totalOut)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+          subtitle={`${totals.outCount} movimentacoes`}
+        />
+        <KpiCard
+          label="Saldo Liquido"
+          value={formatBRL(totals.net)}
+          accentColor={totals.net >= 0 ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor={totals.net >= 0 ? 'text-emerald-400' : 'text-yellow-400'}
+          subtitle="Entradas - Saidas"
+          ring="ring-1 ring-emerald-700/30"
+        />
       </div>
 
       {/* Filter buttons + Search */}

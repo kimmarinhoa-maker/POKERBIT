@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   listLedger,
   createLedgerEntry,
@@ -10,10 +10,12 @@ import {
   formatBRL,
 } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -84,21 +86,26 @@ export default function Liquidacao({
   const [saving, setSaving] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('devedor');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
   const [statusFilter, setStatusFilter] = useState<'todos' | EntityStatus>('todos');
   const [paymentTypeLoading, setPaymentTypeLoading] = useState<Set<string>>(new Set());
   const [paymentTypeOverrides, setPaymentTypeOverrides] = useState<Record<string, 'fiado' | 'avista'>>({});
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   const loadLedger = useCallback(async () => {
     setLoading(true);
     try {
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
+      if (!mountedRef.current) return;
       if (ledgerRes.success) setAllEntries(ledgerRes.data || []);
       if (carryRes.success) setCarryMap(carryRes.data || {});
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro ao carregar dados de liquidacao', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [weekStart, clubId]);
 
@@ -258,12 +265,12 @@ export default function Liquidacao({
     if (statusFilter !== 'todos') {
       result = result.filter((a) => a.status === statusFilter);
     }
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase();
       result = result.filter((a) => a.agent.agent_name.toLowerCase().includes(term));
     }
     return result;
-  }, [agentLiq, viewTab, searchTerm, statusFilter, isAgentDirect]);
+  }, [agentLiq, viewTab, debouncedSearch, statusFilter, isAgentDirect]);
 
   // Sort
   const sorted = useMemo(() => {
@@ -424,50 +431,37 @@ export default function Liquidacao({
 
       {/* KPI cards - 5 columns like HTML */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${kpis.totalResultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Total</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-              {formatBRL(kpis.totalResultado)}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-yellow-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">RB Distribuido</p>
-            <p className="text-xl font-bold mt-2 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-emerald-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Recebido</p>
-            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{formatBRL(kpis.totalRecebido)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Pago</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{formatBRL(kpis.totalPago)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Saldo Final</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}`}
-            >
-              {formatBRL(kpis.totalPendente)}
-            </p>
-            <p className="text-[9px] text-dark-500 mt-0.5">
-              {kpis.quitados}/{kpis.comMov} quitados
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Resultado Total"
+          value={formatBRL(kpis.totalResultado)}
+          accentColor={kpis.totalResultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={kpis.totalResultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+        />
+        <KpiCard
+          label="RB Distribuido"
+          value={formatBRL(kpis.totalRB)}
+          accentColor="bg-yellow-500"
+          valueColor="text-yellow-400"
+        />
+        <KpiCard
+          label="Recebido"
+          value={formatBRL(kpis.totalRecebido)}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Pago"
+          value={formatBRL(kpis.totalPago)}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+        />
+        <KpiCard
+          label="Saldo Final"
+          value={formatBRL(kpis.totalPendente)}
+          accentColor={kpis.quitados === kpis.comMov && kpis.comMov > 0 ? 'bg-emerald-500' : 'bg-yellow-500'}
+          valueColor={Math.abs(kpis.totalPendente) < 0.01 ? 'text-emerald-400' : 'text-yellow-400'}
+          subtitle={`${kpis.quitados}/${kpis.comMov} quitados`}
+        />
       </div>
 
       {/* Progress bar */}

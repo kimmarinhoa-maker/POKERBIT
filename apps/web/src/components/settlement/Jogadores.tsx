@@ -2,10 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
 import { SubclubData, PlayerMetric, PagamentoDetalhe } from '@/types/settlement';
 import { Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: SubclubData;
@@ -44,6 +46,7 @@ export default function Jogadores({ subclub }: Props) {
   const { players, agents } = subclub;
   const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search);
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [paymentModal, setPaymentModal] = useState<{
@@ -104,8 +107,8 @@ export default function Jogadores({ subclub }: Props) {
 
   // ── Search filter: agencies ──
   const filteredAgencyGroups = useMemo(() => {
-    if (!search.trim()) return agencyGroups;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return agencyGroups;
+    const q = debouncedSearch.toLowerCase();
     return agencyGroups
       .map((g) => ({
         ...g,
@@ -118,16 +121,16 @@ export default function Jogadores({ subclub }: Props) {
       }))
       .filter((g) => g.players.length > 0)
       .map((g) => ({ ...g, totals: sumTotals(g.players) }));
-  }, [agencyGroups, search]);
+  }, [agencyGroups, debouncedSearch]);
 
   // ── Search filter: direct players ──
   const filteredDirectPlayers = useMemo(() => {
-    if (!search.trim()) return directPlayers;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return directPlayers;
+    const q = debouncedSearch.toLowerCase();
     return directPlayers.filter(
       (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
     );
-  }, [directPlayers, search]);
+  }, [directPlayers, debouncedSearch]);
 
   // ── Grand totals (per active tab) ──
   const grandTotals = useMemo(() => {
@@ -171,55 +174,39 @@ export default function Jogadores({ subclub }: Props) {
     <div>
       {/* ═══ 5 KPI MINI CARDS ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores Ativos</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{activeCount}</p>
-            <p className="text-[10px] text-dark-500">de {players.length} total</p>
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-amber-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Profit / Loss</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${cc(grandTotals.ganhos)}`}>
-              {formatBRL(grandTotals.ganhos)}
-            </p>
-            <p className="text-[10px] text-dark-500">
-              {grandTotals.ganhos >= 0 ? 'lucro jogadores' : 'loss jogadores'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-emerald-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Gerado</p>
-            <p className="text-xl font-bold mt-2 font-mono text-emerald-400">{formatBRL(grandTotals.rake)}</p>
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-lime-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rakeback Total</p>
-            <p className="text-xl font-bold mt-2 font-mono text-lime-400">
-              {grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-amber-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Semana</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${cc(grandTotals.resultado)}`}>
-              {formatBRL(grandTotals.resultado)}
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Jogadores Ativos"
+          value={activeCount}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={`de ${players.length} total`}
+        />
+        <KpiCard
+          label="Profit / Loss"
+          value={formatBRL(grandTotals.ganhos)}
+          accentColor="bg-amber-500"
+          valueColor={cc(grandTotals.ganhos)}
+          subtitle={grandTotals.ganhos >= 0 ? 'lucro jogadores' : 'loss jogadores'}
+        />
+        <KpiCard
+          label="Rake Gerado"
+          value={formatBRL(grandTotals.rake)}
+          accentColor="bg-emerald-500"
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          label="Rakeback Total"
+          value={grandTotals.rbValue > 0 ? formatBRL(grandTotals.rbValue) : '—'}
+          accentColor="bg-lime-500"
+          valueColor="text-lime-400"
+        />
+        <KpiCard
+          label="Resultado Semana"
+          value={formatBRL(grandTotals.resultado)}
+          accentColor="bg-amber-500"
+          valueColor={cc(grandTotals.resultado)}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* ═══ TAB BUTTONS ═══ */}

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: {
@@ -83,43 +84,38 @@ export default function DRE({ subclub, fees }: Props) {
 
       {/* ── KPI Strip ── 5 cards ─────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        <DreKpiCard
-          icon="up"
+        <KpiCard
           label="Receita Bruta"
-          sublabel={totals.rake > 0 ? `Rake ${formatBRL(totals.rake)}` : undefined}
           value={formatBRL(receita)}
-          borderColor="border-blue-500"
-          textColor="text-blue-400"
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+          subtitle={totals.rake > 0 ? `Rake ${formatBRL(totals.rake)}` : undefined}
         />
-        <DreKpiCard
-          icon="down"
+        <KpiCard
           label="Custos (RB)"
-          sublabel={custos > 0 && receita > 0.01 ? `${((custos / receita) * 100).toFixed(1)}% da receita` : undefined}
           value={formatBRL(-custos)}
-          borderColor="border-red-500"
-          textColor="text-red-400"
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+          subtitle={custos > 0 && receita > 0.01 ? `${((custos / receita) * 100).toFixed(1)}% da receita` : undefined}
         />
-        <DreKpiCard
-          icon="money"
+        <KpiCard
           label="Res. Operacional"
           value={formatBRL(resOperacional)}
-          borderColor={resOperacional >= 0 ? 'border-poker-500' : 'border-red-500'}
-          textColor={resOperacional >= 0 ? 'text-poker-400' : 'text-red-400'}
+          accentColor={resOperacional >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={resOperacional >= 0 ? 'text-poker-400' : 'text-red-400'}
         />
-        <DreKpiCard
-          icon="check"
-          label="Res. Líquido"
+        <KpiCard
+          label="Res. Liquido"
           value={formatBRL(resLiquido)}
-          borderColor={resLiquido >= 0 ? 'border-poker-500' : 'border-red-500'}
-          textColor={resLiquido >= 0 ? 'text-poker-400' : 'text-red-400'}
+          accentColor={resLiquido >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={resLiquido >= 0 ? 'text-poker-400' : 'text-red-400'}
         />
-        <DreKpiCard
-          icon="trophy"
+        <KpiCard
           label="Acerto Liga"
-          sublabel={acertoDirecao || undefined}
           value={formatBRL(acertoLiga)}
-          borderColor={acertoLiga > 0 ? 'border-poker-500' : acertoLiga < 0 ? 'border-red-500' : 'border-dark-600'}
-          textColor={acertoLiga > 0 ? 'text-poker-400' : acertoLiga < 0 ? 'text-red-400' : 'text-dark-300'}
+          accentColor={acertoLiga > 0 ? 'bg-poker-500' : acertoLiga < 0 ? 'bg-red-500' : 'bg-dark-600'}
+          valueColor={acertoLiga > 0 ? 'text-poker-400' : acertoLiga < 0 ? 'text-red-400' : 'text-dark-300'}
+          subtitle={acertoDirecao || undefined}
         />
       </div>
 
@@ -337,34 +333,6 @@ function SectionTotal({ label, value }: { label: string; value: number }) {
 
 function Separator() {
   return <div className="border-t border-dark-700/50 my-1" />;
-}
-
-function DreKpiCard({
-  icon,
-  label,
-  sublabel,
-  value,
-  borderColor,
-  textColor,
-}: {
-  icon: string;
-  label: string;
-  sublabel?: string;
-  value: string;
-  borderColor: string;
-  textColor: string;
-}) {
-  return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-      {/* Colored top border */}
-      <div className={`h-0.5 ${borderColor.replace('border-', 'bg-')}`} />
-      <div className="p-4">
-        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">{label}</p>
-        {sublabel && <p className="text-[9px] text-dark-600 -mt-0.5">{sublabel}</p>}
-        <p className={`text-xl font-bold mt-2 font-mono ${textColor}`}>{value}</p>
-      </div>
-    </div>
-  );
 }
 
 // round2 imported from @/lib/formatters

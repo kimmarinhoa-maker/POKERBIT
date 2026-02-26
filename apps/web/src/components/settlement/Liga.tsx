@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface SubclubSummary {
   id: string;
@@ -44,46 +45,31 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
 
       {/* KPI Cards - 4 columns */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Total</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotal.resultado)}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Total Taxas</p>
-            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(grandTotal.taxasSigned)}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Lancamentos</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}`}
-            >
-              {formatBRL(grandTotal.lancamentos)}
-            </p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-amber-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Acerto Liga</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotal.acertoLiga)}
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Resultado Total"
+          value={formatBRL(grandTotal.resultado)}
+          accentColor={grandTotal.resultado >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+          valueColor={grandTotal.resultado >= 0 ? 'text-poker-400' : 'text-red-400'}
+        />
+        <KpiCard
+          label="Total Taxas"
+          value={formatBRL(grandTotal.taxasSigned)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+        />
+        <KpiCard
+          label="Lancamentos"
+          value={formatBRL(grandTotal.lancamentos)}
+          accentColor={grandTotal.lancamentos !== 0 ? 'bg-blue-500' : 'bg-dark-600'}
+          valueColor={grandTotal.lancamentos !== 0 ? 'text-blue-400' : 'text-dark-500'}
+        />
+        <KpiCard
+          label="Acerto Liga"
+          value={formatBRL(grandTotal.acertoLiga)}
+          accentColor={grandTotal.acertoLiga >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+          valueColor={grandTotal.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* Table */}

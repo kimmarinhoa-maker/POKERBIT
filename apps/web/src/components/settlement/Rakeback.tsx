@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   listOrganizations,
   listLedger,
@@ -14,6 +14,7 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import { round2 } from '@/lib/formatters';
 import { Percent, Users } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -97,6 +98,8 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const [applyAllRate, setApplyAllRate] = useState('');
   const [applyingAll, setApplyingAll] = useState(false);
   const [directDropdown, setDirectDropdown] = useState('');
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   // Load orgs (for is_direct) and ledger (for badge status)
   const loadExtras = useCallback(async () => {
@@ -106,9 +109,11 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         await syncSettlementAgents(settlementId).catch(() => {});
       }
       const [orgsRes, ledgerRes] = await Promise.all([listOrganizations('AGENT'), listLedger(weekStart)]);
+      if (!mountedRef.current) return;
       if (orgsRes.success) setOrgs(orgsRes.data || []);
       if (ledgerRes.success) setLedgerEntries(ledgerRes.data || []);
     } catch {
+      if (!mountedRef.current) return;
       toast('Erro na operacao de rakeback', 'error');
     }
   }, [weekStart, settlementId, isDraft]);
@@ -397,42 +402,35 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Total</p>
-            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(kpis.rakeTotal)}</p>
-            <p className="text-[10px] text-dark-500">{players.length} jogadores</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-yellow-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Total Rakeback</p>
-            <p className="text-xl font-bold mt-2 font-mono text-yellow-400">{formatBRL(kpis.totalRB)}</p>
-            <p className="text-[10px] text-dark-500">Agentes + Diretos</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-red-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Taxas Liga</p>
-            <p className="text-xl font-bold mt-2 font-mono text-red-400">{formatBRL(kpis.taxesOnRake)}</p>
-            <p className="text-[10px] text-dark-500">{taxLabel} sobre rake</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-emerald-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className={`h-0.5 ${kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Lucro Liquido</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-            >
-              {formatBRL(kpis.lucroLiquido)}
-            </p>
-            <p className="text-[10px] text-dark-500">Rake - RB - Taxas</p>
-          </div>
-        </div>
+        <KpiCard
+          label="Rake Total"
+          value={formatBRL(kpis.rakeTotal)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+          subtitle={`${players.length} jogadores`}
+        />
+        <KpiCard
+          label="Total Rakeback"
+          value={formatBRL(kpis.totalRB)}
+          accentColor="bg-yellow-500"
+          valueColor="text-yellow-400"
+          subtitle="Agentes + Diretos"
+        />
+        <KpiCard
+          label="Taxas Liga"
+          value={formatBRL(kpis.taxesOnRake)}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
+          subtitle={`${taxLabel} sobre rake`}
+        />
+        <KpiCard
+          label="Lucro Liquido"
+          value={formatBRL(kpis.lucroLiquido)}
+          accentColor={kpis.lucroLiquido >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
+          valueColor={kpis.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          subtitle="Rake - RB - Taxas"
+          ring="ring-1 ring-emerald-700/30"
+        />
       </div>
 
       {/* Sub-tabs */}

@@ -756,12 +756,7 @@ export async function setUserOrgAccess(userTenantId: string, orgIds: string[]): 
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-export function formatBRL(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-}
+export { formatBRL } from './formatters';
 
 export function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');

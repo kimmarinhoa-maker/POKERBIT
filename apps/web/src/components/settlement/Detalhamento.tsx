@@ -2,9 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
 import { valueColor, ggrColor } from '@/lib/colorUtils';
 import { Search } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
 
 interface Props {
   subclub: SubclubData;
@@ -27,6 +29,7 @@ export default function Detalhamento({ subclub }: Props) {
   const { players, agents, name } = subclub;
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search);
 
   // Group players by agent
   const agentGroups: AgentGroup[] = useMemo(() => {
@@ -70,8 +73,8 @@ export default function Detalhamento({ subclub }: Props) {
 
   // Filter by search
   const filteredGroups = useMemo(() => {
-    if (!search.trim()) return agentGroups;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return agentGroups;
+    const q = debouncedSearch.toLowerCase();
     return agentGroups
       .map((g) => ({
         ...g,
@@ -83,7 +86,7 @@ export default function Detalhamento({ subclub }: Props) {
         ),
       }))
       .filter((g) => g.players.length > 0);
-  }, [agentGroups, search]);
+  }, [agentGroups, debouncedSearch]);
 
   // Grand totals (always from ALL players, not filtered)
   const grandTotals = useMemo(() => {
@@ -169,64 +172,37 @@ export default function Detalhamento({ subclub }: Props) {
     <div>
       {/* ── 5 KPI Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        {/* Jogadores Ativos */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-blue-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores Ativos</p>
-            <p className="text-xl font-bold mt-2 font-mono text-blue-400">{grandTotals.ativos}</p>
-          </div>
-        </div>
-
-        {/* Profit / Loss */}
-        <div
-          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default`}
-        >
-          <div className={`h-0.5 ${grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Profit/Loss</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}
-            >
-              {formatBRL(grandTotals.ganhos)}
-            </p>
-          </div>
-        </div>
-
-        {/* Rake Gerado */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-poker-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Gerado</p>
-            <p className="text-xl font-bold mt-2 font-mono text-poker-400">{formatBRL(grandTotals.rake)}</p>
-          </div>
-        </div>
-
-        {/* GGR Rodeio */}
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
-          <div className="h-0.5 bg-purple-500" />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">GGR Rodeio</p>
-            <p className={`text-xl font-bold mt-2 font-mono ${ggrColor(grandTotals.ggr)}`}>
-              {Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
-            </p>
-          </div>
-        </div>
-
-        {/* Resultado Final */}
-        <div
-          className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ring-1 ring-amber-700/30`}
-        >
-          <div className={`h-0.5 ${grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-          <div className="p-4">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Resultado Final</p>
-            <p
-              className={`text-xl font-bold mt-2 font-mono ${grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}
-            >
-              {formatBRL(grandTotals.resultado)}
-            </p>
-          </div>
-        </div>
+        <KpiCard
+          label="Jogadores Ativos"
+          value={grandTotals.ativos}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+        />
+        <KpiCard
+          label="Profit/Loss"
+          value={formatBRL(grandTotals.ganhos)}
+          accentColor={grandTotals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
+          valueColor={grandTotals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
+        />
+        <KpiCard
+          label="Rake Gerado"
+          value={formatBRL(grandTotals.rake)}
+          accentColor="bg-poker-500"
+          valueColor="text-poker-400"
+        />
+        <KpiCard
+          label="GGR Rodeio"
+          value={Math.abs(grandTotals.ggr) > 0.001 ? formatBRL(grandTotals.ggr) : '\u2014'}
+          accentColor="bg-purple-500"
+          valueColor={ggrColor(grandTotals.ggr)}
+        />
+        <KpiCard
+          label="Resultado Final"
+          value={formatBRL(grandTotals.resultado)}
+          accentColor={grandTotals.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+          valueColor={grandTotals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}
+          ring="ring-1 ring-amber-700/30"
+        />
       </div>
 
       {/* ── Toolbar ── */}
