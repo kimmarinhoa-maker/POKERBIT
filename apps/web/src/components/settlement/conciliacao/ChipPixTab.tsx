@@ -15,6 +15,7 @@ import {
 import VerificadorConciliacao from './VerificadorConciliacao';
 import type { VerificadorStats } from './VerificadorConciliacao';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Upload } from 'lucide-react';
 import EntityPicker from './EntityPicker';
@@ -54,6 +55,7 @@ export default function ChipPixTab({
   const [search, setSearch] = useState('');
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
   const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
   const fileRef = useRef<HTMLInputElement>(null);
   const [verificadoOk, setVerificadoOk] = useState(false);
@@ -266,7 +268,8 @@ export default function ChipPixTab({
   }
 
   async function handleApply() {
-    if (!confirm(`Lockar ${kpis.linked} registros? Isso vai aplicar o impacto no ledger de cada jogador.`)) return;
+    const ok = await confirm({ title: 'Lockar Registros', message: `Lockar ${kpis.linked} registros? Isso vai aplicar o impacto no ledger de cada jogador.`, variant: 'danger' });
+    if (!ok) return;
     setApplying(true);
     try {
       const res = await applyChipPixTransactions(weekStart);
@@ -286,7 +289,8 @@ export default function ChipPixTab({
   async function handleClear() {
     const deletable = txns.filter((t) => t.status !== 'applied');
     if (deletable.length === 0) return;
-    if (!confirm(`Limpar ${deletable.length} registros nao aplicados?`)) return;
+    const ok = await confirm({ title: 'Limpar Registros', message: `Limpar ${deletable.length} registros nao aplicados?`, variant: 'danger' });
+    if (!ok) return;
     for (const tx of deletable) {
       try {
         await deleteChipPixTransaction(tx.id);
@@ -606,6 +610,8 @@ export default function ChipPixTab({
           </div>
         </>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

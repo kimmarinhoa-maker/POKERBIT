@@ -235,6 +235,7 @@ export default function SubclubPanelPage() {
               weekStart={settlement.week_start}
               clubId={settlement.club_id}
               fees={fees}
+              logoUrl={logoMap[subclubId.toLowerCase()] || null}
             />
           </TabErrorBoundary>
         );

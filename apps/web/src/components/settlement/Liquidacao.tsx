@@ -13,35 +13,11 @@ import { round2 } from '@/lib/formatters';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { LedgerEntry, AgentMetric } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  created_at: string;
-}
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  commission_brl: number;
-  resultado_brl: number;
-  is_direct?: boolean;
-  payment_type?: 'fiado' | 'avista';
-}
 
 interface Props {
   subclub: {
@@ -76,6 +52,7 @@ export default function Liquidacao({
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canPay = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   const [allEntries, setAllEntries] = useState<LedgerEntry[]>([]);
   const [carryMap, setCarryMap] = useState<Record<string, number>>({});
@@ -92,7 +69,7 @@ export default function Liquidacao({
   const [paymentTypeOverrides, setPaymentTypeOverrides] = useState<Record<string, 'fiado' | 'avista'>>({});
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
   const mountedRef = useRef(true);
-  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const loadLedger = useCallback(async () => {
     setLoading(true);
@@ -378,7 +355,8 @@ export default function Liquidacao({
   }
 
   async function handleDeleteEntry(id: string) {
-    if (!confirm('Excluir esta movimentacao?')) return;
+    const ok = await confirm({ title: 'Excluir Movimentacao', message: 'Excluir esta movimentacao?', variant: 'danger' });
+    if (!ok) return;
     try {
       const res = await deleteLedgerEntry(id);
       if (res.success) {
@@ -749,7 +727,7 @@ export default function Liquidacao({
                         {entries.map((e) => (
                           <div key={e.id} className="flex items-center justify-between py-1.5 text-xs">
                             <div className="flex items-center gap-3">
-                              <span className="text-dark-500 font-mono">{fmtDate(e.created_at)}</span>
+                              <span className="text-dark-500 font-mono">{fmtDate(e.created_at!)}</span>
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                   e.dir === 'IN' ? 'bg-poker-900/30 text-poker-400' : 'bg-red-900/30 text-red-400'
@@ -783,6 +761,8 @@ export default function Liquidacao({
           })}
         </div>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

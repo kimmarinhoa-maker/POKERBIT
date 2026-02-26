@@ -12,6 +12,7 @@ import {
   deleteBankAccount,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -116,6 +117,7 @@ function PaymentMethodsSection({ methods, onReload }: { methods: PaymentMethod[]
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   async function handleCreate() {
     if (!form.name.trim()) return;
@@ -146,7 +148,8 @@ function PaymentMethodsSection({ methods, onReload }: { methods: PaymentMethod[]
   }
 
   async function handleDelete(m: PaymentMethod) {
-    if (!confirm(`Excluir metodo "${m.name}"?`)) return;
+    const ok = await confirm({ title: 'Excluir Metodo', message: `Excluir metodo "${m.name}"?`, variant: 'danger' });
+    if (!ok) return;
     await deletePaymentMethod(m.id);
     onReload();
   }
@@ -289,6 +292,8 @@ function PaymentMethodsSection({ methods, onReload }: { methods: PaymentMethod[]
           + Adicionar Metodo
         </button>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }
@@ -302,6 +307,7 @@ function BankAccountsSection({ banks, onReload }: { banks: BankAccount[]; onRelo
   const [form, setForm] = useState({ name: '', bank_code: '', agency: '', account_nr: '', is_default: false });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   async function handleCreate() {
     if (!form.name.trim()) return;
@@ -338,7 +344,8 @@ function BankAccountsSection({ banks, onReload }: { banks: BankAccount[]; onRelo
   }
 
   async function handleDelete(b: BankAccount) {
-    if (!confirm(`Excluir conta "${b.name}"?`)) return;
+    const ok = await confirm({ title: 'Excluir Conta', message: `Excluir conta "${b.name}"?`, variant: 'danger' });
+    if (!ok) return;
     await deleteBankAccount(b.id);
     onReload();
   }
@@ -497,6 +504,8 @@ function BankAccountsSection({ banks, onReload }: { banks: BankAccount[]; onRelo
           + Adicionar Conta Bancaria
         </button>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

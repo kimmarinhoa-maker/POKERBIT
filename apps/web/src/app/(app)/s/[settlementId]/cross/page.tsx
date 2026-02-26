@@ -5,26 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSettlementFull, formatDate, formatBRL } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { AgentMetric } from '@/types/settlement';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
 
 // ─── Types ──────────────────────────────────────────────────────────
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  ggr_total_brl: number;
-  rb_rate: number;
-  commission_brl: number;
-  resultado_brl: number;
-  is_direct?: boolean;
-  subclub_id?: string;
-  subclub_name?: string;
-}
 
 interface CrossAgent {
   agent_name: string;

@@ -14,6 +14,7 @@ import {
   toggleAgentDirect,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
 import ClubLogo from '@/components/ClubLogo';
 
@@ -53,6 +54,7 @@ export default function ConfigEstrutura() {
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<'subclubes' | 'agentes'>('subclubes');
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   // Subclub form
   const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string }>(
@@ -192,7 +194,8 @@ export default function ConfigEstrutura() {
   }
 
   async function handleLogoDelete(sub: Org) {
-    if (!confirm('Remover o logo deste subclube?')) return;
+    const ok = await confirm({ title: 'Remover Logo', message: 'Remover o logo deste subclube?', variant: 'danger' });
+    if (!ok) return;
     setUploadingLogoId(sub.id);
     try {
       const res = await deleteClubLogo(sub.id);
@@ -273,7 +276,8 @@ export default function ConfigEstrutura() {
   }
 
   async function handlePfxDelete(id: string) {
-    if (!confirm('Excluir esta regra de prefixo?')) return;
+    const ok = await confirm({ title: 'Excluir Regra', message: 'Excluir esta regra de prefixo?', variant: 'danger' });
+    if (!ok) return;
     try {
       const res = await deletePrefixRule(id);
       if (res.success) loadData();
@@ -286,7 +290,8 @@ export default function ConfigEstrutura() {
 
   async function handleToggleDirect(agentId: string, agentName: string, currentIsDirect: boolean) {
     const action = currentIsDirect ? 'desmarcar' : 'marcar';
-    if (!confirm(`Deseja ${action} "${agentName}" como acerto direto?`)) return;
+    const ok = await confirm({ title: 'Acerto Direto', message: `Deseja ${action} "${agentName}" como acerto direto?` });
+    if (!ok) return;
     setTogglingDirect((prev) => new Set(prev).add(agentId));
     try {
       const res = await toggleAgentDirect(agentId, !currentIsDirect);
@@ -814,6 +819,8 @@ export default function ConfigEstrutura() {
           </div>
         </>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

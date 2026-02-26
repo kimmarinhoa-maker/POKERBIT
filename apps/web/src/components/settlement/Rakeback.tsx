@@ -13,46 +13,9 @@ import {
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import { round2 } from '@/lib/formatters';
+import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
 import { Percent, Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
-
-// ─── Types ──────────────────────────────────────────────────────────
-
-interface AgentMetric {
-  id: string;
-  agent_id: string | null;
-  agent_name: string;
-  player_count: number;
-  rake_total_brl: number;
-  ganhos_total_brl: number;
-  rb_rate: number;
-  commission_brl: number;
-  resultado_brl: number;
-  is_direct?: boolean;
-}
-
-interface PlayerMetric {
-  id: string;
-  player_id: string;
-  external_player_id: string | null;
-  nickname: string | null;
-  agent_name: string | null;
-  agent_id: string | null;
-  agent_is_direct?: boolean;
-  winnings_brl: number;
-  rake_total_brl: number;
-  ggr_brl: number;
-  rb_rate: number;
-  rb_value_brl: number;
-  resultado_brl: number;
-}
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  dir: 'IN' | 'OUT';
-  amount: number;
-}
 
 interface OrgData {
   id: string;
@@ -99,7 +62,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const [applyingAll, setApplyingAll] = useState(false);
   const [directDropdown, setDirectDropdown] = useState('');
   const mountedRef = useRef(true);
-  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Load orgs (for is_direct) and ledger (for badge status)
   const loadExtras = useCallback(async () => {
@@ -1040,12 +1003,12 @@ function JogadoresTab({
                                         className="input w-14 text-right text-xs font-mono py-0.5"
                                         autoFocus
                                         onKeyDown={(e) => {
-                                          if (e.key === 'Enter') savePlayerRate(p.player_id);
+                                          if (e.key === 'Enter') savePlayerRate(p.player_id!);
                                           if (e.key === 'Escape') setEditingRate(null);
                                         }}
                                       />
                                       <button
-                                        onClick={() => savePlayerRate(p.player_id)}
+                                        onClick={() => savePlayerRate(p.player_id!)}
                                         disabled={savingRate}
                                         aria-label={`Salvar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
                                         className="text-poker-400 text-xs"

@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import type { AutoMatchSuggestion } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import { FileText } from 'lucide-react';
 import EntityPicker from './EntityPicker';
@@ -49,6 +50,7 @@ export default function OFXTab({
   const [filter, setFilter] = useState<OFXFilter>('all');
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
   const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -140,13 +142,15 @@ export default function OFXTab({
   }
 
   async function handleDelete(txId: string) {
-    if (!confirm('Excluir esta transacao?')) return;
+    const ok = await confirm({ title: 'Excluir Transacao', message: 'Excluir esta transacao?', variant: 'danger' });
+    if (!ok) return;
     await deleteOFXTransaction(txId);
     loadTxns();
   }
 
   async function handleApply() {
-    if (!confirm(`Aplicar ${kpis.linked} transacoes vinculadas? Serao criadas como movimentacoes no Ledger.`)) return;
+    const ok = await confirm({ title: 'Aplicar Transacoes', message: `Aplicar ${kpis.linked} transacoes vinculadas? Serao criadas como movimentacoes no Ledger.`, variant: 'danger' });
+    if (!ok) return;
     setApplying(true);
     try {
       const res = await applyOFXTransactions(weekStart);
@@ -212,7 +216,8 @@ export default function OFXTab({
       (s) => (s.confidence === 'high' || s.confidence === 'medium') && s.suggested_entity_id && s.suggested_entity_name,
     );
     if (actionable.length === 0) return;
-    if (!confirm(`Aceitar ${actionable.length} sugestoes (alta + media confianca)?`)) return;
+    const ok = await confirm({ title: 'Aceitar Sugestoes', message: `Aceitar ${actionable.length} sugestoes (alta + media confianca)?` });
+    if (!ok) return;
 
     setBulkAccepting(true);
     let accepted = 0;
@@ -728,6 +733,8 @@ export default function OFXTab({
           </div>
         </div>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }

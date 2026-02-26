@@ -5,6 +5,7 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, listLedger, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
+import { LedgerEntry } from '@/types/settlement';
 import Spinner from '@/components/Spinner';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -13,20 +14,6 @@ interface Settlement {
   id: string;
   week_start: string;
   status: string;
-}
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  source: string | null;
-  external_ref: string | null;
-  is_reconciled: boolean;
-  created_at: string;
 }
 
 type FilterDir = 'all' | 'IN' | 'OUT';
@@ -384,7 +371,7 @@ export default function CaixaGeralPage() {
                         key={e.id}
                         className={`transition-colors ${e.is_reconciled ? 'opacity-60' : 'hover:bg-dark-800/20'}`}
                       >
-                        <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at)}</td>
+                        <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
                         <td className="px-3 py-2.5 text-white font-medium text-sm truncate max-w-[180px]">
                           {e.entity_name || '—'}
                         </td>

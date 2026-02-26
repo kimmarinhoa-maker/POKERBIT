@@ -39,35 +39,47 @@ router.get('/', ...adminOnly, async (req: Request, res: Response) => {
 
       if (queryError) throw queryError;
 
-      // Buscar profiles e emails separadamente
+      // Buscar profiles (com email) em batch — evita N+1 getUserById
       const userIds = (users || []).map((u) => u.user_id);
 
       const { data: profiles } = await supabaseAdmin
         .from('user_profiles')
-        .select('id, full_name, avatar_url')
+        .select('id, full_name, avatar_url, email')
         .in('id', userIds);
 
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
 
-      // Buscar emails via admin auth
-      const enriched = await Promise.all(
-        (users || []).map(async (ut) => {
-          const profile = profileMap.get(ut.user_id);
-          let email = null;
-          try {
-            const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(ut.user_id);
-            email = authUser?.user?.email || null;
-          } catch (authErr: any) {
-            console.warn(`[users] Failed to fetch email for user ${ut.user_id}:`, authErr?.message);
-          }
-          return {
-            ...ut,
-            full_name: profile?.full_name || null,
-            avatar_url: profile?.avatar_url || null,
-            email,
-          };
-        }),
-      );
+      // Enriquecer com dados do profile (email vem do profile se disponivel)
+      // Apenas chama getUserById para users sem email no profile (fallback minimo)
+      const enriched: any[] = [];
+      const missingEmailUsers: { index: number; userId: string }[] = [];
+
+      for (const ut of users || []) {
+        const profile = profileMap.get(ut.user_id);
+        enriched.push({
+          ...ut,
+          full_name: profile?.full_name || null,
+          avatar_url: profile?.avatar_url || null,
+          email: profile?.email || null,
+        });
+        if (!profile?.email) {
+          missingEmailUsers.push({ index: enriched.length - 1, userId: ut.user_id });
+        }
+      }
+
+      // Fallback: buscar emails faltantes via auth admin (apenas os que nao tem no profile)
+      if (missingEmailUsers.length > 0) {
+        await Promise.all(
+          missingEmailUsers.map(async ({ index, userId }) => {
+            try {
+              const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+              enriched[index].email = authUser?.user?.email || null;
+            } catch (authErr: any) {
+              console.warn(`[users] Failed to fetch email for user ${userId}:`, authErr?.message);
+            }
+          }),
+        );
+      }
 
       res.json({ success: true, data: enriched });
       return;
@@ -190,11 +202,44 @@ router.post('/invite', ...adminOnly, async (req: Request, res: Response) => {
     }
 
     // Buscar usuario por email via auth admin
-    const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // Usa user_profiles + user_tenants para busca filtrada (evita listUsers que carrega TODOS)
+    // Fallback: listUsers com paginacao se user_profiles nao tiver o email
+    let existingUser: { id: string; email?: string | null } | null = null;
 
-    if (listError) throw listError;
+    // Estrategia 1: buscar via user_profiles (tabela publica, rapida)
+    const { data: profileMatch } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id, email')
+      .eq('email', email.toLowerCase())
+      .limit(1)
+      .maybeSingle();
 
-    const existingUser = listData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (profileMatch) {
+      existingUser = { id: profileMatch.id, email: profileMatch.email };
+    } else {
+      // Estrategia 2: fallback via auth admin com paginacao pequena
+      // Percorre paginas de 50 ate achar ou acabar (evita carregar 1000+ de uma vez)
+      const PER_PAGE = 50;
+      let page = 1;
+      let found = false;
+      while (!found) {
+        const { data: pageData, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage: PER_PAGE,
+        });
+        if (pageError) throw pageError;
+        if (!pageData.users || pageData.users.length === 0) break;
+
+        const match = pageData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+        if (match) {
+          existingUser = { id: match.id, email: match.email };
+          found = true;
+        }
+        // Se retornou menos que PER_PAGE, nao ha mais paginas
+        if (pageData.users.length < PER_PAGE) break;
+        page++;
+      }
+    }
 
     if (!existingUser) {
       res.json({

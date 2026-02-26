@@ -175,7 +175,7 @@ export default function LedgerTab({
                     >
                       <td className="px-4 py-2.5 text-center">
                         <button
-                          onClick={() => isDraft && canEdit && onToggle(e.id, e.is_reconciled)}
+                          onClick={() => isDraft && canEdit && onToggle(e.id, e.is_reconciled!)}
                           disabled={!isDraft || !canEdit || isToggling}
                           className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                             e.is_reconciled
@@ -191,7 +191,7 @@ export default function LedgerTab({
                         </button>
                       </td>
                       <td className="px-3 py-2.5 text-white font-medium">{e.entity_name || '—'}</td>
-                      <td className="px-3 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at)}</td>
+                      <td className="px-3 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
                       <td className="px-3 py-2.5 text-center">
                         <FonteBadge entry={e} />
                       </td>

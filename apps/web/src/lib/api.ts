@@ -48,6 +48,62 @@ function getTenantId(): string | null {
   return auth?.tenants?.[0]?.id || null;
 }
 
+// ─── Token refresh ─────────────────────────────────────────────────
+
+let _refreshPromise: Promise<boolean> | null = null;
+
+/**
+ * Attempts to refresh the access token using the stored refresh_token.
+ * Returns true if the refresh succeeded, false otherwise.
+ * Deduplicates concurrent refresh calls (only one in-flight at a time).
+ */
+export async function refreshAuthToken(): Promise<boolean> {
+  // If a refresh is already in progress, wait for it
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    try {
+      const auth = getStoredAuth();
+      const refreshToken = auth?.session?.refresh_token;
+      if (!refreshToken) return false;
+
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!res.ok) return false;
+
+      const json = await res.json();
+      if (!json.success || !json.data) return false;
+
+      // Update only the session tokens in stored auth (preserve user + tenants)
+      const updated = {
+        ...auth,
+        session: {
+          ...auth.session,
+          access_token: json.data.access_token,
+          refresh_token: json.data.refresh_token,
+          expires_at: json.data.expires_at,
+        },
+      };
+      setStoredAuth(updated);
+
+      // Notify other tabs and the AuthProvider about the refreshed token
+      window.dispatchEvent(new CustomEvent('poker_token_refreshed'));
+
+      return true;
+    } catch {
+      return false;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+
+  return _refreshPromise;
+}
+
 // ─── Fetch wrapper ─────────────────────────────────────────────────
 
 async function apiFetch<T = any>(
@@ -55,6 +111,32 @@ async function apiFetch<T = any>(
   options: RequestInit = {},
   useDirectUrl = false,
 ): Promise<ApiResponse<T>> {
+  const result = await _apiFetchOnce<T>(path, options, useDirectUrl);
+
+  // On 401 — attempt to refresh and retry ONCE
+  if (result === _UNAUTHORIZED_SENTINEL) {
+    const refreshed = await refreshAuthToken();
+    if (refreshed) {
+      const retry = await _apiFetchOnce<T>(path, options, useDirectUrl);
+      if (retry !== _UNAUTHORIZED_SENTINEL) return retry;
+    }
+    // Refresh failed or retry still 401 — logout
+    clearAuth();
+    window.location.href = '/login';
+    return { success: false, error: 'Sessao expirada' };
+  }
+
+  return result;
+}
+
+/** Sentinel value returned by _apiFetchOnce when the response is 401 */
+const _UNAUTHORIZED_SENTINEL = Symbol('unauthorized');
+
+async function _apiFetchOnce<T = any>(
+  path: string,
+  options: RequestInit = {},
+  useDirectUrl = false,
+): Promise<ApiResponse<T> | typeof _UNAUTHORIZED_SENTINEL> {
   const token = getToken();
   const tenantId = getTenantId();
 
@@ -90,10 +172,9 @@ async function apiFetch<T = any>(
     return { success: false, error: 'Servidor indisponivel. Verifique se o backend esta rodando (porta 3001).' };
   }
 
+  // Return sentinel so caller can attempt refresh + retry
   if (!res.ok && res.status === 401) {
-    clearAuth();
-    window.location.href = '/login';
-    throw new Error('Sessao expirada');
+    return _UNAUTHORIZED_SENTINEL;
   }
 
   // Read body as text first, then try to parse as JSON

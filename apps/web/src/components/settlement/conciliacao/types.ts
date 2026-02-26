@@ -1,17 +1,7 @@
 // ─── Shared Types for Conciliacao sub-tabs ──────────────────────────
 
-export interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  external_ref: string | null;
-  is_reconciled: boolean;
-  created_at: string;
-}
+// Re-export LedgerEntry from shared types (single source of truth)
+export type { LedgerEntry } from '@/types/settlement';
 
 export interface AgentOption {
   agent_id: string | null;

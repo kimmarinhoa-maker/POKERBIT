@@ -13,6 +13,7 @@ import {
 } from '@/lib/api';
 import type { TenantUser } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
 
 // ─── Role config ─────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   // Invite modal
   const [showInvite, setShowInvite] = useState(false);
@@ -160,7 +162,8 @@ export default function UsersPage() {
 
   async function handleRemove(userTenantId: string, name: string | null) {
     const label = name || 'este membro';
-    if (!confirm(`Tem certeza que deseja remover ${label} da organizacao?`)) return;
+    const ok = await confirm({ title: 'Remover Membro', message: `Tem certeza que deseja remover ${label} da organizacao?`, variant: 'danger' });
+    if (!ok) return;
 
     try {
       const res = await removeUser(userTenantId);
@@ -501,6 +504,8 @@ export default function UsersPage() {
           </p>
         </div>
       </div>
+
+      {ConfirmDialogElement}
     </div>
   );
 }

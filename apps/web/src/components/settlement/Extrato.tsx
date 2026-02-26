@@ -5,20 +5,11 @@ import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/l
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
+import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { LedgerEntry } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { BookOpen } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
-
-interface LedgerEntry {
-  id: string;
-  entity_id: string;
-  entity_name: string | null;
-  dir: 'IN' | 'OUT';
-  amount: number;
-  method: string | null;
-  description: string | null;
-  created_at: string;
-}
 
 interface Props {
   weekStart: string;
@@ -31,6 +22,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +33,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm);
   const mountedRef = useRef(true);
-  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   const [form, setForm] = useState({
     entity_name: '',
@@ -136,7 +128,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta movimentacao?')) return;
+    const ok = await confirm({ title: 'Excluir Movimentacao', message: 'Tem certeza que deseja excluir esta movimentacao?', variant: 'danger' });
+    if (!ok) return;
     try {
       const res = await deleteLedgerEntry(id);
       if (res.success) {
@@ -369,7 +362,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
                 <tbody className="divide-y divide-dark-800/30">
                   {filteredEntries.map((e) => (
                     <tr key={e.id} className="hover:bg-dark-800/20 transition-colors">
-                      <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at)}</td>
+                      <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
                       <td className="px-3 py-2.5 text-white font-medium">{e.entity_name || '—'}</td>
                       <td className="px-3 py-2.5 text-center">
                         <span
@@ -419,6 +412,8 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
           </div>
         </>
       )}
+
+      {ConfirmDialogElement}
     </div>
   );
 }
