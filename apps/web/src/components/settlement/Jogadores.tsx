@@ -1,18 +1,24 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { formatBRL } from '@/lib/api';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { formatBRL, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
 import { SubclubData, PlayerMetric, PagamentoDetalhe } from '@/types/settlement';
 import { Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+import Highlight from '@/components/ui/Highlight';
+import { exportCsv } from '@/lib/exportCsv';
+import { Download } from 'lucide-react';
 
 interface Props {
   subclub: SubclubData;
   weekStart?: string;
   clubId?: string;
+  settlementId?: string;
+  settlementStatus?: string;
+  onDataChange?: () => void;
 }
 
 interface AgentGroup {
@@ -42,18 +48,34 @@ function sumTotals(pls: PlayerMetric[]) {
   };
 }
 
-export default function Jogadores({ subclub }: Props) {
+export default function Jogadores({ subclub, settlementId, settlementStatus, onDataChange }: Props) {
   const { players, agents } = subclub;
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
+  const syncedRef = useRef(false);
   const [paymentModal, setPaymentModal] = useState<{
     entityName: string;
     detalhe: PagamentoDetalhe[];
     total: number;
   } | null>(null);
+
+  // Auto-sync rates on mount (DRAFT only, once) — always reload after sync
+  useEffect(() => {
+    if (syncedRef.current || !settlementId || settlementStatus !== 'DRAFT') return;
+    syncedRef.current = true;
+    (async () => {
+      try {
+        await syncSettlementAgents(settlementId).catch(() => {});
+        await syncSettlementRates(settlementId).catch(() => null);
+        onDataChange?.();
+      } catch {
+        // non-critical
+      }
+    })();
+  }, [settlementId, settlementStatus, onDataChange]);
 
   // Build is_direct set from agent data (annotated by backend)
   const directAgents = useMemo(() => {
@@ -241,14 +263,38 @@ export default function Jogadores({ subclub }: Props) {
       </div>
 
       {/* ═══ TOOLBAR ═══ */}
-      <div className="mb-4">
+      <div className="flex items-center gap-3 mb-4">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nome, agente ou ID..."
-          className="input w-full max-w-md"
+          className="input flex-1 max-w-md"
         />
+        <button
+          onClick={() => {
+            const headers = ['Agente', 'Jogador', 'ID', 'Ganhos', 'Rake', 'RB%', 'RB Valor', 'Resultado', 'Saldo Ant.', 'Pagamentos', 'Saldo Atual'];
+            const rows = players.map((p) => [
+              p.agent_name || '',
+              p.nickname || '',
+              p.external_player_id || '',
+              Number(p.winnings_brl) || 0,
+              Number(p.rake_total_brl) || 0,
+              Number(p.rb_rate) || 0,
+              Number(p.rb_value_brl) || 0,
+              Number(p.resultado_brl) || 0,
+              Number(p.saldo_anterior) || 0,
+              Number(p.total_pagamentos) || 0,
+              Number(p.saldo_atual) || 0,
+            ]);
+            exportCsv(`jogadores_${subclub.name}`, headers, rows);
+          }}
+          className="btn-ghost text-xs flex items-center gap-1.5 shrink-0"
+          title="Exportar CSV"
+        >
+          <Download size={14} />
+          <span className="hidden sm:inline">CSV</span>
+        </button>
       </div>
 
       {/* ═══ TABLE ═══ */}
@@ -297,6 +343,7 @@ export default function Jogadores({ subclub }: Props) {
                       onToggle={() => toggleAgent(group.agentName)}
                       onPaymentClick={(name, detalhe, total) => setPaymentModal({ entityName: name, detalhe, total })}
                       onCopyId={copyId}
+                      searchQuery={debouncedSearch}
                     />
                   ))}
                 </>
@@ -308,6 +355,7 @@ export default function Jogadores({ subclub }: Props) {
                       player={p}
                       onCopyId={copyId}
                       onPaymentClick={(name, detalhe, total) => setPaymentModal({ entityName: name, detalhe, total })}
+                      searchQuery={debouncedSearch}
                     />
                   ))}
                 </>
@@ -390,12 +438,14 @@ function AgentSection({
   onToggle,
   onPaymentClick,
   onCopyId,
+  searchQuery = '',
 }: {
   group: AgentGroup;
   isExpanded: boolean;
   onToggle: () => void;
   onPaymentClick: (name: string, detalhe: PagamentoDetalhe[], total: number) => void;
   onCopyId: (id: string) => void;
+  searchQuery?: string;
 }) {
   const agentDetalhe = group.players.flatMap((p) => p.pagamentos_detalhe || []);
 
@@ -414,7 +464,7 @@ function AgentSection({
             </span>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-dark-100 text-xs font-semibold">{group.agentName}</span>
+                <span className="text-dark-100 text-xs font-semibold"><Highlight text={group.agentName} query={searchQuery} /></span>
                 {group.externalAgentId && (
                   <span
                     className="text-[10px] font-mono text-dark-600 ml-1.5 select-all cursor-pointer hover:text-dark-400 transition-colors"
@@ -498,7 +548,7 @@ function AgentSection({
             >
               <td className="pl-8 pr-3 py-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-dark-100 text-xs">{p.nickname || '—'}</span>
+                  <span className="text-dark-100 text-xs"><Highlight text={p.nickname || '—'} query={searchQuery} /></span>
                   {p.external_player_id && (
                     <span
                       className="text-[10px] font-mono text-dark-600 ml-1.5 select-all cursor-pointer hover:text-dark-400 transition-colors"
@@ -568,10 +618,12 @@ function DirectPlayerRow({
   player: p,
   onCopyId,
   onPaymentClick,
+  searchQuery = '',
 }: {
   player: PlayerMetric;
   onCopyId: (id: string) => void;
   onPaymentClick: (name: string, detalhe: PagamentoDetalhe[], total: number) => void;
+  searchQuery?: string;
 }) {
   const ganhos = Number(p.winnings_brl) || 0;
   const rake = Number(p.rake_total_brl) || 0;
@@ -587,7 +639,7 @@ function DirectPlayerRow({
     <tr className="hover:bg-dark-800/20 transition-colors border-b border-dark-800/30">
       <td className="px-3 py-1.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-dark-100 text-xs font-medium">{p.nickname || '—'}</span>
+          <span className="text-dark-100 text-xs font-medium"><Highlight text={p.nickname || '—'} query={searchQuery} /></span>
           {p.external_player_id && (
             <span
               className="text-[10px] font-mono text-dark-600 ml-1.5 select-all cursor-pointer hover:text-dark-400 transition-colors"

@@ -11,6 +11,13 @@ import { safeErrorMessage, AppError } from '../utils/apiError';
 
 const router = Router();
 
+/** Calcula rb_value_brl e resultado_brl de um jogador a partir de winnings, rake e rbRate */
+function calcPlayerResultado(winnings: number, rake: number, rbRate: number) {
+  const rbValue = Math.round(((rake * rbRate) / 100 + Number.EPSILON) * 100) / 100;
+  const resultado = Math.round(((winnings + rbValue) + Number.EPSILON) * 100) / 100;
+  return { rbValue, resultado };
+}
+
 // ─── GET /api/settlements — Listar semanas ─────────────────────────
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
@@ -457,7 +464,7 @@ router.post(
         // 5a: Agent rates — fetch default rates from agent_rb_rates
         const { data: defaultAgentRates } = await supabaseAdmin
           .from('agent_rb_rates')
-          .select('organization_id, rate')
+          .select('agent_id, rate')
           .eq('tenant_id', tenantId)
           .lte('effective_from', today)
           .or(`effective_to.is.null,effective_to.gte.${today}`);
@@ -465,7 +472,7 @@ router.post(
         if (defaultAgentRates && defaultAgentRates.length > 0) {
           const agentRateMap = new Map<string, number>();
           for (const r of defaultAgentRates) {
-            agentRateMap.set(r.organization_id, r.rate);
+            agentRateMap.set(r.agent_id, r.rate);
           }
 
           // Fetch agent_week_metrics that have rb_rate = 0 or null AND have an agent_id
@@ -509,7 +516,7 @@ router.post(
           // Fetch player_week_metrics that have rb_rate = 0 or null
           const { data: playerMetrics } = await supabaseAdmin
             .from('player_week_metrics')
-            .select('id, player_id, rake_total_brl, rb_rate')
+            .select('id, player_id, rake_total_brl, winnings_brl, rb_rate')
             .eq('settlement_id', settlementId);
 
           if (playerMetrics) {
@@ -518,10 +525,52 @@ router.post(
               const defaultRate = playerRateMap.get(pm.player_id);
               if (defaultRate != null && defaultRate > 0) {
                 const rake = Number(pm.rake_total_brl) || 0;
-                const rbValue = Math.round(((rake * defaultRate) / 100 + Number.EPSILON) * 100) / 100;
+                const winnings = Number(pm.winnings_brl) || 0;
+                const { rbValue, resultado } = calcPlayerResultado(winnings, rake, defaultRate);
                 await supabaseAdmin
                   .from('player_week_metrics')
-                  .update({ rb_rate: defaultRate, rb_value_brl: rbValue })
+                  .update({ rb_rate: defaultRate, rb_value_brl: rbValue, resultado_brl: resultado })
+                  .eq('id', pm.id);
+                ratesPopulated++;
+              }
+            }
+          }
+        }
+        // 5c: Propagate agent rates to players without individual rate
+        // Build agent_id -> rb_rate map from agent_week_metrics (already updated in 5a)
+        const { data: agentMetricsForRates } = await supabaseAdmin
+          .from('agent_week_metrics')
+          .select('agent_id, agent_name, rb_rate')
+          .eq('settlement_id', settlementId)
+          .gt('rb_rate', 0);
+
+        if (agentMetricsForRates && agentMetricsForRates.length > 0) {
+          const agentNameRateMap = new Map<string, number>();
+          const agentIdRateMap = new Map<string, number>();
+          for (const am of agentMetricsForRates) {
+            if (am.agent_name) agentNameRateMap.set(am.agent_name, Number(am.rb_rate));
+            if (am.agent_id) agentIdRateMap.set(am.agent_id, Number(am.rb_rate));
+          }
+
+          // Fetch players that still have rb_rate = 0
+          const { data: playersNoRate } = await supabaseAdmin
+            .from('player_week_metrics')
+            .select('id, agent_id, agent_name, rake_total_brl, winnings_brl, rb_rate')
+            .eq('settlement_id', settlementId)
+            .or('rb_rate.eq.0,rb_rate.is.null');
+
+          if (playersNoRate) {
+            for (const pm of playersNoRate) {
+              // Try to find agent rate by agent_id first, then by agent_name
+              const agentRate = (pm.agent_id && agentIdRateMap.get(pm.agent_id))
+                || agentNameRateMap.get(pm.agent_name || '') || 0;
+              if (agentRate > 0) {
+                const rake = Number(pm.rake_total_brl) || 0;
+                const winnings = Number(pm.winnings_brl) || 0;
+                const { rbValue, resultado } = calcPlayerResultado(winnings, rake, agentRate);
+                await supabaseAdmin
+                  .from('player_week_metrics')
+                  .update({ rb_rate: agentRate, rb_value_brl: rbValue, resultado_brl: resultado })
                   .eq('id', pm.id);
                 ratesPopulated++;
               }
@@ -645,7 +694,52 @@ router.patch(
         }
       }
 
-      res.json({ success: true, data });
+      // ── Propagate agent rate to player_week_metrics ──────────────
+      let playersPropagated = 0;
+      try {
+        // Fetch players of this agent in this settlement
+        const { data: agentPlayers } = await supabaseAdmin
+          .from('player_week_metrics')
+          .select('id, player_id, rake_total_brl, winnings_brl')
+          .eq('settlement_id', settlementId)
+          .eq('agent_name', metric.agent_name);
+
+        if (agentPlayers && agentPlayers.length > 0) {
+          // Find players with individual rates (skip those)
+          const playerIds = agentPlayers.filter((p) => p.player_id).map((p) => p.player_id);
+          const playerIndividualRates = new Set<string>();
+          if (playerIds.length > 0) {
+            const { data: individualRates } = await supabaseAdmin
+              .from('player_rb_rates')
+              .select('player_id')
+              .eq('tenant_id', tenantId)
+              .in('player_id', playerIds)
+              .is('effective_to', null);
+            for (const r of individualRates || []) {
+              playerIndividualRates.add(r.player_id);
+            }
+          }
+
+          for (const pm of agentPlayers) {
+            // Skip players with individual persistent rate
+            if (pm.player_id && playerIndividualRates.has(pm.player_id)) continue;
+
+            const rake = Number(pm.rake_total_brl) || 0;
+            const winnings = Number(pm.winnings_brl) || 0;
+            const { rbValue, resultado } = calcPlayerResultado(winnings, rake, rb_rate);
+
+            await supabaseAdmin
+              .from('player_week_metrics')
+              .update({ rb_rate, rb_value_brl: rbValue, resultado_brl: resultado })
+              .eq('id', pm.id);
+            playersPropagated++;
+          }
+        }
+      } catch (propErr) {
+        console.warn('[rb-rate] Failed to propagate to players:', propErr);
+      }
+
+      res.json({ success: true, data, playersPropagated });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
@@ -740,7 +834,7 @@ router.post(
       // ── Sync player rates ─────────────────────────────────────────
       const { data: playerMetrics } = await supabaseAdmin
         .from('player_week_metrics')
-        .select('id, player_id, rb_rate, rake_total_brl')
+        .select('id, player_id, agent_id, agent_name, rb_rate, rake_total_brl, winnings_brl')
         .eq('settlement_id', settlementId)
         .eq('tenant_id', tenantId);
 
@@ -749,8 +843,9 @@ router.post(
           .filter((m) => m.player_id)
           .map((m) => m.player_id);
 
+        // Fetch current active player rates (effective_to IS NULL = current rate)
+        const playerRateMap = new Map<string, number>();
         if (playerIds.length > 0) {
-          // Fetch current active player rates (effective_to IS NULL = current rate)
           const { data: playerRates } = await supabaseAdmin
             .from('player_rb_rates')
             .select('player_id, rate')
@@ -758,30 +853,54 @@ router.post(
             .in('player_id', playerIds)
             .is('effective_to', null);
 
-          const playerRateMap = new Map<string, number>();
           for (const r of playerRates || []) {
             if (!playerRateMap.has(r.player_id)) {
               playerRateMap.set(r.player_id, Number(r.rate));
             }
           }
+        }
 
-          for (const m of playerMetrics) {
-            if (!m.player_id) continue;
-            const persistentRate = playerRateMap.get(m.player_id);
-            if (persistentRate == null || persistentRate < 0) continue;
+        // Build agent rate map from already-synced agent_week_metrics
+        const { data: syncedAgentMetrics } = await supabaseAdmin
+          .from('agent_week_metrics')
+          .select('agent_id, agent_name, rb_rate')
+          .eq('settlement_id', settlementId)
+          .eq('tenant_id', tenantId)
+          .gt('rb_rate', 0);
 
-            // Skip if rate is already the same
-            if (Number(m.rb_rate) === persistentRate) continue;
+        const agentIdRateMap = new Map<string, number>();
+        const agentNameRateMap = new Map<string, number>();
+        for (const am of syncedAgentMetrics || []) {
+          if (am.agent_id) agentIdRateMap.set(am.agent_id, Number(am.rb_rate));
+          if (am.agent_name) agentNameRateMap.set(am.agent_name, Number(am.rb_rate));
+        }
 
-            const rake = Number(m.rake_total_brl) || 0;
-            const rbValue = Math.round(((rake * persistentRate) / 100 + Number.EPSILON) * 100) / 100;
+        for (const m of playerMetrics) {
+          // First try player-specific rate, then fall back to agent rate
+          let targetRate: number | undefined;
 
-            await supabaseAdmin
-              .from('player_week_metrics')
-              .update({ rb_rate: persistentRate, rb_value_brl: rbValue })
-              .eq('id', m.id);
-            playersUpdated++;
+          if (m.player_id && playerRateMap.has(m.player_id)) {
+            targetRate = playerRateMap.get(m.player_id);
+          } else {
+            // Fall back to agent rate
+            targetRate = (m.agent_id && agentIdRateMap.get(m.agent_id))
+              || agentNameRateMap.get(m.agent_name || '') || undefined;
           }
+
+          if (targetRate == null || targetRate < 0) continue;
+
+          // Skip if rate is already the same
+          if (Number(m.rb_rate) === targetRate) continue;
+
+          const rake = Number(m.rake_total_brl) || 0;
+          const winnings = Number(m.winnings_brl) || 0;
+          const { rbValue, resultado } = calcPlayerResultado(winnings, rake, targetRate);
+
+          await supabaseAdmin
+            .from('player_week_metrics')
+            .update({ rb_rate: targetRate, rb_value_brl: rbValue, resultado_brl: resultado })
+            .eq('id', m.id);
+          playersUpdated++;
         }
       }
 
