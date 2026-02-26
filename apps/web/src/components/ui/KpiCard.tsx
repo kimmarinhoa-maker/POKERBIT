@@ -26,16 +26,16 @@ export default function KpiCard({
     >
       <div className={`h-0.5 ${accentColor || 'bg-dark-700'}`} />
       <div className="p-4">
-        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">
+        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">
           {label}
         </p>
+        {subtitle && <p className="text-[10px] text-dark-600 uppercase tracking-wider">{subtitle}</p>}
         <p
           className={`text-xl font-bold mt-2 font-mono ${valueColor || 'text-white'} ${tooltip ? 'explainable inline-block' : ''}`}
           title={tooltip}
         >
           {value}
         </p>
-        {subtitle && <p className="text-[10px] text-dark-500 mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
