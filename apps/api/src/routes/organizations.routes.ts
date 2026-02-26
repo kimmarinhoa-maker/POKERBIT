@@ -587,15 +587,19 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     if (error) throw error;
 
-    // Audit
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: req.userId!,
-      action: 'UPDATE',
-      entity_type: 'agent_rb_rate',
-      entity_id: agentId,
-      new_data: { rate, effective_from: dateFrom },
-    });
+    // Audit (non-blocking — don't fail the request if audit insert fails)
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: req.userId!,
+        action: 'UPDATE',
+        entity_type: 'agent_rb_rate',
+        entity_id: agentId,
+        new_data: { rate, effective_from: dateFrom },
+      });
+    } catch (auditErr) {
+      console.warn('[audit] Failed to log:', auditErr);
+    }
 
     res.json({ success: true, data });
   } catch (err: unknown) {

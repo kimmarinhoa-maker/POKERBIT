@@ -43,13 +43,13 @@ DELETE FROM agent_week_metrics a
 
 -- Um jogador pode aparecer em subclubes diferentes no mesmo settlement.
 -- A combinação (settlement, player, subclub) é única.
-CREATE UNIQUE INDEX uq_pwm_settlement_player_subclub
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pwm_settlement_player_subclub
   ON player_week_metrics(settlement_id, external_player_id, COALESCE(subclub_name, ''))
   WHERE external_player_id IS NOT NULL;
 
 -- Um agente pode gerenciar jogadores em subclubes diferentes.
 -- A combinação (settlement, agent_name, subclub) é única.
-CREATE UNIQUE INDEX uq_awm_settlement_agent_subclub
+CREATE UNIQUE INDEX IF NOT EXISTS uq_awm_settlement_agent_subclub
   ON agent_week_metrics(settlement_id, agent_name, COALESCE(subclub_name, ''))
   WHERE agent_name IS NOT NULL AND agent_name != '';
 

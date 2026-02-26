@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSettlementFull, formatDate, formatBRL } from '@/lib/api';
+import { getSettlementFull, formatBRL } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { AgentMetric } from '@/types/settlement';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
+import KpiCard from '@/components/ui/KpiCard';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ export default function CrossClubPage() {
     } finally {
       setLoading(false);
     }
-  }, [settlementId]);
+  }, [settlementId, toast]);
 
   useEffect(() => {
     loadData();
@@ -248,16 +249,16 @@ export default function CrossClubPage() {
 
             {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-              <KpiCard label="Agentes" value={String(kpis.total)} borderColor="bg-purple-500" />
-              <KpiCard label="Jogadores" value={String(kpis.totalPlayers)} borderColor="bg-blue-500" />
-              <KpiCard label="Multi-Club" value={String(kpis.multiClub)} borderColor="bg-amber-500" />
-              <KpiCard label="Rake Total" value={formatBRL(kpis.totalRake)} borderColor="bg-poker-500" />
-              <KpiCard label="Comissao RB" value={formatBRL(kpis.totalComission)} borderColor="bg-purple-500" />
+              <KpiCard label="Agentes" value={String(kpis.total)} accentColor="bg-purple-500" />
+              <KpiCard label="Jogadores" value={String(kpis.totalPlayers)} accentColor="bg-blue-500" />
+              <KpiCard label="Multi-Club" value={String(kpis.multiClub)} accentColor="bg-amber-500" />
+              <KpiCard label="Rake Total" value={formatBRL(kpis.totalRake)} accentColor="bg-poker-500" />
+              <KpiCard label="Comissao RB" value={formatBRL(kpis.totalComission)} accentColor="bg-purple-500" />
               <KpiCard
                 label="Resultado"
                 value={formatBRL(kpis.totalResultado)}
-                borderColor={kpis.totalResultado >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
-                textColor={clr(kpis.totalResultado)}
+                accentColor={kpis.totalResultado >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
+                valueColor={clr(kpis.totalResultado)}
               />
             </div>
 
@@ -448,26 +449,3 @@ export default function CrossClubPage() {
   );
 }
 
-// ─── KPI Card ──────────────────────────────────────────────────────
-
-function KpiCard({
-  label,
-  value,
-  borderColor,
-  textColor,
-}: {
-  label: string;
-  value: string;
-  borderColor: string;
-  textColor?: string;
-}) {
-  return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-      <div className={`h-0.5 ${borderColor}`} />
-      <div className="p-3 text-center">
-        <p className="text-[10px] text-dark-400 uppercase tracking-wider mb-1">{label}</p>
-        <p className={`text-lg font-bold font-mono ${textColor || 'text-white'}`}>{value}</p>
-      </div>
-    </div>
-  );
-}

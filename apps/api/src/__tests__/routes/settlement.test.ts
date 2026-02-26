@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createTestApp } from '../helpers/testApp';
+import { AppError } from '../../utils/apiError';
 
 // ── Mock settlement service ──────────────────────────────────────────
 const mockService = {
@@ -146,7 +147,7 @@ describe('Settlement Routes', () => {
     });
 
     it('non-DRAFT → 422', async () => {
-      mockService.finalizeSettlement.mockRejectedValue(new Error('Settlement não pode ser finalizado'));
+      mockService.finalizeSettlement.mockRejectedValue(new AppError('Settlement não pode ser finalizado', 422));
       const { app } = createTestApp({ userRole: 'OWNER' });
       app.use('/api/settlements', settlementRoutes);
 

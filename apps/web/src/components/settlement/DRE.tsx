@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import KpiCard from '@/components/ui/KpiCard';
@@ -237,7 +237,7 @@ function SectionCard({
 }: {
   title: string;
   accentColor: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden border-t-2 ${accentColor}`}>

@@ -16,6 +16,7 @@ import { supabaseAdmin } from '../config/supabase';
 import type { SettlementStatus } from '../types';
 import { round2 } from '../utils/round2';
 import { normName } from '../utils/normName';
+import { AppError } from '../utils/apiError';
 
 function sumArr(arr: any[], key: string): number {
   return arr.reduce((s, r) => s + (Number(r[key]) || 0), 0);
@@ -554,9 +555,9 @@ export class SettlementService {
       .eq('tenant_id', tenantId)
       .single();
 
-    if (!current) throw new Error('Settlement não encontrado');
+    if (!current) throw new AppError('Settlement não encontrado', 404);
     if (current.status !== 'DRAFT') {
-      throw new Error(`Settlement não pode ser finalizado (status atual: ${current.status})`);
+      throw new AppError(`Settlement não pode ser finalizado (status atual: ${current.status})`, 422);
     }
 
     const { data, error } = await supabaseAdmin
@@ -572,14 +573,18 @@ export class SettlementService {
 
     if (error) throw new Error(`Erro ao finalizar: ${error.message}`);
 
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'FINALIZE',
-      entity_type: 'settlement',
-      entity_id: settlementId,
-      new_data: { status: 'FINAL', week_start: current.week_start },
-    });
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        action: 'FINALIZE',
+        entity_type: 'settlement',
+        entity_id: settlementId,
+        new_data: { status: 'FINAL', week_start: current.week_start },
+      });
+    } catch (auditErr) {
+      console.warn('[audit] Failed to log:', auditErr);
+    }
 
     return data;
   }
@@ -593,9 +598,9 @@ export class SettlementService {
       .eq('tenant_id', tenantId)
       .single();
 
-    if (!current) throw new Error('Settlement não encontrado');
+    if (!current) throw new AppError('Settlement não encontrado', 404);
     if (current.status !== 'FINAL') {
-      throw new Error(`Apenas settlements FINAL podem ser anulados (atual: ${current.status})`);
+      throw new AppError(`Apenas settlements FINAL podem ser anulados (atual: ${current.status})`, 422);
     }
 
     const { data, error } = await supabaseAdmin
@@ -612,14 +617,18 @@ export class SettlementService {
 
     if (error) throw new Error(`Erro ao anular: ${error.message}`);
 
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      action: 'VOID',
-      entity_type: 'settlement',
-      entity_id: settlementId,
-      new_data: { status: 'VOID', reason },
-    });
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        action: 'VOID',
+        entity_type: 'settlement',
+        entity_id: settlementId,
+        new_data: { status: 'VOID', reason },
+      });
+    } catch (auditErr) {
+      console.warn('[audit] Failed to log:', auditErr);
+    }
 
     return data;
   }

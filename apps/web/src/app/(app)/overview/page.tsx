@@ -69,7 +69,7 @@ export default function OverviewPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [toast]);
 
   // Load full data
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function OverviewPage() {
         setLoadingFull(false);
       }
     })();
-  }, [selectedId]);
+  }, [selectedId, toast]);
 
   // Unique subclubs
   const subclubs = useMemo(() => [...new Set(allPlayers.map((p) => p.subclub))].sort(), [allPlayers]);

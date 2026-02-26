@@ -249,8 +249,6 @@ export default function OFXTab({
     none: { label: 'Nenhuma', cls: 'bg-red-500/10 text-red-400/60 border-red-500/20' },
   };
 
-  // Actionable suggestions (not 'none')
-  const actionableSuggestions = suggestions.filter((s) => s.confidence !== 'none');
   const highMediumCount = suggestions.filter((s) => s.confidence === 'high' || s.confidence === 'medium').length;
 
   function fmtDate(dt: string) {

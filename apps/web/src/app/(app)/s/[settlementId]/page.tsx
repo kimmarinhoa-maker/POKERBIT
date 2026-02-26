@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, formatDate, formatBRL, getOrgTree } from '@/lib/api';
+import { getSettlementFull, voidSettlement, formatBRL, getOrgTree } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
+import KpiCard from '@/components/ui/KpiCard';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
 import ClubLogo from '@/components/ClubLogo';
@@ -107,7 +108,7 @@ export default function SettlementOverviewPage() {
     );
   }
 
-  const { settlement, fees, subclubs, dashboardTotals } = data;
+  const { settlement, subclubs, dashboardTotals } = data;
   const t = dashboardTotals;
 
   const weekEnd = (() => {
@@ -175,15 +176,15 @@ export default function SettlementOverviewPage() {
           <>
             {/* Global KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-              <KpiCard label="Jogadores" value={String(t.players)} borderColor="bg-blue-500" />
-              <KpiCard label="Agentes" value={String(t.agents)} borderColor="bg-purple-500" />
-              <KpiCard label="Rake Total" value={formatBRL(t.rake)} borderColor="bg-poker-500" />
-              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} borderColor="bg-purple-500" />
+              <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" />
+              <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" />
+              <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" />
+              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" />
               <KpiCard
                 label="Resultado Total"
                 value={formatBRL(t.resultado)}
-                borderColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
-                textColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
+                accentColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+                valueColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
               />
             </div>
 
@@ -336,24 +337,3 @@ export default function SettlementOverviewPage() {
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  borderColor,
-  textColor,
-}: {
-  label: string;
-  value: string;
-  borderColor: string;
-  textColor?: string;
-}) {
-  return (
-    <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-      <div className={`h-0.5 ${borderColor}`} />
-      <div className="p-4">
-        <p className="text-[10px] text-dark-400 uppercase tracking-wider">{label}</p>
-        <p className={`text-lg font-bold font-mono truncate ${textColor || 'text-white'}`}>{value}</p>
-      </div>
-    </div>
-  );
-}

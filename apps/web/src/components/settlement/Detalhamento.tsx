@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
-import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
+import { SubclubData, PlayerMetric } from '@/types/settlement';
 import { valueColor, ggrColor } from '@/lib/colorUtils';
 import { Search } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';

@@ -46,8 +46,8 @@ export default function ImportHistoryPage() {
       } else {
         toast(res.error || 'Erro ao carregar historico', 'error');
       }
-    } catch (err: any) {
-      toast(err.message || 'Erro de conexao', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
       setLoading(false);
     }
@@ -65,8 +65,8 @@ export default function ImportHistoryPage() {
       } else {
         toast(res.error || 'Erro ao remover', 'error');
       }
-    } catch (err: any) {
-      toast(err.message || 'Erro de conexao', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
       setDeleting(null);
     }

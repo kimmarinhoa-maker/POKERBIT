@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabaseAdmin } from '../config/supabase';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, FULL_ACCESS_ROLES } from '../middleware/auth';
 import { safeErrorMessage } from '../utils/apiError';
 
 const router = Router();
@@ -36,8 +36,6 @@ router.post('/login', async (req: Request, res: Response) => {
       res.status(401).json({ success: false, error: 'Credenciais inválidas' });
       return;
     }
-
-    const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'];
 
     // Buscar tenants do usuário
     const { data: tenants } = await supabaseAdmin
@@ -79,7 +77,7 @@ router.post('/login', async (req: Request, res: Response) => {
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
-          allowed_subclubs: FULL_ACCESS_ROLES.includes(t.role) ? null : orgAccessByTenant.get(t.tenant_id) || [],
+          allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role) ? null : orgAccessByTenant.get(t.tenant_id) || [],
         })),
       },
     });
@@ -122,8 +120,6 @@ router.post('/refresh', async (req: Request, res: Response) => {
 // ─── GET /api/auth/me — Dados do usuário logado + RBAC ──────────────
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
-    const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'];
-
     // Buscar profile
     const { data: profile } = await supabaseAdmin.from('user_profiles').select('*').eq('id', req.userId!).single();
 
@@ -162,7 +158,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
-          allowed_subclubs: FULL_ACCESS_ROLES.includes(t.role)
+          allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
             ? null // null = acesso total
             : orgAccessByTenant.get(t.tenant_id) || [],
         })),

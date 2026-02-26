@@ -34,22 +34,22 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), a
       return;
     }
 
-    // Atualizar cada fee
-    for (const fee of fees) {
-      if (!fee.name || fee.rate === undefined) continue;
+    // Build batch and upsert in a single query
+    const upsertRows = fees
+      .filter((fee: any) => fee.name && fee.rate !== undefined)
+      .map((fee: any) => ({
+        tenant_id: tenantId,
+        name: fee.name,
+        rate: Number(fee.rate),
+        base: fee.base || 'rake',
+        is_active: fee.is_active !== false,
+      }));
 
-      await supabaseAdmin.from('fee_config').upsert(
-        {
-          tenant_id: tenantId,
-          name: fee.name,
-          rate: Number(fee.rate),
-          base: fee.base || 'rake',
-          is_active: fee.is_active !== false,
-        },
-        {
-          onConflict: 'tenant_id,name',
-        },
-      );
+    if (upsertRows.length > 0) {
+      const { error: upsertErr } = await supabaseAdmin.from('fee_config').upsert(upsertRows, {
+        onConflict: 'tenant_id,name',
+      });
+      if (upsertErr) throw upsertErr;
     }
 
     // Retornar estado atualizado
@@ -380,20 +380,21 @@ router.put('/rakeback-defaults', requireAuth, requireTenant, requireRole('OWNER'
       return;
     }
 
-    for (const item of defaults) {
-      if (!item.subclub_id) continue;
+    // Build batch and upsert in a single query
+    const upsertRows = defaults
+      .filter((item: any) => item.subclub_id)
+      .map((item: any) => ({
+        tenant_id: tenantId,
+        subclub_id: item.subclub_id,
+        agent_rb_default: Number(item.agent_rb_default) || 0,
+        player_rb_default: Number(item.player_rb_default) || 0,
+      }));
 
-      await supabaseAdmin.from('rb_defaults').upsert(
-        {
-          tenant_id: tenantId,
-          subclub_id: item.subclub_id,
-          agent_rb_default: Number(item.agent_rb_default) || 0,
-          player_rb_default: Number(item.player_rb_default) || 0,
-        },
-        {
-          onConflict: 'tenant_id,subclub_id',
-        },
-      );
+    if (upsertRows.length > 0) {
+      const { error: upsertErr } = await supabaseAdmin.from('rb_defaults').upsert(upsertRows, {
+        onConflict: 'tenant_id,subclub_id',
+      });
+      if (upsertErr) throw upsertErr;
     }
 
     // Retornar estado atualizado

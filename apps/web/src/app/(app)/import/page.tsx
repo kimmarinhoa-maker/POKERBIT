@@ -75,8 +75,8 @@ export default function ImportWizardPage() {
       } else {
         setError(res.error || 'Erro na pre-analise');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setLoading(false);
     }
@@ -104,8 +104,8 @@ export default function ImportWizardPage() {
       } else {
         toast(res.error || 'Erro desconhecido', 'error');
       }
-    } catch (err: any) {
-      toast(err.message || 'Erro de conexao', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -131,8 +131,8 @@ export default function ImportWizardPage() {
       } else {
         toast(res.error || 'Erro desconhecido', 'error');
       }
-    } catch (err: any) {
-      toast(err.message || 'Erro de conexao', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -146,8 +146,8 @@ export default function ImportWizardPage() {
     if (bulkMode === 'new_agent' && bulkNewAgentName) {
       try {
         await linkAgent(bulkNewAgentName, bulkSubclubId);
-      } catch (err: any) {
-        toast(err.message || 'Erro de conexao', 'error');
+      } catch (err: unknown) {
+        toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
         return;
       }
     }
@@ -176,8 +176,8 @@ export default function ImportWizardPage() {
       } else {
         toast(res.error || 'Erro desconhecido', 'error');
       }
-    } catch (err: any) {
-      toast(err.message || 'Erro de conexao', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -199,8 +199,8 @@ export default function ImportWizardPage() {
           setStep('pendencies');
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setLoading(false);
     }

@@ -50,21 +50,29 @@ router.post('/send', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
     const baseUrl = config.api_url.replace(/\/+$/, '');
     const url = `${baseUrl}/message/sendMedia/${config.instance_name}`;
 
-    // Send via Evolution API
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: cleanPhone,
-        mediatype: 'image',
-        media: imageBase64,
-        caption: caption || '',
-        fileName: fileName || 'comprovante.png',
-      }),
-    });
+    // Send via Evolution API (with 15s timeout)
+    const sendController = new AbortController();
+    const sendTimeout = setTimeout(() => sendController.abort(), 15000);
+    let response: globalThis.Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: config.api_key,
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          mediatype: 'image',
+          media: imageBase64,
+          caption: caption || '',
+          fileName: fileName || 'comprovante.png',
+        }),
+        signal: sendController.signal,
+      });
+    } finally {
+      clearTimeout(sendTimeout);
+    }
 
     if (!response.ok) {
       const errText = await response.text();
@@ -100,10 +108,18 @@ router.post('/test', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
     const baseUrl = config.api_url.replace(/\/+$/, '');
     const url = `${baseUrl}/instance/connectionState/${config.instance_name}`;
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { apikey: config.api_key },
-    });
+    const testController = new AbortController();
+    const testTimeout = setTimeout(() => testController.abort(), 15000);
+    let response: globalThis.Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: { apikey: config.api_key },
+        signal: testController.signal,
+      });
+    } finally {
+      clearTimeout(testTimeout);
+    }
 
     if (!response.ok) {
       const errText = await response.text();

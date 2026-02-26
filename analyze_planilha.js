@@ -1,5 +1,12 @@
-const XLSX = require('c:/Users/Kim Marinho.DESKTOP-AFVAA86/Downloads/files/node_modules/xlsx');
-const wb = XLSX.readFile('c:/Users/Kim Marinho.DESKTOP-AFVAA86/Downloads/files/planilha import/106-343122-20260209-20260215 (1).xlsx');
+const XLSX = require('xlsx');
+
+const file = process.argv[2];
+if (!file) {
+  console.error('Usage: node analyze_planilha.js <file>');
+  process.exit(1);
+}
+
+const wb = XLSX.readFile(file);
 const ws = wb.Sheets['Grand Union Member Resume'];
 const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
 
@@ -8,7 +15,7 @@ function resolveClubeInterno(agentName){
   name = name.replace(/^AG[\.\s]+/i,'').trim();
   if (!name || name === 'NONE') return '?';
   const rules = [
-    {prefixes:['AMS','TW','BB'], clube:'IMPÉRIO'},
+    {prefixes:['AMS','TW','BB'], clube:'IMPERIO'},
     {prefixes:['TGP'],           clube:'TGP'},
     {prefixes:['CONFRA'],        clube:'CONFRARIA'},
     {prefixes:['3BET'],          clube:'3BET'},
@@ -21,7 +28,7 @@ function resolveClubeInterno(agentName){
   return '?';
 }
 
-const manualLinks = {'NONE': 'IMPÉRIO', 'AG ANDRÉ': 'IMPÉRIO'};
+const manualLinks = {'NONE': 'IMPERIO', 'AG ANDRE': 'IMPERIO'};
 
 const agents = {};
 rows.slice(4).forEach(r => {
@@ -32,7 +39,7 @@ rows.slice(4).forEach(r => {
   agents[u].count++;
 });
 
-console.log('=== Agentes não resolvidos (?) ===');
+console.log('=== Agentes nao resolvidos (?) ===');
 Object.entries(agents).filter(([k,v]) => v.clube === '?').forEach(([k,v]) =>
   console.log(' [?]', v.name, '('+v.count+' jog.)')
 );
@@ -66,7 +73,7 @@ rows.slice(4).forEach(r => {
   totalGGR += (parseFloat(r[25])||0); // RODEO Total Profit col index 25
 });
 console.log('\n=== Totais brutos (GU, antes de *5) ===');
-console.log('Winnings:', totalWin.toFixed(2), '→ BRL:', (totalWin*GU_TO_BRL).toFixed(2));
-console.log('Total Fee:', totalFee.toFixed(2), '→ BRL:', (totalFee*GU_TO_BRL).toFixed(2));
-console.log('RODEO GGR:', totalGGR.toFixed(2), '→ BRL:', (totalGGR*GU_TO_BRL).toFixed(2));
+console.log('Winnings:', totalWin.toFixed(2), '-> BRL:', (totalWin*GU_TO_BRL).toFixed(2));
+console.log('Total Fee:', totalFee.toFixed(2), '-> BRL:', (totalFee*GU_TO_BRL).toFixed(2));
+console.log('RODEO GGR:', totalGGR.toFixed(2), '-> BRL:', (totalGGR*GU_TO_BRL).toFixed(2));
 console.log('Total jogadores:', rows.length - 4);

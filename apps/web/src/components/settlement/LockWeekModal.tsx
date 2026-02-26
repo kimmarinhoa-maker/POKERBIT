@@ -86,8 +86,8 @@ export default function LockWeekModal({
 
       setResults({ finalized: true, carryCount });
       setStep('done');
-    } catch (err: any) {
-      setError(err.message || 'Erro durante finalizacao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro durante finalizacao');
       setStep('checklist');
     } finally {
       setProcessing(false);

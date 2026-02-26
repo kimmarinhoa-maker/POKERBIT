@@ -43,7 +43,10 @@ coverage/
 *.bak*
 
 # ─── Claude Code config ────────────────────────────────────────────
-.claude/settings.local.json
+.claude/
+
+# ─── Internal memory files ────────────────────────────────────────
+memory/
 
 # ─── Additional env ────────────────────────────────────────────────
 .env.development.local

@@ -25,8 +25,8 @@ export default function LoginPage() {
       } else {
         setError(res.error || 'Credenciais invalidas');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao conectar');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao conectar');
     } finally {
       setLoading(false);
     }

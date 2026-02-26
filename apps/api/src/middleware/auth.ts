@@ -6,7 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 
 // Roles com acesso total (não precisam de user_org_access)
-const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'];
+export const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'] as const;
 
 // Extende o Request do Express com dados do usuário
 declare global {
@@ -29,7 +29,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token de autenticação ausente' });
+    res.status(401).json({ success: false, error: 'Token de autenticação ausente' });
     return;
   }
 
@@ -40,7 +40,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !data.user) {
-      res.status(401).json({ error: 'Token inválido ou expirado' });
+      res.status(401).json({ success: false, error: 'Token inválido ou expirado' });
       return;
     }
 
@@ -53,7 +53,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     if (tenantError) {
       console.error('[auth] Erro ao buscar tenants:', tenantError);
-      res.status(500).json({ error: 'Erro interno de autenticação' });
+      res.status(500).json({ success: false, error: 'Erro interno de autenticação' });
       return;
     }
 
@@ -68,14 +68,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     if (req.tenantIds.length === 0) {
-      res.status(403).json({ error: 'Usuário não vinculado a nenhum tenant' });
+      res.status(403).json({ success: false, error: 'Usuário não vinculado a nenhum tenant' });
       return;
     }
 
     next();
   } catch (err) {
     console.error('[auth] Erro inesperado:', err);
-    res.status(500).json({ error: 'Erro interno de autenticação' });
+    res.status(500).json({ success: false, error: 'Erro interno de autenticação' });
   }
 }
 
@@ -84,12 +84,12 @@ export async function requireTenant(req: Request, res: Response, next: NextFunct
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string);
 
   if (!tenantId) {
-    res.status(400).json({ error: 'Header X-Tenant-Id obrigatório' });
+    res.status(400).json({ success: false, error: 'Header X-Tenant-Id obrigatório' });
     return;
   }
 
   if (!req.tenantIds?.includes(tenantId)) {
-    res.status(403).json({ error: 'Acesso negado a este tenant' });
+    res.status(403).json({ success: false, error: 'Acesso negado a este tenant' });
     return;
   }
 
@@ -99,7 +99,7 @@ export async function requireTenant(req: Request, res: Response, next: NextFunct
   req.userRole = role;
 
   // Resolve subclubs permitidos
-  if (FULL_ACCESS_ROLES.includes(role)) {
+  if ((FULL_ACCESS_ROLES as readonly string[]).includes(role)) {
     req.allowedSubclubIds = null; // null = acesso total
   } else {
     try {

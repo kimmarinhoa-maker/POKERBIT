@@ -292,13 +292,23 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
   async function savePlayerRate(playerId: string) {
     const rate = parseFloat(rateInput);
-    if (isNaN(rate) || rate < 0 || rate > 100) return;
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      toast('Rate deve ser entre 0 e 100', 'error');
+      return;
+    }
+    if (!playerId) {
+      toast('ID do jogador nao encontrado', 'error');
+      return;
+    }
     setSavingRate(true);
     try {
       const res = await updatePlayerRate(playerId, rate, weekStart);
       if (res.success) {
+        toast(`Rate ${rate}% salvo!`, 'success');
         setEditingRate(null);
         onDataChange();
+      } else {
+        toast(res.error || 'Erro ao salvar rate do jogador', 'error');
       }
     } catch {
       toast('Erro na operacao de rakeback', 'error');
@@ -338,12 +348,33 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   async function handleApplyAll(agentName: string) {
     const rate = parseFloat(applyAllRate);
     if (isNaN(rate) || rate < 0 || rate > 100) return;
-    const agentPlayers = getPlayersForAgent(agentName);
     setApplyingAll(true);
     try {
-      for (const p of agentPlayers) {
-        if (p.player_id) {
-          await updatePlayerRate(p.player_id, rate, weekStart);
+      // If special '__ALL_DIRECT__' flag, apply to all direct players across all agents
+      if (agentName === '__ALL_DIRECT__') {
+        const { directAgents: dAgents } = (() => {
+          const direct: AgentMetric[] = [];
+          for (const a of agents) {
+            if (a.is_direct || directNameSet.has(a.agent_name.toLowerCase())) {
+              direct.push(a);
+            }
+          }
+          return { directAgents: direct };
+        })();
+        for (const da of dAgents) {
+          const dPlayers = getPlayersForAgent(da.agent_name);
+          for (const p of dPlayers) {
+            if (p.player_id) {
+              await updatePlayerRate(p.player_id, rate, weekStart);
+            }
+          }
+        }
+      } else {
+        const agentPlayers = getPlayersForAgent(agentName);
+        for (const p of agentPlayers) {
+          if (p.player_id) {
+            await updatePlayerRate(p.player_id, rate, weekStart);
+          }
         }
       }
       setApplyAllAgent(null);
@@ -402,6 +433,46 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           ring="ring-1 ring-emerald-700/30"
         />
       </div>
+
+      {/* Alert: agents/players without rates */}
+      {(() => {
+        const agentsWithoutRate = nonDirectAgents.filter((a) => !Number(a.rb_rate));
+        const directPlayersWithoutRate: string[] = [];
+        for (const da of directAgents) {
+          const dPlayers = getPlayersForAgent(da.agent_name);
+          for (const p of dPlayers) {
+            if (!Number(p.rb_rate)) directPlayersWithoutRate.push(p.nickname || p.external_player_id || '?');
+          }
+        }
+        const total = agentsWithoutRate.length + directPlayersWithoutRate.length;
+        if (total === 0) return null;
+        return (
+          <div className="mb-5 bg-amber-900/20 border border-amber-600/30 rounded-xl px-4 py-3 flex items-start gap-3">
+            <span className="text-amber-400 text-lg mt-0.5">&#9888;</span>
+            <div className="text-sm">
+              <p className="text-amber-300 font-medium mb-1">
+                {total} {total === 1 ? 'entidade sem' : 'entidades sem'} rate de rakeback definido
+              </p>
+              {agentsWithoutRate.length > 0 && (
+                <p className="text-amber-400/80 text-xs">
+                  <span className="font-bold">Agentes:</span>{' '}
+                  {agentsWithoutRate.map((a) => a.agent_name).join(', ')}
+                </p>
+              )}
+              {directPlayersWithoutRate.length > 0 && (
+                <p className="text-amber-400/80 text-xs mt-0.5">
+                  <span className="font-bold">Jogadores diretos:</span>{' '}
+                  {directPlayersWithoutRate.slice(0, 10).join(', ')}
+                  {directPlayersWithoutRate.length > 10 && ` (+${directPlayersWithoutRate.length - 10})`}
+                </p>
+              )}
+              <p className="text-amber-500/60 text-[10px] mt-1.5">
+                Defina rates padrao em <span className="font-mono">Cadastro {'>'} Agentes/Jogadores</span> para auto-preencher
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Sub-tabs */}
       <div className="flex items-center gap-1 mb-4">
@@ -469,15 +540,9 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
         />
       ) : (
         <JogadoresTab
-          agents={filteredDirect}
-          allAgents={agents}
-          orgs={orgs}
-          directNameSet={directNameSet}
-          orgByName={orgByName}
-          playersByAgent={playersByAgent}
+          agents={directAgents}
           getPlayersForAgent={getPlayersForAgent}
-          expandedAgents={expandedAgents}
-          toggleAgent={toggleAgent}
+          search={search}
           taxRate={taxRate}
           isDraft={isDraft}
           editingRate={editingRate}
@@ -487,17 +552,12 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
           startEditRate={startEditRate}
           savePlayerRate={savePlayerRate}
           setEditingRate={setEditingRate}
-          directDropdown={directDropdown}
-          setDirectDropdown={setDirectDropdown}
-          handleMarkDirect={handleMarkDirect}
-          handleRemoveDirect={handleRemoveDirect}
           applyAllAgent={applyAllAgent}
           setApplyAllAgent={setApplyAllAgent}
           applyAllRate={applyAllRate}
           setApplyAllRate={setApplyAllRate}
           applyingAll={applyingAll}
           handleApplyAll={handleApplyAll}
-          resolveOrgId={resolveOrgId}
           canEditRates={canEditRates}
         />
       )}
@@ -619,7 +679,7 @@ function AgenciasTab({
                         value={rateInput}
                         onChange={(e) => setRateInput(e.target.value)}
                         aria-label={`Taxa de rakeback do agente ${agent.agent_name}`}
-                        className="input w-16 text-right text-xs font-mono py-1"
+                        className="input w-16 text-right text-xs font-mono py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') saveAgentRate(agent);
@@ -733,14 +793,8 @@ function AgenciasTab({
 
 function JogadoresTab({
   agents,
-  allAgents,
-  orgs,
-  directNameSet,
-  orgByName,
-  playersByAgent,
   getPlayersForAgent,
-  expandedAgents,
-  toggleAgent,
+  search,
   taxRate,
   isDraft,
   editingRate,
@@ -750,28 +804,17 @@ function JogadoresTab({
   startEditRate,
   savePlayerRate,
   setEditingRate,
-  directDropdown,
-  setDirectDropdown,
-  handleMarkDirect,
-  handleRemoveDirect,
   applyAllAgent,
   setApplyAllAgent,
   applyAllRate,
   setApplyAllRate,
   applyingAll,
   handleApplyAll,
-  resolveOrgId,
   canEditRates,
 }: {
   agents: AgentMetric[];
-  allAgents: AgentMetric[];
-  orgs: OrgData[];
-  directNameSet: Set<string>;
-  orgByName: Map<string, OrgData>;
-  playersByAgent: Map<string, PlayerMetric[]>;
   getPlayersForAgent: (agentName: string) => PlayerMetric[];
-  expandedAgents: Set<string>;
-  toggleAgent: (id: string) => void;
+  search: string;
   taxRate: number;
   isDraft: boolean;
   editingRate: string | null;
@@ -781,322 +824,209 @@ function JogadoresTab({
   startEditRate: (id: string, rate: number) => void;
   savePlayerRate: (id: string) => void;
   setEditingRate: (v: string | null) => void;
-  directDropdown: string;
-  setDirectDropdown: (v: string) => void;
-  handleMarkDirect: () => void;
-  handleRemoveDirect: (agent: AgentMetric) => void;
   applyAllAgent: string | null;
   setApplyAllAgent: (v: string | null) => void;
   applyAllRate: string;
   setApplyAllRate: (v: string) => void;
   applyingAll: boolean;
   handleApplyAll: (agentName: string) => void;
-  resolveOrgId: (agent: AgentMetric) => string | null;
   canEditRates: boolean;
 }) {
-  // Available agents to mark as direct — resolve org ID by agent_id OR name
-  const availableForDirect = useMemo(() => {
-    const result: { agent: AgentMetric; orgId: string }[] = [];
-    for (const a of allAgents) {
-      const orgId = a.agent_id || orgByName.get(a.agent_name.toLowerCase())?.id;
-      if (orgId && !directNameSet.has(a.agent_name.toLowerCase())) {
-        result.push({ agent: a, orgId });
+  // Flatten all direct players into a single sorted list, filtered by search
+  const allDirectPlayers = useMemo(() => {
+    const list: (PlayerMetric & { _agentName: string })[] = [];
+    for (const agent of agents) {
+      const agentPlayers = getPlayersForAgent(agent.agent_name);
+      for (const p of agentPlayers) {
+        list.push({ ...p, _agentName: agent.agent_name });
       }
     }
-    return result;
-  }, [allAgents, orgByName, directNameSet]);
+    list.sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
+
+    // Filter by search at the player level
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter(
+      (p) =>
+        (p.nickname || '').toLowerCase().includes(q) ||
+        (p.external_player_id || '').toLowerCase().includes(q) ||
+        (p._agentName || '').toLowerCase().includes(q),
+    );
+  }, [agents, getPlayersForAgent, search]);
+
+  // Totals
+  const totals = useMemo(() => {
+    let totalRake = 0, totalRB = 0, totalLucro = 0;
+    for (const p of allDirectPlayers) {
+      const pRake = Number(p.rake_total_brl) || 0;
+      const pRBValue = Number(p.rb_value_brl) || 0;
+      totalRake += pRake;
+      totalRB += pRBValue;
+      totalLucro += pRake - pRBValue - pRake * taxRate;
+    }
+    return { totalRake: round2(totalRake), totalRB: round2(totalRB), totalLucro: round2(totalLucro) };
+  }, [allDirectPlayers, taxRate]);
+
+  const isApplyAll = applyAllAgent !== null;
 
   return (
     <div>
-      {/* Define direct agencies */}
-      <div className="card mb-6 border-dark-700/50">
-        <div className="flex items-center gap-2 mb-3">
-          <h4 className="text-sm font-semibold text-dark-200 uppercase tracking-wider">Definir Agencias Diretas</h4>
-        </div>
-        {availableForDirect.length > 0 ? (
-          <div className="flex items-center gap-3">
-            <select
-              value={directDropdown}
-              onChange={(e) => setDirectDropdown(e.target.value)}
-              aria-label="Selecionar agencia para marcar como direta"
-              className="input flex-1 max-w-sm text-sm"
-              disabled={!isDraft}
-            >
-              <option value="">Selecionar agencia...</option>
-              {availableForDirect.map(({ agent, orgId }) => (
-                <option key={orgId} value={orgId}>
-                  {agent.agent_name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleMarkDirect}
-              disabled={!isDraft || !directDropdown}
-              aria-label="Marcar agencia como direta"
-              className="btn-primary text-sm px-4 py-2 disabled:opacity-50"
-            >
-              + Marcar como Direto
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-dark-500">
-            {orgs.length === 0
-              ? 'Nenhum agente cadastrado como organizacao. Cadastre agentes na pagina Estrutura.'
-              : 'Todas as agencias ja foram marcadas como diretas ou nao ha agentes vinculados.'}
-          </p>
-        )}
-        <p className="text-xs text-dark-500 mt-2">
-          Agencias diretas sao fechadas individualmente — cada jogador com seu proprio % de rakeback.
-        </p>
-      </div>
-
-      {agents.length === 0 ? (
+      {allDirectPlayers.length === 0 ? (
         <div className="card text-center py-12">
           <Users className="w-8 h-8 text-dark-600 mx-auto mb-3" />
-          <p className="text-dark-400">Nenhuma agencia direta definida</p>
+          <p className="text-dark-400">Nenhum jogador direto neste subclube</p>
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
-          {/* Table header */}
-          <div className="bg-dark-800/80 backdrop-blur-sm px-5 py-2 grid grid-cols-[1fr_120px_110px_120px_120px] text-[10px] text-dark-400 font-medium uppercase tracking-wider">
-            <span>Agencia / Jogador</span>
-            <span className="text-right">Rake</span>
-            <span className="text-right">% RB Jogador</span>
-            <span className="text-right">RB Jogador</span>
-            <span className="text-right">Lucro Liq.</span>
-          </div>
-
-          {agents.map((agent) => {
-            const isExpanded = expandedAgents.has(agent.id);
-            const agentPlayers = getPlayersForAgent(agent.agent_name);
-            const rake = Number(agent.rake_total_brl) || 0;
-            const totalPlayerRB = round2(agentPlayers.reduce((s, p) => s + Number(p.rb_value_brl || 0), 0));
-            const lucro = round2(rake - totalPlayerRB - rake * taxRate);
-            const isApplyAll = applyAllAgent === agent.agent_name;
-
-            return (
-              <div key={agent.id} className="border-t border-dark-800/50">
-                {/* Agent header */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAgent(agent.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') toggleAgent(agent.id);
-                  }}
-                  className="w-full grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 hover:bg-dark-800/20 transition-colors cursor-pointer select-none"
-                >
-                  <div className="flex items-center gap-2 text-left">
-                    <span className={`text-dark-400 text-xs transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                      ▶
-                    </span>
-                    <span className="text-white font-semibold text-sm">{agent.agent_name}</span>
-                    <span className="text-dark-500 text-xs bg-dark-800 px-1.5 py-0.5 rounded-full">
-                      {agent.player_count}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">
-                      DIRETO
-                    </span>
-                    {isDraft && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveDirect(agent);
-                        }}
-                        aria-label={`Remover agencia direta ${agent.agent_name}`}
-                        className="text-dark-500 hover:text-red-400 text-xs transition-colors"
-                        title="Remover direto"
-                      >
-                        ✕ Remover
-                      </button>
-                    )}
-                  </div>
-                  <span className="text-right font-mono text-sm text-dark-200">{formatBRL(rake)}</span>
-                  <span className="text-right text-sm text-dark-400 italic">Individual</span>
-                  <span className="text-right font-mono text-sm text-yellow-400">{formatBRL(totalPlayerRB)}</span>
-                  <span
-                    className={`text-right font-mono text-sm font-semibold ${lucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+          {/* Apply all bar */}
+          {isDraft && canEditRates && (
+            <div className="px-5 py-2.5 flex items-center justify-between bg-dark-800/40 border-b border-dark-800/50">
+              <span className="text-[10px] text-dark-400 uppercase tracking-wider font-medium">
+                {allDirectPlayers.length} jogadores diretos
+              </span>
+              {isApplyAll ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-dark-400">Aplicar</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    value={applyAllRate}
+                    onChange={(e) => setApplyAllRate(e.target.value)}
+                    className="input w-16 text-xs text-right font-mono py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="%"
+                    autoFocus
+                  />
+                  <span className="text-xs text-dark-400">% a todos</span>
+                  <button
+                    onClick={() => handleApplyAll('__ALL_DIRECT__')}
+                    disabled={applyingAll}
+                    className="btn-primary text-xs px-3 py-1"
                   >
-                    {formatBRL(lucro)}
-                  </span>
+                    {applyingAll ? '...' : 'Aplicar'}
+                  </button>
+                  <button onClick={() => setApplyAllAgent(null)} className="text-dark-500 hover:text-dark-300 text-xs">
+                    ✕
+                  </button>
                 </div>
-
-                {/* Expanded: player list */}
-                {isExpanded && (
-                  <div className="border-t border-dark-700/50 bg-dark-900/30">
-                    {/* Apply all */}
-                    {isDraft && (
-                      <div className="px-8 py-2 flex items-center justify-between border-b border-dark-800/30">
-                        <span className="text-[10px] text-dark-500 uppercase tracking-wider">
-                          Jogadores diretos de {agent.agent_name}
-                        </span>
-                        {isApplyAll ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="1"
-                              min="0"
-                              max="100"
-                              value={applyAllRate}
-                              onChange={(e) => setApplyAllRate(e.target.value)}
-                              className="input w-16 text-xs text-right font-mono py-1"
-                              placeholder="%"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleApplyAll(agent.agent_name)}
-                              disabled={applyingAll}
-                              className="btn-primary text-xs px-3 py-1"
-                            >
-                              {applyingAll ? '...' : 'Aplicar'}
-                            </button>
-                            <button onClick={() => setApplyAllAgent(null)} className="text-dark-500 text-xs">
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setApplyAllAgent(agent.agent_name);
-                            }}
-                            className="text-xs text-dark-400 hover:text-dark-200 border border-dark-700 rounded px-2 py-1 transition-colors"
-                          >
-                            Aplicar % a todos
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-dark-800/50">
-                          <th className="px-8 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>
-                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
-                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">% RB Jogador</th>
-                          <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">RB Jogador</th>
-                          <th className="px-5 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Lucro Liq.</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-dark-800/30">
-                        {agentPlayers
-                          .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''))
-                          .map((p, i) => {
-                            const pRake = Number(p.rake_total_brl) || 0;
-                            const pRBRate = Number(p.rb_rate) || 0;
-                            const pRBValue = Number(p.rb_value_brl) || 0;
-                            const pLucro = round2(pRake - pRBValue - pRake * taxRate);
-                            const isEditingPlayer = editingRate === `player-${p.player_id}`;
-
-                            return (
-                              <tr key={i} className="hover:bg-dark-800/20 transition-colors">
-                                <td className="px-8 py-1.5">
-                                  <span className="text-dark-200 font-medium">{p.nickname}</span>
-                                  <span className="text-dark-600 text-xs ml-2">#{p.external_player_id}</span>
-                                </td>
-                                <td className="px-3 py-1.5 text-right font-mono text-dark-300">{formatBRL(pRake)}</td>
-                                <td className="px-3 py-1.5 text-right">
-                                  {isEditingPlayer ? (
-                                    <span className="flex items-center justify-end gap-1">
-                                      <input
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        max="100"
-                                        value={rateInput}
-                                        onChange={(e) => setRateInput(e.target.value)}
-                                        aria-label={`Taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
-                                        className="input w-14 text-right text-xs font-mono py-0.5"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') savePlayerRate(p.player_id!);
-                                          if (e.key === 'Escape') setEditingRate(null);
-                                        }}
-                                      />
-                                      <button
-                                        onClick={() => savePlayerRate(p.player_id!)}
-                                        disabled={savingRate}
-                                        aria-label={`Salvar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
-                                        className="text-poker-400 text-xs"
-                                      >
-                                        ✓
-                                      </button>
-                                    </span>
-                                  ) : (
-                                    <span className="flex items-center justify-end gap-1">
-                                      <span
-                                        className={`font-mono text-sm ${pRBRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}
-                                      >
-                                        {pRBRate}%
-                                      </span>
-                                      {isDraft && canEditRates && (
-                                        <button
-                                          onClick={() => startEditRate(`player-${p.player_id}`, pRBRate)}
-                                          aria-label={`Editar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
-                                          className="text-dark-600 hover:text-dark-300 text-xs ml-0.5"
-                                        >
-                                          Editar
-                                        </button>
-                                      )}
-                                    </span>
-                                  )}
-                                </td>
-                                <td
-                                  className={`px-3 py-1.5 text-right font-mono ${pRBValue > 0 ? 'text-yellow-400' : 'text-dark-500'}`}
-                                >
-                                  {pRBValue > 0 ? formatBRL(pRBValue) : '—'}
-                                </td>
-                                <td
-                                  className={`px-5 py-1.5 text-right font-mono ${pLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
-                                >
-                                  {formatBRL(pLucro)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Totals row */}
-          {(() => {
-            let totalRake = 0,
-              totalRB = 0,
-              totalLucro = 0;
-            for (const a of agents) {
-              const rake = Number(a.rake_total_brl) || 0;
-              const agentPlayers = getPlayersForAgent(a.agent_name);
-              const playerRB = agentPlayers.reduce((s, p) => s + Number(p.rb_value_brl || 0), 0);
-              totalRake += rake;
-              totalRB += playerRB;
-              totalLucro += rake - playerRB - rake * taxRate;
-            }
-            return (
-              <div className="border-t-2 border-dark-700 grid grid-cols-[1fr_120px_110px_120px_120px] items-center px-5 py-3 bg-dark-900">
-                <span className="text-xs font-extrabold text-amber-400">
-                  TOTAL
-                  <span className="text-dark-500 text-[10px] font-normal ml-2">{agents.length} agencias</span>
-                </span>
-                <span className="text-right font-mono text-xs font-extrabold text-dark-200">
-                  {formatBRL(round2(totalRake))}
-                </span>
-                <span className="text-right text-dark-500">—</span>
-                <span className="text-right font-mono text-xs font-extrabold text-yellow-400">
-                  {formatBRL(round2(totalRB))}
-                </span>
-                <span
-                  className={`text-right font-mono text-xs font-extrabold ${totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}
+              ) : (
+                <button
+                  onClick={() => setApplyAllAgent('__ALL_DIRECT__')}
+                  className="text-xs text-dark-400 hover:text-dark-200 border border-dark-700 rounded px-2 py-1 transition-colors"
                 >
-                  {formatBRL(round2(totalLucro))}
-                </span>
-              </div>
-            );
-          })()}
+                  Aplicar % a todos
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Table */}
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-dark-800/50">
+                <th className="px-5 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Jogador</th>
+                <th className="px-3 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Agencia</th>
+                <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Rake</th>
+                <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">% RB</th>
+                <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">RB Valor</th>
+                <th className="px-5 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Lucro Liq.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-dark-800/30">
+              {allDirectPlayers.map((p, i) => {
+                const pRake = Number(p.rake_total_brl) || 0;
+                const pRBRate = Number(p.rb_rate) || 0;
+                const pRBValue = Number(p.rb_value_brl) || 0;
+                const pLucro = round2(pRake - pRBValue - pRake * taxRate);
+                const isEditingPlayer = editingRate === `player-${p.player_id}`;
+
+                return (
+                  <tr key={`${p.player_id}-${i}`} className="hover:bg-dark-800/20 transition-colors">
+                    <td className="px-5 py-2">
+                      <span className="text-white font-medium">{p.nickname}</span>
+                      <span className="text-dark-600 text-[11px] font-mono ml-2">#{p.external_player_id}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="text-dark-400 text-xs">{p._agentName || '—'}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-dark-300">{formatBRL(pRake)}</td>
+                    <td className="px-3 py-2 text-right">
+                      {isEditingPlayer ? (
+                        <span className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max="100"
+                            value={rateInput}
+                            onChange={(e) => setRateInput(e.target.value)}
+                            aria-label={`Taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
+                            className="input w-14 text-right text-xs font-mono py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') savePlayerRate(p.player_id!);
+                              if (e.key === 'Escape') setEditingRate(null);
+                            }}
+                          />
+                          <button
+                            onClick={() => savePlayerRate(p.player_id!)}
+                            disabled={savingRate}
+                            aria-label={`Salvar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
+                            className="text-poker-400 text-xs"
+                          >
+                            ✓
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-end gap-1">
+                          <span className={`font-mono text-sm ${pRBRate > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
+                            {pRBRate}%
+                          </span>
+                          {isDraft && canEditRates && (
+                            <button
+                              onClick={() => startEditRate(`player-${p.player_id}`, pRBRate)}
+                              aria-label={`Editar taxa de rakeback do jogador ${p.nickname || p.external_player_id}`}
+                              className="text-dark-600 hover:text-dark-300 text-xs ml-0.5"
+                            >
+                              Editar
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className={`px-3 py-2 text-right font-mono ${pRBValue > 0 ? 'text-yellow-400' : 'text-dark-500'}`}>
+                      {pRBValue > 0 ? formatBRL(pRBValue) : '—'}
+                    </td>
+                    <td className={`px-5 py-2 text-right font-mono font-semibold ${pLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                      {formatBRL(pLucro)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {/* Totals footer */}
+            <tfoot>
+              <tr className="border-t-2 border-dark-700 bg-dark-900">
+                <td className="px-5 py-3 text-xs font-extrabold text-amber-400">
+                  TOTAL
+                  <span className="text-dark-500 text-[10px] font-normal ml-2">{allDirectPlayers.length} jogadores</span>
+                </td>
+                <td />
+                <td className="px-3 py-3 text-right font-mono text-xs font-extrabold text-dark-200">
+                  {formatBRL(totals.totalRake)}
+                </td>
+                <td className="px-3 py-3 text-right text-dark-500">—</td>
+                <td className="px-3 py-3 text-right font-mono text-xs font-extrabold text-yellow-400">
+                  {formatBRL(totals.totalRB)}
+                </td>
+                <td className={`px-5 py-3 text-right font-mono text-xs font-extrabold ${totals.totalLucro >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                  {formatBRL(totals.totalLucro)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
           </div>
         </div>
       )}

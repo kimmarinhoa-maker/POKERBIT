@@ -193,27 +193,6 @@ export class CarryForwardService {
     };
   }
 
-  // ─── Helper: calcular ledgerNet para vários entity_ids ────────────
-  private async calcLedgerNet(tenantId: string, weekStart: string, entityIds: string[]): Promise<number> {
-    const { data, error } = await supabaseAdmin
-      .from('ledger_entries')
-      .select('dir, amount')
-      .eq('tenant_id', tenantId)
-      .eq('week_start', weekStart)
-      .in('entity_id', entityIds);
-
-    if (error) throw new Error(`Erro ao buscar ledger: ${error.message}`);
-
-    let entradas = 0;
-    let saidas = 0;
-    for (const e of data || []) {
-      if (e.dir === 'IN') entradas += Number(e.amount) || 0;
-      else saidas += Number(e.amount) || 0;
-    }
-
-    return entradas - saidas;
-  }
-
   // ─── Helper: adicionar dias a uma data string ─────────────────────
   private addDays(dateStr: string, days: number): string {
     const d = new Date(dateStr + 'T00:00:00Z');

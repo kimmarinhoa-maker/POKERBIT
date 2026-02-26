@@ -5,13 +5,15 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import ConfigEstrutura from '@/components/config/ConfigEstrutura';
 import ConfigPagamentos from '@/components/config/ConfigPagamentos';
 import ConfigTaxas from '@/components/config/ConfigTaxas';
+import ConfigWhatsApp from '@/components/config/ConfigWhatsApp';
 
-type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas';
+type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'whatsapp';
 
 const tabs: { key: ConfigTab; label: string }[] = [
   { key: 'estrutura', label: 'Estrutura' },
   { key: 'pagamentos', label: 'Pagamentos' },
   { key: 'taxas', label: 'Taxas' },
+  { key: 'whatsapp', label: 'WhatsApp' },
 ];
 
 export default function ConfigPage() {
@@ -23,7 +25,7 @@ export default function ConfigPage() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white">Configuracao</h2>
-        <p className="text-dark-400 text-sm">Estrutura, pagamentos e taxas da operacao</p>
+        <p className="text-dark-400 text-sm">Estrutura, pagamentos, taxas e integracoes</p>
       </div>
 
       {/* Main tabs — underline style */}
@@ -48,6 +50,7 @@ export default function ConfigPage() {
       {activeTab === 'estrutura' && <ConfigEstrutura />}
       {activeTab === 'pagamentos' && <ConfigPagamentos />}
       {activeTab === 'taxas' && <ConfigTaxas />}
+      {activeTab === 'whatsapp' && <ConfigWhatsApp />}
     </div>
   );
 }

@@ -61,8 +61,8 @@ export default function LinksPage() {
       } else {
         setError(res.error || 'Erro ao carregar dados');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setLoading(false);
     }
@@ -92,8 +92,8 @@ export default function LinksPage() {
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
-    } catch (err: any) {
-      toast(err.message, 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro inesperado', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -110,8 +110,8 @@ export default function LinksPage() {
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
-    } catch (err: any) {
-      toast(err.message, 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro inesperado', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -140,8 +140,8 @@ export default function LinksPage() {
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
-    } catch (err: any) {
-      toast(err.message, 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro inesperado', 'error');
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }

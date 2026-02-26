@@ -7,7 +7,7 @@ import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { settlementService } from '../services/settlement.service';
 import { supabaseAdmin } from '../config/supabase';
 import { normName } from '../utils/normName';
-import { safeErrorMessage } from '../utils/apiError';
+import { safeErrorMessage, AppError } from '../utils/apiError';
 
 const router = Router();
 
@@ -127,8 +127,8 @@ router.post(
 
       res.json({ success: true, data });
     } catch (err: unknown) {
+      const status = err instanceof AppError ? err.statusCode : 500;
       const msg = safeErrorMessage(err);
-      const status = msg.includes('não pode') ? 422 : 500;
       res.status(status).json({ success: false, error: msg });
     }
   },
@@ -435,9 +435,98 @@ router.post(
         }
       }
 
-      await Promise.all(allPromises);
+      const checked = allPromises.map((p) =>
+        p.then(({ error }: any) => {
+          if (error) console.error('[sync-agents] Phase 4 error:', error);
+        }),
+      );
+      await Promise.all(checked);
 
-      res.json({ success: true, data: { created, fixed, linked } });
+      // ── Fase 5: Auto-populate rates from global defaults ────────────
+      let ratesPopulated = 0;
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // 5a: Agent rates — fetch default rates from agent_rb_rates
+        const { data: defaultAgentRates } = await supabaseAdmin
+          .from('agent_rb_rates')
+          .select('organization_id, rate')
+          .eq('tenant_id', tenantId)
+          .lte('effective_from', today)
+          .or(`effective_to.is.null,effective_to.gte.${today}`);
+
+        if (defaultAgentRates && defaultAgentRates.length > 0) {
+          const agentRateMap = new Map<string, number>();
+          for (const r of defaultAgentRates) {
+            agentRateMap.set(r.organization_id, r.rate);
+          }
+
+          // Fetch agent_week_metrics that have rb_rate = 0 or null AND have an agent_id
+          const { data: metricsToUpdate } = await supabaseAdmin
+            .from('agent_week_metrics')
+            .select('id, agent_id, rake_total_brl, rb_rate')
+            .eq('settlement_id', settlementId)
+            .not('agent_id', 'is', null);
+
+          if (metricsToUpdate) {
+            for (const m of metricsToUpdate) {
+              if (m.rb_rate && Number(m.rb_rate) > 0) continue; // Already has a rate set
+              const defaultRate = agentRateMap.get(m.agent_id);
+              if (defaultRate != null && defaultRate > 0) {
+                const rakeTotal = Number(m.rake_total_brl) || 0;
+                const commission = Math.round(((rakeTotal * defaultRate) / 100 + Number.EPSILON) * 100) / 100;
+                await supabaseAdmin
+                  .from('agent_week_metrics')
+                  .update({ rb_rate: defaultRate, commission_brl: commission })
+                  .eq('id', m.id);
+                ratesPopulated++;
+              }
+            }
+          }
+        }
+
+        // 5b: Player rates — fetch default rates from player_rb_rates
+        const { data: defaultPlayerRates } = await supabaseAdmin
+          .from('player_rb_rates')
+          .select('player_id, rate')
+          .eq('tenant_id', tenantId)
+          .lte('effective_from', today)
+          .or(`effective_to.is.null,effective_to.gte.${today}`);
+
+        if (defaultPlayerRates && defaultPlayerRates.length > 0) {
+          const playerRateMap = new Map<string, number>();
+          for (const r of defaultPlayerRates) {
+            playerRateMap.set(r.player_id, r.rate);
+          }
+
+          // Fetch player_week_metrics that have rb_rate = 0 or null
+          const { data: playerMetrics } = await supabaseAdmin
+            .from('player_week_metrics')
+            .select('id, player_id, rake_total_brl, rb_rate')
+            .eq('settlement_id', settlementId);
+
+          if (playerMetrics) {
+            for (const pm of playerMetrics) {
+              if (pm.rb_rate && Number(pm.rb_rate) > 0) continue; // Already has a rate
+              const defaultRate = playerRateMap.get(pm.player_id);
+              if (defaultRate != null && defaultRate > 0) {
+                const rake = Number(pm.rake_total_brl) || 0;
+                const rbValue = Math.round(((rake * defaultRate) / 100 + Number.EPSILON) * 100) / 100;
+                await supabaseAdmin
+                  .from('player_week_metrics')
+                  .update({ rb_rate: defaultRate, rb_value_brl: rbValue })
+                  .eq('id', pm.id);
+                ratesPopulated++;
+              }
+            }
+          }
+        }
+      } catch (rateErr) {
+        // Non-critical: log but don't fail the sync
+        console.warn('[sync-agents] Phase 5 (rate auto-populate) error:', rateErr);
+      }
+
+      res.json({ success: true, data: { created, fixed, linked, ratesPopulated } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
@@ -540,8 +629,8 @@ router.post(
 
       res.json({ success: true, data });
     } catch (err: unknown) {
+      const status = err instanceof AppError ? err.statusCode : 500;
       const msg = safeErrorMessage(err);
-      const status = msg.includes('Apenas') ? 422 : 500;
       res.status(status).json({ success: false, error: msg });
     }
   },

@@ -221,9 +221,10 @@ router.post('/invite', ...adminOnly, async (req: Request, res: Response) => {
       // Estrategia 2: fallback via auth admin com paginacao pequena
       // Percorre paginas de 50 ate achar ou acabar (evita carregar 1000+ de uma vez)
       const PER_PAGE = 50;
+      const MAX_PAGES = 20;
       let page = 1;
       let found = false;
-      while (!found) {
+      while (!found && page <= MAX_PAGES) {
         const { data: pageData, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
           page,
           perPage: PER_PAGE,

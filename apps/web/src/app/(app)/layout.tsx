@@ -62,7 +62,7 @@ const navSections: NavSection[] = [
   {
     label: 'CADASTRO',
     items: [
-      { href: '/players', label: 'Jogadores', icon: Users, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { href: '/players', label: 'Agentes / Jogadores', icon: Users, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
       { href: '/clubs', label: 'Clubes', icon: Building2, roles: ['OWNER', 'ADMIN'] },
       { href: '/links', label: 'Vincular', icon: LinkIcon, roles: ['OWNER', 'ADMIN'] },
     ],

@@ -99,8 +99,8 @@ export default function LancamentosPage() {
       // Infer total overlay from saved data
       const totalSavedOverlay = rows.reduce((s, r) => s + r.overlay, 0);
       setTotalOverlay(totalSavedOverlay);
-    } catch (err: any) {
-      toast(err.message || 'Erro ao carregar dados', 'error');
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro ao carregar dados', 'error');
     } finally {
       setDataLoading(false);
     }
@@ -158,8 +158,8 @@ export default function LancamentosPage() {
         );
 
         toast('Overlay salvo com sucesso', 'success');
-      } catch (err: any) {
-        toast(err.message || 'Erro ao salvar overlay', 'error');
+      } catch (err: unknown) {
+        toast(err instanceof Error ? err.message : 'Erro ao salvar overlay', 'error');
       } finally {
         setSavingOverlay(false);
       }
@@ -209,8 +209,8 @@ export default function LancamentosPage() {
             return next;
           });
         }, 3000);
-      } catch (err: any) {
-        toast(err.message || 'Erro ao salvar lancamento', 'error');
+      } catch (err: unknown) {
+        toast(err instanceof Error ? err.message : 'Erro ao salvar lancamento', 'error');
       }
     },
     [weekStart, rows, toast],

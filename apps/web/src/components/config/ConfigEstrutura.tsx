@@ -96,7 +96,7 @@ export default function ConfigEstrutura() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadData();
@@ -153,8 +153,8 @@ export default function ConfigEstrutura() {
       } else {
         setSubError(res.error || 'Erro ao salvar');
       }
-    } catch (err: any) {
-      setSubError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setSubError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setSubSaving(false);
     }
@@ -268,8 +268,8 @@ export default function ConfigEstrutura() {
       } else {
         setPfxError(res.error || 'Erro ao salvar');
       }
-    } catch (err: any) {
-      setPfxError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setPfxError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setPfxSaving(false);
     }

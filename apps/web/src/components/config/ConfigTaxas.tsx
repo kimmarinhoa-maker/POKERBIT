@@ -97,8 +97,8 @@ export default function ConfigTaxas() {
       } else {
         setError(res.error || 'Erro ao salvar');
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro de conexao');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro de conexao');
     } finally {
       setSaving(false);
     }

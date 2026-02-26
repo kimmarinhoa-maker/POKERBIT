@@ -31,6 +31,9 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
   const { canAccess } = useAuth();
   const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
+  // Reset sub-tab when week changes
+  useEffect(() => { setActiveSubTab('ledger'); }, [weekStart]);
+
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>('all');
@@ -50,7 +53,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, toast]);
 
   useEffect(() => {
     loadEntries();

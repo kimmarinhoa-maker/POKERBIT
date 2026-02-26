@@ -27,7 +27,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       .range(offset, offset + limit - 1);
 
     if (search) {
-      const escaped = search.replace(/[%_\\]/g, '\\$&').replace(/[,.()\[\]]/g, '');
+      const escaped = search.replace(/[%_\\]/g, '\\$&').replace(/[,.()[\]]/g, '');
       query = query.or(`nickname.ilike.%${escaped}%,external_id.ilike.%${escaped}%`);
     }
 
@@ -145,15 +145,19 @@ router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
 
     if (error) throw error;
 
-    // Audit
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: req.userId,
-      action: 'UPDATE',
-      entity_type: 'player',
-      entity_id: playerId,
-      new_data: { full_name, phone, email },
-    });
+    // Audit (non-blocking — don't fail the request if audit insert fails)
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: req.userId,
+        action: 'UPDATE',
+        entity_type: 'player',
+        entity_id: playerId,
+        new_data: { full_name, phone, email },
+      });
+    } catch (auditErr) {
+      console.warn('[audit] Failed to log:', auditErr);
+    }
 
     res.json({ success: true, data });
   } catch (err: unknown) {
@@ -197,15 +201,19 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     if (error) throw error;
 
-    // Audit
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: req.userId,
-      action: 'UPDATE',
-      entity_type: 'player_rb_rate',
-      entity_id: req.params.id,
-      new_data: { rate, effective_from: dateFrom },
-    });
+    // Audit (non-blocking — don't fail the request if audit insert fails)
+    try {
+      await supabaseAdmin.from('audit_log').insert({
+        tenant_id: tenantId,
+        user_id: req.userId,
+        action: 'UPDATE',
+        entity_type: 'player_rb_rate',
+        entity_id: req.params.id,
+        new_data: { rate, effective_from: dateFrom },
+      });
+    } catch (auditErr) {
+      console.warn('[audit] Failed to log:', auditErr);
+    }
 
     res.json({ success: true, data });
   } catch (err: unknown) {

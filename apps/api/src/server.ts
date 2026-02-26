@@ -77,6 +77,15 @@ const importLimiter = rateLimit({
   message: { success: false, error: 'Muitas importacoes em pouco tempo. Aguarde 1 minuto.' },
 });
 
+// WhatsApp endpoints: 10 requests per minute
+const whatsappLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Rate limit exceeded for WhatsApp' },
+});
+
 // ─── Health check ──────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
@@ -100,7 +109,7 @@ app.use('/api/carry-forward', carryForwardRoutes);
 app.use('/api/ofx', ofxRoutes);
 app.use('/api/chippix', chipPixRoutes);
 app.use('/api/users', usersRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);
 
 // ─── 404 handler ───────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -117,7 +126,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ─── Start ─────────────────────────────────────────────────────────
-app.listen(env.API_PORT, () => {
+const server = app.listen(env.API_PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════╗
 ║     🃏  Poker Manager SaaS — API Server         ║
@@ -147,6 +156,14 @@ app.listen(env.API_PORT, () => {
 ║                                                  ║
 ╚══════════════════════════════════════════════════╝
   `);
+});
+
+server.on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${env.API_PORT} already in use`);
+    process.exit(1);
+  }
+  throw err;
 });
 
 export default app;

@@ -165,8 +165,8 @@ async function _apiFetchOnce<T = any>(
       signal: controller.signal,
     });
     clearTimeout(timeout);
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
       return { success: false, error: 'Timeout: o servidor demorou mais de 30s para responder.' };
     }
     return { success: false, error: 'Servidor indisponivel. Verifique se o backend esta rodando (porta 3001).' };
@@ -579,10 +579,21 @@ export async function updateAgentRate(agentId: string, rate: number, effectiveFr
   });
 }
 
+export async function getPlayerRates() {
+  return apiFetch('/players/rates/current');
+}
+
 export async function updatePlayerRate(playerId: string, rate: number, effectiveFrom?: string) {
   return apiFetch(`/players/${playerId}/rate`, {
     method: 'PUT',
     body: JSON.stringify({ rate, effective_from: effectiveFrom }),
+  });
+}
+
+export async function updatePlayer(playerId: string, data: { full_name?: string; phone?: string; email?: string }) {
+  return apiFetch(`/players/${playerId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }
 
@@ -646,6 +657,34 @@ export async function updateBankAccount(
 
 export async function deleteBankAccount(id: string) {
   return apiFetch(`/config/bank-accounts/${id}`, { method: 'DELETE' });
+}
+
+// ─── WhatsApp (Evolution API) ────────────────────────────────────
+
+export async function getWhatsAppConfig() {
+  return apiFetch('/config/whatsapp');
+}
+
+export async function updateWhatsAppConfig(data: {
+  api_url: string;
+  api_key: string;
+  instance_name: string;
+  is_active: boolean;
+}) {
+  return apiFetch('/config/whatsapp', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function testWhatsAppConnection() {
+  return apiFetch('/whatsapp/test', { method: 'POST' });
+}
+
+export async function sendWhatsApp(data: {
+  phone: string;
+  imageBase64: string;
+  caption?: string;
+  fileName?: string;
+}) {
+  return apiFetch('/whatsapp/send', { method: 'POST', body: JSON.stringify(data) });
 }
 
 // ─── Carry-Forward ───────────────────────────────────────────────

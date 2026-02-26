@@ -55,7 +55,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, toast]);
 
   useEffect(() => {
     loadEntries();

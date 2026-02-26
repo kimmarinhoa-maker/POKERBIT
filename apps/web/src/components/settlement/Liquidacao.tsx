@@ -79,7 +79,7 @@ export default function Liquidacao({
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, clubId]);
+  }, [weekStart, clubId, toast]);
 
   // Unified direct logic: backend annotations (agent.is_direct, player.agent_is_direct) + "SEM AGENTE"
   const directNameSet = useMemo(() => {
