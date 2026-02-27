@@ -157,7 +157,7 @@ export default function ChipPixTab({
     };
   }, [txns]);
 
-  // Extrato stats for verificador (derived from dir/amount — matches ledger logic)
+  // Extrato stats for verificador (gross values from memo — matches backend parseMemo)
   const extratoStats = useMemo<VerificadorStats>(() => {
     const nonIgnored = txns.filter((t) => t.status !== 'ignored');
     const playerIds = new Set<string>();
@@ -165,14 +165,11 @@ export default function ChipPixTab({
     let saidas = 0;
     let taxas = 0;
     for (const tx of nonIgnored) {
-      const src = (tx as any).source;
-      if (src === 'chippix_fee') {
-        taxas += Number(tx.amount);
-        continue;
-      }
       if (tx.entity_id) playerIds.add(tx.entity_id);
-      if (tx.dir === 'IN') entradas += Number(tx.amount);
-      else saidas += Number(tx.amount);
+      const p = parseMemo(tx.memo);
+      entradas += p.entrada;
+      saidas += p.saida;
+      taxas += p.taxa;
     }
     return {
       jogadores: playerIds.size || nonIgnored.length,

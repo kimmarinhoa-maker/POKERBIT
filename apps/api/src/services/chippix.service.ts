@@ -675,11 +675,24 @@ export class ChipPixService {
     return this.enrichRow(data);
   }
 
+  // ─── Parse gross values from memo/description ─────────────────────
+  private parseGrossFromMemo(desc: string | null) {
+    if (!desc) return { entrada: 0, saida: 0, taxa: 0 };
+    const entMatch = desc.match(/ent\s+([\d.]+)/);
+    const saiMatch = desc.match(/sa[íi]\s+([\d.]+)/);
+    const taxMatch = desc.match(/taxa\s+([\d.]+)/);
+    return {
+      entrada: entMatch ? parseFloat(entMatch[1]) : 0,
+      saida: saiMatch ? parseFloat(saiMatch[1]) : 0,
+      taxa: taxMatch ? parseFloat(taxMatch[1]) : 0,
+    };
+  }
+
   // ─── Ledger Summary (para verificador de conciliação) ─────────────
   async getLedgerSummary(tenantId: string, weekStart: string) {
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
-      .select('entity_id, dir, amount, source')
+      .select('entity_id, dir, amount, source, description')
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart)
       .in('source', ['chippix', 'chippix_fee', 'chippix_ignored']);
@@ -698,13 +711,12 @@ export class ChipPixService {
         continue;
       }
       if (r.source === 'chippix_ignored') continue;
-      // source === 'chippix'
+      // source === 'chippix' — parse gross values from description memo
       if (r.entity_id) playerIds.add(r.entity_id);
-      if (r.dir === 'IN') {
-        entradas += Number(r.amount);
-      } else {
-        saidas += Number(r.amount);
-      }
+      const gross = this.parseGrossFromMemo(r.description);
+      entradas += gross.entrada;
+      saidas += gross.saida;
+      taxas += gross.taxa;
     }
 
     return {
