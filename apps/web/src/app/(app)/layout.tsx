@@ -12,7 +12,6 @@ import {
   Clock,
   Receipt,
   Building2,
-  Eye,
   Trophy,
   Wallet,
   Users,
@@ -58,7 +57,6 @@ const navSections: NavSection[] = [
     label: 'FECHAMENTOS',
     items: [
       { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
-      { href: '/overview', label: 'Visao Geral', icon: Eye, permKey: 'page:overview' },
       { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
       { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
     ],
