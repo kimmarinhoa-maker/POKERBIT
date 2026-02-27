@@ -104,6 +104,23 @@ export async function refreshAuthToken(): Promise<boolean> {
   return _refreshPromise;
 }
 
+// ─── Request cache + dedup ───────────────────────────────────────
+
+const _cache = new Map<string, { data: any; ts: number }>();
+const _inflight = new Map<string, Promise<any>>();
+const CACHE_TTL = 15_000; // 15 seconds
+
+/** Bust cache for a specific path prefix (e.g. after mutations) */
+export function invalidateCache(pathPrefix?: string) {
+  if (!pathPrefix) {
+    _cache.clear();
+    return;
+  }
+  for (const key of _cache.keys()) {
+    if (key.startsWith(pathPrefix)) _cache.delete(key);
+  }
+}
+
 // ─── Fetch wrapper ─────────────────────────────────────────────────
 
 async function apiFetch<T = any>(
@@ -111,22 +128,62 @@ async function apiFetch<T = any>(
   options: RequestInit = {},
   useDirectUrl = false,
 ): Promise<ApiResponse<T>> {
-  const result = await _apiFetchOnce<T>(path, options, useDirectUrl);
+  const method = (options.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
 
-  // On 401 — attempt to refresh and retry ONCE
-  if (result === _UNAUTHORIZED_SENTINEL) {
-    const refreshed = await refreshAuthToken();
-    if (refreshed) {
-      const retry = await _apiFetchOnce<T>(path, options, useDirectUrl);
-      if (retry !== _UNAUTHORIZED_SENTINEL) return retry;
+  // Cache: only GET requests, only proxied (not direct uploads)
+  if (isGet && !useDirectUrl) {
+    // Return cached if fresh
+    const cached = _cache.get(path);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      return cached.data as ApiResponse<T>;
     }
-    // Refresh failed or retry still 401 — logout
-    clearAuth();
-    window.location.href = '/login';
-    return { success: false, error: 'Sessao expirada' };
+
+    // Dedup: if same GET is already in-flight, wait for it
+    const inflight = _inflight.get(path);
+    if (inflight) return inflight as Promise<ApiResponse<T>>;
   }
 
-  return result;
+  // Create the actual fetch promise
+  const fetchPromise = (async (): Promise<ApiResponse<T>> => {
+    const result = await _apiFetchOnce<T>(path, options, useDirectUrl);
+
+    // On 401 — attempt to refresh and retry ONCE
+    if (result === _UNAUTHORIZED_SENTINEL) {
+      const refreshed = await refreshAuthToken();
+      if (refreshed) {
+        const retry = await _apiFetchOnce<T>(path, options, useDirectUrl);
+        if (retry !== _UNAUTHORIZED_SENTINEL) return retry;
+      }
+      // Refresh failed or retry still 401 — logout
+      clearAuth();
+      window.location.href = '/login';
+      return { success: false, error: 'Sessao expirada' };
+    }
+
+    return result;
+  })();
+
+  // Track in-flight for GET dedup
+  if (isGet && !useDirectUrl) {
+    _inflight.set(path, fetchPromise);
+    fetchPromise.finally(() => _inflight.delete(path));
+
+    // Cache successful GET responses
+    const result = await fetchPromise;
+    if (result.success) {
+      _cache.set(path, { data: result, ts: Date.now() });
+    }
+    return result;
+  }
+
+  // Mutations: invalidate related cache after completion
+  if (!isGet) {
+    const basePath = '/' + path.split('/').slice(1, 3).join('/');
+    fetchPromise.then(() => invalidateCache(basePath));
+  }
+
+  return fetchPromise;
 }
 
 /** Sentinel value returned by _apiFetchOnce when the response is 401 */

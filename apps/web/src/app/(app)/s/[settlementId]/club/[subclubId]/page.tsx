@@ -419,7 +419,7 @@ export default function SubclubPanelPage() {
           </div>
 
           {/* Content area — fade on tab switch */}
-          <div key={activeTab} className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30 animate-tab-fade">{renderContent()}</div>
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30 animate-tab-fade">{renderContent()}</div>
         </div>
       )}
     </div>

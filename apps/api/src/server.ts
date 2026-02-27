@@ -6,6 +6,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import express from 'express';
+import compression from 'compression';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -30,6 +31,9 @@ import permissionsRoutes from './routes/permissions.routes';
 const app = express();
 
 // ─── Middleware global ─────────────────────────────────────────────
+
+// Gzip compression — reduce response size by 60-80%
+app.use(compression());
 
 // Security headers
 app.use(helmet());
