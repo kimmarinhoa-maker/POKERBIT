@@ -8,7 +8,7 @@ import {
   Clock,
   Receipt,
   Building2,
-  Eye,
+
   Trophy,
   Wallet,
   Users,
@@ -51,7 +51,6 @@ export const permissionSections: PermResourceSection[] = [
     label: 'Fechamentos',
     items: [
       { key: 'page:clubes', label: 'Clubes', icon: Building2 },
-      { key: 'page:overview', label: 'Visao Geral', icon: Eye },
       { key: 'page:liga_global', label: 'Liga Global', icon: Trophy },
       { key: 'page:caixa_geral', label: 'Caixa Geral', icon: Wallet },
     ],
