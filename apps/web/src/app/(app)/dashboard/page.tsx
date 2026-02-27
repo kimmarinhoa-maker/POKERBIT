@@ -4,29 +4,19 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { formatCurrency, round2 } from '@/lib/formatters';
-import { listSettlements, getSettlementFull, getSettlementBatchSummary, getOrgTree } from '@/lib/api';
+import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
-import dynamic from 'next/dynamic';
 import ClubCard from '@/components/dashboard/ClubCard';
 import WeekDatePicker from '@/components/WeekDatePicker';
-
-// Recharts is ~120KB — lazy-load charts only when needed
-const ComparativeBarChart = dynamic(() => import('@/components/dashboard/ComparativeBarChart'), { ssr: false });
-const ComparativeLineChart = dynamic(() => import('@/components/dashboard/ComparativeLineChart'), { ssr: false });
 import Spinner from '@/components/Spinner';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
-import type { ClubeData, ChartDataPoint } from '@/types/dashboard';
+import type { ClubeData } from '@/types/dashboard';
 
 // ─── helpers ──────────────────────────────────────────────────────
 function formatDDMM(iso: string) {
   const [, m, dd] = iso.split('-');
   return `${dd}/${m}`;
-}
-
-function _formatWeekLabel(iso: string) {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
 }
 
 // ─── types for loaded data ────────────────────────────────────────
@@ -66,9 +56,7 @@ export default function DashboardPage() {
   // Data states
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState<WeekData | null>(null);
-  const [previousWeek, setPreviousWeek] = useState<WeekData | null>(null);
   const [allSettlements, setAllSettlements] = useState<any[]>([]);
-  const [allWeekData, setAllWeekData] = useState<WeekData[]>([]);
   const [notFoundEmpty, setNotFoundEmpty] = useState(false);
 
   // Week selector state
@@ -176,32 +164,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Convert batch summary item to WeekData (lightweight — no per-club breakdown)
-  const batchItemToWeekData = useCallback((item: any): WeekData => {
-    const dt = item.dashboardTotals || {};
-    return {
-      settlement: item.settlement,
-      subclubs: [],
-      jogadoresAtivos: Number(dt.players ?? 0),
-      rakeTotal: Number(dt.rake ?? 0),
-      ganhosTotal: Number(dt.ganhos ?? 0),
-      ggrTotal: Number(dt.ggr ?? 0),
-      despesas: {
-        taxas: Number(dt.totalTaxas ?? 0),
-        rakeback: Number(dt.rbTotal ?? 0),
-        lancamentos: Number(dt.totalLancamentos ?? 0),
-        total: round2(Number(dt.totalTaxas ?? 0) + Math.abs(Number(dt.totalLancamentos ?? 0))),
-        overlay: 0, compras: 0, security: 0, outros: 0,
-      },
-      resultadoFinal: Number(dt.resultado ?? 0),
-      acertoLiga: Number(dt.acertoLiga ?? 0),
-      totalTaxasSigned: Number(dt.totalTaxasSigned ?? 0),
-      totalLancamentos: Number(dt.totalLancamentos ?? 0),
-      clubes: [],
-    };
-  }, []);
-
-  // Initial load: fetch current week (full) + org tree + batch summaries for charts
+  // Initial load: fetch current week (full) + org tree
   useEffect(() => {
     async function init() {
       setLoading(true);
@@ -237,29 +200,6 @@ export default function DashboardPage() {
           const dtEnd = new Date(ws + 'T00:00:00');
           dtEnd.setDate(dtEnd.getDate() + 6);
           setEndDate(dtEnd.toISOString().slice(0, 10));
-
-          // Previous week (for comparison) + chart data: use batch endpoint (1 call instead of 11)
-          const chartSettlements = res.data.slice(0, 12);
-          const otherIds = chartSettlements.filter((s: any) => s.id !== latest.id).map((s: any) => s.id);
-
-          if (otherIds.length > 0) {
-            getSettlementBatchSummary(otherIds).then((batchRes) => {
-              if (batchRes.success && batchRes.data) {
-                const batchWeeks = batchRes.data.map(batchItemToWeekData);
-                // Set previous week if available
-                if (batchWeeks.length > 0) {
-                  setPreviousWeek(batchWeeks[batchWeeks.length - 1]); // most recent = last sorted
-                }
-                const all = [currentData, ...batchWeeks];
-                all.sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
-                setAllWeekData(all);
-              } else {
-                setAllWeekData([currentData]);
-              }
-            });
-          } else {
-            setAllWeekData([currentData]);
-          }
         } else {
           setNotFoundEmpty(true);
         }
@@ -271,7 +211,7 @@ export default function DashboardPage() {
       }
     }
     init();
-  }, [loadWeekData, batchItemToWeekData, toast]);
+  }, [loadWeekData, toast]);
 
   // Week selector handlers — auto-search on date change
   function handleStartChange(date: string) {
@@ -295,20 +235,10 @@ export default function DashboardPage() {
         const target = res.data[0];
         setLoading(true);
 
-        // Find the previous settlement (the one right before the selected)
-        const allRes = await listSettlements();
-        const allList = allRes.success ? allRes.data || [] : allSettlements;
-        const targetIdx = allList.findIndex((s: any) => s.id === target.id);
-        const prev = targetIdx >= 0 && targetIdx < allList.length - 1 ? allList[targetIdx + 1] : null;
-
-        const [newData, prevData] = await Promise.all([
-          loadWeekData(target),
-          prev ? loadWeekData(prev) : Promise.resolve(null),
-        ]);
+        const newData = await loadWeekData(target);
 
         if (newData) {
           setCurrentWeek(newData);
-          setPreviousWeek(prevData);
           setNotFoundEmpty(false);
         } else {
           setNotFoundEmpty(true);
@@ -389,19 +319,7 @@ export default function DashboardPage() {
 
   // ─── Derived data ───────────────────────────────────────────────
   const d = currentWeek;
-  const _p = previousWeek;
   const f = useMemo(() => calcFiltered(d), [d, calcFiltered]);
-  // Chart data from all loaded settlements
-  const chartData: ChartDataPoint[] = useMemo(() => {
-    if (!allWeekData.length) return [];
-    return allWeekData.map((w, i) => ({
-      semana: formatDDMM(w.settlement.week_start),
-      anterior: i > 0 ? allWeekData[i - 1].jogadoresAtivos : w.jogadoresAtivos,
-      atual: w.jogadoresAtivos,
-      rakeAnterior: i > 0 ? allWeekData[i - 1].rakeTotal : w.rakeTotal,
-      rake: w.rakeTotal,
-    }));
-  }, [allWeekData]);
 
   const status = d?.settlement?.status || 'DRAFT';
   const statusLabel = status === 'FINAL' ? 'FECHADO' : status === 'DRAFT' ? 'RASCUNHO' : status;
@@ -529,26 +447,6 @@ export default function DashboardPage() {
               >
                 Mostrar todos
               </button>
-            </div>
-          )}
-
-          {/* Charts */}
-          {chartData.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 mb-7">
-              <div className="card">
-                <div className="mb-4">
-                  <h3 className="text-sm font-bold text-dark-100">Jogadores Ativos</h3>
-                  <p className="text-xs text-dark-400">Comparativo semanal</p>
-                </div>
-                <ComparativeBarChart data={chartData} />
-              </div>
-              <div className="card">
-                <div className="mb-4">
-                  <h3 className="text-sm font-bold text-dark-100">Rake Semanal</h3>
-                  <p className="text-xs text-dark-400">Comparativo semanal</p>
-                </div>
-                <ComparativeLineChart data={chartData} />
-              </div>
             </div>
           )}
 
