@@ -26,7 +26,6 @@ import Ajustes from '@/components/settlement/Ajustes';
 import DRE from '@/components/settlement/DRE';
 import Liga from '@/components/settlement/Liga';
 import Extrato from '@/components/settlement/Extrato';
-import Liquidacao from '@/components/settlement/Liquidacao';
 import DashboardClube from '@/components/settlement/DashboardClube';
 
 // ─── Tabs pesadas (code-split com dynamic import) ────────────────────
@@ -228,20 +227,6 @@ export default function SubclubPanelPage() {
             <Extrato weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
           </TabErrorBoundary>
         );
-      case 'liquidacao':
-        return (
-          <TabErrorBoundary tabName="Liquidacao">
-            <Liquidacao
-              subclub={subclub}
-              weekStart={settlement.week_start}
-              clubId={settlement.club_id}
-              settlementId={settlementId}
-              settlementStatus={settlement.status}
-              onDataChange={loadData}
-            />
-          </TabErrorBoundary>
-        );
-
       case 'rakeback':
         return (
           <TabErrorBoundary tabName="Rakeback">
@@ -264,6 +249,9 @@ export default function SubclubPanelPage() {
               clubId={settlement.club_id}
               fees={fees}
               logoUrl={logoMap[subclubId.toLowerCase()] || null}
+              settlementId={settlementId}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
             />
           </TabErrorBoundary>
         );

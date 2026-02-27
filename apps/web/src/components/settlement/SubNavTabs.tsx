@@ -6,7 +6,6 @@ import {
   LineChart,
   Percent,
   Users,
-  ClipboardList,
   FileText,
   BookOpen,
   Landmark,
@@ -43,7 +42,6 @@ const sections: TabSection[] = [
     label: 'FECHAMENTOS',
     items: [
       { key: 'jogadores', icon: Users, label: 'Jogadores', permKey: 'tab:jogadores' },
-      { key: 'liquidacao', icon: ClipboardList, label: 'Liquidacao', permKey: 'tab:liquidacao' },
       { key: 'comprovantes', icon: FileText, label: 'Comprovantes', permKey: 'tab:comprovantes' },
       { key: 'extrato', icon: BookOpen, label: 'Extrato', permKey: 'tab:extrato' },
     ],
