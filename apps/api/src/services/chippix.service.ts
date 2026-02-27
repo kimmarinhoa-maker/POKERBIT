@@ -193,6 +193,42 @@ export class ChipPixService {
       return { imported: 0, skipped: 0, matched: 0, total_players: 0, transactions: [] };
     }
 
+    // ── Validate spreadsheet dates match the target week ──────────
+    if (weekStart) {
+      const wsDate = new Date(weekStart + 'T00:00:00Z');
+      const weDate = new Date(wsDate.getTime() + 6 * 86400000); // +6 days (Sunday)
+      const wsStr = weekStart; // "YYYY-MM-DD"
+      const weStr = weDate.toISOString().substring(0, 10);
+
+      // Collect all unique dates from the spreadsheet
+      const allDates = new Set<string>();
+      for (const p of parsed) {
+        for (const d of p.datas) {
+          if (d) allDates.add(d);
+        }
+      }
+
+      if (allDates.size > 0) {
+        const outOfRange: string[] = [];
+        for (const d of allDates) {
+          if (d < wsStr || d > weStr) outOfRange.push(d);
+        }
+        if (outOfRange.length > 0) {
+          // Format dates for user-friendly message
+          const fmt = (d: string) => d.split('-').reverse().join('/');
+          const sheetRange = [...allDates].sort();
+          const sheetFirst = fmt(sheetRange[0]);
+          const sheetLast = fmt(sheetRange[sheetRange.length - 1]);
+          throw new Error(
+            `Planilha incompatível com a semana selecionada. ` +
+            `Semana atual: ${fmt(wsStr)} a ${fmt(weStr)}. ` +
+            `Datas na planilha: ${sheetFirst} a ${sheetLast}. ` +
+            `Verifique se está importando o arquivo correto.`
+          );
+        }
+      }
+    }
+
     // Fetch players for auto-matching (from player_week_metrics for this week)
     let players: Array<{ external_player_id: string; nickname: string; agent_id: string; agent_name: string }> = [];
     if (weekStart) {
