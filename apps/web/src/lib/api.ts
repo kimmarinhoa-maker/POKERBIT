@@ -2,13 +2,17 @@
 //  API Client — Comunicação com o backend
 // ══════════════════════════════════════════════════════════════════════
 
-const API_BASE = '/api';
+// In production, call API directly (skip Next.js rewrite proxy = ~200ms faster per request).
+// In development (localhost), use /api proxy for convenience (avoids CORS setup).
+const _backendUrl = process.env.NEXT_PUBLIC_API_BACKEND_URL || '';
+const _isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-// Direct backend URL for file uploads (bypasses Next.js proxy which can fail on large multipart bodies)
-const API_DIRECT =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? (process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://localhost:3001') + '/api'
-    : '/api';
+const API_BASE = _isLocal ? '/api' : _backendUrl ? `${_backendUrl}/api` : '/api';
+
+// Direct backend URL — same as API_BASE now (kept for backwards compat with uploads)
+const API_DIRECT = _isLocal
+  ? (_backendUrl || 'http://localhost:3001') + '/api'
+  : API_BASE;
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -108,7 +112,7 @@ export async function refreshAuthToken(): Promise<boolean> {
 
 const _cache = new Map<string, { data: any; ts: number }>();
 const _inflight = new Map<string, Promise<any>>();
-const CACHE_TTL = 15_000; // 15 seconds
+const CACHE_TTL = 60_000; // 60 seconds
 
 /** Bust cache for a specific path prefix (e.g. after mutations) */
 export function invalidateCache(pathPrefix?: string) {

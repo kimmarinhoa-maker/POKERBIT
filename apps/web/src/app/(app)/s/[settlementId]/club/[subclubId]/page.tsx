@@ -18,29 +18,20 @@ import SubNavTabs from '@/components/settlement/SubNavTabs';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import WeekSelector from '@/components/WeekSelector';
 
-// ─── Tabs leves (import estático) ────────────────────────────────────
+// ─── Tab leve (sempre visível, import estático) ─────────────────────
 import ResumoClube from '@/components/settlement/ResumoClube';
-import Detalhamento from '@/components/settlement/Detalhamento';
-import Jogadores from '@/components/settlement/Jogadores';
-import Ajustes from '@/components/settlement/Ajustes';
-import DRE from '@/components/settlement/DRE';
-import Liga from '@/components/settlement/Liga';
-import Extrato from '@/components/settlement/Extrato';
-import DashboardClube from '@/components/settlement/DashboardClube';
 
-// ─── Tabs pesadas (code-split com dynamic import) ────────────────────
-const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), {
-  loading: () => <TabSkeleton />,
-  ssr: false,
-});
-const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), {
-  loading: () => <TabSkeleton />,
-  ssr: false,
-});
-const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), {
-  loading: () => <TabSkeleton />,
-  ssr: false,
-});
+// ─── Tabs com code-split (carregadas sob demanda) ───────────────────
+const DashboardClube = dynamic(() => import('@/components/settlement/DashboardClube'), { loading: () => <TabSkeleton />, ssr: false });
+const Detalhamento = dynamic(() => import('@/components/settlement/Detalhamento'), { loading: () => <TabSkeleton />, ssr: false });
+const Jogadores = dynamic(() => import('@/components/settlement/Jogadores'), { loading: () => <TabSkeleton />, ssr: false });
+const Ajustes = dynamic(() => import('@/components/settlement/Ajustes'), { loading: () => <TabSkeleton />, ssr: false });
+const DRE = dynamic(() => import('@/components/settlement/DRE'), { loading: () => <TabSkeleton />, ssr: false });
+const Liga = dynamic(() => import('@/components/settlement/Liga'), { loading: () => <TabSkeleton />, ssr: false });
+const Extrato = dynamic(() => import('@/components/settlement/Extrato'), { loading: () => <TabSkeleton />, ssr: false });
+const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), { loading: () => <TabSkeleton />, ssr: false });
+const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
+const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), { loading: () => <TabSkeleton />, ssr: false });
 
 export default function SubclubPanelPage() {
   const params = useParams();

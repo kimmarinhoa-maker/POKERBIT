@@ -6,10 +6,13 @@ import Link from 'next/link';
 import { formatCurrency, round2 } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
+import dynamic from 'next/dynamic';
 import ClubCard from '@/components/dashboard/ClubCard';
-import ComparativeBarChart from '@/components/dashboard/ComparativeBarChart';
-import ComparativeLineChart from '@/components/dashboard/ComparativeLineChart';
 import WeekDatePicker from '@/components/WeekDatePicker';
+
+// Recharts is ~120KB — lazy-load charts only when needed
+const ComparativeBarChart = dynamic(() => import('@/components/dashboard/ComparativeBarChart'), { ssr: false });
+const ComparativeLineChart = dynamic(() => import('@/components/dashboard/ComparativeLineChart'), { ssr: false });
 import Spinner from '@/components/Spinner';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
