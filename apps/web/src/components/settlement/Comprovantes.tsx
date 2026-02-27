@@ -4,10 +4,13 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
+import { useSortable } from '@/lib/useSortable';
 import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+
+type SortKey = 'agent' | 'status' | 'ganhos' | 'rb' | 'saldoAnt' | 'pago' | 'saldo';
 
 interface Props {
   subclub: {
@@ -373,22 +376,43 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
 
   const activeData = activeTab === 'agencias' ? normalAgents : directPlayerRows;
 
-  // Sort by absolute pendente (biggest first)
-  const sortedData = useMemo(
-    () => [...activeData].sort((a, b) => Math.abs(b.pendente) - Math.abs(a.pendente)),
-    [activeData],
-  );
-
-  // Filter by search + result type
-  const filteredData = useMemo(() => {
-    return sortedData.filter((d) => {
+  // Filter by search + result type (before sorting)
+  const preFiltered = useMemo(() => {
+    return activeData.filter((d) => {
       if (searchTerm && !d.agent.agent_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (resultFilter === 'pagar' && !(d.pendente < -0.01)) return false;
       if (resultFilter === 'receber' && !(d.pendente > 0.01)) return false;
       if (resultFilter === 'zero' && Math.abs(d.pendente) > 0.01) return false;
       return true;
     });
-  }, [sortedData, searchTerm, resultFilter]);
+  }, [activeData, searchTerm, resultFilter]);
+
+  // Sortable columns
+  const getSortValue = useCallback((item: AgentFinancials, key: SortKey): string | number => {
+    switch (key) {
+      case 'agent': return item.agent.agent_name;
+      case 'status': {
+        const isQ = Math.abs(item.pendente) < 0.01 && (Math.abs(item.totalDevido) > 0.01 || Math.abs(item.pago) > 0.01);
+        if (isQ) return 2;
+        if (item.pendente < -0.01) return 0; // pagar
+        if (item.pendente > 0.01) return 1;  // receber
+        return 3;
+      }
+      case 'ganhos': return item.ganhos;
+      case 'rb': return item.rbAgente;
+      case 'saldoAnt': return item.saldoAnterior;
+      case 'pago': return item.pago;
+      case 'saldo': return Math.abs(item.pendente);
+      default: return 0;
+    }
+  }, []);
+
+  const { sorted: filteredData, handleSort, sortIcon, ariaSort } = useSortable<AgentFinancials, SortKey>({
+    data: preFiltered,
+    defaultKey: 'saldo',
+    defaultDir: 'desc',
+    getValue: getSortValue,
+  });
 
   // KPIs for active tab
   const kpis = useMemo(() => {
@@ -544,13 +568,13 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
           <table className="w-full text-sm data-table">
             <thead>
               <tr className="bg-dark-800/50 border-b border-dark-700">
-                <th className="py-2.5 px-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-bold">Agente</th>
-                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[80px]">Status</th>
-                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Ganhos</th>
-                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">RB Ag.</th>
-                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo Ant.</th>
-                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Pago</th>
-                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold">Saldo</th>
+                <th className="py-2.5 px-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('agent')} onClick={() => handleSort('agent')}>Agente{sortIcon('agent')}</th>
+                <th className="py-2.5 px-2 text-center text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[80px] cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('status')} onClick={() => handleSort('status')}>Status{sortIcon('status')}</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('ganhos')} onClick={() => handleSort('ganhos')}>Ganhos{sortIcon('ganhos')}</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('rb')} onClick={() => handleSort('rb')}>RB Ag.{sortIcon('rb')}</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('saldoAnt')} onClick={() => handleSort('saldoAnt')}>Saldo Ant.{sortIcon('saldoAnt')}</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('pago')} onClick={() => handleSort('pago')}>Pago{sortIcon('pago')}</th>
+                <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold cursor-pointer select-none hover:text-dark-300 transition-colors" scope="col" aria-sort={ariaSort('saldo')} onClick={() => handleSort('saldo')}>Saldo{sortIcon('saldo')}</th>
                 <th className="py-2.5 px-2 text-right text-[10px] text-dark-500 uppercase tracking-wider font-bold w-[120px]"></th>
               </tr>
             </thead>
@@ -926,7 +950,7 @@ function AgentRow({
             {isDraft && hasMov && !isQuitado && (
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenPay(); }}
-                className={`text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border font-medium ${
+                className={`text-[11px] px-2.5 py-1 min-w-[68px] text-center whitespace-nowrap rounded-md transition-colors border font-medium ${
                   pendente > 0.01
                     ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/15'
                     : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/15'
