@@ -1135,6 +1135,12 @@ function StatementView({
               </div>
             )}
 
+            {/* Rake Gerado */}
+            <div className="flex justify-between">
+              <span className="text-dark-400 print:text-gray-500 text-xs">Rake Gerado <span className="text-dark-600 print:text-gray-400">(informativo)</span></span>
+              <span className="font-mono text-dark-400 print:text-gray-500 text-xs">{formatBRL(data.rakeTotal)}</span>
+            </div>
+
             {/* RB Agente */}
             {data.rbAgente > 0.01 && (
               <div className="flex justify-between">
@@ -1146,12 +1152,6 @@ function StatementView({
                 </span>
               </div>
             )}
-
-            {/* Rake informativo */}
-            <div className="flex justify-between">
-              <span className="text-dark-400 print:text-gray-500 text-xs">Rake Gerado <span className="text-dark-600 print:text-gray-400">(informativo)</span></span>
-              <span className="font-mono text-dark-400 print:text-gray-500 text-xs">{formatBRL(data.rakeTotal)}</span>
-            </div>
 
             {/* Saldo anterior (se houver) */}
             {Math.abs(data.saldoAnterior) > 0.01 && (
