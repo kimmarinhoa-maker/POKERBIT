@@ -146,9 +146,10 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ─── Start ─────────────────────────────────────────────────────────
-// Railway injeta PORT, local usa API_PORT
-const PORT = env.PORT ? Number(env.PORT) : env.API_PORT;
-const server = app.listen(PORT, () => {
+// Railway injeta PORT; local usa API_PORT; bind 0.0.0.0 para containers
+const PORT = Number(process.env.PORT) || env.API_PORT;
+const HOST = '0.0.0.0';
+const server = app.listen(PORT, HOST, () => {
   console.log(`
 ╔══════════════════════════════════════════════════╗
 ║     🃏  Poker Manager SaaS — API Server         ║
