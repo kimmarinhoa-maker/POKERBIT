@@ -2,7 +2,7 @@
 //  Poker Manager SaaS — API Server
 //
 //  Stack: Express + TypeScript + Supabase
-//  Porta: 3001 (configurável via API_PORT no .env)
+//  Porta: Railway PORT || API_PORT (default 3001)
 // ══════════════════════════════════════════════════════════════════════
 
 import express from 'express';

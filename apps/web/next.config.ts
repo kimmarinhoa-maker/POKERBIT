@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 
+// Railway/Vercel: set NEXT_PUBLIC_API_BACKEND_URL to the API service URL
 const API_BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://localhost:3001';
 
 const nextConfig: NextConfig = {
