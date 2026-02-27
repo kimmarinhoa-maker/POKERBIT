@@ -2,11 +2,10 @@
 //  Import Service — Upload, parse e processamento de XLSX
 //
 //  Pipeline:
-//    1. Upload XLSX → Supabase Storage
-//    2. Parse com coreSuprema.parseWorkbook()
-//    3. Upsert players no banco
-//    4. Calcular com calculateWeek()
-//    5. Criar settlement DRAFT + persistir métricas
+//    1. Parse com coreSuprema.parseWorkbook()
+//    2. Upsert players no banco
+//    3. Calcular com calculateWeek()
+//    4. Criar settlement DRAFT + persistir métricas
 //
 //  PR2 fixes:
 //    - subclub_name + subclub_id populados em todas as métricas
@@ -17,7 +16,6 @@
 import crypto from 'crypto';
 import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
-import { env } from '../config/env';
 import type { ImportProcessResult } from '../types';
 import { round2 } from '../utils/round2';
 
@@ -70,21 +68,8 @@ export class ImportService {
       };
     }
 
-    // 2) Upload para Storage
+    // 2) Criar registro de import
     const storagePath = `${tenantId}/${weekStart}/${fileHash}_${fileName}`;
-    const { error: storageError } = await supabaseAdmin.storage
-      .from(env.STORAGE_BUCKET)
-      .upload(storagePath, fileBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        upsert: false,
-      });
-
-    if (storageError) {
-      console.error('[import] Erro no upload:', storageError);
-      warnings.push(`Upload para storage falhou: ${storageError.message}`);
-    }
-
-    // 3) Criar registro de import
     const { data: importRow, error: importError } = await supabaseAdmin
       .from('imports')
       .insert({

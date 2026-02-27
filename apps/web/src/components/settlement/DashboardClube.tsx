@@ -2,14 +2,13 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 import KpiCard from '@/components/ui/KpiCard';
 import { formatCurrency } from '@/lib/formatters';
@@ -84,9 +83,8 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
         const res = await listSettlements();
         if (cancelled || !res?.data) return;
 
-        // Take up to 4 most recent settlements (limit API calls)
-        // TODO: replace with dedicated GET /api/settlements/rake-history?subclub=X endpoint
-        const settlements = res.data.slice(0, 4);
+        // Take up to 8 most recent settlements
+        const settlements = res.data.slice(0, 8);
         if (settlements.length === 0) {
           setHistoryLoading(false);
           return;
@@ -452,7 +450,7 @@ function PodiumCards({
   );
 }
 
-/* ── Rake History Chart (Recharts BarChart) ───────────────────────── */
+/* ── Rake History Chart (Recharts AreaChart — line) ───────────────── */
 function RakeTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -466,28 +464,12 @@ function RakeTooltip({ active, payload, label }: any) {
 function RakeHistoryChart({ data }: { data: RakeWeekPoint[] }) {
   return (
     <div>
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-3">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-poker-500" />
-          <span className="text-[11px] text-dark-400">Semana atual</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-dark-600" />
-          <span className="text-[11px] text-dark-400">Semanas anteriores</span>
-        </div>
-      </div>
-
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} barCategoryGap="20%" barSize={28} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
           <defs>
-            <linearGradient id="rakeBarCurrent" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#22c55e" />
-              <stop offset="100%" stopColor="#15803d" />
-            </linearGradient>
-            <linearGradient id="rakeBarDefault" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#475569" />
-              <stop offset="100%" stopColor="#334155" />
+            <linearGradient id="rakeAreaFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
@@ -501,15 +483,16 @@ function RakeHistoryChart({ data }: { data: RakeWeekPoint[] }) {
             }
           />
           <Tooltip content={<RakeTooltip />} />
-          <Bar dataKey="rake" radius={[4, 4, 0, 0]}>
-            {data.map((entry, index) => (
-              <Cell
-                key={index}
-                fill={entry.isCurrent ? 'url(#rakeBarCurrent)' : 'url(#rakeBarDefault)'}
-              />
-            ))}
-          </Bar>
-        </BarChart>
+          <Area
+            type="monotone"
+            dataKey="rake"
+            stroke="#22c55e"
+            strokeWidth={2}
+            fill="url(#rakeAreaFill)"
+            dot={{ r: 4, fill: '#22c55e', stroke: '#0f172a', strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+          />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

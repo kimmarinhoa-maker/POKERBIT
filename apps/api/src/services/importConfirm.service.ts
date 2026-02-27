@@ -5,12 +5,11 @@
 //    1. Recebe XLSX + weekStart confirmado
 //    2. Re-executa parse + validate (guardrail: recusa se não ready)
 //    3. Cria import record
-//    4. Upload para Supabase Storage
-//    5. Upsert players
-//    6. Calcula semana (calculateWeek)
-//    7. Cria settlement (DRAFT) — com versionamento (v2, v3 se reimport)
-//    8. Persiste player_week_metrics + agent_week_metrics
-//    9. Retorna settlement_id
+//    4. Upsert players
+//    5. Calcula semana (calculateWeek)
+//    6. Cria settlement (DRAFT) — com versionamento (v2, v3 se reimport)
+//    7. Persiste player_week_metrics + agent_week_metrics
+//    8. Retorna settlement_id
 //
 //  GUARDRAIL: retorna 409 se houver blockers (agências sem clube, etc)
 // ══════════════════════════════════════════════════════════════════════
@@ -103,18 +102,8 @@ class ImportConfirmService {
       importId = crypto.randomUUID();
     }
 
-    // Upload para storage
-    const storagePath = `${tenantId}/${weekStart}/${fileHash}_${fileName}`;
-    const { error: storageError } = await supabaseAdmin.storage.from('imports').upload(storagePath, fileBuffer, {
-      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      upsert: true,
-    });
-
-    if (storageError) {
-      warnings.push(`Upload para storage falhou: ${storageError.message}`);
-    }
-
     // Criar/atualizar registro de import
+    const storagePath = `${tenantId}/${weekStart}/${fileHash}_${fileName}`;
     const { error: importError } = await supabaseAdmin.from('imports').upsert(
       {
         id: importId,
