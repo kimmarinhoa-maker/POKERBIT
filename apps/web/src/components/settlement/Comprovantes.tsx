@@ -89,9 +89,10 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
   const [fechamentoTipo, setFechamentoTipo] = useState<'avista' | 'profitloss'>('profitloss');
   const [hidePlayers, setHidePlayers] = useState(false);
 
-  // ─── Quick-pay state ──────────────────────────────────────────────
-  const [quickPayAgent, setQuickPayAgent] = useState<string | null>(null);
+  // ─── Quick-pay state (modal) ──────────────────────────────────────
+  const [payModalAgent, setPayModalAgent] = useState<AgentMetric | null>(null);
   const [payForm, setPayForm] = useState({ amount: '', method: 'PIX', description: '', dir: 'OUT' as 'IN' | 'OUT' });
+  const [payPendente, setPayPendente] = useState(0);
   const [saving, setSaving] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
@@ -118,7 +119,8 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
 
   // ─── Quick-pay handlers ─────────────────────────────────────────
   function openQuickPay(agent: AgentMetric, pendente: number) {
-    setQuickPayAgent(agent.id);
+    setPayModalAgent(agent);
+    setPayPendente(pendente);
     setPayForm({
       amount: String(Math.abs(round2(pendente))),
       method: 'PIX',
@@ -127,14 +129,15 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
     });
   }
 
-  async function handleQuickPay(agent: AgentMetric) {
+  async function handleQuickPay() {
+    if (!payModalAgent) return;
     const amount = parseFloat(payForm.amount);
     if (!amount || amount <= 0) return;
     setSaving(true);
     try {
       const res = await createLedgerEntry({
-        entity_id: agent.agent_id || agent.id,
-        entity_name: agent.agent_name,
+        entity_id: payModalAgent.agent_id || payModalAgent.id,
+        entity_name: payModalAgent.agent_name,
         week_start: weekStart,
         dir: payForm.dir,
         amount,
@@ -142,7 +145,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
         description: payForm.description || undefined,
       });
       if (res.success) {
-        setQuickPayAgent(null);
+        setPayModalAgent(null);
         loadEntries();
         if (onDataChange) onDataChange();
         toast('Pagamento registrado', 'success');
@@ -560,13 +563,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                   onToggleExpand={() => toggleExpand(d.agent.id)}
                   onPreview={() => setSelectedAgent(d)}
                   isDraft={isDraft}
-                  isQuickPay={quickPayAgent === d.agent.id}
-                  payForm={payForm}
-                  saving={saving}
                   onOpenPay={() => openQuickPay(d.agent, d.pendente)}
-                  onPayFormChange={setPayForm}
-                  onSubmitPay={() => handleQuickPay(d.agent)}
-                  onCancelPay={() => setQuickPayAgent(null)}
                 />
               ))}
             </tbody>
@@ -708,6 +705,117 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
           </div>
         </div>
       )}
+
+      {/* ─── Payment Modal ────────────────────────────────────────── */}
+      {payModalAgent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPayModalAgent(null);
+          }}
+        >
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md mx-4 animate-slide-up">
+            <div className="bg-dark-900 border border-dark-700 rounded-xl p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Registrar Pagamento</h3>
+                  <p className="text-dark-400 text-sm mt-0.5">{payModalAgent.agent_name}</p>
+                </div>
+                <button
+                  onClick={() => setPayModalAgent(null)}
+                  className="text-dark-500 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-dark-800/80 border border-dark-700 transition-colors"
+                  aria-label="Fechar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Saldo info */}
+              <div className="bg-dark-800/60 rounded-lg p-3 mb-5 flex items-center justify-between">
+                <span className="text-dark-400 text-sm">Saldo Pendente</span>
+                <span className={`font-mono font-bold text-base ${clr(payPendente)}`}>
+                  {formatBRL(payPendente)}
+                </span>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                {/* Valor */}
+                <div>
+                  <label className="block text-xs text-dark-400 font-medium mb-1.5">Valor</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={payForm.amount}
+                    onChange={(e) => setPayForm(p => ({ ...p, amount: e.target.value }))}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5 text-sm font-mono text-white focus:border-poker-500 outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Dir + Metodo (side by side) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-dark-400 font-medium mb-1.5">Direcao</label>
+                    <select
+                      value={payForm.dir}
+                      onChange={(e) => setPayForm(p => ({ ...p, dir: e.target.value as 'IN' | 'OUT' }))}
+                      className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-poker-500 outline-none"
+                    >
+                      <option value="IN">IN (Recebido)</option>
+                      <option value="OUT">OUT (Enviado)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-dark-400 font-medium mb-1.5">Metodo</label>
+                    <select
+                      value={payForm.method}
+                      onChange={(e) => setPayForm(p => ({ ...p, method: e.target.value }))}
+                      className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-poker-500 outline-none"
+                    >
+                      <option value="PIX">PIX</option>
+                      <option value="TED">TED</option>
+                      <option value="CASH">CASH</option>
+                      <option value="CHIPPIX">CHIPPIX</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Descricao */}
+                <div>
+                  <label className="block text-xs text-dark-400 font-medium mb-1.5">Descricao (opcional)</label>
+                  <input
+                    placeholder="Ex: Pagamento semanal"
+                    value={payForm.description}
+                    onChange={(e) => setPayForm(p => ({ ...p, description: e.target.value }))}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-poker-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-dark-700/50">
+                <button
+                  onClick={() => setPayModalAgent(null)}
+                  className="text-sm px-4 py-2 rounded-lg text-dark-400 hover:text-white transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleQuickPay}
+                  disabled={saving || !payForm.amount || parseFloat(payForm.amount) <= 0}
+                  className="text-sm px-5 py-2 rounded-lg font-bold bg-poker-500 hover:bg-poker-600 text-white transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Registrar Pagamento'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -720,26 +828,14 @@ function AgentRow({
   onToggleExpand,
   onPreview,
   isDraft,
-  isQuickPay,
-  payForm,
-  saving,
   onOpenPay,
-  onPayFormChange,
-  onSubmitPay,
-  onCancelPay,
 }: {
   data: AgentFinancials;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onPreview: () => void;
   isDraft: boolean;
-  isQuickPay: boolean;
-  payForm: { amount: string; method: string; description: string; dir: 'IN' | 'OUT' };
-  saving: boolean;
   onOpenPay: () => void;
-  onPayFormChange: (fn: any) => void;
-  onSubmitPay: () => void;
-  onCancelPay: () => void;
 }) {
   const { agent, players, ganhos, rbAgente, saldoAnterior, pago, pendente } = data;
   const isDirect = agent.is_direct;
@@ -819,6 +915,14 @@ function AgentRow({
         {/* Actions */}
         <td className="py-2.5 px-2 text-right">
           <div className="flex items-center justify-end gap-1.5">
+            {hasMov && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPreview(); }}
+                className="text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border border-poker-500/30 text-poker-400 bg-poker-500/5 hover:bg-poker-500/15"
+              >
+                Comprovante
+              </button>
+            )}
             {isDraft && hasMov && !isQuitado && (
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenPay(); }}
@@ -828,75 +932,12 @@ function AgentRow({
                     : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/15'
                 }`}
               >
-                {pendente > 0.01 ? 'Receber' : 'Pagar'}
-              </button>
-            )}
-            {hasMov && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onPreview(); }}
-                className="text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border border-poker-500/30 text-poker-400 bg-poker-500/5 hover:bg-poker-500/15"
-              >
-                Comprovante
+                {pendente > 0.01 ? 'Pagar' : 'Receber'}
               </button>
             )}
           </div>
         </td>
       </tr>
-
-      {/* Quick-pay inline form */}
-      {isQuickPay && (
-        <tr>
-          <td colSpan={8} className="px-3 py-2 bg-dark-800/40">
-            <div className="flex items-center gap-2 pl-5">
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Valor"
-                value={payForm.amount}
-                onChange={(e) => onPayFormChange((p: any) => ({ ...p, amount: e.target.value }))}
-                className="w-28 bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:border-poker-500 outline-none"
-              />
-              <select
-                value={payForm.dir}
-                onChange={(e) => onPayFormChange((p: any) => ({ ...p, dir: e.target.value }))}
-                className="bg-dark-900 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white focus:border-poker-500 outline-none"
-              >
-                <option value="IN">IN</option>
-                <option value="OUT">OUT</option>
-              </select>
-              <select
-                value={payForm.method}
-                onChange={(e) => onPayFormChange((p: any) => ({ ...p, method: e.target.value }))}
-                className="bg-dark-900 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white focus:border-poker-500 outline-none"
-              >
-                <option value="PIX">PIX</option>
-                <option value="TED">TED</option>
-                <option value="CASH">CASH</option>
-                <option value="CHIPPIX">CHIPPIX</option>
-              </select>
-              <input
-                placeholder="Descricao (opcional)"
-                value={payForm.description}
-                onChange={(e) => onPayFormChange((p: any) => ({ ...p, description: e.target.value }))}
-                className="flex-1 bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-poker-500 outline-none"
-              />
-              <button
-                onClick={(e) => { e.stopPropagation(); onSubmitPay(); }}
-                disabled={saving}
-                className="text-[11px] px-3 py-1.5 rounded-lg font-bold bg-poker-500 hover:bg-poker-600 text-white transition-colors disabled:opacity-50"
-              >
-                {saving ? '...' : 'Salvar'}
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onCancelPay(); }}
-                className="text-[11px] px-2 py-1.5 rounded-lg text-dark-400 hover:text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          </td>
-        </tr>
-      )}
 
       {/* Expanded detail */}
       {isExpanded && (

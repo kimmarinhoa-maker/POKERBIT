@@ -316,10 +316,16 @@ router.post(
         .eq('type', 'AGENT')
         .eq('is_active', true);
 
+      // Key: normName(name) + '|' + parent_id -> org.id (scoped to subclub)
+      const orgNameParentMap = new Map<string, string>();
+      // Fallback: normName(name) -> org.id (first found, for agents without clear parent)
       const orgNameMap = new Map<string, string>();
       const orgParentMap = new Map<string, string>(); // orgId -> current parent_id
       for (const org of existingOrgs || []) {
-        orgNameMap.set(normName(org.name), org.id);
+        orgNameParentMap.set(normName(org.name) + '|' + org.parent_id, org.id);
+        if (!orgNameMap.has(normName(org.name))) {
+          orgNameMap.set(normName(org.name), org.id);
+        }
         orgParentMap.set(org.id, org.parent_id);
       }
 
@@ -343,9 +349,12 @@ router.post(
       const resolvedOrgMap = new Map<string, string>();
 
       for (const agentName of uniqueNames) {
-        const orgId = orgNameMap.get(normName(agentName));
         const subclubName = agentSubclubMap.get(agentName);
         const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
+
+        // Try exact match (name + parent) first, then fallback to name-only
+        const orgId = orgNameParentMap.get(normName(agentName) + '|' + correctParentId)
+          || orgNameMap.get(normName(agentName));
 
         if (orgId) {
           resolvedOrgMap.set(agentName, orgId);

@@ -70,13 +70,22 @@ export default function PlayersPage() {
   }, [subclubOptions, selectedSubclubId]);
 
   // Get agents for selected subclub from tree (exclude direct agents — those show in Jogadores tab)
+  // Dedup by lowercase name to avoid displaying duplicate orgs
   const agentsFromTree = useMemo(() => {
     for (const club of tree) {
       for (const sub of club.subclubes || []) {
         if (sub.id === selectedSubclubId) {
-          return (sub.agents || []).filter(
+          const agents = (sub.agents || []).filter(
             (a: any) => !a.metadata?.is_direct,
           );
+          // Dedup: keep first occurrence per lowercase name
+          const seen = new Set<string>();
+          return agents.filter((a: any) => {
+            const key = (a.name || '').toLowerCase().trim();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
         }
       }
     }
