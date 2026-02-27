@@ -52,7 +52,7 @@ export class ImportService {
       .select('id, status')
       .eq('tenant_id', tenantId)
       .eq('file_hash', fileHash)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { SubClub } from '@/types/launches';
-import { formatCurrency } from '@/lib/formatters';
+import { formatBRL } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 
 interface OverlaySectionProps {
@@ -152,7 +152,7 @@ export default function OverlaySection({
                   clubValue < 0 ? 'text-danger-500' : clubValue > 0 ? 'text-poker-500' : 'text-dark-500'
                 }`}
               >
-                {formatCurrency(clubValue)}
+                {formatBRL(clubValue)}
               </span>
             </button>
           );
@@ -162,11 +162,11 @@ export default function OverlaySection({
       {/* Footer */}
       {selectedCount > 0 && (
         <p className="text-center text-[11px] text-dark-500 font-mono">
-          {formatCurrency(totalOverlay)}
+          {formatBRL(totalOverlay)}
           <span className="text-dark-600"> {'\u00F7'} </span>
           {selectedCount} clube{selectedCount > 1 ? 's' : ''}
           <span className="text-dark-600"> : </span>
-          <span className="font-bold text-dark-200">{formatCurrency(perClub)} por clube</span>
+          <span className="font-bold text-dark-200">{formatBRL(perClub)} por clube</span>
         </p>
       )}
     </div>

@@ -83,7 +83,9 @@ router.get('/:id/full', requireAuth, requireTenant, requirePermission('page:over
   try {
     const tenantId = req.tenantId!;
     const settlementId = req.params.id;
-    const cacheKey = `settlement:${settlementId}`;
+    // Include RBAC scope in cache key so different roles get correct data
+    const scopeHash = (req.allowedSubclubIds || []).sort().join(',');
+    const cacheKey = `settlement:${settlementId}:${scopeHash}`;
 
     // Try cache first
     const cached = cacheGet<any>(cacheKey);

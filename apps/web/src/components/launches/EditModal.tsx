@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { LaunchRow } from '@/types/launches';
-import { formatCurrency } from '@/lib/formatters';
+import { formatBRL } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 
 interface EditModalProps {
@@ -148,7 +148,7 @@ export default function EditModal({ row, onSave, onClose }: EditModalProps) {
                 totalLancamentos < 0 ? 'text-danger-500' : totalLancamentos > 0 ? 'text-poker-500' : 'text-dark-400'
               }`}
             >
-              {formatCurrency(totalLancamentos)}
+              {formatBRL(totalLancamentos)}
             </span>
           </div>
 

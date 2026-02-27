@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ClubeData } from '@/types/dashboard';
-import { formatCurrency } from '@/lib/formatters';
+import { formatBRL } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 
 interface ClubCardProps {
@@ -60,18 +60,18 @@ export default function ClubCard({ clube, settlementId, enabled = true, onToggle
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-dark-400 mb-0.5">Rake</p>
-          <p className="font-mono font-semibold text-sm text-poker-500">{formatCurrency(clube.rake)}</p>
+          <p className="font-mono font-semibold text-sm text-poker-500">{formatBRL(clube.rake)}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-widest text-dark-400 mb-0.5">Resultado</p>
-          <p className={`font-mono font-semibold text-sm ${resultColor}`}>{formatCurrency(clube.resultado)}</p>
+          <p className={`font-mono font-semibold text-sm ${resultColor}`}>{formatBRL(clube.resultado)}</p>
         </div>
       </div>
 
       {/* Acerto Liga */}
       <div className="bg-dark-800 rounded-lg p-2.5 mb-3">
         <p className="text-[10px] uppercase tracking-widest text-dark-400 mb-0.5">Acerto Liga</p>
-        <p className={`font-mono font-bold text-base ${acertoColor}`}>{formatCurrency(clube.acertoLiga)}</p>
+        <p className={`font-mono font-bold text-base ${acertoColor}`}>{formatBRL(clube.acertoLiga)}</p>
       </div>
 
       {/* Button */}

@@ -1,7 +1,7 @@
 'use client';
 
 import { LaunchRow } from '@/types/launches';
-import { formatCurrency } from '@/lib/formatters';
+import { formatBRL } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 
 interface LaunchesTableProps {
@@ -18,7 +18,7 @@ function cellColor(value: number): string {
 
 function fmtCell(value: number): string {
   if (value === 0) return '\u2014';
-  return formatCurrency(value);
+  return formatBRL(value);
 }
 
 export default function LaunchesTable({ rows, onEdit, savedIds }: LaunchesTableProps) {

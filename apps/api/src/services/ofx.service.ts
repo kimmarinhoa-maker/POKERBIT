@@ -322,7 +322,8 @@ export class OFXService {
         await supabaseAdmin
           .from('bank_transactions')
           .update({ applied_ledger_id: ledgerId })
-          .eq('id', tx.id);
+          .eq('id', tx.id)
+          .eq('tenant_id', tenantId);
       }
     }
 

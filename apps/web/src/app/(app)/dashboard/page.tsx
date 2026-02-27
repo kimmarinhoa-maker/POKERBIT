@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { formatCurrency, round2 } from '@/lib/formatters';
+import { formatBRL, round2 } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
 import ClubCard from '@/components/dashboard/ClubCard';
@@ -400,36 +400,36 @@ export default function DashboardPage() {
             />
             <KpiCard
               label="Profit / Loss"
-              value={formatCurrency(f?.ganhosTotal ?? 0)}
+              value={formatBRL(f?.ganhosTotal ?? 0)}
               accentColor={(f?.ganhosTotal ?? 0) >= 0 ? 'bg-poker-500' : 'bg-red-500'}
               valueColor={(f?.ganhosTotal ?? 0) >= 0 ? 'text-poker-400' : 'text-red-400'}
             />
             <KpiCard
               label="Rake Total"
-              value={formatCurrency(f?.rakeTotal ?? 0)}
+              value={formatBRL(f?.rakeTotal ?? 0)}
               accentColor="bg-poker-500"
             />
             <KpiCard
               label="GGR Rodeio"
-              value={formatCurrency(f?.ggrTotal ?? 0)}
+              value={formatBRL(f?.ggrTotal ?? 0)}
               accentColor="bg-purple-500"
               valueColor="text-purple-400"
             />
             <KpiCard
               label="Resultado"
-              value={formatCurrency(f?.resultadoFinal ?? 0)}
+              value={formatBRL(f?.resultadoFinal ?? 0)}
               accentColor={(f?.resultadoFinal ?? 0) >= 0 ? 'bg-poker-500' : 'bg-red-500'}
               valueColor={(f?.resultadoFinal ?? 0) >= 0 ? 'text-poker-400' : 'text-red-400'}
             />
             <KpiCard
               label="Despesas"
-              value={formatCurrency(-(f?.despesas.total ?? 0))}
+              value={formatBRL(-(f?.despesas.total ?? 0))}
               accentColor="bg-red-500"
               valueColor="text-red-400"
             />
             <KpiCard
               label="Fechamento"
-              value={formatCurrency(f?.acertoLiga ?? 0)}
+              value={formatBRL(f?.acertoLiga ?? 0)}
               accentColor={(f?.acertoLiga ?? 0) >= 0 ? 'bg-amber-500' : 'bg-red-500'}
               valueColor={(f?.acertoLiga ?? 0) >= 0 ? 'text-amber-400' : 'text-red-400'}
             />

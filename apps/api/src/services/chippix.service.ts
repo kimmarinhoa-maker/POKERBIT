@@ -396,7 +396,7 @@ export class ChipPixService {
       .eq('status', 'DRAFT')
       .order('week_start', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (activeSettlement && activeSettlement.week_start !== semana) {
       throw new Error(

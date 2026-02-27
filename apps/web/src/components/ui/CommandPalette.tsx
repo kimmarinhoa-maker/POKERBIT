@@ -33,7 +33,7 @@ const commands: CommandItem[] = [
   { label: 'Historico', href: '/import/history', icon: Clock, section: 'Operacao', keywords: 'imports passados' },
   { label: 'Lancamentos', href: '/lancamentos', icon: Receipt, section: 'Operacao', keywords: 'manual ajuste' },
   { label: 'Clubes (Settlement)', href: '/s', icon: Building2, section: 'Fechamentos', keywords: 'settlement acerto' },
-  { label: 'Visao Geral', href: '/overview', icon: Eye, section: 'Fechamentos', keywords: 'overview resumo' },
+  { label: 'Visao Geral', href: '/s', icon: Eye, section: 'Fechamentos', keywords: 'overview resumo settlement' },
   { label: 'Liga Global', href: '/liga-global', icon: Trophy, section: 'Fechamentos', keywords: 'consolidado total' },
   { label: 'Caixa Geral', href: '/caixa-geral', icon: Wallet, section: 'Fechamentos', keywords: 'financeiro banco' },
   { label: 'Agentes / Jogadores', href: '/players', icon: Users, section: 'Cadastro', keywords: 'player agent cadastro' },

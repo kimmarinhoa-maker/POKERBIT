@@ -88,6 +88,7 @@ export class SettlementService {
     const { data: playerMetrics } = await supabaseAdmin
       .from('player_week_metrics')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('settlement_id', settlementId)
       .order('agent_name', { ascending: true })
       .order('nickname', { ascending: true });
@@ -95,6 +96,7 @@ export class SettlementService {
     const { data: agentMetrics } = await supabaseAdmin
       .from('agent_week_metrics')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('settlement_id', settlementId)
       .order('agent_name', { ascending: true });
 

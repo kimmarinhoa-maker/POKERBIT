@@ -11,8 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import KpiCard from '@/components/ui/KpiCard';
-import { formatCurrency } from '@/lib/formatters';
-import { formatBRL, listSettlements, getSettlementFull } from '@/lib/api';
+import { listSettlements, getSettlementFull, formatBRL } from '@/lib/api';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -247,30 +246,30 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
         />
         <KpiCard
           label="Profit / Loss"
-          value={formatCurrency(totals.ganhos)}
+          value={formatBRL(totals.ganhos)}
           accentColor={totals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
           valueColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
         />
         <KpiCard
           label="Rake Total"
-          value={formatCurrency(totals.rake)}
+          value={formatBRL(totals.rake)}
           accentColor="bg-poker-500"
         />
         <KpiCard
           label="Resultado"
-          value={formatCurrency(totals.resultado)}
+          value={formatBRL(totals.resultado)}
           accentColor={totals.resultado < 0 ? 'bg-red-500' : 'bg-poker-500'}
           valueColor={totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}
         />
         <KpiCard
           label="Despesas"
-          value={formatCurrency(-totalDespesas)}
+          value={formatBRL(-totalDespesas)}
           accentColor="bg-red-500"
           valueColor="text-red-400"
         />
         <KpiCard
           label="Fechamento"
-          value={formatCurrency(acertoLiga)}
+          value={formatBRL(acertoLiga)}
           accentColor={acertoLiga < 0 ? 'bg-red-500' : 'bg-amber-500'}
           valueColor={acertoLiga < 0 ? 'text-red-400' : 'text-amber-400'}
         />

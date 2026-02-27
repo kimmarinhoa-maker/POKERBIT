@@ -34,5 +34,5 @@ export async function exportElementAsJpg(
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(dataUrl);
+  // Note: revokeObjectURL not needed here — dataUrl is a base64 data URI, not a blob URL
 }
