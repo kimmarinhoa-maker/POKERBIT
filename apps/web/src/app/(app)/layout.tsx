@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ToastProvider } from '@/components/Toast';
 import ScrollToTop from '@/components/ui/ScrollToTop';
-import CommandPalette from '@/components/ui/CommandPalette';
 import { AuthProvider, useAuth } from '@/lib/useAuth';
 import {
   LayoutDashboard,
@@ -287,7 +286,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
         <ScrollToTop />
       </main>
-      <CommandPalette />
     </div>
   );
 }
