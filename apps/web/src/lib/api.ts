@@ -366,14 +366,6 @@ export async function getSettlementFull(id: string) {
   return apiFetch(`/settlements/${id}/full`);
 }
 
-// Dashboard batch — lightweight totals for multiple settlements (charts)
-export async function getSettlementBatchSummary(ids: string[]) {
-  return apiFetch<any[]>('/settlements/batch-summary', {
-    method: 'POST',
-    body: JSON.stringify({ ids }),
-  });
-}
-
 export async function finalizeSettlement(id: string) {
   return apiFetch(`/settlements/${id}/finalize`, { method: 'POST' });
 }
@@ -465,10 +457,6 @@ export async function updateOrganization(
   },
 ) {
   return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-}
-
-export async function deleteOrganization(id: string) {
-  return apiFetch(`/organizations/${id}`, { method: 'DELETE' });
 }
 
 export async function uploadClubLogo(orgId: string, file: File) {
@@ -573,25 +561,6 @@ export async function saveClubAdjustments(data: {
 }
 
 // ─── Rakeback Defaults ──────────────────────────────────────────
-
-export interface RBDefault {
-  id?: string;
-  subclub_id: string;
-  agent_rb_default: number;
-  player_rb_default: number;
-  organizations?: { name: string };
-}
-
-export async function getRakebackDefaults(): Promise<ApiResponse<RBDefault[]>> {
-  return apiFetch<RBDefault[]>('/config/rakeback-defaults');
-}
-
-export async function updateRakebackDefaults(defaults: RBDefault[]): Promise<ApiResponse<RBDefault[]>> {
-  return apiFetch<RBDefault[]>('/config/rakeback-defaults', {
-    method: 'PUT',
-    body: JSON.stringify({ defaults }),
-  });
-}
 
 // ─── Links (vinculação de jogadores/agentes) ─────────────────────
 
