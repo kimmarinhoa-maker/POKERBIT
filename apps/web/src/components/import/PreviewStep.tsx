@@ -6,6 +6,7 @@ interface PreviewStepProps {
   preview: PreviewData;
   onNext: () => void;
   onBack: () => void;
+  onEditLinks?: () => void;
 }
 
 // ─── Status badges ──────────────────────────────────────────────────
@@ -24,7 +25,7 @@ type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 50;
 
-export default function PreviewStep({ preview, onNext, onBack }: PreviewStepProps) {
+export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: PreviewStepProps) {
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);
   const [playerSearch, setPlayerSearch] = useState('');
@@ -129,6 +130,12 @@ export default function PreviewStep({ preview, onNext, onBack }: PreviewStepProp
     existing && !isMerge ? !hasDifferences && agentDiff.added.length === 0 && agentDiff.removed.length === 0 : false;
   // Merge mode doesn't need confirmation — data from other clubs is preserved
   const needsReimportConfirm = !!existing && !isMerge && !reimportConfirmed;
+
+  // Auto-resolved players (linked from previous imports)
+  const autoResolvedCount = useMemo(
+    () => (preview.players || []).filter((p) => p._status === 'auto_resolved').length,
+    [preview.players],
+  );
 
   return (
     <div>
@@ -553,6 +560,29 @@ export default function PreviewStep({ preview, onNext, onBack }: PreviewStepProp
             {preview.blockers.players_without_agency.length > 0 &&
               `${preview.blockers.players_without_agency.length} jogador(es) sem agencia`}
           </p>
+        </div>
+      )}
+
+      {/* ─── Auto-resolved players banner ─── */}
+      {autoResolvedCount > 0 && onEditLinks && (
+        <div className="bg-blue-900/15 border border-blue-700/40 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-300 font-medium">
+                {'\u{1F517}'} {autoResolvedCount} jogador{autoResolvedCount !== 1 ? 'es' : ''} auto-vinculado
+                {autoResolvedCount !== 1 ? 's' : ''}
+              </p>
+              <p className="text-dark-400 text-sm mt-0.5">
+                Links salvos de importacoes anteriores. Voce pode revisar ou alterar.
+              </p>
+            </div>
+            <button
+              onClick={onEditLinks}
+              className="px-3 py-1.5 text-blue-400 hover:text-blue-300 text-sm font-medium border border-blue-700/40 rounded-lg hover:bg-blue-900/30 transition-colors shrink-0"
+            >
+              Revisar Vinculos
+            </button>
+          </div>
         </div>
       )}
 

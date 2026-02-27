@@ -225,7 +225,7 @@ export default function ImportWizardPage() {
 
   return (
     <div>
-      <StepIndicator currentStep={confirmResult ? 'confirm' : step} skipPendencies={!!preview?.readiness.ready} />
+      <StepIndicator currentStep={confirmResult ? 'confirm' : step} skipPendencies={!!preview?.readiness.ready && step !== 'pendencies'} />
 
       {step === 'upload' && (
         <UploadStep
@@ -248,7 +248,7 @@ export default function ImportWizardPage() {
       )}
 
       {step === 'preview' && preview && (
-        <PreviewStep preview={preview} onNext={handlePreviewNext} onBack={() => setStep('upload')} />
+        <PreviewStep preview={preview} onNext={handlePreviewNext} onBack={() => setStep('upload')} onEditLinks={() => setStep('pendencies')} />
       )}
 
       {step === 'pendencies' && preview && (

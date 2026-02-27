@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PreviewData, PlayerSelection, getClubStyle, getClubIcon } from '@/types/import';
 import Spinner from '@/components/Spinner';
 
@@ -49,12 +49,21 @@ export default function PendenciesStep({
   onBack,
   loading,
 }: PendenciesStepProps) {
+  const hasPendencies = preview.blockers.unknown_agencies.length > 0 || preview.blockers.players_without_agency.length > 0;
+  const [autoResolvedOpen, setAutoResolvedOpen] = useState(!hasPendencies);
+
   function getAgentsForSubclub(subclubId: string) {
     if (!preview) return [];
     const subclub = preview.available_subclubs.find((s) => s.id === subclubId);
     if (!subclub) return [];
     return preview.available_agents.filter((a) => a.subclub_name === subclub.name);
   }
+
+  // Auto-resolved players (linked from previous imports)
+  const autoResolvedPlayers = useMemo(
+    () => (preview.players || []).filter((p) => p._status === 'auto_resolved'),
+    [preview.players],
+  );
 
   // Phase 3: Progress computation
   const totalAgencies = preview.blockers.unknown_agencies.length;
@@ -95,18 +104,25 @@ export default function PendenciesStep({
     }
   }
 
+  const hasBlockers = totalPendencies > 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">Resolver Pendencias</h2>
+          <h2 className="text-2xl font-bold text-white">
+            {hasBlockers ? 'Resolver Pendencias' : 'Revisar Vinculos'}
+          </h2>
           <p className="text-dark-400 mt-1">
-            Vincule as agencias e jogadores aos subclubes. Regras salvas valem para futuras importacoes.
+            {hasBlockers
+              ? 'Vincule as agencias e jogadores aos subclubes. Regras salvas valem para futuras importacoes.'
+              : 'Revise os vinculos auto-aplicados de importacoes anteriores. Altere se necessario.'}
           </p>
         </div>
       </div>
 
-      {/* Phase 3: Progress bar */}
+      {/* Phase 3: Progress bar (only when there are blockers) */}
+      {hasBlockers && (
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-dark-300">
@@ -125,6 +141,7 @@ export default function PendenciesStep({
           />
         </div>
       </div>
+      )}
 
       {/* Agencies without subclub */}
       {totalAgencies > 0 && (
@@ -466,6 +483,169 @@ export default function PendenciesStep({
         </div>
       )}
 
+      {/* Auto-resolved players (from previous imports) */}
+      {autoResolvedPlayers.length > 0 && (
+        <div className="mb-6">
+          <button
+            onClick={() => setAutoResolvedOpen((o) => !o)}
+            className="w-full flex items-center justify-between mb-3"
+          >
+            <h3 className="text-sm font-semibold text-dark-300 flex items-center gap-2">
+              {'\u{1F517}'} Jogadores auto-vinculados
+              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                {autoResolvedPlayers.length}
+              </span>
+            </h3>
+            <span className="text-dark-500 text-xs">{autoResolvedOpen ? '\u25B2 Recolher' : '\u25BC Expandir'}</span>
+          </button>
+
+          {autoResolvedOpen && (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {autoResolvedPlayers.map((player) => {
+                const isRelinked = !!playerLinks[player.id];
+                const relinkedSubclubId = playerLinks[player.id];
+                const relinkedSubclub = preview.available_subclubs.find((s) => s.id === relinkedSubclubId);
+                const isSaving = saving[`player:${player.id}`];
+                const sel = playerSelections[player.id];
+
+                if (isRelinked) {
+                  return (
+                    <div
+                      key={player.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg border bg-dark-800/30 border-blue-700/30 opacity-60 transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-blue-400">{'\u2713'}</span>
+                        <span className="text-poker-400 font-mono text-xs shrink-0">{player.id}</span>
+                        <span className="text-white text-sm truncate">{player.nick}</span>
+                      </div>
+                      {relinkedSubclub && (
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-bold border shrink-0 ${getClubStyle(relinkedSubclub.name)}`}
+                        >
+                          {'\u2713'} {relinkedSubclub.name}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={player.id}
+                    className="p-3 rounded-lg border bg-dark-800/50 border-blue-700/20 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-poker-400 font-mono text-xs shrink-0">{player.id}</span>
+                      <span className="text-white text-sm">{player.nick}</span>
+                      <span className="text-dark-500 text-xs">
+                        atual: {player.aname || '-'} / {player.clube || '?'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="flex-1 min-w-[120px]">
+                        <select
+                          className="input w-full text-xs"
+                          value={sel?.subclubId || ''}
+                          onChange={(e) => {
+                            onSetPlayerSelection(player.id, {
+                              subclubId: e.target.value,
+                              mode: 'direct',
+                            });
+                          }}
+                        >
+                          <option value="">Novo subclube...</option>
+                          {preview.available_subclubs.map((sc) => (
+                            <option key={sc.id} value={sc.id}>
+                              {sc.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {sel?.subclubId && (
+                        <div className="flex-1 min-w-[140px]">
+                          <select
+                            className="input w-full text-xs"
+                            value={
+                              sel.mode === 'agent'
+                                ? `agent:${sel.agentName}`
+                                : sel.mode === 'new_agent'
+                                  ? '__new__'
+                                  : '__direct__'
+                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '__direct__') {
+                                onSetPlayerSelection(player.id, {
+                                  ...sel,
+                                  mode: 'direct',
+                                  agentName: undefined,
+                                  agentId: undefined,
+                                });
+                              } else if (val === '__new__') {
+                                onSetPlayerSelection(player.id, {
+                                  ...sel,
+                                  mode: 'new_agent',
+                                  agentName: undefined,
+                                  agentId: undefined,
+                                  newAgentName: '',
+                                });
+                              } else if (val.startsWith('agent:')) {
+                                const agName = val.replace('agent:', '');
+                                const ag = preview.available_agents.find((a) => a.agent_name === agName);
+                                onSetPlayerSelection(player.id, {
+                                  ...sel,
+                                  mode: 'agent',
+                                  agentName: agName,
+                                  agentId: ag?.agent_id,
+                                });
+                              }
+                            }}
+                          >
+                            <option value="__direct__">Jogador direto</option>
+                            {getAgentsForSubclub(sel.subclubId).map((a) => (
+                              <option key={a.agent_name} value={`agent:${a.agent_name}`}>
+                                {a.agent_name}
+                              </option>
+                            ))}
+                            <option value="__new__">+ Nova agencia...</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {sel?.mode === 'new_agent' && (
+                        <div className="flex-1 min-w-[100px]">
+                          <input
+                            className="input w-full text-xs"
+                            placeholder="Nome agencia"
+                            value={sel.newAgentName || ''}
+                            onChange={(e) => {
+                              onSetPlayerSelection(player.id, { ...sel, newAgentName: e.target.value });
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {sel?.subclubId && (
+                        <button
+                          onClick={() => onLinkPlayer(player.id, sel)}
+                          disabled={isSaving || !sel.subclubId || (sel.mode === 'new_agent' && !sel.newAgentName)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {isSaving ? <Spinner size="sm" variant="white" /> : 'Re-vincular'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Bottom bar */}
       <div className="sticky bottom-0 bg-dark-900/95 backdrop-blur-sm border-t border-dark-700 py-4 -mx-6 px-6 mt-6">
         <div className="flex items-center justify-between">
@@ -473,11 +653,13 @@ export default function PendenciesStep({
             {'\u2190'} Voltar
           </button>
           <div className="flex items-center gap-3">
-            {!allResolved && <span className="text-yellow-400 text-sm">{'\u26A0\uFE0F'} Ainda ha pendencias</span>}
+            {!allResolved && totalPendencies > 0 && (
+              <span className="text-yellow-400 text-sm">{'\u26A0\uFE0F'} Ainda ha pendencias</span>
+            )}
             <button
               onClick={onReprocess}
               disabled={loading}
-              className={`btn-primary py-2.5 px-6 ${!allResolved ? 'opacity-70' : ''}`}
+              className={`btn-primary py-2.5 px-6 ${!allResolved && totalPendencies > 0 ? 'opacity-70' : ''}`}
             >
               {loading ? '\u{1F504} Reprocessando...' : '\u{1F504} Aplicar e Reprocessar'}
             </button>
