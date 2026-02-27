@@ -3,12 +3,6 @@ export function round2(v: number): number {
   return Math.round((v + Number.EPSILON) * 100) / 100;
 }
 
-export function formatCurrency(value: number): string {
-  const abs = Math.abs(value);
-  const formatted = abs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return value < 0 ? `-R$ ${formatted}` : `R$ ${formatted}`;
-}
-
 /** Format a number as BRL currency using Intl (R$ 1.234,56) */
 export function formatBRL(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -17,9 +11,12 @@ export function formatBRL(value: number): string {
   }).format(value);
 }
 
-export function calcDelta(current: number, previous: number): { pct: string; isUp: boolean; isZero: boolean } {
-  if (previous === 0) return { pct: '0.0', isUp: current > 0, isZero: current === 0 };
-  const diff = current - previous;
-  const pct = Math.abs((diff / Math.abs(previous)) * 100).toFixed(1);
-  return { pct, isUp: diff > 0, isZero: diff === 0 };
+/** Format ISO datetime string as dd/mm HH:mm (pt-BR) */
+export function fmtDateTime(dt: string): string {
+  return new Date(dt).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry } from '@/lib/api';
-import { round2 } from '@/lib/formatters';
+import { round2, fmtDateTime } from '@/lib/formatters';
+import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
 import { useSortable } from '@/lib/useSortable';
 import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
@@ -52,18 +53,9 @@ function fmtDate(dt: string): string {
   return new Date(dt + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-function fmtDateTime(dt: string): string {
-  return new Date(dt).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+// fmtDateTime imported from @/lib/formatters
 
-function clr(v: number): string {
-  return v > 0.01 ? 'text-emerald-400' : v < -0.01 ? 'text-red-400' : 'text-dark-400';
-}
+const clr = cc;
 
 function clrPrint(v: number): string {
   return v > 0.01

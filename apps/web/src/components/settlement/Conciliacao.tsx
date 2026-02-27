@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, toggleReconciled } from '@/lib/api';
+import { fmtDateTime } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import ChipPixTab from './conciliacao/ChipPixTab';
@@ -91,14 +92,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     }
   }
 
-  function fmtDateTime(dt: string) {
-    return new Date(dt).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // fmtDateTime imported from @/lib/formatters
 
   // Sub-tab config
   const subTabs: { key: SubTab; label: string; count?: number }[] = [
@@ -163,7 +157,6 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           canEdit={canEdit}
           toggling={toggling}
           onToggle={handleToggle}
-          fmtDateTime={fmtDateTime}
         />
       )}
     </div>

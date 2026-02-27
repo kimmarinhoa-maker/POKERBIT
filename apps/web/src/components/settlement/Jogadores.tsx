@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { formatBRL } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
@@ -37,13 +38,13 @@ interface AgentGroup {
 
 function sumTotals(pls: PlayerMetric[]) {
   return {
-    ganhos: r2(pls.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0)),
-    rake: r2(pls.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0)),
-    rbValue: r2(pls.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0)),
-    resultado: r2(pls.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0)),
-    saldoAnterior: r2(pls.reduce((s, p) => s + (Number(p.saldo_anterior) || 0), 0)),
-    totalPagamentos: r2(pls.reduce((s, p) => s + (Number(p.total_pagamentos) || 0), 0)),
-    saldoAtual: r2(pls.reduce((s, p) => s + (Number(p.saldo_atual) || 0), 0)),
+    ganhos: round2(pls.reduce((s, p) => s + (Number(p.winnings_brl) || 0), 0)),
+    rake: round2(pls.reduce((s, p) => s + (Number(p.rake_total_brl) || 0), 0)),
+    rbValue: round2(pls.reduce((s, p) => s + (Number(p.rb_value_brl) || 0), 0)),
+    resultado: round2(pls.reduce((s, p) => s + (Number(p.resultado_brl) || 0), 0)),
+    saldoAnterior: round2(pls.reduce((s, p) => s + (Number(p.saldo_anterior) || 0), 0)),
+    totalPagamentos: round2(pls.reduce((s, p) => s + (Number(p.total_pagamentos) || 0), 0)),
+    saldoAtual: round2(pls.reduce((s, p) => s + (Number(p.saldo_atual) || 0), 0)),
   };
 }
 
@@ -778,11 +779,5 @@ function PaymentModal({
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   Helpers
+   Helpers — round2 imported from @/lib/formatters, cc from @/lib/colorUtils
    ════════════════════════════════════════════════════════════════════ */
-
-function r2(v: number) {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
-}
-
-// cc() imported from @/lib/colorUtils

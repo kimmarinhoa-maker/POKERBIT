@@ -1,6 +1,7 @@
 'use client';
 
 import { formatBRL } from '@/lib/api';
+import { fmtDateTime } from '@/lib/formatters';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import { BookOpen } from 'lucide-react';
 import type { LedgerEntry, FilterMode } from './types';
@@ -26,7 +27,6 @@ export interface LedgerTabProps {
   canEdit: boolean;
   toggling: string | null;
   onToggle: (id: string, current: boolean) => void;
-  fmtDateTime: (dt: string) => string;
 }
 
 // ─── FonteBadge ─────────────────────────────────────────────────────
@@ -67,7 +67,6 @@ export default function LedgerTab({
   canEdit,
   toggling,
   onToggle,
-  fmtDateTime,
 }: LedgerTabProps) {
   return (
     <div>

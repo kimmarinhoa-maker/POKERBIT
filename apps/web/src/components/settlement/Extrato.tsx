@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/lib/api';
+import { fmtDateTime } from '@/lib/formatters';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
@@ -144,14 +145,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     }
   }
 
-  function fmtDateTime(dt: string) {
-    return new Date(dt).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // fmtDateTime imported from @/lib/formatters
 
   if (loading) {
     return <SettlementSkeleton kpis={4} />;

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { formatBRL } from '@/lib/api';
+import { exportCsv } from '@/lib/exportCsv';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { SubclubData, PlayerMetric } from '@/types/settlement';
 import { valueColor, ggrColor } from '@/lib/colorUtils';
@@ -138,7 +139,8 @@ export default function Detalhamento({ subclub }: Props) {
   }
 
   function exportCSV(groups: AgentGroup[]) {
-    const rows = [['Agencia', 'ID Agente', 'Jogador', 'ID Jogador', 'Ganhos', 'Rake', 'GGR', 'Resultado']];
+    const headers = ['Agencia', 'ID Agente', 'Jogador', 'ID Jogador', 'Ganhos', 'Rake', 'GGR', 'Resultado'];
+    const rows: (string | number)[][] = [];
     for (const g of groups) {
       for (const p of g.players) {
         const pGanhos = Number(p.winnings_brl || 0);
@@ -156,14 +158,7 @@ export default function Detalhamento({ subclub }: Props) {
         ]);
       }
     }
-    const csv = rows.map((r) => r.join(';')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `detalhamento_${name || 'clube'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportCsv(`detalhamento_${name || 'clube'}`, headers, rows, { separator: ';' });
   }
 
   // Color functions imported from @/lib/colorUtils

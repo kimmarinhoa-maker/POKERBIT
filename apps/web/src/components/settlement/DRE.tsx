@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import { cc } from '@/lib/colorUtils';
 import KpiCard from '@/components/ui/KpiCard';
 import { SubclubData } from '@/types/settlement';
 
@@ -17,9 +18,7 @@ function nz(v: number): boolean {
   return Math.abs(v) > 0.01;
 }
 
-function clr(v: number): string {
-  return v > 0.01 ? 'text-emerald-400' : v < -0.01 ? 'text-red-400' : 'text-dark-400';
-}
+const clr = cc;
 
 // ─── Component ────────────────────────────────────────────────────
 

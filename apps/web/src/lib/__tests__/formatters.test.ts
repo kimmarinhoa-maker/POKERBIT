@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { round2, formatCurrency, calcDelta } from '../formatters';
+import { round2, formatBRL, fmtDateTime } from '../formatters';
 
 describe('round2', () => {
   it('rounds to 2 decimal places', () => {
@@ -30,73 +30,26 @@ describe('round2', () => {
   });
 });
 
-describe('formatCurrency', () => {
+describe('formatBRL', () => {
   it('formats positive values as R$', () => {
-    expect(formatCurrency(1000)).toBe('R$ 1.000,00');
-    expect(formatCurrency(0.5)).toBe('R$ 0,50');
-    expect(formatCurrency(1234567.89)).toBe('R$ 1.234.567,89');
+    expect(formatBRL(1000)).toMatch(/1\.000,00/);
+    expect(formatBRL(0.5)).toMatch(/0,50/);
   });
 
   it('formats zero', () => {
-    expect(formatCurrency(0)).toBe('R$ 0,00');
+    expect(formatBRL(0)).toMatch(/0,00/);
   });
 
-  it('formats negative values with dash prefix', () => {
-    expect(formatCurrency(-500)).toBe('-R$ 500,00');
-    expect(formatCurrency(-1234.56)).toBe('-R$ 1.234,56');
-  });
-
-  it('formats small decimal values', () => {
-    expect(formatCurrency(0.01)).toBe('R$ 0,01');
-    expect(formatCurrency(-0.01)).toBe('-R$ 0,01');
+  it('formats negative values', () => {
+    expect(formatBRL(-500)).toMatch(/500,00/);
   });
 });
 
-describe('calcDelta', () => {
-  it('calculates positive delta', () => {
-    const result = calcDelta(150, 100);
-    expect(result.pct).toBe('50.0');
-    expect(result.isUp).toBe(true);
-    expect(result.isZero).toBe(false);
-  });
-
-  it('calculates negative delta', () => {
-    const result = calcDelta(50, 100);
-    expect(result.pct).toBe('50.0');
-    expect(result.isUp).toBe(false);
-    expect(result.isZero).toBe(false);
-  });
-
-  it('handles zero previous (no division by zero)', () => {
-    const result = calcDelta(100, 0);
-    expect(result.pct).toBe('0.0');
-    expect(result.isUp).toBe(true);
-    expect(result.isZero).toBe(false);
-  });
-
-  it('handles both zero', () => {
-    const result = calcDelta(0, 0);
-    expect(result.pct).toBe('0.0');
-    expect(result.isZero).toBe(true);
-  });
-
-  it('handles equal values (no change)', () => {
-    const result = calcDelta(100, 100);
-    expect(result.pct).toBe('0.0');
-    expect(result.isZero).toBe(true);
-  });
-
-  it('handles negative previous value', () => {
-    const result = calcDelta(-50, -100);
-    expect(result.pct).toBe('50.0');
-    expect(result.isUp).toBe(true);
-    expect(result.isZero).toBe(false);
-  });
-
-  it('handles crossing zero (negative to positive)', () => {
-    const result = calcDelta(50, -50);
-    expect(result.pct).toBe('200.0');
-    expect(result.isUp).toBe(true);
-    expect(result.isZero).toBe(false);
+describe('fmtDateTime', () => {
+  it('formats ISO datetime to dd/mm HH:mm', () => {
+    const result = fmtDateTime('2026-02-15T14:30:00Z');
+    // Result depends on locale/timezone but should contain day/month and hour:minute
+    expect(result).toMatch(/\d{2}\/\d{2}/);
+    expect(result).toMatch(/\d{2}:\d{2}/);
   });
 });

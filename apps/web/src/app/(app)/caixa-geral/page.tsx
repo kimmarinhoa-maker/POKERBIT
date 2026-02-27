@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, listLedger, formatBRL } from '@/lib/api';
-import { round2 } from '@/lib/formatters';
+import { round2, fmtDateTime } from '@/lib/formatters';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
 import { LedgerEntry } from '@/types/settlement';
@@ -153,14 +153,7 @@ export default function CaixaGeralPage() {
     return `${day}/${m}/${y}`;
   }
 
-  function fmtDateTime(dt: string) {
-    return new Date(dt).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // fmtDateTime imported from @/lib/formatters
 
   if (loading) {
     return (

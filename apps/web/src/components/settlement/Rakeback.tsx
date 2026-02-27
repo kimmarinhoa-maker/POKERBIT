@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   listOrganizations,
   listLedger,
-  toggleAgentDirect,
   syncSettlementAgents,
   syncSettlementRates,
   formatBRL,
@@ -52,7 +51,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
   const [orgs, setOrgs] = useState<OrgData[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
-  const [directDropdown, setDirectDropdown] = useState('');
   const mountedRef = useRef(true);
   const hasSyncedRef = useRef(false);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
@@ -166,13 +164,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     return [];
   }, [playersByAgent]);
 
-  // Resolve org ID for an agent (by agent_id or name fallback)
-  function resolveOrgId(agent: AgentMetric): string | null {
-    if (agent.agent_id) return agent.agent_id;
-    const org = orgByName.get(agent.agent_name.toLowerCase());
-    return org?.id || null;
-  }
-
   // Split agents into non-direct and direct (using backend annotations)
   // Also add synthetic agent entries for orphan direct player groups
   const { nonDirectAgents, directAgents } = useMemo(() => {
@@ -227,18 +218,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     });
   }, [nonDirectAgents, search, getPlayersForAgent]);
 
-  const _filteredDirect = useMemo(() => {
-    if (!search.trim()) return directAgents;
-    const q = search.toLowerCase();
-    return directAgents.filter((a) => {
-      if (a.agent_name.toLowerCase().includes(q)) return true;
-      const agentPlayers = getPlayersForAgent(a.agent_name);
-      return agentPlayers.some(
-        (p) => (p.nickname || '').toLowerCase().includes(q) || (p.external_player_id || '').includes(q),
-      );
-    });
-  }, [directAgents, search, getPlayersForAgent]);
-
   // KPIs
   const kpis = useMemo(() => {
     const rakeTotal = round2(players.reduce((s, p) => s + Number(p.rake_total_brl || 0), 0));
@@ -284,34 +263,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
       return 'parcial';
     }
     return 'pendente';
-  }
-
-  async function _handleMarkDirect() {
-    if (!directDropdown) return;
-    try {
-      const res = await toggleAgentDirect(directDropdown, true);
-      if (res.success) {
-        setDirectDropdown('');
-        await loadExtras();
-        onDataChange();
-      }
-    } catch {
-      toast('Erro na operacao de rakeback', 'error');
-    }
-  }
-
-  async function _handleRemoveDirect(agent: AgentMetric) {
-    const orgId = resolveOrgId(agent);
-    if (!orgId) return;
-    try {
-      const res = await toggleAgentDirect(orgId, false);
-      if (res.success) {
-        await loadExtras();
-        onDataChange();
-      }
-    } catch {
-      toast('Erro na operacao de rakeback', 'error');
-    }
   }
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -436,7 +387,6 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
 
 function AgenciasTab({
   agents,
-  playersByAgent: _playersByAgent,
   getPlayersForAgent,
   expandedAgents,
   toggleAgent,

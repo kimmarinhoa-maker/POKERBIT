@@ -66,12 +66,11 @@ const MEDAL = ['🥇', '🥈', '🥉'];
    Main Component
    ══════════════════════════════════════════════════════════════════════ */
 
-export default function DashboardClube({ subclub, fees: _fees, settlementId, subclubName }: Props) {
-  const { totals, feesComputed, adjustments: _adjustments, totalLancamentos, acertoLiga, name, players, agents } = subclub;
+export default function DashboardClube({ subclub, settlementId, subclubName }: Props) {
+  const { totals, feesComputed, totalLancamentos, acertoLiga, name, players, agents } = subclub;
 
   // ── Historical data (8 weeks) ──────────────────────────────────────
   const [rakeHistory, setRakeHistory] = useState<RakeWeekPoint[]>([]);
-  const [prevPlayers, setPrevPlayers] = useState<number | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
 
   useEffect(() => {
@@ -110,8 +109,6 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
 
         // Extract rake per week for this subclub
         const points: RakeWeekPoint[] = [];
-        let prevPlayerCount: number | null = null;
-
         for (const item of sorted) {
           const { settlement, full } = item;
           const weekStart = settlement.week_start;
@@ -128,11 +125,6 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
               rake: Number(sc.totals?.rake || 0),
               isCurrent,
             });
-
-            // Track previous week's player count
-            if (!isCurrent) {
-              prevPlayerCount = Number(sc.totals?.players || 0);
-            }
           } else {
             points.push({ semana: label, rake: 0, isCurrent });
           }
@@ -140,7 +132,6 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
 
         if (!cancelled) {
           setRakeHistory(points);
-          setPrevPlayers(prevPlayerCount);
           setHistoryLoading(false);
         }
       } catch {
@@ -217,18 +208,6 @@ export default function DashboardClube({ subclub, fees: _fees, settlementId, sub
   const totalTaxas = Math.abs(feesComputed.totalTaxasSigned || 0);
   const absLancamentos = Math.abs(totalLancamentos || 0);
   const totalDespesas = totalTaxas + absLancamentos;
-  const _totalRakeback = (agents || []).reduce((s: number, a: AgentMetric) => s + Number(a.commission_brl || 0), 0);
-
-  // ── Player delta ─────────────────────────────────────────────────
-  const _playerDelta = useMemo(() => {
-    if (prevPlayers === null) return undefined;
-    const current = totals.players;
-    const diff = current - prevPlayers;
-    if (diff === 0) return { pct: '0', isUp: false, isZero: true };
-    const pct = prevPlayers > 0 ? Math.abs(Math.round((diff / prevPlayers) * 100)) : 100;
-    return { pct: String(pct), isUp: diff > 0, isZero: false };
-  }, [prevPlayers, totals.players]);
-
   return (
     <div>
       {/* Header */}
