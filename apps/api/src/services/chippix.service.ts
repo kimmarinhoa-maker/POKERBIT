@@ -208,14 +208,16 @@ export class ChipPixService {
       players = (data || []).filter((p) => p.external_player_id);
     }
 
-    // Check existing external_refs to avoid duplicates
+    // Check existing external_refs to avoid duplicates (scoped to this week)
     const refs = parsed.map((p) => `cp_${p.idJog}`);
-    const { data: existing } = await supabaseAdmin
+    let dedupQuery = supabaseAdmin
       .from('ledger_entries')
       .select('external_ref')
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
       .in('external_ref', refs);
+    if (weekStart) dedupQuery = dedupQuery.eq('week_start', weekStart);
+    const { data: existing } = await dedupQuery;
 
     const existingSet = new Set((existing || []).map((e) => e.external_ref));
 
