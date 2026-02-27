@@ -40,6 +40,7 @@ export default function ConfigTaxas() {
 
   useEffect(() => {
     loadFees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Fee Config Logic ────────────────────────────────────────────
@@ -231,7 +232,7 @@ export default function ConfigTaxas() {
 // ─── Sub-components ──────────────────────────────────────────────
 
 function FeeRow({
-  name,
+  name: _name,
   meta,
   rate,
   editing,

@@ -22,6 +22,7 @@ export default function ConfigWhatsApp() {
 
   useEffect(() => {
     loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadConfig() {

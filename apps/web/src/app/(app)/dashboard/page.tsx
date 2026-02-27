@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { formatCurrency, calcDelta, round2 } from '@/lib/formatters';
-import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
-import KpiCard from '@/components/dashboard/KpiCard';
+import { formatCurrency, round2 } from '@/lib/formatters';
+import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
+import KpiCard from '@/components/ui/KpiCard';
 import ClubCard from '@/components/dashboard/ClubCard';
 import ComparativeBarChart from '@/components/dashboard/ComparativeBarChart';
 import ComparativeLineChart from '@/components/dashboard/ComparativeLineChart';
@@ -21,7 +21,7 @@ function formatDDMM(iso: string) {
   return `${dd}/${m}`;
 }
 
-function formatWeekLabel(iso: string) {
+function _formatWeekLabel(iso: string) {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
 }
@@ -71,7 +71,7 @@ export default function DashboardPage() {
   // Week selector state
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [_searching, setSearching] = useState(false);
   const [notFoundSearch, setNotFoundSearch] = useState(false);
 
   // Logo map: subclub name -> logo_url
@@ -126,6 +126,7 @@ export default function DashboardPage() {
         totalLancamentos += scLancamentos;
 
         clubes.push({
+          subclubId: sc.id,
           nome: sc.name,
           agentes: agents.length,
           jogadores: scJogadores,
@@ -243,23 +244,24 @@ export default function DashboardPage() {
     init();
   }, [loadWeekData, toast]);
 
-  // Week selector handlers
+  // Week selector handlers — auto-search on date change
   function handleStartChange(date: string) {
     setStartDate(date);
     setNotFoundSearch(false);
     setNotFoundEmpty(false);
     const dt = new Date(date + 'T00:00:00');
     dt.setDate(dt.getDate() + 6);
-    setEndDate(dt.toISOString().slice(0, 10));
+    const end = dt.toISOString().slice(0, 10);
+    setEndDate(end);
+    doSearch(date, end);
   }
 
-  async function handleBuscar() {
-    if (!startDate) return;
+  async function doSearch(start: string, end?: string) {
     setSearching(true);
     setNotFoundSearch(false);
     setNotFoundEmpty(false);
     try {
-      const res = await listSettlements(undefined, startDate, endDate || undefined);
+      const res = await listSettlements(undefined, start, end || undefined);
       if (res.success && res.data && res.data.length > 0) {
         const target = res.data[0];
         setLoading(true);
@@ -307,7 +309,7 @@ export default function DashboardPage() {
     });
   }, []);
 
-  function calcFiltered(week: WeekData | null) {
+  const calcFiltered = useCallback(function calcFiltered(week: WeekData | null) {
     if (!week) return null;
     if (disabledClubs.size === 0) {
       return {
@@ -354,40 +356,12 @@ export default function DashboardPage() {
       totalTaxasSigned,
       totalLancamentos: lancamentos,
     };
-  }
+  }, [disabledClubs]);
 
   // ─── Derived data ───────────────────────────────────────────────
   const d = currentWeek;
-  const p = previousWeek;
-  const f = useMemo(() => calcFiltered(d), [d, disabledClubs]);
-  const fp = useMemo(() => calcFiltered(p), [p, disabledClubs]);
-
-  const deltaJogadores = f && fp ? calcDelta(f.jogadoresAtivos, fp.jogadoresAtivos) : null;
-  const deltaRake = f && fp ? calcDelta(f.rakeTotal, fp.rakeTotal) : null;
-  const deltaGanhos = f && fp ? calcDelta(f.ganhosTotal, fp.ganhosTotal) : null;
-  const deltaGGR = f && fp ? calcDelta(f.ggrTotal, fp.ggrTotal) : null;
-  const deltaResultado = f && fp ? calcDelta(f.resultadoFinal, fp.resultadoFinal) : null;
-  const deltaAcerto = f && fp ? calcDelta(f.acertoLiga, fp.acertoLiga) : null;
-
-  const despesasBreakdown = f
-    ? [
-        { label: 'Taxas Liga + App', value: '', rawValue: -f.despesas.taxas },
-        { label: 'Rakeback', value: '', rawValue: -f.despesas.rakeback },
-        { label: 'Compras', value: '', rawValue: f.despesas.compras },
-        { label: 'Overlay', value: '', rawValue: f.despesas.overlay },
-        { label: 'Security', value: '', rawValue: f.despesas.security },
-        { label: 'Outros', value: '', rawValue: f.despesas.outros },
-      ]
-    : [];
-
-  const resultadoBreakdown = f
-    ? [
-        { label: 'Profit/Loss', value: '', rawValue: f.ganhosTotal },
-        { label: 'Rake', value: '', rawValue: f.rakeTotal },
-        { label: 'GGR Rodeio', value: '', rawValue: f.ggrTotal },
-      ]
-    : [];
-
+  const _p = previousWeek;
+  const f = useMemo(() => calcFiltered(d), [d, calcFiltered]);
   // Chart data from all loaded settlements
   const chartData: ChartDataPoint[] = useMemo(() => {
     if (!allWeekData.length) return [];
@@ -431,13 +405,6 @@ export default function DashboardPage() {
             <div className="flex items-end gap-2">
               <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
               <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
-              <button
-                onClick={handleBuscar}
-                disabled={searching || !startDate}
-                className="btn-primary px-4 py-2 text-sm font-semibold h-[38px] disabled:opacity-50"
-              >
-                {searching ? '...' : 'Buscar'}
-              </button>
             </div>
 
             {/* Not found badge */}
@@ -478,121 +445,47 @@ export default function DashboardPage() {
       {!loading && d && !notFoundEmpty && (
         <>
           {/* KPI Grid */}
-          <div className="grid grid-cols-7 gap-4 mb-7">
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-7">
             <KpiCard
-              label="Jogadores Ativos"
+              label="Jogadores"
               value={String(f?.jogadoresAtivos ?? 0)}
-              accent="blue"
-              delta={deltaJogadores || undefined}
-              tooltip="Total de jogadores com movimentacao em todos subclubes"
+              accentColor="bg-blue-500"
             />
             <KpiCard
               label="Profit / Loss"
-              subtitle="Ganhos e Perdas"
               value={formatCurrency(f?.ganhosTotal ?? 0)}
-              accent={(f?.ganhosTotal ?? 0) >= 0 ? 'green' : 'red'}
-              delta={deltaGanhos || undefined}
-              tooltip="Soma dos ganhos/perdas de todos jogadores (winnings_brl)"
+              accentColor={(f?.ganhosTotal ?? 0) >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+              valueColor={(f?.ganhosTotal ?? 0) >= 0 ? 'text-poker-400' : 'text-red-400'}
             />
             <KpiCard
               label="Rake Total"
               value={formatCurrency(f?.rakeTotal ?? 0)}
-              accent="green"
-              delta={deltaRake || undefined}
-              tooltip="Soma do rake gerado por todos jogadores em todos subclubes"
+              accentColor="bg-poker-500"
             />
             <KpiCard
               label="GGR Rodeio"
               value={formatCurrency(f?.ggrTotal ?? 0)}
-              accent="purple"
-              delta={deltaGGR || undefined}
-              tooltip="Gross Gaming Revenue consolidado do Rodeo"
+              accentColor="bg-purple-500"
+              valueColor="text-purple-400"
             />
             <KpiCard
-              label="Resultado Final"
+              label="Resultado"
               value={formatCurrency(f?.resultadoFinal ?? 0)}
-              accent={(f?.resultadoFinal ?? 0) >= 0 ? 'green' : 'red'}
-              delta={deltaResultado || undefined}
-              breakdown={resultadoBreakdown}
-              tooltip="resultado = ganhos + rake + ggr (consolidado todos subclubes)"
+              accentColor={(f?.resultadoFinal ?? 0) >= 0 ? 'bg-poker-500' : 'bg-red-500'}
+              valueColor={(f?.resultadoFinal ?? 0) >= 0 ? 'text-poker-400' : 'text-red-400'}
             />
             <KpiCard
-              label="Total Despesas"
+              label="Despesas"
               value={formatCurrency(-(f?.despesas.total ?? 0))}
-              accent="red"
-              breakdown={despesasBreakdown}
-              tooltip="Taxas automaticas + lancamentos manuais (overlay, compras, security, outros)"
+              accentColor="bg-red-500"
+              valueColor="text-red-400"
             />
-
-            {/* Card especial: Fechamento Semana */}
-            {(() => {
-              const acerto = f?.acertoLiga ?? 0;
-              return (
-                <div
-                  className={`relative rounded-xl bg-dark-900 overflow-hidden ${
-                    acerto < 0
-                      ? 'border-2 border-danger-500 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
-                      : acerto > 0
-                        ? 'border-2 border-poker-500 shadow-[0_0_20px_rgba(34,197,94,0.15)]'
-                        : 'border border-dark-700'
-                  }`}
-                >
-                  <div className="p-5">
-                    <div className="text-[10px] font-bold text-dark-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      Fechamento Semana
-                    </div>
-
-                    <div
-                      className={`font-mono text-2xl font-semibold mb-1 ${
-                        acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
-                      } explainable inline-block`}
-                      title={`acertoLiga = resultado + totalTaxasSigned + lancamentos = ${formatCurrency(f?.resultadoFinal ?? 0)} + ${formatCurrency(f?.totalTaxasSigned ?? 0)} + ${formatCurrency(f?.totalLancamentos ?? 0)}`}
-                    >
-                      {formatCurrency(acerto)}
-                    </div>
-
-                    <div
-                      className={`text-xs mt-1 ${
-                        acerto < 0 ? 'text-danger-500' : acerto > 0 ? 'text-poker-500' : 'text-dark-400'
-                      }`}
-                    >
-                      {acerto < 0 ? 'clube deve pagar a liga' : acerto > 0 ? 'clube tem a receber' : 'zerado'}
-                    </div>
-
-                    {deltaAcerto && !deltaAcerto.isZero && (
-                      <div className="mt-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            deltaAcerto.isUp ? 'bg-poker-900 text-poker-500' : 'bg-red-900/50 text-red-400'
-                          }`}
-                        >
-                          {deltaAcerto.isUp ? '\u25B2' : '\u25BC'} {deltaAcerto.pct}% vs sem. anterior
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="mt-3 pt-3 border-t border-dark-800 space-y-1">
-                      <div className="flex justify-between text-xs text-dark-400">
-                        <span>Resultado</span>
-                        <span className="font-mono text-dark-100">{formatCurrency(f?.resultadoFinal ?? 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-dark-400">
-                        <span>Taxas</span>
-                        <span className="font-mono text-danger-500">{formatCurrency(f?.totalTaxasSigned ?? 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-dark-400">
-                        <span>Lancamentos</span>
-                        <span
-                          className={`font-mono ${(f?.totalLancamentos ?? 0) < 0 ? 'text-danger-500' : 'text-poker-500'}`}
-                        >
-                          {formatCurrency(f?.totalLancamentos ?? 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            <KpiCard
+              label="Fechamento"
+              value={formatCurrency(f?.acertoLiga ?? 0)}
+              accentColor={(f?.acertoLiga ?? 0) >= 0 ? 'bg-amber-500' : 'bg-red-500'}
+              valueColor={(f?.acertoLiga ?? 0) >= 0 ? 'text-amber-400' : 'text-red-400'}
+            />
           </div>
 
           {/* Filter indicator */}
@@ -645,6 +538,7 @@ export default function DashboardPage() {
                   <ClubCard
                     key={clube.nome}
                     clube={clube}
+                    settlementId={d.settlement.id}
                     enabled={!disabledClubs.has(clube.nome)}
                     onToggle={() => toggleClub(clube.nome)}
                   />

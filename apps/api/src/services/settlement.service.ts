@@ -438,7 +438,9 @@ export class SettlementService {
         pagamentosDetalhe.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         const resultadoSemana = Number(p.resultado_brl) || 0;
-        const saldoAtual = round2(resultadoSemana + saldoAnterior + round2(totalPagamentos));
+        // Fórmula canônica: saldoAtual = saldoAnterior + resultado - ledgerNet
+        // totalPagamentos = IN - OUT (mesmo sinal de ledgerNet), então SUBTRAI
+        const saldoAtual = round2(resultadoSemana + saldoAnterior - round2(totalPagamentos));
 
         p.saldo_anterior = round2(saldoAnterior);
         p.total_pagamentos = round2(totalPagamentos);

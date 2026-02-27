@@ -102,6 +102,21 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
                   </p>
                 </div>
               </div>
+
+              {/* Composition bar (resultado / taxas / lancamentos) */}
+              {(() => {
+                const abs = Math.abs(sc.totals.resultado) + Math.abs(sc.feesComputed.totalTaxasSigned) + Math.abs(sc.totalLancamentos);
+                if (abs === 0) return null;
+                const pRes = (Math.abs(sc.totals.resultado) / abs) * 100;
+                const pTax = (Math.abs(sc.feesComputed.totalTaxasSigned) / abs) * 100;
+                return (
+                  <div className="mt-3 flex h-1 rounded-full overflow-hidden bg-dark-800" title={`Resultado ${pRes.toFixed(0)}% | Taxas ${pTax.toFixed(0)}% | Lanc. ${(100 - pRes - pTax).toFixed(0)}%`}>
+                    <div className={`${sc.totals.resultado >= 0 ? 'bg-poker-500/70' : 'bg-red-500/70'}`} style={{ width: `${pRes}%` }} />
+                    <div className="bg-amber-500/50" style={{ width: `${pTax}%` }} />
+                    <div className="bg-blue-500/40" style={{ width: `${100 - pRes - pTax}%` }} />
+                  </div>
+                );
+              })()}
             </div>
           </button>
         ))}
@@ -113,7 +128,7 @@ export default function SettlementDashboard({ subclubs, dashboardTotals, onSelec
 function DashKpiCard({
   label,
   value,
-  icon,
+  icon: _icon,
   borderColor,
   textColor,
   tooltip,

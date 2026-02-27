@@ -291,10 +291,10 @@ router.delete(
       const tenantId = req.tenantId!;
       const importId = req.params.id;
 
-      // Verify import exists and belongs to tenant
+      // Verify import exists and get week_start for sibling check
       const { data: imp, error: fetchErr } = await supabaseAdmin
         .from('imports')
-        .select('id')
+        .select('id, week_start')
         .eq('id', importId)
         .eq('tenant_id', tenantId)
         .single();
@@ -319,24 +319,43 @@ router.delete(
           return;
         }
 
-        const sid = settlement.id;
+        // Check if there are OTHER imports for the same week (sibling imports)
+        // If yes, preserve the settlement — only delete this import record
+        const { data: siblings } = await supabaseAdmin
+          .from('imports')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('week_start', imp.week_start)
+          .eq('status', 'DONE')
+          .neq('id', importId)
+          .limit(1);
 
-        // Cascade delete in dependency order (child → parent).
-        const cascadeSteps = [
-          { table: 'player_week_metrics', label: 'player metrics' },
-          { table: 'agent_week_metrics', label: 'agent metrics' },
-          { table: 'settlements', label: 'settlement' },
-        ] as const;
+        if (siblings && siblings.length > 0) {
+          // Has sibling imports → preserve settlement, reassign import_id to a sibling
+          await supabaseAdmin
+            .from('settlements')
+            .update({ import_id: siblings[0].id })
+            .eq('id', settlement.id);
+        } else {
+          // Last import for this week → full cascade delete
+          const sid = settlement.id;
 
-        for (const step of cascadeSteps) {
-          const col = step.table === 'settlements' ? 'id' : 'settlement_id';
-          const { error } = await supabaseAdmin
-            .from(step.table)
-            .delete()
-            .eq(col, sid)
-            .eq('tenant_id', tenantId);
-          if (error) {
-            throw new Error(`Falha ao excluir ${step.label} (${step.table}): ${error.message}`);
+          const cascadeSteps = [
+            { table: 'player_week_metrics', label: 'player metrics' },
+            { table: 'agent_week_metrics', label: 'agent metrics' },
+            { table: 'settlements', label: 'settlement' },
+          ] as const;
+
+          for (const step of cascadeSteps) {
+            const col = step.table === 'settlements' ? 'id' : 'settlement_id';
+            const { error } = await supabaseAdmin
+              .from(step.table)
+              .delete()
+              .eq(col, sid)
+              .eq('tenant_id', tenantId);
+            if (error) {
+              throw new Error(`Falha ao excluir ${step.label} (${step.table}): ${error.message}`);
+            }
           }
         }
       }

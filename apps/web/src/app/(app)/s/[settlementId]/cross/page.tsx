@@ -9,6 +9,8 @@ import { AgentMetric } from '@/types/settlement';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
 import KpiCard from '@/components/ui/KpiCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { AlertCircle, Search } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -192,11 +194,8 @@ export default function CrossClubPage() {
   if (error || !data) {
     return (
       <div className="p-8">
-        <div className="card text-center py-16">
-          <p className="text-red-400 mb-4">{error || 'Dados nao encontrados'}</p>
-          <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">
-            Voltar ao Dashboard
-          </button>
+        <div className="card">
+          <EmptyState icon={AlertCircle} title={error || 'Dados nao encontrados'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
       </div>
     );
@@ -305,14 +304,13 @@ export default function CrossClubPage() {
 
             {/* Agent table */}
             {sortedAgents.length === 0 ? (
-              <div className="card text-center py-16">
-                <h3 className="text-xl font-bold text-white mb-2">Nenhum agente encontrado</h3>
-                <p className="text-dark-400 text-sm">Ajuste os filtros ou importe dados</p>
+              <div className="card">
+                <EmptyState icon={Search} title="Nenhum agente encontrado" description="Ajuste os filtros ou importe dados" />
               </div>
             ) : (
               <div className="card overflow-hidden p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm" aria-label="Agentes cross-club">
+                  <table className="w-full text-sm data-table" aria-label="Agentes cross-club">
                     <thead>
                       <tr className="bg-dark-800/50">
                         <th
@@ -372,7 +370,7 @@ export default function CrossClubPage() {
                     </thead>
                     <tbody className="divide-y divide-dark-800/50">
                       {sortedAgents.map((agent) => (
-                        <tr key={agent.agent_name} className="hover:bg-dark-800/20 transition-colors">
+                        <tr key={agent.agent_name} className="">
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2">
                               <span className="text-white font-medium">{agent.agent_name}</span>

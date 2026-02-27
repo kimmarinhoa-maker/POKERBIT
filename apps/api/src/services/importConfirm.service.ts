@@ -290,16 +290,17 @@ class ImportConfirmService {
     // Buscar settlement deste import (scoped by tenant_id)
     const { data: settlements } = await supabaseAdmin
       .from('settlements')
-      .select('id')
+      .select('id, status')
       .eq('import_id', importId)
       .eq('tenant_id', tenantId);
 
     for (const s of settlements || []) {
-      await supabaseAdmin.from('player_week_metrics').delete().eq('settlement_id', s.id);
-      await supabaseAdmin.from('agent_week_metrics').delete().eq('settlement_id', s.id);
+      if (s.status !== 'DRAFT') continue; // Never delete finalized/voided settlements
+      await supabaseAdmin.from('player_week_metrics').delete().eq('settlement_id', s.id).eq('tenant_id', tenantId);
+      await supabaseAdmin.from('agent_week_metrics').delete().eq('settlement_id', s.id).eq('tenant_id', tenantId);
     }
 
-    await supabaseAdmin.from('settlements').delete().eq('import_id', importId).eq('tenant_id', tenantId);
+    await supabaseAdmin.from('settlements').delete().eq('import_id', importId).eq('tenant_id', tenantId).eq('status', 'DRAFT');
   }
 
   private async getNextVersion(tenantId: string, weekStart: string): Promise<number> {
@@ -348,7 +349,7 @@ class ImportConfirmService {
       .from('players')
       .select('id, external_id')
       .eq('tenant_id', tenantId)
-      .limit(10000);
+      .limit(50000);
     (data || []).forEach((p) => {
       map[p.external_id] = p.id;
     });

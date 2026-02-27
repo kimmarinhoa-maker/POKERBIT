@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
-import { getSettlementFull, getOrgTree } from '@/lib/api';
+import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
 import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
 import TabErrorBoundary from '@/components/ui/TabErrorBoundary';
+import EmptyState from '@/components/ui/EmptyState';
+import { AlertCircle } from 'lucide-react';
 
 import SubNavTabs from '@/components/settlement/SubNavTabs';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
@@ -45,13 +47,13 @@ export default function SubclubPanelPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { canAccess, role } = useAuth();
+  const { canAccess, hasPermission } = useAuth();
 
   const settlementId = params.settlementId as string;
   const subclubId = decodeURIComponent(params.subclubId as string);
   const requestedTab = searchParams.get('tab') || 'resumo';
   // Fallback: if requested tab is not visible for this role, redirect to 'resumo'
-  const visibleTabs = getVisibleTabKeys(role);
+  const visibleTabs = getVisibleTabKeys(hasPermission);
   const activeTab = visibleTabs.has(requestedTab) ? requestedTab : 'resumo';
 
   const [data, setData] = useState<SettlementFullResponse | null>(null);
@@ -66,6 +68,12 @@ export default function SubclubPanelPage() {
     setLoading(true);
     setError(null);
     try {
+      // Sync agents & rates (DRAFT only, fire-and-forget — don't block initial load)
+      Promise.all([
+        syncSettlementAgents(settlementId).catch(() => {}),
+        syncSettlementRates(settlementId).catch(() => {}),
+      ]);
+
       const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
       if (treeRes.success && treeRes.data) {
         const map: Record<string, string | null> = {};
@@ -93,7 +101,7 @@ export default function SubclubPanelPage() {
   }, [loadData]);
 
   // Keyboard shortcuts: 1-9 for tab navigation
-  const tabList = getVisibleTabList(role);
+  const tabList = getVisibleTabList(hasPermission);
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Skip if user is typing in an input/textarea/select
@@ -124,7 +132,10 @@ export default function SubclubPanelPage() {
   }
 
   // ─── Loading (skeleton em vez de spinner) ────────────────────────
-  if (loading) {
+  // Only show skeleton on initial load (no data yet).
+  // During refreshes (loading=true but data exists), keep content mounted
+  // to avoid unmounting children which causes infinite remount loops.
+  if (loading && !data) {
     return (
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -140,11 +151,8 @@ export default function SubclubPanelPage() {
   if (error || !data) {
     return (
       <div className="p-8">
-        <div className="card text-center py-16">
-          <p className="text-red-400 mb-4">{error || 'Settlement nao encontrado'}</p>
-          <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">
-            Voltar ao Dashboard
-          </button>
+        <div className="card">
+          <EmptyState icon={AlertCircle} title={error || 'Settlement nao encontrado'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
       </div>
     );
@@ -158,11 +166,8 @@ export default function SubclubPanelPage() {
   if (!foundSubclub) {
     return (
       <div className="p-8">
-        <div className="card text-center py-16">
-          <p className="text-red-400 mb-4">Subclube &quot;{subclubId}&quot; nao encontrado</p>
-          <button onClick={() => router.push(`/s/${settlementId}`)} className="btn-secondary text-sm">
-            Voltar para Semana
-          </button>
+        <div className="card">
+          <EmptyState icon={AlertCircle} title={`Subclube "${subclubId}" nao encontrado`} action={{ label: 'Voltar para Semana', onClick: () => router.push(`/s/${settlementId}`) }} />
         </div>
       </div>
     );
@@ -178,12 +183,6 @@ export default function SubclubPanelPage() {
     d.setDate(d.getDate() + 6);
     return d.toISOString().split('T')[0];
   })();
-
-  // Tab count badges
-  const tabCounts = useMemo(() => ({
-    jogadores: subclub.players?.length || 0,
-    liga: subclubs.length,
-  }), [subclub.players, subclubs.length]);
 
   // ─── Render content based on tab ──────────────────────────────────
   function renderContent() {
@@ -205,7 +204,7 @@ export default function SubclubPanelPage() {
       case 'dashboard':
         return <TabErrorBoundary tabName="Dashboard"><DashboardClube subclub={subclub} fees={fees} settlementId={settlementId} subclubName={subclubId} /></TabErrorBoundary>;
       case 'jogadores':
-        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} weekStart={settlement.week_start} clubId={settlement.club_id} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} /></TabErrorBoundary>;
 
       // Tabs funcionais
       case 'ajustes':
@@ -347,20 +346,23 @@ export default function SubclubPanelPage() {
             <span className="text-dark-500 text-xs">v{settlement.version}</span>
           </div>
           <div className="h-4 w-px bg-dark-700 hidden md:block" />
-          <select
-            value={subclub.name}
-            onChange={(e) => {
-              router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
-            }}
-            className="bg-dark-800 border border-dark-700 rounded-lg px-2 lg:px-3 py-1.5 text-sm text-white font-medium focus:border-poker-500 focus:outline-none cursor-pointer max-w-[140px] lg:max-w-none"
-            aria-label="Selecionar subclube"
-          >
-            {subclubs.map((sc: any) => (
-              <option key={sc.id || sc.name} value={sc.name}>
-                {sc.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={subclub.name}
+              onChange={(e) => {
+                router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
+              }}
+              className="appearance-none bg-dark-800 border border-dark-700 rounded-lg pl-3 pr-7 py-1.5 text-sm text-white font-medium hover:border-dark-600 focus:border-poker-500 focus:outline-none cursor-pointer max-w-[160px] lg:max-w-none transition-colors"
+              aria-label="Trocar subclube"
+            >
+              {subclubs.map((sc: SubclubData) => (
+                <option key={sc.id || sc.name} value={sc.name}>
+                  {sc.name}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 text-xs">&#9662;</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -425,7 +427,7 @@ export default function SubclubPanelPage() {
 
           {/* Desktop sidebar tabs */}
           <div className="hidden lg:block">
-            <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} counts={tabCounts} />
+            <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
 
           {/* Content area — fade on tab switch */}

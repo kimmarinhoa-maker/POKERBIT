@@ -383,7 +383,7 @@ export class ImportService {
       .from('players')
       .select('id, external_id')
       .eq('tenant_id', tenantId)
-      .limit(10000);
+      .limit(50000);
 
     (data || []).forEach((p) => {
       map[p.external_id] = p.id;

@@ -354,19 +354,23 @@ export class OFXService {
     if (txErr) throw new Error(`Erro ao buscar transações pendentes: ${txErr.message}`);
     if (!pendingTxns || pendingTxns.length === 0) return [];
 
-    // 2) Fetch entities for matching: agents from agent_week_metrics
+    // 2) Fetch entities for matching
     const { data: agentMetrics } = await supabaseAdmin
       .from('agent_week_metrics')
-      .select('agent_id, agent_name, sup_id, player_nick')
+      .select('agent_id, agent_name')
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart);
 
-    const agents = agentMetrics || [];
+    const { data: playerMetrics } = await supabaseAdmin
+      .from('player_week_metrics')
+      .select('external_player_id, nickname, agent_id, agent_name')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart);
 
     // Build a unique set of entity names (agents + player nicks)
     const entityMap = new Map<string, { id: string; name: string; type: 'agent' | 'player' }>();
     const agentNameSet = new Set<string>();
-    for (const a of agents) {
+    for (const a of (agentMetrics || [])) {
       const agentKey = (a.agent_name || '').toUpperCase().trim();
       if (agentKey && !agentNameSet.has(agentKey)) {
         agentNameSet.add(agentKey);
@@ -376,12 +380,13 @@ export class OFXService {
           type: 'agent',
         });
       }
-      // Also index player nicks
-      const playerKey = (a.player_nick || '').toUpperCase().trim();
+    }
+    for (const p of (playerMetrics || [])) {
+      const playerKey = (p.nickname || '').toUpperCase().trim();
       if (playerKey && !entityMap.has(playerKey)) {
         entityMap.set(playerKey, {
-          id: a.sup_id || a.player_nick,
-          name: a.player_nick,
+          id: p.external_player_id || p.nickname,
+          name: p.nickname,
           type: 'player',
         });
       }

@@ -57,7 +57,8 @@ export default function ConfigPagamentos() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   useEffect(() => {
     loadData();

@@ -17,8 +17,9 @@ export default function LancamentosPage() {
   const [clubs, setClubs] = useState<SubClub[]>([]);
   const [launches, setLaunches] = useState<LaunchRow[]>([]);
   const [weekStart, setWeekStart] = useState<string | null>(null);
-  const [weekEnd, setWeekEnd] = useState<string | null>(null);
+  const [_weekEnd, setWeekEnd] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [allSettlements, setAllSettlements] = useState<any[]>([]);
 
   // Overlay state
   const [totalOverlay, setTotalOverlay] = useState(0);
@@ -33,12 +34,13 @@ export default function LancamentosPage() {
   useEffect(() => {
     if (authLoading || !isAdmin) return;
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isAdmin]);
 
-  async function loadData() {
+  async function loadData(targetWeekStart?: string) {
     setDataLoading(true);
     try {
-      // 1. Get active settlement to find week_start
+      // 1. Get all settlements
       const settRes = await listSettlements();
       const settlements = settRes?.data || settRes || [];
       if (!settlements.length) {
@@ -46,10 +48,14 @@ export default function LancamentosPage() {
         setDataLoading(false);
         return;
       }
-      // Use latest settlement
-      const latest = settlements[0];
-      const ws = latest.week_start;
-      const we = latest.week_end;
+      setAllSettlements(settlements);
+
+      // Use target week or latest settlement
+      const target = targetWeekStart
+        ? settlements.find((s: any) => s.week_start === targetWeekStart) || settlements[0]
+        : settlements[0];
+      const ws = target.week_start;
+      const we = target.week_end;
       setWeekStart(ws);
       setWeekEnd(we);
 
@@ -216,6 +222,11 @@ export default function LancamentosPage() {
     [weekStart, rows, toast],
   );
 
+  // Week change handler
+  function handleWeekChange(ws: string) {
+    loadData(ws);
+  }
+
   // Edit handler
   function handleEdit(subclubId: string) {
     const row = rows.find((r) => r.subclubId === subclubId);
@@ -283,7 +294,7 @@ export default function LancamentosPage() {
             Overlay global + ajustes manuais por clube · Semana selecionada
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5">
+        <div className="flex items-center gap-2">
           <svg className="w-3.5 h-3.5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -292,9 +303,23 @@ export default function LancamentosPage() {
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <span className="font-mono text-xs text-dark-300">
-            {fmtDate(weekStart)} — {fmtDate(weekEnd)}
-          </span>
+          <select
+            value={weekStart || ''}
+            onChange={(e) => handleWeekChange(e.target.value)}
+            className="bg-dark-800 border border-dark-700 rounded-lg px-3 py-1.5 font-mono text-xs text-dark-300 focus:outline-none focus:border-poker-500 cursor-pointer"
+          >
+            {allSettlements.map((s: any) => {
+              const ws = s.week_start;
+              const d = new Date(ws + 'T00:00:00');
+              d.setDate(d.getDate() + 6);
+              const we = d.toISOString().slice(0, 10);
+              return (
+                <option key={s.id} value={ws}>
+                  {fmtDate(ws)} — {fmtDate(we)}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
 

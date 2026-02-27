@@ -5,6 +5,9 @@ const API_BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://local
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  typescript: {
+    ignoreBuildErrors: false,
+  },
   async rewrites() {
     return [
       {

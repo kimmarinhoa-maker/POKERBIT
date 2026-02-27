@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ToastProvider } from '@/components/Toast';
+import ScrollToTop from '@/components/ui/ScrollToTop';
+import CommandPalette from '@/components/ui/CommandPalette';
 import { AuthProvider, useAuth } from '@/lib/useAuth';
 import {
   LayoutDashboard,
@@ -23,6 +25,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,48 +36,48 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   disabled?: boolean;
-  roles?: string[];
+  permKey?: string; // permission resource key (checked via hasPermission)
 }
 
 interface NavSection {
   label: string;
   items: NavItem[];
-  roles?: string[];
+  adminOnly?: boolean; // section visible only to OWNER/ADMIN
 }
 
 const navSections: NavSection[] = [
   {
     label: 'OPERACAO',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/import', label: 'Importar', icon: Upload, roles: ['OWNER', 'ADMIN'] },
-      { href: '/import/history', label: 'Historico', icon: Clock, roles: ['OWNER', 'ADMIN'] },
-      { href: '/lancamentos', label: 'Lancamentos', icon: Receipt, roles: ['OWNER', 'ADMIN'] },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permKey: 'page:dashboard' },
+      { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
+      { href: '/import/history', label: 'Historico', icon: Clock, permKey: 'page:import_history' },
+      { href: '/lancamentos', label: 'Lancamentos', icon: Receipt, permKey: 'page:lancamentos' },
     ],
   },
   {
     label: 'FECHAMENTOS',
     items: [
-      { href: '/s', label: 'Clubes', icon: Building2 },
-      { href: '/overview', label: 'Visao Geral', icon: Eye, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { href: '/liga-global', label: 'Liga Global', icon: Trophy, roles: ['OWNER', 'ADMIN'] },
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
+      { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
+      { href: '/overview', label: 'Visao Geral', icon: Eye, permKey: 'page:overview' },
+      { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
+      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
     ],
   },
   {
     label: 'CADASTRO',
     items: [
-      { href: '/players', label: 'Agentes / Jogadores', icon: Users, roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { href: '/clubs', label: 'Clubes', icon: Building2, roles: ['OWNER', 'ADMIN'] },
-      { href: '/links', label: 'Vincular', icon: LinkIcon, roles: ['OWNER', 'ADMIN'] },
+      { href: '/players', label: 'Agentes / Jogadores', icon: Users, permKey: 'page:players' },
+      { href: '/clubs', label: 'Clubes', icon: Building2, permKey: 'page:clubs' },
+      { href: '/links', label: 'Vincular', icon: LinkIcon, permKey: 'page:links' },
     ],
   },
   {
     label: 'CONFIGURACOES',
-    roles: ['OWNER', 'ADMIN'],
+    adminOnly: true,
     items: [
       { href: '/config', label: 'Configuracao', icon: Settings },
-      { href: '/config/users', label: 'Equipe', icon: UserCog },
+      { href: '/config/equipe', label: 'Equipe', icon: UserCog },
     ],
   },
 ];
@@ -94,7 +97,7 @@ function isRouteActive(pathname: string, href: string): boolean {
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, role, tenantName, logout, loading } = useAuth();
+  const { user, role, tenantName, isAdmin, hasPermission, logout, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -174,12 +177,29 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
+        {/* Quick search hint */}
+        <div className={`px-3 pt-3 ${collapsed ? 'lg:px-2' : ''}`}>
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className={`w-full flex items-center gap-2 bg-dark-800/50 border border-dark-700/50 rounded-lg text-dark-400 hover:text-dark-200 hover:border-dark-600 transition-colors ${
+              collapsed ? 'lg:justify-center lg:px-2 lg:py-2 px-3 py-2' : 'px-3 py-2'
+            }`}
+            title="Busca rapida (Ctrl+K)"
+          >
+            <Search size={14} className="shrink-0" />
+            <span className={`text-xs ${collapsed ? 'lg:hidden' : ''}`}>Buscar...</span>
+            <kbd className={`ml-auto text-[10px] text-dark-500 bg-dark-900 border border-dark-700 px-1.5 py-0.5 rounded font-mono ${collapsed ? 'lg:hidden' : ''}`}>
+              Ctrl+K
+            </kbd>
+          </button>
+        </div>
+
         {/* Navigation */}
         <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-5' : 'p-4 space-y-5'}`} aria-label="Menu principal">
           {navSections
-            .filter((section) => !section.roles || section.roles.includes(role))
+            .filter((section) => !section.adminOnly || isAdmin)
             .map((section) => {
-              const visibleItems = section.items.filter((item) => !item.roles || item.roles.includes(role));
+              const visibleItems = section.items.filter((item) => !item.permKey || hasPermission(item.permKey));
               if (visibleItems.length === 0) return null;
               return (
                 <div key={section.label}>
@@ -261,7 +281,13 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto lg:pt-0 pt-14">{children}</main>
+      <main className="flex-1 overflow-auto lg:pt-0 pt-14">
+        <div className="animate-fade-in">
+          {children}
+        </div>
+        <ScrollToTop />
+      </main>
+      <CommandPalette />
     </div>
   );
 }

@@ -17,14 +17,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
 
-// All roles constant for tabs visible to everyone
-const ALL_ROLES = ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR', 'AGENTE'];
-
 interface TabItem {
   key: string;
   icon: LucideIcon;
   label: string;
-  roles: string[];
+  permKey: string; // permission resource key (e.g. 'tab:resumo')
 }
 
 interface TabSection {
@@ -36,59 +33,54 @@ const sections: TabSection[] = [
   {
     label: 'OPERACAO',
     items: [
-      { key: 'resumo', icon: BarChart3, label: 'Resumo do Clube', roles: ALL_ROLES },
-      { key: 'detalhamento', icon: Search, label: 'Detalhamento', roles: ALL_ROLES },
-      { key: 'dashboard', icon: LineChart, label: 'Dashboard', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'rakeback', icon: Percent, label: 'Rakeback', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
+      { key: 'resumo', icon: BarChart3, label: 'Resumo do Clube', permKey: 'tab:resumo' },
+      { key: 'detalhamento', icon: Search, label: 'Detalhamento', permKey: 'tab:detalhamento' },
+      { key: 'dashboard', icon: LineChart, label: 'Dashboard', permKey: 'tab:dashboard' },
+      { key: 'rakeback', icon: Percent, label: 'Rakeback', permKey: 'tab:rakeback' },
     ],
   },
   {
     label: 'FECHAMENTOS',
     items: [
-      { key: 'jogadores', icon: Users, label: 'Jogadores', roles: ALL_ROLES },
-      {
-        key: 'liquidacao',
-        icon: ClipboardList,
-        label: 'Liquidacao',
-        roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'],
-      },
-      { key: 'comprovantes', icon: FileText, label: 'Comprovantes', roles: ALL_ROLES },
-      { key: 'extrato', icon: BookOpen, label: 'Extrato', roles: ALL_ROLES },
+      { key: 'jogadores', icon: Users, label: 'Jogadores', permKey: 'tab:jogadores' },
+      { key: 'liquidacao', icon: ClipboardList, label: 'Liquidacao', permKey: 'tab:liquidacao' },
+      { key: 'comprovantes', icon: FileText, label: 'Comprovantes', permKey: 'tab:comprovantes' },
+      { key: 'extrato', icon: BookOpen, label: 'Extrato', permKey: 'tab:extrato' },
     ],
   },
   {
     label: 'FINANCEIRO',
     items: [
-      { key: 'conciliacao', icon: Landmark, label: 'Conciliacao', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
+      { key: 'conciliacao', icon: Landmark, label: 'Conciliacao', permKey: 'tab:conciliacao' },
+      { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', permKey: 'tab:ajustes' },
     ],
   },
   {
     label: 'RESULTADO',
     items: [
-      { key: 'dre', icon: TrendingUp, label: 'DRE', roles: ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR'] },
-      { key: 'liga', icon: Trophy, label: 'Liga', roles: ['OWNER', 'ADMIN', 'FINANCEIRO'] },
+      { key: 'dre', icon: TrendingUp, label: 'DRE', permKey: 'tab:dre' },
+      { key: 'liga', icon: Trophy, label: 'Liga', permKey: 'tab:liga' },
     ],
   },
 ];
 
-/** Returns the set of tab keys visible for a given role */
-export function getVisibleTabKeys(role: string): Set<string> {
+/** Returns the set of tab keys visible for a given hasPermission function */
+export function getVisibleTabKeys(hasPermission: (resource: string) => boolean): Set<string> {
   const keys = new Set<string>();
   for (const section of sections) {
     for (const item of section.items) {
-      if (item.roles.includes(role)) keys.add(item.key);
+      if (hasPermission(item.permKey)) keys.add(item.key);
     }
   }
   return keys;
 }
 
 /** Returns ordered array of visible tab keys (for keyboard shortcuts 1-9) */
-export function getVisibleTabList(role: string): string[] {
+export function getVisibleTabList(hasPermission: (resource: string) => boolean): string[] {
   const keys: string[] = [];
   for (const section of sections) {
     for (const item of section.items) {
-      if (item.roles.includes(role)) keys.push(item.key);
+      if (hasPermission(item.permKey)) keys.push(item.key);
     }
   }
   return keys;
@@ -97,19 +89,17 @@ export function getVisibleTabList(role: string): string[] {
 interface Props {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  /** Optional count badges per tab key (e.g., { jogadores: 94, extrato: 12 }) */
-  counts?: Record<string, number>;
 }
 
-export default function SubNavTabs({ activeTab, onTabChange, counts = {} }: Props) {
-  const { role } = useAuth();
+export default function SubNavTabs({ activeTab, onTabChange }: Props) {
+  const { hasPermission } = useAuth();
 
   // Build global shortcut index (1-9)
   let globalIdx = 0;
   const shortcutMap = new Map<string, number>();
   for (const section of sections) {
     for (const item of section.items) {
-      if (item.roles.includes(role)) {
+      if (hasPermission(item.permKey)) {
         globalIdx++;
         if (globalIdx <= 9) shortcutMap.set(item.key, globalIdx);
       }
@@ -123,7 +113,7 @@ export default function SubNavTabs({ activeTab, onTabChange, counts = {} }: Prop
       aria-label="Navegacao do settlement (atalhos: 1-9)"
     >
       {sections.map((section) => {
-        const visibleItems = section.items.filter((item) => item.roles.includes(role));
+        const visibleItems = section.items.filter((item) => hasPermission(item.permKey));
         if (visibleItems.length === 0) return null;
         return (
           <div key={section.label} className="mb-4">
@@ -149,16 +139,6 @@ export default function SubNavTabs({ activeTab, onTabChange, counts = {} }: Prop
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {counts[item.key] != null && counts[item.key]! > 0 && (
-                      <span className="text-[10px] font-mono text-dark-500 bg-dark-800 px-1.5 py-0.5 rounded-full border border-dark-700 shrink-0">
-                        {counts[item.key]}
-                      </span>
-                    )}
-                    {shortcut && (
-                      <kbd className="hidden lg:inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-mono bg-dark-800 text-dark-500 border border-dark-700 shrink-0">
-                        {shortcut}
-                      </kbd>
-                    )}
                   </button>
                 );
               })}

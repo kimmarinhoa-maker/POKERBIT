@@ -61,9 +61,11 @@ function calculateWeek(players, rates = {}) {
       // ── Player metrics ──
       const playerMetrics = agPlayers.map(p => {
         const plRate = playerRates[p.id] || playerRates[p.nick] || 0;
+        // Use player rate if exists, otherwise fall back to agent rate
+        const effectiveRate = plRate || agRate;
         const engineP = { ganhos: p.ganhos, rake: p.rake || p.rakeGerado || 0 };
-        const resultado = FinanceEngine.calcPlayerResult(engineP, plRate);
-        const rbValor = (engineP.rake) * plRate / 100;
+        const resultado = FinanceEngine.calcPlayerResult(engineP, effectiveRate);
+        const rbValor = (engineP.rake) * effectiveRate / 100;
 
         const pm = {
           id: p.id,
@@ -74,7 +76,7 @@ function calculateWeek(players, rates = {}) {
           ganhos: p.ganhos,
           rake: engineP.rake,
           ggr: p.ggr || 0,
-          rbRate: plRate,
+          rbRate: effectiveRate,
           rbValor,
           resultado,
           rakeBreakdown: p.rakeBreakdown || null,
@@ -140,7 +142,7 @@ function _sum(arr, keyOrFn) {
 }
 
 function _emptyTotals() {
-  return { players: 0, clubs: 0, ganhos: 0, rake: 0, ggr: 0 };
+  return { players: 0, clubs: 0, ganhos: 0, rake: 0, ggr: 0, rbTotal: 0, resultadoTotal: 0 };
 }
 
 module.exports = { calculateWeek };

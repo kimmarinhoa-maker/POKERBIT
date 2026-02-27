@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import KpiCard from '@/components/dashboard/KpiCard';
+import KpiCard from '@/components/ui/KpiCard';
 import { formatCurrency } from '@/lib/formatters';
 import { formatBRL, listSettlements, getSettlementFull } from '@/lib/api';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
@@ -50,6 +50,17 @@ interface RakeWeekPoint {
   isCurrent: boolean;
 }
 
+interface HistorySubclub {
+  name: string;
+  id: string;
+  totals?: { rake?: number; players?: number };
+}
+
+interface HistoryItem {
+  settlement: { id: string; week_start: string };
+  full: { data?: { subclubs?: HistorySubclub[] }; subclubs?: HistorySubclub[] } | null;
+}
+
 const BAR_COLORS_RAKE = ['bg-poker-500', 'bg-poker-500', 'bg-poker-600', 'bg-poker-600', 'bg-poker-700'];
 const MEDAL = ['🥇', '🥈', '🥉'];
 
@@ -57,8 +68,8 @@ const MEDAL = ['🥇', '🥈', '🥉'];
    Main Component
    ══════════════════════════════════════════════════════════════════════ */
 
-export default function DashboardClube({ subclub, fees, settlementId, subclubName }: Props) {
-  const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, name, players, agents } = subclub;
+export default function DashboardClube({ subclub, fees: _fees, settlementId, subclubName }: Props) {
+  const { totals, feesComputed, adjustments: _adjustments, totalLancamentos, acertoLiga, name, players, agents } = subclub;
 
   // ── Historical data (8 weeks) ──────────────────────────────────────
   const [rakeHistory, setRakeHistory] = useState<RakeWeekPoint[]>([]);
@@ -83,10 +94,10 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
 
         // Load full data for each settlement in parallel
         const fullData = await Promise.all(
-          settlements.map(async (s: any) => {
+          settlements.map(async (s: { id: string; week_start: string }) => {
             try {
               const full = await getSettlementFull(s.id);
-              return { settlement: s, full };
+              return { settlement: s, full } as HistoryItem;
             } catch {
               return null;
             }
@@ -97,23 +108,22 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
 
         // Sort by week_start ascending
         const sorted = fullData
-          .filter(Boolean)
-          .sort((a: any, b: any) => a.settlement.week_start.localeCompare(b.settlement.week_start));
+          .filter((x): x is HistoryItem => x !== null)
+          .sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
 
         // Extract rake per week for this subclub
         const points: RakeWeekPoint[] = [];
         let prevPlayerCount: number | null = null;
 
         for (const item of sorted) {
-          if (!item) continue;
-          const { settlement, full } = item as any;
+          const { settlement, full } = item;
           const weekStart = settlement.week_start;
           const dt = new Date(weekStart + 'T00:00:00');
           const label = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
 
           const isCurrent = settlement.id === settlementId;
           const subclubs = full?.data?.subclubs || full?.subclubs || [];
-          const sc = subclubs.find((sc: any) => sc.name === subclubName || sc.id === subclubName);
+          const sc = subclubs.find((s) => s.name === subclubName || s.id === subclubName);
 
           if (sc) {
             points.push({
@@ -210,10 +220,10 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
   const totalTaxas = Math.abs(feesComputed.totalTaxasSigned || 0);
   const absLancamentos = Math.abs(totalLancamentos || 0);
   const totalDespesas = totalTaxas + absLancamentos;
-  const totalRakeback = (agents || []).reduce((s: number, a: AgentMetric) => s + Number(a.commission_brl || 0), 0);
+  const _totalRakeback = (agents || []).reduce((s: number, a: AgentMetric) => s + Number(a.commission_brl || 0), 0);
 
   // ── Player delta ─────────────────────────────────────────────────
-  const playerDelta = useMemo(() => {
+  const _playerDelta = useMemo(() => {
     if (prevPlayers === null) return undefined;
     const current = totals.players;
     const diff = current - prevPlayers;
@@ -231,71 +241,40 @@ export default function DashboardClube({ subclub, fees, settlementId, subclubNam
       </div>
 
       {/* ── 6 KPI Cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
         <KpiCard
-          label="Jogadores Ativos"
+          label="Jogadores"
           value={String(totals.players)}
-          accent="blue"
-          delta={playerDelta}
+          accentColor="bg-blue-500"
         />
         <KpiCard
           label="Profit / Loss"
-          subtitle="Ganhos e Perdas"
           value={formatCurrency(totals.ganhos)}
-          accent={totals.ganhos < 0 ? 'red' : 'green'}
+          accentColor={totals.ganhos < 0 ? 'bg-red-500' : 'bg-poker-500'}
+          valueColor={totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}
         />
-        <KpiCard label="Rake Total" value={formatCurrency(totals.rake)} accent="green" />
         <KpiCard
-          label="Resultado Final"
-          subtitle="P/L + Rake + GGR"
+          label="Rake Total"
+          value={formatCurrency(totals.rake)}
+          accentColor="bg-poker-500"
+        />
+        <KpiCard
+          label="Resultado"
           value={formatCurrency(totals.resultado)}
-          accent={totals.resultado < 0 ? 'red' : 'green'}
-          breakdown={[
-            { label: 'P/L', value: formatCurrency(totals.ganhos), rawValue: totals.ganhos },
-            { label: 'Rake', value: formatCurrency(totals.rake), rawValue: totals.rake },
-            { label: 'GGR', value: formatCurrency(totals.ggr), rawValue: totals.ggr },
-          ]}
+          accentColor={totals.resultado < 0 ? 'bg-red-500' : 'bg-poker-500'}
+          valueColor={totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}
         />
         <KpiCard
-          label="Total Despesas"
+          label="Despesas"
           value={formatCurrency(-totalDespesas)}
-          accent="red"
-          breakdown={[
-            {
-              label: 'Taxas',
-              value: formatCurrency(feesComputed.totalTaxasSigned),
-              rawValue: feesComputed.totalTaxasSigned,
-            },
-            ...(totalRakeback !== 0
-              ? [{ label: 'Rakeback', value: formatCurrency(-totalRakeback), rawValue: -totalRakeback }]
-              : []),
-            ...(adjustments.overlay
-              ? [{ label: 'Overlay', value: formatCurrency(adjustments.overlay), rawValue: adjustments.overlay }]
-              : []),
-            ...(adjustments.compras
-              ? [{ label: 'Compras', value: formatCurrency(adjustments.compras), rawValue: adjustments.compras }]
-              : []),
-            ...(adjustments.security
-              ? [{ label: 'Security', value: formatCurrency(adjustments.security), rawValue: adjustments.security }]
-              : []),
-            ...(adjustments.outros
-              ? [{ label: 'Outros', value: formatCurrency(adjustments.outros), rawValue: adjustments.outros }]
-              : []),
-          ]}
+          accentColor="bg-red-500"
+          valueColor="text-red-400"
         />
         <KpiCard
-          label="Fechamento Semana"
+          label="Fechamento"
           value={formatCurrency(acertoLiga)}
-          accent={acertoLiga < 0 ? 'red' : 'green'}
-          breakdown={[
-            { label: 'Resultado', value: formatCurrency(totals.resultado), rawValue: totals.resultado },
-            {
-              label: 'Taxas',
-              value: formatCurrency(feesComputed.totalTaxasSigned),
-              rawValue: feesComputed.totalTaxasSigned,
-            },
-            { label: 'Lancamentos', value: formatCurrency(totalLancamentos || 0), rawValue: totalLancamentos || 0 },
-          ]}
+          accentColor={acertoLiga < 0 ? 'bg-red-500' : 'bg-amber-500'}
+          valueColor={acertoLiga < 0 ? 'text-red-400' : 'text-amber-400'}
         />
       </div>
 

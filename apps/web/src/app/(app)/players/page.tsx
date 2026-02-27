@@ -15,7 +15,9 @@ import { useToast } from '@/components/Toast';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Spinner from '@/components/Spinner';
-import { User, Phone, Mail, X, Save, Percent, Check, Users, ChevronDown } from 'lucide-react';
+import KpiCard from '@/components/ui/KpiCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { User, Phone, Mail, X, Save, Percent, Check, Users, ChevronDown, Search } from 'lucide-react';
 
 type Tab = 'jogadores' | 'agentes';
 type ToastFn = (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -350,23 +352,11 @@ function AgentesTab({
   return (
     <>
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Total Agentes</p>
-          <p className="font-mono text-lg font-bold text-white">{kpis.total}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Com Rate</p>
-          <p className="font-mono text-lg font-bold text-emerald-400">{kpis.withRate}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-amber-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Sem Rate</p>
-          <p className="font-mono text-lg font-bold text-amber-400">{kpis.withoutRate}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Media RB</p>
-          <p className="font-mono text-lg font-bold text-poker-400">{kpis.avgRate.toFixed(1)}%</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <KpiCard label="Total Agentes" value={kpis.total} accentColor="bg-blue-500" />
+        <KpiCard label="Com Rate" value={kpis.withRate} accentColor="bg-emerald-500" valueColor="text-emerald-400" />
+        <KpiCard label="Sem Rate" value={kpis.withoutRate} accentColor="bg-amber-500" valueColor="text-amber-400" />
+        <KpiCard label="Media RB" value={`${kpis.avgRate.toFixed(1)}%`} accentColor="bg-poker-500" valueColor="text-poker-400" />
       </div>
 
       {/* Search + Apply All */}
@@ -422,18 +412,17 @@ function AgentesTab({
           <Spinner />
         </div>
       ) : sorted.length === 0 ? (
-        <div className="card text-center py-16">
-          <h3 className="text-xl font-bold text-white mb-2">{search ? 'Nenhum resultado' : 'Nenhum agente'}</h3>
-          <p className="text-dark-400 text-sm">
-            {search
-              ? `Nenhum agente encontrado para "${search}"`
-              : 'Agentes sao criados automaticamente ao importar XLSX'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={search ? Search : Users}
+            title={search ? 'Nenhum resultado' : 'Nenhum agente'}
+            description={search ? `Nenhum agente encontrado para "${search}"` : 'Agentes sao criados automaticamente ao importar XLSX'}
+          />
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm data-table">
               <thead>
                 <tr className="bg-dark-800/50">
                   <th className="px-3 py-2 text-left font-medium text-xs text-dark-400">Agente</th>
@@ -444,7 +433,7 @@ function AgentesTab({
               </thead>
               <tbody className="divide-y divide-dark-800/50">
                 {sorted.map((agent) => (
-                  <tr key={agent.id} className="hover:bg-dark-800/20 transition-colors">
+                  <tr key={agent.id}>
                     <td className="px-3 py-1.5 text-white font-medium">{agent.name}</td>
                     <td className="px-3 py-1.5 text-dark-500 font-mono text-[11px]">{agent.external_id || '—'}</td>
                     <td className="px-3 py-1.5 text-center">
@@ -684,8 +673,10 @@ function JogadoresTab({
     try {
       const res = await getPlayerRates();
       if (res.success) setRates(res.data || []);
-    } catch { /* silent */ }
-  }, []);
+    } catch {
+      toast('Erro ao carregar rates dos jogadores', 'error');
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadPlayers();
@@ -798,23 +789,11 @@ function JogadoresTab({
   return (
     <>
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Total Jogadores</p>
-          <p className="font-mono text-lg font-bold text-white">{kpis.total}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Com Rate</p>
-          <p className="font-mono text-lg font-bold text-emerald-400">{kpis.withRate}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-amber-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Sem Rate</p>
-          <p className="font-mono text-lg font-bold text-amber-400">{kpis.withoutRate}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Media RB</p>
-          <p className="font-mono text-lg font-bold text-poker-400">{kpis.avgRate.toFixed(1)}%</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <KpiCard label="Total Jogadores" value={kpis.total} accentColor="bg-blue-500" />
+        <KpiCard label="Com Rate" value={kpis.withRate} accentColor="bg-emerald-500" valueColor="text-emerald-400" />
+        <KpiCard label="Sem Rate" value={kpis.withoutRate} accentColor="bg-amber-500" valueColor="text-amber-400" />
+        <KpiCard label="Media RB" value={`${kpis.avgRate.toFixed(1)}%`} accentColor="bg-poker-500" valueColor="text-poker-400" />
       </div>
 
       {/* Search */}
@@ -853,21 +832,18 @@ function JogadoresTab({
           <Spinner />
         </div>
       ) : playersWithRates.length === 0 ? (
-        <div className="card text-center py-16">
-          <h3 className="text-xl font-bold text-white mb-2">
-            {search ? 'Nenhum resultado' : 'Nenhum jogador direto'}
-          </h3>
-          <p className="text-dark-400 text-sm">
-            {search
-              ? `Nenhum jogador encontrado para "${search}"`
-              : 'Marque agentes como diretos em Configuracao > Estrutura para ver seus jogadores aqui.'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={search ? Search : User}
+            title={search ? 'Nenhum resultado' : 'Nenhum jogador direto'}
+            description={search ? `Nenhum jogador encontrado para "${search}"` : 'Marque agentes como diretos em Configuracao > Estrutura para ver seus jogadores aqui.'}
+          />
         </div>
       ) : (
         <>
           <div className="card overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm data-table">
                 <thead>
                   <tr className="bg-dark-800/50">
                     <th className="px-3 py-2 text-left font-medium text-xs text-dark-400">Jogador</th>
@@ -878,7 +854,7 @@ function JogadoresTab({
                 </thead>
                 <tbody className="divide-y divide-dark-800/50">
                   {playersWithRates.map((player) => (
-                    <tr key={player.id} className="hover:bg-dark-800/20 transition-colors">
+                    <tr key={player.id}>
                       <td className="px-3 py-1.5 text-white font-medium">{player.nickname || player.full_name || '—'}</td>
                       <td className="px-3 py-1.5 text-dark-500 font-mono text-[11px]">{player.external_id || '—'}</td>
                       <td className="px-3 py-1.5 text-center">

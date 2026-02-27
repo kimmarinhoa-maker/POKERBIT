@@ -7,6 +7,7 @@ import { SubclubData, PlayerMetric } from '@/types/settlement';
 import { valueColor, ggrColor } from '@/lib/colorUtils';
 import { Search } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
+import Highlight from '@/components/ui/Highlight';
 
 interface Props {
   subclub: SubclubData;
@@ -257,6 +258,7 @@ export default function Detalhamento({ subclub }: Props) {
                   onToggle={() => toggleAgent(group.agentName)}
                   valColor={valColor}
                   ggrColor={ggrColor}
+                  searchQuery={debouncedSearch}
                 />
               );
             })}
@@ -313,9 +315,10 @@ interface AgentSectionProps {
   onToggle: () => void;
   valColor: (v: number) => string;
   ggrColor: (v: number) => string;
+  searchQuery: string;
 }
 
-function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: AgentSectionProps) {
+function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor, searchQuery }: AgentSectionProps) {
   return (
     <>
       {/* Agent row */}
@@ -325,7 +328,7 @@ function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: Agent
             <span className="text-dark-500 text-[10px]">{isExpanded ? '\u25BC' : '\u25B6'}</span>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-dark-100 text-xs font-semibold">{group.agentName}</span>
+                <span className="text-dark-100 text-xs font-semibold"><Highlight text={group.agentName} query={searchQuery} /></span>
                 {group.externalAgentId && (
                   <span className="text-dark-600 text-[10px] font-mono">{group.externalAgentId}</span>
                 )}
@@ -361,7 +364,7 @@ function AgentSection({ group, isExpanded, onToggle, valColor, ggrColor }: Agent
               key={p.external_player_id || i}
               className="hover:bg-dark-800/20 transition-colors border-b border-white/[0.04]"
             >
-              <td className="pl-8 pr-3 py-1 text-dark-400 text-xs">{p.nickname || p.external_player_id || '\u2014'}</td>
+              <td className="pl-8 pr-3 py-1 text-dark-400 text-xs"><Highlight text={p.nickname || p.external_player_id || '\u2014'} query={searchQuery} /></td>
               <td className="px-3 py-1 text-right font-mono text-xs text-emerald-400">
                 {pRake > 0.001 ? formatBRL(pRake) : '\u2014'}
               </td>

@@ -6,5 +6,6 @@
 // ══════════════════════════════════════════════════════════════════════
 
 export function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
+  // Usa abs + sign para tratar negativos corretamente (EPSILON só funciona com positivos)
+  return Math.sign(v) * Math.round((Math.abs(v) + Number.EPSILON) * 100) / 100;
 }

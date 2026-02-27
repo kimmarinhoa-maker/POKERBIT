@@ -1,12 +1,18 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, listLedger, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
 import { LedgerEntry } from '@/types/settlement';
-import Spinner from '@/components/Spinner';
+import KpiCard from '@/components/ui/KpiCard';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
+import Highlight from '@/components/ui/Highlight';
+import EmptyState from '@/components/ui/EmptyState';
+import { Receipt } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -54,7 +60,8 @@ export default function CaixaGeralPage() {
         setLoading(false);
       }
     })();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   // Load ledger when selection changes
   const selectedWeek = settlements.find((s) => s.id === selectedId);
@@ -71,7 +78,7 @@ export default function CaixaGeralPage() {
         setLoadingEntries(false);
       }
     })();
-  }, [selectedWeek?.week_start]);
+  }, [selectedWeek?.week_start, toast]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -123,6 +130,23 @@ export default function CaixaGeralPage() {
     return Array.from(map.values()).sort((a, b) => b.totalIn + b.totalOut - (a.totalIn + a.totalOut));
   }, [filtered, groupBy]);
 
+  type CaixaSortKey = 'date' | 'entity' | 'amount' | 'method';
+
+  const getCaixaSortValue = useCallback((e: LedgerEntry, key: CaixaSortKey): string | number => {
+    switch (key) {
+      case 'date': return e.created_at || '';
+      case 'entity': return e.entity_name || '';
+      case 'amount': return Number(e.amount) * (e.dir === 'OUT' ? -1 : 1);
+      case 'method': return e.method || '';
+    }
+  }, []);
+
+  const { sorted: sortedEntries, handleSort: handleCaixaSort, sortIcon: caixaSortIcon, ariaSort: caixaAriaSort } = useSortable<LedgerEntry, CaixaSortKey>({
+    data: filtered,
+    defaultKey: 'date',
+    getValue: getCaixaSortValue,
+  });
+
   function fmtDate(d?: string) {
     if (!d) return '';
     const [y, m, day] = d.split('-');
@@ -140,8 +164,11 @@ export default function CaixaGeralPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner />
+      <div className="p-8 max-w-6xl">
+        <div className="h-8 skeleton-shimmer rounded w-48 mb-2" />
+        <div className="h-4 skeleton-shimmer rounded w-72 mb-6" />
+        <KpiSkeleton count={5} />
+        <TableSkeleton columns={7} rows={8} />
       </div>
     );
   }
@@ -171,39 +198,19 @@ export default function CaixaGeralPage() {
       </div>
 
       {loadingEntries ? (
-        <div className="flex justify-center py-20">
-          <Spinner />
+        <div>
+          <KpiSkeleton count={5} />
+          <TableSkeleton columns={7} rows={8} />
         </div>
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Movimentacoes</p>
-              <p className="font-mono text-lg font-bold text-white">{kpis.total}</p>
-            </div>
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-emerald-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Entradas (IN)</p>
-              <p className="font-mono text-lg font-bold text-emerald-400">{formatBRL(kpis.totalIn)}</p>
-            </div>
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-red-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Saidas (OUT)</p>
-              <p className="font-mono text-lg font-bold text-red-400">{formatBRL(kpis.totalOut)}</p>
-            </div>
-            <div
-              className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
-                kpis.net >= 0 ? 'border-t-poker-500' : 'border-t-red-500'
-              } rounded-lg p-4 text-center`}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Net</p>
-              <p className={`font-mono text-lg font-bold ${kpis.net >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-                {formatBRL(kpis.net)}
-              </p>
-            </div>
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Entidades</p>
-              <p className="font-mono text-lg font-bold text-yellow-400">{kpis.entities}</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <KpiCard label="Movimentacoes" value={kpis.total} accentColor="bg-blue-500" />
+            <KpiCard label="Entradas" value={formatBRL(kpis.totalIn)} accentColor="bg-emerald-500" valueColor="text-emerald-400" />
+            <KpiCard label="Saidas" value={formatBRL(kpis.totalOut)} accentColor="bg-red-500" valueColor="text-red-400" />
+            <KpiCard label="Net" value={formatBRL(kpis.net)} accentColor={kpis.net >= 0 ? 'bg-poker-500' : 'bg-red-500'} valueColor={kpis.net >= 0 ? 'text-poker-400' : 'text-red-400'} />
+            <KpiCard label="Entidades" value={kpis.entities} accentColor="bg-yellow-500" valueColor="text-yellow-400" />
           </div>
 
           {/* Reconciliation progress */}
@@ -274,23 +281,23 @@ export default function CaixaGeralPage() {
           {grouped && grouped.length > 0 && (
             <div className="card overflow-hidden p-0 mb-5">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" aria-label="Movimentacoes agrupadas">
+                <table className="w-full text-sm data-table" aria-label="Movimentacoes agrupadas">
                   <thead>
                     <tr className="bg-dark-800/50">
-                      <th className="px-5 py-3 text-left font-medium text-xs text-dark-400">
+                      <th scope="col" className="px-5 py-3 text-left font-medium text-xs text-dark-400">
                         {groupBy === 'entity' ? 'Entidade' : groupBy === 'method' ? 'Metodo' : 'Origem'}
                       </th>
-                      <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Movs</th>
-                      <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Entradas</th>
-                      <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Saidas</th>
-                      <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Net</th>
+                      <th scope="col" className="px-3 py-3 text-center font-medium text-xs text-dark-400">Movs</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium text-xs text-dark-400">Entradas</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium text-xs text-dark-400">Saidas</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium text-xs text-dark-400">Net</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-800/50">
                     {grouped.map((g) => {
                       const net = round2(g.totalIn - g.totalOut);
                       return (
-                        <tr key={g.label} className="hover:bg-dark-800/20 transition-colors">
+                        <tr key={g.label}>
                           <td
                             className="px-5 py-2.5 text-white font-medium text-sm truncate max-w-[240px]"
                             title={g.label}
@@ -346,34 +353,33 @@ export default function CaixaGeralPage() {
 
           {/* Detail table */}
           {entries.length === 0 ? (
-            <div className="card text-center py-16">
-              <h3 className="text-xl font-bold text-white mb-2">Nenhuma movimentacao</h3>
-              <p className="text-dark-400 text-sm">Nao ha movimentacoes registradas nesta semana</p>
+            <div className="card">
+              <EmptyState icon={Receipt} title="Nenhuma movimentacao" description="Nao ha movimentacoes registradas nesta semana" />
             </div>
           ) : (
             <div className="card overflow-hidden p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" aria-label="Detalhamento de movimentacoes">
+                <table className="w-full text-sm data-table" aria-label="Detalhamento de movimentacoes">
                   <thead>
                     <tr className="bg-dark-800/50">
-                      <th className="px-4 py-3 text-left font-medium text-xs text-dark-400">Data</th>
-                      <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Entidade</th>
-                      <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">Dir</th>
-                      <th className="px-3 py-3 text-right font-medium text-xs text-dark-400">Valor</th>
-                      <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Metodo</th>
-                      <th className="px-3 py-3 text-left font-medium text-xs text-dark-400">Descricao</th>
-                      <th className="px-3 py-3 text-center font-medium text-xs text-dark-400">✓</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200" onClick={() => handleCaixaSort('date')} role="columnheader" aria-sort={caixaAriaSort('date')}>Data{caixaSortIcon('date')}</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200" onClick={() => handleCaixaSort('entity')} role="columnheader" aria-sort={caixaAriaSort('entity')}>Entidade{caixaSortIcon('entity')}</th>
+                      <th scope="col" className="px-3 py-3 text-center font-medium text-xs text-dark-400">Dir</th>
+                      <th scope="col" className="px-3 py-3 text-right font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200" onClick={() => handleCaixaSort('amount')} role="columnheader" aria-sort={caixaAriaSort('amount')}>Valor{caixaSortIcon('amount')}</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium text-xs text-dark-400 cursor-pointer hover:text-dark-200" onClick={() => handleCaixaSort('method')} role="columnheader" aria-sort={caixaAriaSort('method')}>Metodo{caixaSortIcon('method')}</th>
+                      <th scope="col" className="px-3 py-3 text-left font-medium text-xs text-dark-400">Descricao</th>
+                      <th scope="col" className="px-3 py-3 text-center font-medium text-xs text-dark-400">✓</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-800/50">
-                    {filtered.map((e) => (
+                    {sortedEntries.map((e) => (
                       <tr
                         key={e.id}
-                        className={`transition-colors ${e.is_reconciled ? 'opacity-60' : 'hover:bg-dark-800/20'}`}
+                        className={e.is_reconciled ? 'opacity-60' : ''}
                       >
                         <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
                         <td className="px-3 py-2.5 text-white font-medium text-sm truncate max-w-[180px]">
-                          {e.entity_name || '—'}
+                          <Highlight text={e.entity_name || '—'} query={search} />
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           <span
@@ -394,7 +400,7 @@ export default function CaixaGeralPage() {
                         </td>
                         <td className="px-3 py-2.5 text-dark-400 text-xs">{e.method || '—'}</td>
                         <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">
-                          {e.description || '—'}
+                          <Highlight text={e.description || '—'} query={search} />
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           {e.is_reconciled ? (

@@ -84,7 +84,7 @@ export class CarryForwardService {
     >();
 
     for (const a of agents) {
-      const key = a.agent_id;
+      const key = a.agent_id || a.agent_name;
       if (!key) continue;
 
       const existing = agentMap.get(key);

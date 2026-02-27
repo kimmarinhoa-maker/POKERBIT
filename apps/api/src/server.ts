@@ -146,12 +146,14 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ─── Start ─────────────────────────────────────────────────────────
-const server = app.listen(env.API_PORT, () => {
+// Railway injeta PORT, local usa API_PORT
+const PORT = env.PORT ? Number(env.PORT) : env.API_PORT;
+const server = app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════╗
 ║     🃏  Poker Manager SaaS — API Server         ║
 ║                                                  ║
-║     Port: ${String(env.API_PORT).padEnd(39)}║
+║     Port: ${String(PORT).padEnd(39)}║
 ║     Env:  ${String(env.NODE_ENV).padEnd(39)}║
 ║     Supabase: ${env.SUPABASE_URL.substring(0, 35).padEnd(35)}║
 ║                                                  ║
@@ -180,7 +182,7 @@ const server = app.listen(env.API_PORT, () => {
 
 server.on('error', (err: any) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${env.API_PORT} already in use`);
+    console.error(`Port ${PORT} already in use`);
     process.exit(1);
   }
   throw err;

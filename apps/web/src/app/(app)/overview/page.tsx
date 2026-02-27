@@ -5,7 +5,13 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, getSettlementFull, formatBRL } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
-import Spinner from '@/components/Spinner';
+import KpiCard from '@/components/ui/KpiCard';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
+import Highlight from '@/components/ui/Highlight';
+import { exportCsv } from '@/lib/exportCsv';
+import EmptyState from '@/components/ui/EmptyState';
+import { Download, Users } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -108,7 +114,7 @@ export default function OverviewPage() {
   }, [selectedId, toast]);
 
   // Unique subclubs
-  const subclubs = useMemo(() => [...new Set(allPlayers.map((p) => p.subclub))].sort(), [allPlayers]);
+  const _subclubs = useMemo(() => [...new Set(allPlayers.map((p) => p.subclub))].sort(), [allPlayers]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -185,13 +191,16 @@ export default function OverviewPage() {
     return v > 0.01 ? 'text-emerald-400' : v < -0.01 ? 'text-red-400' : 'text-dark-400';
   }
 
-  const selectedWeek = settlements.find((s) => s.id === selectedId);
+  const _selectedWeek = settlements.find((s) => s.id === selectedId);
   const sortIcon = (key: SortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner />
+      <div className="p-8">
+        <div className="h-8 skeleton-shimmer rounded w-48 mb-2" />
+        <div className="h-4 skeleton-shimmer rounded w-72 mb-6" />
+        <KpiSkeleton count={5} />
+        <TableSkeleton columns={9} rows={10} />
       </div>
     );
   }
@@ -223,48 +232,19 @@ export default function OverviewPage() {
       </div>
 
       {loadingFull ? (
-        <div className="flex justify-center py-20">
-          <Spinner />
+        <div>
+          <KpiSkeleton count={5} />
+          <TableSkeleton columns={9} rows={10} />
         </div>
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Jogadores</p>
-              <p className="font-mono text-lg font-bold text-white">{kpis.total}</p>
-              <p className="text-[10px] text-dark-500 mt-1">
-                <span className="text-emerald-400">{kpis.winners} W</span>
-                {' / '}
-                <span className="text-red-400">{kpis.losers} L</span>
-              </p>
-            </div>
-            <div
-              className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
-                kpis.totalWinnings >= 0 ? 'border-t-emerald-500' : 'border-t-red-500'
-              } rounded-lg p-4 text-center`}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Profit/Loss</p>
-              <p className={`font-mono text-lg font-bold ${clr(kpis.totalWinnings)}`}>
-                {formatBRL(kpis.totalWinnings)}
-              </p>
-            </div>
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Rake Total</p>
-              <p className="font-mono text-lg font-bold text-poker-400">{formatBRL(kpis.totalRake)}</p>
-            </div>
-            <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-yellow-500 rounded-lg p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">GGR Total</p>
-              <p className="font-mono text-lg font-bold text-yellow-400">{formatBRL(kpis.totalGGR)}</p>
-            </div>
-            <div
-              className={`bg-dark-800/50 border border-dark-700/50 border-t-2 ${
-                kpis.totalResult >= 0 ? 'border-t-amber-500' : 'border-t-red-500'
-              } rounded-lg p-4 text-center`}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Resultado Total</p>
-              <p className={`font-mono text-lg font-bold ${clr(kpis.totalResult)}`}>{formatBRL(kpis.totalResult)}</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <KpiCard label="Jogadores" value={kpis.total} accentColor="bg-blue-500" />
+            <KpiCard label="Profit/Loss" value={formatBRL(kpis.totalWinnings)} accentColor={kpis.totalWinnings >= 0 ? 'bg-emerald-500' : 'bg-red-500'} valueColor={clr(kpis.totalWinnings)} />
+            <KpiCard label="Rake Total" value={formatBRL(kpis.totalRake)} accentColor="bg-poker-500" valueColor="text-poker-400" />
+            <KpiCard label="GGR Total" value={formatBRL(kpis.totalGGR)} accentColor="bg-yellow-500" valueColor="text-yellow-400" />
+            <KpiCard label="Resultado" value={formatBRL(kpis.totalResult)} accentColor={kpis.totalResult >= 0 ? 'bg-amber-500' : 'bg-red-500'} valueColor={clr(kpis.totalResult)} />
           </div>
 
           {/* Subclub cards */}
@@ -321,6 +301,16 @@ export default function OverviewPage() {
                 Limpar filtro ({filterSubclub})
               </button>
             )}
+            <button
+              onClick={() => {
+                const headers = ['Jogador', 'ID', 'Agente', 'Subclube', 'P/L', 'Rake', 'RB%', 'RB Valor', 'Resultado'];
+                const csvRows = sorted.map((p) => [p.nickname, p.external_player_id, p.agent_name, p.subclub, p.winnings, p.rake, p.rbRate, p.rbValue, p.resultado]);
+                exportCsv('visao_geral', headers, csvRows);
+              }}
+              className="btn-ghost text-xs flex items-center gap-1.5 shrink-0"
+            >
+              <Download size={14} /><span className="hidden sm:inline">CSV</span>
+            </button>
             <span className="text-xs text-dark-500 ml-auto">
               {sorted.length} jogadores
               {totalPages > 1 && ` — Pag. ${page + 1}/${totalPages}`}
@@ -329,15 +319,14 @@ export default function OverviewPage() {
 
           {/* Table */}
           {allPlayers.length === 0 ? (
-            <div className="card text-center py-16">
-              <h3 className="text-xl font-bold text-white mb-2">Nenhum jogador</h3>
-              <p className="text-dark-400 text-sm">Selecione uma semana com dados importados</p>
+            <div className="card">
+              <EmptyState icon={Users} title="Nenhum jogador" description="Selecione uma semana com dados importados" />
             </div>
           ) : (
             <>
               <div className="card overflow-hidden p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" aria-label="Visao geral dos jogadores">
+                <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                  <table className="w-full text-sm data-table" aria-label="Visao geral dos jogadores">
                     <thead>
                       <tr className="bg-dark-800/50">
                         <th
@@ -401,13 +390,12 @@ export default function OverviewPage() {
                       {paginated.map((p, i) => (
                         <tr
                           key={`${p.external_player_id}-${p.subclub}-${i}`}
-                          className="hover:bg-dark-800/20 transition-colors"
                         >
-                          <td className="px-4 py-2 text-white font-medium text-sm">{p.nickname}</td>
+                          <td className="px-4 py-2 text-white font-medium text-sm"><Highlight text={p.nickname} query={search} /></td>
                           <td className="px-3 py-2 text-dark-500 text-[10px] font-mono">
                             {p.external_player_id || '—'}
                           </td>
-                          <td className="px-3 py-2 text-dark-300 text-xs">{p.agent_name}</td>
+                          <td className="px-3 py-2 text-dark-300 text-xs"><Highlight text={p.agent_name} query={search} /></td>
                           <td className="px-3 py-2">
                             <span className="text-xs bg-dark-700/50 text-dark-300 px-2 py-0.5 rounded">
                               {p.subclub}
@@ -428,24 +416,26 @@ export default function OverviewPage() {
                           </td>
                         </tr>
                       ))}
-                      {/* Totals footer */}
-                      {sorted.length > 0 && (
-                        <tr className="bg-dark-800/50 font-semibold border-t-2 border-dark-600">
+                    </tbody>
+                    {/* Totals footer */}
+                    {sorted.length > 0 && (
+                      <tfoot className="sticky bottom-0 z-10">
+                        <tr className="bg-dark-900/95 backdrop-blur-sm font-semibold border-t-2 border-dark-600">
                           <td className="px-4 py-3 text-white" colSpan={4}>
                             TOTAL ({sorted.length} jogadores)
                           </td>
-                          <td className={`px-3 py-3 text-right font-mono ${clr(kpis.totalWinnings)}`}>
-                            {formatBRL(kpis.totalWinnings)}
+                          <td className={`px-3 py-3 text-right font-mono ${clr(round2(sorted.reduce((s, p) => s + p.winnings, 0)))}`}>
+                            {formatBRL(round2(sorted.reduce((s, p) => s + p.winnings, 0)))}
                           </td>
-                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(kpis.totalRake)}</td>
+                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(round2(sorted.reduce((s, p) => s + p.rake, 0)))}</td>
                           <td className="px-3 py-3 text-right text-dark-400 text-xs">—</td>
-                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(kpis.totalRB)}</td>
-                          <td className={`px-3 py-3 text-right font-mono font-bold ${clr(kpis.totalResult)}`}>
-                            {formatBRL(kpis.totalResult)}
+                          <td className="px-3 py-3 text-right font-mono text-dark-200">{formatBRL(round2(sorted.reduce((s, p) => s + p.rbValue, 0)))}</td>
+                          <td className={`px-3 py-3 text-right font-mono font-bold ${clr(round2(sorted.reduce((s, p) => s + p.resultado, 0)))}`}>
+                            {formatBRL(round2(sorted.reduce((s, p) => s + p.resultado, 0)))}
                           </td>
                         </tr>
-                      )}
-                    </tbody>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               </div>

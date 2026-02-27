@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import type { ClubeData } from '@/types/dashboard';
 import { formatCurrency } from '@/lib/formatters';
 import ClubLogo from '@/components/ClubLogo';
 
 interface ClubCardProps {
   clube: ClubeData;
+  settlementId?: string;
   enabled?: boolean;
   onToggle?: () => void;
 }
@@ -16,7 +18,7 @@ function getBadge(acertoLiga: number): { label: string; cls: string } {
   return { label: 'QUITADO', cls: 'bg-dark-800 text-dark-400 border-dark-700' };
 }
 
-export default function ClubCard({ clube, enabled = true, onToggle }: ClubCardProps) {
+export default function ClubCard({ clube, settlementId, enabled = true, onToggle }: ClubCardProps) {
   const resultColor = clube.resultado >= 0 ? 'text-poker-500' : 'text-red-400';
   const acertoColor = clube.acertoLiga >= 0 ? 'text-poker-500' : 'text-red-400';
 
@@ -73,9 +75,19 @@ export default function ClubCard({ clube, enabled = true, onToggle }: ClubCardPr
       </div>
 
       {/* Button */}
-      <button className="mt-auto w-full border border-dark-700 bg-transparent hover:bg-dark-800 text-dark-400 hover:text-dark-100 text-xs font-semibold py-1.5 rounded-lg transition-colors">
-        Abrir Fechamento →
-      </button>
+      {settlementId && clube.subclubId ? (
+        <Link
+          href={`/s/${settlementId}/club/${clube.subclubId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-auto w-full border border-dark-700 bg-transparent hover:bg-dark-800 text-dark-400 hover:text-dark-100 text-xs font-semibold py-1.5 rounded-lg transition-colors text-center block"
+        >
+          Abrir Fechamento →
+        </Link>
+      ) : (
+        <button disabled className="mt-auto w-full border border-dark-700 bg-transparent text-dark-500 text-xs font-semibold py-1.5 rounded-lg cursor-not-allowed">
+          Abrir Fechamento →
+        </button>
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import KpiCard from '@/components/ui/KpiCard';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
 import ClubLogo from '@/components/ClubLogo';
+import EmptyState from '@/components/ui/EmptyState';
+import { AlertCircle } from 'lucide-react';
 
 export default function SettlementOverviewPage() {
   const params = useParams();
@@ -100,11 +102,8 @@ export default function SettlementOverviewPage() {
   if (error || !data) {
     return (
       <div className="p-8">
-        <div className="card text-center py-16">
-          <p className="text-red-400 mb-4">{error || 'Settlement nao encontrado'}</p>
-          <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">
-            Voltar ao Dashboard
-          </button>
+        <div className="card">
+          <EmptyState icon={AlertCircle} title={error || 'Settlement nao encontrado'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
       </div>
     );

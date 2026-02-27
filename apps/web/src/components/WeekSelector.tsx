@@ -32,24 +32,26 @@ export default function WeekSelector({
 
   const [startDate, setStartDate] = useState<string | null>(weekStart);
   const [endDate, setEndDate] = useState<string | null>(weekEnd);
-  const [searching, setSearching] = useState(false);
+  const [_searching, setSearching] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
-  // Auto-compute Data Final (Sunday) = Data Inicial (Monday) + 6 days
+  // Auto-compute Data Final (Sunday) = Data Inicial (Monday) + 6 days, then search
   function handleStartChange(date: string) {
     setStartDate(date);
     setNotFound(false);
     const d = new Date(date + 'T00:00:00');
     d.setDate(d.getDate() + 6);
-    setEndDate(d.toISOString().slice(0, 10));
+    const end = d.toISOString().slice(0, 10);
+    setEndDate(end);
+    // Auto-search immediately
+    doSearch(date, end);
   }
 
-  async function handleBuscar() {
-    if (!startDate) return;
+  async function doSearch(start: string, end?: string) {
     setSearching(true);
     setNotFound(false);
     try {
-      const res = await listSettlements(undefined, startDate, endDate || undefined);
+      const res = await listSettlements(undefined, start, end || undefined);
       if (res.success && res.data && res.data.length > 0) {
         const target = res.data[0];
         const suffix = pathname.replace(`/s/${currentSettlementId}`, '');
@@ -85,13 +87,6 @@ export default function WeekSelector({
         <div className="flex items-end gap-2">
           <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
           <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
-          <button
-            onClick={handleBuscar}
-            disabled={searching || !startDate}
-            className="btn-primary px-4 py-2 text-sm font-semibold h-[38px] disabled:opacity-50"
-          >
-            {searching ? '...' : 'Buscar'}
-          </button>
         </div>
 
         {/* Not found inline */}

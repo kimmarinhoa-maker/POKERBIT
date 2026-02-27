@@ -10,6 +10,7 @@ export interface DespesasData {
 }
 
 export interface ClubeData {
+  subclubId: string;
   nome: string;
   agentes: number;
   jogadores: number;

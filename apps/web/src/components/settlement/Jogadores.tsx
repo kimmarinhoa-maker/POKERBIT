@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { formatBRL, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
+import { useState, useMemo, useCallback } from 'react';
+import { formatBRL } from '@/lib/api';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
@@ -18,7 +18,6 @@ interface Props {
   clubId?: string;
   settlementId?: string;
   settlementStatus?: string;
-  onDataChange?: () => void;
 }
 
 interface AgentGroup {
@@ -48,34 +47,22 @@ function sumTotals(pls: PlayerMetric[]) {
   };
 }
 
-export default function Jogadores({ subclub, settlementId, settlementStatus, onDataChange }: Props) {
+export default function Jogadores({ subclub }: Props) {
   const { players, agents } = subclub;
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [viewTab, setViewTab] = useState<'agencias' | 'jogadores'>('agencias');
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
-  const syncedRef = useRef(false);
   const [paymentModal, setPaymentModal] = useState<{
     entityName: string;
     detalhe: PagamentoDetalhe[];
     total: number;
   } | null>(null);
 
-  // Auto-sync rates on mount (DRAFT only, once) — always reload after sync
-  useEffect(() => {
-    if (syncedRef.current || !settlementId || settlementStatus !== 'DRAFT') return;
-    syncedRef.current = true;
-    (async () => {
-      try {
-        await syncSettlementAgents(settlementId).catch(() => {});
-        await syncSettlementRates(settlementId).catch(() => null);
-        onDataChange?.();
-      } catch {
-        // non-critical
-      }
-    })();
-  }, [settlementId, settlementStatus, onDataChange]);
+  // NOTE: sync is handled by the parent (loadData) — no need to duplicate here.
+  // Previously this caused an infinite remount loop:
+  // sync → onDataChange → parent loading=true → skeleton unmounts Jogadores → remount → sync again
 
   // Build is_direct set from agent data (annotated by backend)
   const directAgents = useMemo(() => {

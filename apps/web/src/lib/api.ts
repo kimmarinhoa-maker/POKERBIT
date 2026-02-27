@@ -869,7 +869,10 @@ export async function removeUser(userTenantId: string): Promise<ApiResponse> {
   return apiFetch(`/users/${userTenantId}`, { method: 'DELETE' });
 }
 
-export async function inviteUser(email: string, role: string): Promise<ApiResponse<any>> {
+export async function inviteUser(
+  email: string,
+  role: string,
+): Promise<ApiResponse & { pending?: boolean; message?: string }> {
   return apiFetch('/users/invite', {
     method: 'POST',
     body: JSON.stringify({ email, role }),
@@ -886,6 +889,26 @@ export async function setUserOrgAccess(userTenantId: string, orgIds: string[]): 
   return apiFetch(`/users/${userTenantId}/org-access`, {
     method: 'PUT',
     body: JSON.stringify({ org_ids: orgIds }),
+  });
+}
+
+// ─── Permissions ──────────────────────────────────────────────────
+
+export async function getMyPermissions(): Promise<ApiResponse<Record<string, boolean>>> {
+  return apiFetch<Record<string, boolean>>('/permissions/my');
+}
+
+export async function getAllPermissions(): Promise<ApiResponse<Record<string, Record<string, boolean>>>> {
+  return apiFetch<Record<string, Record<string, boolean>>>('/permissions');
+}
+
+export async function updateRolePermissions(
+  role: string,
+  permissions: Record<string, boolean>,
+): Promise<ApiResponse> {
+  return apiFetch('/permissions', {
+    method: 'PUT',
+    body: JSON.stringify({ role, permissions }),
   });
 }
 

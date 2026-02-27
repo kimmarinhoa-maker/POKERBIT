@@ -35,7 +35,7 @@ export default function LaunchesTable({ rows, onEdit, savedIds }: LaunchesTableP
 
   return (
     <div className="card overflow-hidden p-0">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm data-table">
         <thead>
           <tr className="bg-dark-800/40 border-b border-dark-700">
             <th className="px-5 py-2.5 text-[11px] font-semibold text-dark-400 uppercase tracking-wider text-left">
@@ -68,7 +68,7 @@ export default function LaunchesTable({ rows, onEdit, savedIds }: LaunchesTableP
           {rows.map((row) => {
             const isSaved = savedIds.has(row.subclubId);
             return (
-              <tr key={row.subclubId} className="hover:bg-dark-800/20 transition-colors">
+              <tr key={row.subclubId}>
                 <td className="px-5 py-2">
                   <div className="flex items-center gap-2">
                     <ClubLogo name={row.subclubName} logoUrl={row.logoUrl} size="sm" />

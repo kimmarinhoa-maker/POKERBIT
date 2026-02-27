@@ -11,6 +11,7 @@ import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { BookOpen } from 'lucide-react';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
+import Highlight from '@/components/ui/Highlight';
 
 interface Props {
   weekStart: string;
@@ -105,7 +106,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
     setError(null);
     try {
       const res = await createLedgerEntry({
-        entity_id: `manual_${form.entity_name.trim().toLowerCase().replace(/\s+/g, '_')}`,
+        entity_id: `manual_${form.entity_name.trim().toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
         entity_name: form.entity_name.trim(),
         week_start: weekStart,
         dir: form.dir,
@@ -368,7 +369,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
                   {filteredEntries.map((e) => (
                     <tr key={e.id} className="hover:bg-dark-800/20 transition-colors">
                       <td className="px-4 py-2.5 text-dark-300 text-xs font-mono">{fmtDateTime(e.created_at!)}</td>
-                      <td className="px-3 py-2.5 text-white font-medium">{e.entity_name || '—'}</td>
+                      <td className="px-3 py-2.5 text-white font-medium"><Highlight text={e.entity_name || '—'} query={debouncedSearch} /></td>
                       <td className="px-3 py-2.5 text-center">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -395,7 +396,7 @@ export default function Extrato({ weekStart, settlementStatus, onDataChange }: P
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">
-                        {e.description || '—'}
+                        <Highlight text={e.description || '—'} query={debouncedSearch} />
                       </td>
                       {isDraft && canEdit && (
                         <td className="px-3 py-2.5 text-center">

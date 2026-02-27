@@ -143,17 +143,17 @@ export class ChipPixService {
     return result;
   }
 
-  // ─── Auto-match player ID against agent_week_metrics ─────────────
+  // ─── Auto-match player ID against player_week_metrics ─────────────
   private matchPlayerId(
     idJog: string,
-    players: Array<{ sup_id: string; player_nick: string; agent_id: string; agent_name: string }>,
+    players: Array<{ external_player_id: string; nickname: string; agent_id: string; agent_name: string }>,
   ): { entityId: string; entityName: string } | null {
     const cpId = idJog.trim();
     if (!cpId) return null;
 
-    // Tier 1: exact match on sup_id
+    // Tier 1: exact match on external_player_id
     let match = players.find((p) => {
-      const sid = String(p.sup_id || '').trim();
+      const sid = String(p.external_player_id || '').trim();
       return sid && sid === cpId;
     });
 
@@ -163,7 +163,7 @@ export class ChipPixService {
       if (numMatch && numMatch[1].length >= 4) {
         const numPart = numMatch[1];
         match = players.find((p) => {
-          const sid = String(p.sup_id || '').trim();
+          const sid = String(p.external_player_id || '').trim();
           return sid && sid === numPart;
         });
       }
@@ -172,7 +172,7 @@ export class ChipPixService {
     // Tier 3: substring match (both directions, min 5 chars)
     if (!match && cpId.length >= 5) {
       match = players.find((p) => {
-        const sid = String(p.sup_id || '').trim();
+        const sid = String(p.external_player_id || '').trim();
         return sid.length >= 5 && (sid.includes(cpId) || cpId.includes(sid));
       });
     }
@@ -180,8 +180,8 @@ export class ChipPixService {
     if (!match) return null;
 
     return {
-      entityId: match.agent_id || match.sup_id,
-      entityName: match.player_nick || match.agent_name || cpId,
+      entityId: match.agent_id || match.external_player_id,
+      entityName: match.nickname || match.agent_name || cpId,
     };
   }
 
@@ -193,19 +193,19 @@ export class ChipPixService {
       return { imported: 0, skipped: 0, matched: 0, total_players: 0, transactions: [] };
     }
 
-    // Fetch players for auto-matching (from agent_week_metrics for this week)
-    let players: Array<{ sup_id: string; player_nick: string; agent_id: string; agent_name: string }> = [];
+    // Fetch players for auto-matching (from player_week_metrics for this week)
+    let players: Array<{ external_player_id: string; nickname: string; agent_id: string; agent_name: string }> = [];
     if (weekStart) {
       let query = supabaseAdmin
-        .from('agent_week_metrics')
-        .select('sup_id, player_nick, agent_id, agent_name')
+        .from('player_week_metrics')
+        .select('external_player_id, nickname, agent_id, agent_name')
         .eq('tenant_id', tenantId)
         .eq('week_start', weekStart);
 
       if (clubId) query = query.eq('club_id', clubId);
 
       const { data } = await query;
-      players = (data || []).filter((p) => p.sup_id);
+      players = (data || []).filter((p) => p.external_player_id);
     }
 
     // Check existing external_refs to avoid duplicates

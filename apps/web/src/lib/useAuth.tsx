@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredAuth, clearAuth, refreshAuthToken } from '@/lib/api';
+import { getStoredAuth, clearAuth, refreshAuthToken, getMyPermissions } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { getDefaultPermissionsForRole, ALL_RESOURCES } from '@/lib/defaultPermissions';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -21,9 +22,11 @@ interface AuthContextValue {
   canWrite: boolean;
   isScoped: boolean;
   allowedSubclubs: string[] | null; // null = all access
+  permissions: Record<string, boolean> | null;
   loading: boolean;
   canAccess: (...roles: string[]) => boolean;
   canEditSubclub: (subclubId: string) => boolean;
+  hasPermission: (resource: string) => boolean;
   logout: () => void;
 }
 
@@ -36,9 +39,11 @@ const AuthContext = createContext<AuthContextValue>({
   canWrite: false,
   isScoped: false,
   allowedSubclubs: null,
+  permissions: null,
   loading: true,
   canAccess: () => false,
   canEditSubclub: () => false,
+  hasPermission: () => false,
   logout: () => {},
 });
 
@@ -59,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [allowedSubclubs, setAllowedSubclubs] = useState<string[] | null>(null);
+  const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,6 +147,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // allowed_subclubs: array of subclub IDs or null/undefined for full access
     const subclubs = tenant?.allowed_subclubs;
     setAllowedSubclubs(Array.isArray(subclubs) && subclubs.length > 0 ? subclubs.map((s: any) => typeof s === 'string' ? s : s?.id) : null);
+
+    // Load permissions (non-blocking — use defaults as fallback)
+    const userRole = tenant?.role || 'FINANCEIRO';
+    if (userRole === 'OWNER') {
+      // OWNER always has full access — set all true locally
+      const allTrue: Record<string, boolean> = {};
+      for (const r of ALL_RESOURCES) allTrue[r] = true;
+      setPermissions(allTrue);
+    } else {
+      // Fetch from API, fallback to defaults
+      getMyPermissions()
+        .then((res) => {
+          if (res.success && res.data) {
+            setPermissions(res.data);
+          } else {
+            setPermissions(getDefaultPermissionsForRole(userRole));
+          }
+        })
+        .catch(() => {
+          setPermissions(getDefaultPermissionsForRole(userRole));
+        });
+    }
+
     setLoading(false);
 
     // Start proactive refresh cycle
@@ -202,6 +231,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [isAdmin, allowedSubclubs],
   );
 
+  // Use a ref to keep hasPermission identity stable across permission loads.
+  // This prevents child components from re-rendering/resetting when permissions
+  // load async (null -> object), since the ref always points to latest data.
+  const permissionsRef = useRef(permissions);
+  const roleRef = useRef(role);
+  permissionsRef.current = permissions;
+  roleRef.current = role;
+
+  const hasPermission = useCallback(
+    (resource: string): boolean => {
+      if (roleRef.current === 'OWNER') return true;
+      if (permissionsRef.current) return permissionsRef.current[resource] ?? false;
+      return getDefaultPermissionsForRole(roleRef.current)[resource] ?? false;
+    },
+    [], // stable identity — reads from refs
+  );
+
   const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
@@ -220,9 +266,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canWrite,
         isScoped,
         allowedSubclubs,
+        permissions,
         loading,
         canAccess,
         canEditSubclub,
+        hasPermission,
         logout,
       }}
     >

@@ -155,7 +155,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
         </div>
 
         <div className="space-y-3">
-          {fields.map(({ key, label, sublabel, icon }) => (
+          {fields.map(({ key, label, sublabel, icon: _icon }) => (
             <div
               key={key}
               className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors ${

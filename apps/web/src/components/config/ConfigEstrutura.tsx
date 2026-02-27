@@ -104,7 +104,7 @@ export default function ConfigEstrutura() {
 
   // Derived
   const club = tree[0] || null;
-  const subclubes = club?.subclubes || [];
+  const subclubes = useMemo(() => club?.subclubes || [], [club?.subclubes]);
 
   // ── Subclub handlers ────────────────────────────────────────────
 
@@ -483,7 +483,7 @@ export default function ConfigEstrutura() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm data-table">
                   <thead>
                     <tr className="border-b border-dark-700/40">
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium w-16">Logo</th>
@@ -676,7 +676,7 @@ export default function ConfigEstrutura() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm data-table">
                   <thead>
                     <tr className="border-b border-dark-700/40">
                       <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">Prefixo</th>
@@ -766,7 +766,7 @@ export default function ConfigEstrutura() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm data-table">
                   <thead>
                     <tr className="text-xs text-dark-500 uppercase tracking-widest border-b border-dark-700">
                       <th className="text-left px-4 py-3">Nome</th>

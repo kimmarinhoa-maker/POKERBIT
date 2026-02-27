@@ -4,6 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { getOrgTree } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
+import KpiCard from '@/components/ui/KpiCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { Building2 } from 'lucide-react';
 
 export default function ClubsPage() {
   const [tree, setTree] = useState<any[]>([]);
@@ -13,6 +16,7 @@ export default function ClubsPage() {
 
   useEffect(() => {
     loadTree();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadTree() {
@@ -70,25 +74,15 @@ export default function ClubsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-poker-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Clubes</p>
-          <p className="font-mono text-lg font-bold text-poker-400">{kpis.clubs}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-blue-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Subclubes</p>
-          <p className="font-mono text-lg font-bold text-blue-400">{kpis.subclubes}</p>
-        </div>
-        <div className="bg-dark-800/50 border border-dark-700/50 border-t-2 border-t-amber-500 rounded-lg p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-dark-400 mb-1">Agentes</p>
-          <p className="font-mono text-lg font-bold text-amber-400">{kpis.agents}</p>
-        </div>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <KpiCard label="Clubes" value={kpis.clubs} accentColor="bg-poker-500" valueColor="text-poker-400" />
+        <KpiCard label="Subclubes" value={kpis.subclubes} accentColor="bg-blue-500" valueColor="text-blue-400" />
+        <KpiCard label="Agentes" value={kpis.agents} accentColor="bg-amber-500" valueColor="text-amber-400" />
       </div>
 
       {tree.length === 0 ? (
-        <div className="card text-center py-16">
-          <h3 className="text-xl font-bold text-white mb-2">Nenhum clube</h3>
-          <p className="text-dark-400 text-sm">Configure a estrutura em Configuracoes → Estrutura</p>
+        <div className="card">
+          <EmptyState icon={Building2} title="Nenhum clube" description="Configure a estrutura em Configuracoes > Estrutura" />
         </div>
       ) : (
         <div className="space-y-6">

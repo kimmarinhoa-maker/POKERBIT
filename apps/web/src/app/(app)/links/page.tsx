@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUnlinkedPlayers, linkAgent, linkPlayer, bulkLinkPlayers, formatBRL } from '@/lib/api';
+import { getUnlinkedPlayers, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { PreviewData, PreviewPlayer, getClubStyle, getClubIcon } from '@/types/import';
+import { PreviewData, getClubStyle, getClubIcon } from '@/types/import';
 import { formatBRL, formatDate } from '@/lib/api';
 
 interface PreviewStepProps {
@@ -37,7 +37,7 @@ export default function PreviewStep({ preview, onNext, onBack }: PreviewStepProp
   // Diff details toggle
   const [diffOpen, setDiffOpen] = useState(true);
 
-  const players = preview.players || [];
+  const players = useMemo(() => preview.players || [], [preview.players]);
 
   const filteredPlayers = useMemo(() => {
     const q = playerSearch.toLowerCase().trim();
@@ -198,7 +198,7 @@ export default function PreviewStep({ preview, onNext, onBack }: PreviewStepProp
                 <div className="mt-3">
                   {/* Comparison table — all rows, diffs highlighted */}
                   <div className="overflow-x-auto mb-3">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm data-table">
                       <thead>
                         <tr className="text-dark-400 text-left border-b border-dark-600/50">
                           <th className="pb-2 pr-4">Campo</th>

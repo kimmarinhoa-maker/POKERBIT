@@ -69,7 +69,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
 
       {/* Table */}
       <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
           <table className="w-full text-sm data-table">
             <thead className="sticky top-0 z-10">
               <tr className="bg-dark-800/80 backdrop-blur-sm">
@@ -150,9 +150,10 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
                   </tr>
                 );
               })}
-
-              {/* Total row */}
-              <tr className="bg-dark-900 border-t-2 border-dark-700">
+            </tbody>
+            {/* Total row (sticky bottom) */}
+            <tfoot className="sticky bottom-0 z-10">
+              <tr className="bg-dark-900/95 backdrop-blur-sm border-t-2 border-dark-700">
                 <td className="px-5 py-3 font-extrabold text-xs text-amber-400">TOTAL</td>
                 <td
                   className={`px-3 py-3 text-right font-mono ${
@@ -182,7 +183,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {} }: Pro
                 </td>
                 <td className="px-5 py-3" />
               </tr>
-            </tbody>
+            </tfoot>
           </table>
         </div>
       </div>

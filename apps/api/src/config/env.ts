@@ -4,10 +4,14 @@
 
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { z } from 'zod';
 
-// Carrega .env da raiz do projeto
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+// Carrega .env apenas em dev (em produção Railway/Render injetam env vars direto)
+const envPath = path.resolve(__dirname, '../../../../.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 const envSchema = z.object({
   // Supabase
@@ -15,7 +19,8 @@ const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),
 
-  // API
+  // API — Railway usa PORT, local usa API_PORT
+  PORT: z.string().optional(),
   API_PORT: z.string().default('3001').transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
