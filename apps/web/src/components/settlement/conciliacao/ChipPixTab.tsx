@@ -53,6 +53,7 @@ export default function ChipPixTab({
   const [autoLinking, setAutoLinking] = useState(false);
   const [filter, setFilter] = useState<ChipPixFilter>('all');
   const [search, setSearch] = useState('');
+  const [tableOpen, setTableOpen] = useState(true);
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
@@ -156,17 +157,31 @@ export default function ChipPixTab({
     };
   }, [txns]);
 
-  // Extrato stats for verificador (derived from parsed memo data)
-  const extratoStats = useMemo<VerificadorStats>(
-    () => ({
-      jogadores: txns.filter((t) => t.status !== 'ignored').length,
-      entradas: kpis.totalEntrada,
-      saidas: kpis.totalSaida,
-      impacto: kpis.impacto,
-      taxas: kpis.totalTaxas,
-    }),
-    [txns, kpis],
-  );
+  // Extrato stats for verificador (derived from dir/amount — matches ledger logic)
+  const extratoStats = useMemo<VerificadorStats>(() => {
+    const nonIgnored = txns.filter((t) => t.status !== 'ignored');
+    const playerIds = new Set<string>();
+    let entradas = 0;
+    let saidas = 0;
+    let taxas = 0;
+    for (const tx of nonIgnored) {
+      const src = (tx as any).source;
+      if (src === 'chippix_fee') {
+        taxas += Number(tx.amount);
+        continue;
+      }
+      if (tx.entity_id) playerIds.add(tx.entity_id);
+      if (tx.dir === 'IN') entradas += Number(tx.amount);
+      else saidas += Number(tx.amount);
+    }
+    return {
+      jogadores: playerIds.size || nonIgnored.length,
+      entradas: Math.round(entradas * 100) / 100,
+      saidas: Math.round(saidas * 100) / 100,
+      impacto: Math.round((entradas - saidas) * 100) / 100,
+      taxas: Math.round(taxas * 100) / 100,
+    };
+  }, [txns]);
 
   // Filter + search
   const filtered = useMemo(() => {
@@ -306,6 +321,18 @@ export default function ChipPixTab({
     loadTxns();
   }
 
+  // Totals for filtered rows
+  const filteredTotals = useMemo(() => {
+    let entrada = 0;
+    let saida = 0;
+    for (const tx of filtered) {
+      const p = parseMemo(tx.memo);
+      entrada += p.entrada;
+      saida += p.saida;
+    }
+    return { entrada, saida, impacto: entrada - saida };
+  }, [filtered]);
+
   const filterBtns: { key: ChipPixFilter; label: string; count: number }[] = [
     { key: 'all', label: 'Todos', count: txns.length },
     { key: 'linked', label: 'Vinculados', count: kpis.linked },
@@ -362,7 +389,7 @@ export default function ChipPixTab({
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
           <div className="h-0.5 bg-blue-500" />
           <div className="p-4">
@@ -391,6 +418,13 @@ export default function ChipPixTab({
             <p className={`text-xl font-bold mt-2 font-mono ${kpis.impacto >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatBRL(kpis.impacto)}
             </p>
+          </div>
+        </div>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
+          <div className="h-0.5 bg-amber-500" />
+          <div className="p-4">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Taxas ChipPix</p>
+            <p className="text-xl font-bold mt-2 font-mono text-amber-400">{formatBRL(kpis.totalTaxas)}</p>
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden ring-1 ring-yellow-700/30 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default">
@@ -456,7 +490,14 @@ export default function ChipPixTab({
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-dark-800/80 backdrop-blur-sm">
                     <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
-                      ID / Nome
+                      <button
+                        onClick={() => setTableOpen(!tableOpen)}
+                        className="flex items-center gap-1.5 hover:text-dark-200 transition-colors"
+                      >
+                        <span className={`text-[10px] transition-transform duration-200 ${tableOpen ? 'rotate-90' : ''}`}>▶</span>
+                        ID / Nome
+                        <span className="text-dark-600 font-normal">({filtered.length})</span>
+                      </button>
                     </th>
                     <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider whitespace-nowrap">
                       Entrada
@@ -472,6 +513,7 @@ export default function ChipPixTab({
                     </th>
                   </tr>
                 </thead>
+                {tableOpen && (
                 <tbody className="divide-y divide-dark-800/30">
                   {filtered.map((tx) => {
                     const parsed = parseMemo(tx.memo);
@@ -590,6 +632,24 @@ export default function ChipPixTab({
                     );
                   })}
                 </tbody>
+                )}
+                <tfoot className="bg-dark-800/60 border-t border-dark-700">
+                  <tr>
+                    <td className="px-3 py-2.5 text-left font-bold text-[11px] text-white">
+                      TOTAL <span className="text-dark-500 font-normal">({filtered.length} jogadores)</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-emerald-400">
+                      {filteredTotals.entrada > 0 ? `+${formatBRL(filteredTotals.entrada)}` : '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-red-400">
+                      {filteredTotals.saida > 0 ? `-${formatBRL(filteredTotals.saida)}` : '—'}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right font-mono font-bold ${filteredTotals.impacto >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatBRL(filteredTotals.impacto)}
+                    </td>
+                    <td className="px-3 py-2.5" />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
