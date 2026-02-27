@@ -23,7 +23,6 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  Search,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -172,23 +171,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               <p className="text-xs text-dark-400">{tenantName || 'SaaS'}</p>
             </div>
           </Link>
-        </div>
-
-        {/* Quick search hint */}
-        <div className={`px-3 pt-3 ${collapsed ? 'lg:px-2' : ''}`}>
-          <button
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-            className={`w-full flex items-center gap-2 bg-dark-800/50 border border-dark-700/50 rounded-lg text-dark-400 hover:text-dark-200 hover:border-dark-600 transition-colors ${
-              collapsed ? 'lg:justify-center lg:px-2 lg:py-2 px-3 py-2' : 'px-3 py-2'
-            }`}
-            title="Busca rapida (Ctrl+K)"
-          >
-            <Search size={14} className="shrink-0" />
-            <span className={`text-xs ${collapsed ? 'lg:hidden' : ''}`}>Buscar...</span>
-            <kbd className={`ml-auto text-[10px] text-dark-500 bg-dark-900 border border-dark-700 px-1.5 py-0.5 rounded font-mono ${collapsed ? 'lg:hidden' : ''}`}>
-              Ctrl+K
-            </kbd>
-          </button>
         </div>
 
         {/* Navigation */}
