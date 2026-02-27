@@ -219,7 +219,7 @@ async function _apiFetchOnce<T = any>(
   let res: Response;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
     res = await fetch(`${base}${path}`, {
       ...options,
       headers,
@@ -228,9 +228,9 @@ async function _apiFetchOnce<T = any>(
     clearTimeout(timeout);
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      return { success: false, error: 'Timeout: o servidor demorou mais de 30s para responder.' };
+      return { success: false, error: 'Timeout: o servidor demorou mais de 15s para responder.' };
     }
-    return { success: false, error: 'Servidor indisponivel. Verifique se o backend esta rodando (porta 3001).' };
+    return { success: false, error: 'Servidor indisponivel. Tente novamente em alguns segundos.' };
   }
 
   // Return sentinel so caller can attempt refresh + retry
@@ -364,6 +364,14 @@ export async function getSettlement(id: string) {
 // Settlement FULL — com breakdown por subclube, fees, adjustments, acertoLiga
 export async function getSettlementFull(id: string) {
   return apiFetch(`/settlements/${id}/full`);
+}
+
+// Dashboard batch — lightweight totals for multiple settlements (charts)
+export async function getSettlementBatchSummary(ids: string[]) {
+  return apiFetch<any[]>('/settlements/batch-summary', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
 }
 
 export async function finalizeSettlement(id: string) {

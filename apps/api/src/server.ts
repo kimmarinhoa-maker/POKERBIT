@@ -38,14 +38,27 @@ app.use(compression());
 // Security headers
 app.use(helmet());
 
-// CORS: read ALLOWED_ORIGINS from env, fallback to pokermanager.com.br in production
+// CORS: read ALLOWED_ORIGINS from env, fallback to pokermanager + railway in production
 const allowedOrigins = env.ALLOWED_ORIGINS
   ? env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-  : ['https://pokermanager.com.br', 'https://www.pokermanager.com.br'];
+  : [
+      'https://pokermanager.com.br',
+      'https://www.pokermanager.com.br',
+      'https://poker-manager-web-production.up.railway.app',
+    ];
 
 app.use(
   cors({
-    origin: env.NODE_ENV === 'production' ? allowedOrigins : '*',
+    origin: env.NODE_ENV === 'production'
+      ? (origin, cb) => {
+          // Allow requests with no origin (mobile apps, curl, server-to-server)
+          if (!origin) return cb(null, true);
+          if (allowedOrigins.includes(origin) || origin.endsWith('.up.railway.app')) {
+            return cb(null, true);
+          }
+          cb(new Error('CORS not allowed'));
+        }
+      : '*',
     credentials: true,
   }),
 );

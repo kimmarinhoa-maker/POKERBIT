@@ -58,6 +58,26 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
   }
 });
 
+// ─── POST /api/settlements/batch-summary — Dashboard batch (lightweight) ──
+// Returns only dashboardTotals for multiple settlements. Used by dashboard
+// charts to avoid 12× individual /full calls.
+router.post('/batch-summary', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > 20) {
+      res.status(400).json({ success: false, error: 'ids deve ser um array de 1-20 UUIDs' });
+      return;
+    }
+
+    const data = await settlementService.getDashboardBatch(tenantId, ids);
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
 // ─── GET /api/settlements/:id — Detalhe básico (compatibilidade) ────
 router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {

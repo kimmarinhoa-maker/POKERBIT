@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { formatCurrency, round2 } from '@/lib/formatters';
-import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
+import { listSettlements, getSettlementFull, getSettlementBatchSummary, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
 import dynamic from 'next/dynamic';
 import ClubCard from '@/components/dashboard/ClubCard';
@@ -176,12 +176,37 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Initial load: fetch latest 2 settlements + org tree for logos
+  // Convert batch summary item to WeekData (lightweight — no per-club breakdown)
+  const batchItemToWeekData = useCallback((item: any): WeekData => {
+    const dt = item.dashboardTotals || {};
+    return {
+      settlement: item.settlement,
+      subclubs: [],
+      jogadoresAtivos: Number(dt.players ?? 0),
+      rakeTotal: Number(dt.rake ?? 0),
+      ganhosTotal: Number(dt.ganhos ?? 0),
+      ggrTotal: Number(dt.ggr ?? 0),
+      despesas: {
+        taxas: Number(dt.totalTaxas ?? 0),
+        rakeback: Number(dt.rbTotal ?? 0),
+        lancamentos: Number(dt.totalLancamentos ?? 0),
+        total: round2(Number(dt.totalTaxas ?? 0) + Math.abs(Number(dt.totalLancamentos ?? 0))),
+        overlay: 0, compras: 0, security: 0, outros: 0,
+      },
+      resultadoFinal: Number(dt.resultado ?? 0),
+      acertoLiga: Number(dt.acertoLiga ?? 0),
+      totalTaxasSigned: Number(dt.totalTaxasSigned ?? 0),
+      totalLancamentos: Number(dt.totalLancamentos ?? 0),
+      clubes: [],
+    };
+  }, []);
+
+  // Initial load: fetch current week (full) + org tree + batch summaries for charts
   useEffect(() => {
     async function init() {
       setLoading(true);
       try {
-        // Load org tree in parallel to build logo map
+        // Load org tree + settlement list in parallel
         const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
         if (treeRes.success && treeRes.data) {
           const map: Record<string, string | null> = {};
@@ -200,17 +225,12 @@ export default function DashboardPage() {
 
         setAllSettlements(res.data);
         const latest = res.data[0];
-        const prev = res.data.length > 1 ? res.data[1] : null;
 
-        // Load current + previous in parallel first (fast render)
-        const [currentData, prevData] = await Promise.all([
-          loadWeekData(latest),
-          prev ? loadWeekData(prev) : Promise.resolve(null),
-        ]);
+        // Only the CURRENT week needs full data (subclub breakdown for cards)
+        const currentData = await loadWeekData(latest);
 
         if (currentData) {
           setCurrentWeek(currentData);
-          setPreviousWeek(prevData);
           // Pre-fill date pickers with current settlement dates
           const ws = currentData.settlement.week_start;
           setStartDate(ws);
@@ -218,21 +238,27 @@ export default function DashboardPage() {
           dtEnd.setDate(dtEnd.getDate() + 6);
           setEndDate(dtEnd.toISOString().slice(0, 10));
 
-          // Load remaining settlements for charts (max 12 total, background)
+          // Previous week (for comparison) + chart data: use batch endpoint (1 call instead of 11)
           const chartSettlements = res.data.slice(0, 12);
-          const already = [currentData, prevData].filter(Boolean) as WeekData[];
-          const alreadyIds = new Set(already.map((w) => w.settlement.id));
-          const remaining = chartSettlements.filter((s: any) => !alreadyIds.has(s.id));
+          const otherIds = chartSettlements.filter((s: any) => s.id !== latest.id).map((s: any) => s.id);
 
-          if (remaining.length > 0) {
-            Promise.all(remaining.map((s: any) => loadWeekData(s))).then((results) => {
-              const all = [...already, ...(results.filter(Boolean) as WeekData[])];
-              all.sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
-              setAllWeekData(all);
+          if (otherIds.length > 0) {
+            getSettlementBatchSummary(otherIds).then((batchRes) => {
+              if (batchRes.success && batchRes.data) {
+                const batchWeeks = batchRes.data.map(batchItemToWeekData);
+                // Set previous week if available
+                if (batchWeeks.length > 0) {
+                  setPreviousWeek(batchWeeks[batchWeeks.length - 1]); // most recent = last sorted
+                }
+                const all = [currentData, ...batchWeeks];
+                all.sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
+                setAllWeekData(all);
+              } else {
+                setAllWeekData([currentData]);
+              }
             });
           } else {
-            const sorted = [...already].sort((a, b) => a.settlement.week_start.localeCompare(b.settlement.week_start));
-            setAllWeekData(sorted);
+            setAllWeekData([currentData]);
           }
         } else {
           setNotFoundEmpty(true);
@@ -245,7 +271,7 @@ export default function DashboardPage() {
       }
     }
     init();
-  }, [loadWeekData, toast]);
+  }, [loadWeekData, batchItemToWeekData, toast]);
 
   // Week selector handlers — auto-search on date change
   function handleStartChange(date: string) {
