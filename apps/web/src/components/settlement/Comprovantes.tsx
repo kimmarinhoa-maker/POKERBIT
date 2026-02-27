@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry } from '@/lib/api';
+import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useToast } from '@/components/Toast';
 import { useSortable } from '@/lib/useSortable';
@@ -97,6 +97,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
   const [payForm, setPayForm] = useState({ amount: '', method: 'PIX', description: '', dir: 'OUT' as 'IN' | 'OUT' });
   const [payPendente, setPayPendente] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [deletingEntry, setDeletingEntry] = useState<string | null>(null);
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
@@ -159,6 +160,24 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
       toast('Erro ao registrar pagamento', 'error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteEntry(entryId: string) {
+    setDeletingEntry(entryId);
+    try {
+      const res = await deleteLedgerEntry(entryId);
+      if (res.success) {
+        loadEntries();
+        if (onDataChange) onDataChange();
+        toast('Movimentacao removida', 'success');
+      } else {
+        toast(res.error || 'Erro ao remover', 'error');
+      }
+    } catch {
+      toast('Erro ao remover movimentacao', 'error');
+    } finally {
+      setDeletingEntry(null);
     }
   }
 
@@ -588,6 +607,8 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                   onPreview={() => setSelectedAgent(d)}
                   isDraft={isDraft}
                   onOpenPay={() => openQuickPay(d.agent, d.pendente)}
+                  onDeleteEntry={handleDeleteEntry}
+                  deletingEntry={deletingEntry}
                 />
               ))}
             </tbody>
@@ -853,6 +874,8 @@ function AgentRow({
   onPreview,
   isDraft,
   onOpenPay,
+  onDeleteEntry,
+  deletingEntry,
 }: {
   data: AgentFinancials;
   isExpanded: boolean;
@@ -860,6 +883,8 @@ function AgentRow({
   onPreview: () => void;
   isDraft: boolean;
   onOpenPay: () => void;
+  onDeleteEntry: (id: string) => void;
+  deletingEntry: string | null;
 }) {
   const { agent, players, ganhos, rbAgente, saldoAnterior, pago, pendente } = data;
   const isDirect = agent.is_direct;
@@ -993,15 +1018,44 @@ function AgentRow({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-dark-300">Pagamentos</span>
-                          {data.entries.length > 0 && (
-                            <span className="text-[10px] text-dark-500">
-                              {data.entries.map(e => e.method).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || ''}
-                            </span>
-                          )}
+                          <span className="text-[10px] text-dark-500">({data.entries.length})</span>
                         </div>
                         <span className="font-mono font-bold text-sky-400">{formatBRL(data.pago)}</span>
                       </div>
-                      <div className="border-t-2 border-dark-600/50 pt-1">
+                      {/* Individual entries */}
+                      {data.entries.length > 0 && (
+                        <div className="ml-2 mt-1 space-y-0.5">
+                          {data.entries.map((e) => (
+                            <div key={e.id} className="flex items-center justify-between text-[11px] group">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`font-mono ${e.dir === 'IN' ? 'text-green-500' : 'text-red-400'}`}>
+                                  {e.dir === 'IN' ? '↓' : '↑'}
+                                </span>
+                                <span className="font-mono text-dark-300">{formatBRL(e.amount)}</span>
+                                {e.method && (
+                                  <span className="px-1.5 py-0 rounded text-[9px] font-bold bg-dark-700 text-dark-400">
+                                    {e.method}
+                                  </span>
+                                )}
+                                {e.description && (
+                                  <span className="text-dark-500 truncate max-w-[120px]">{e.description}</span>
+                                )}
+                              </div>
+                              {isDraft && (
+                                <button
+                                  onClick={() => onDeleteEntry(e.id)}
+                                  disabled={deletingEntry === e.id}
+                                  className="text-dark-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] ml-2 shrink-0"
+                                  title="Remover"
+                                >
+                                  {deletingEntry === e.id ? '...' : '✕'}
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t-2 border-dark-600/50 pt-1 mt-1">
                         <FinRow label="Saldo Final" value={data.pendente} bold large />
                       </div>
                     </>
