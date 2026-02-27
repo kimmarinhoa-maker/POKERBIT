@@ -13,11 +13,13 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { importService } from '../services/import.service';
 import { importPreviewService } from '../services/importPreview.service';
 import { importConfirmService, ConfirmError } from '../services/importConfirm.service';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -41,7 +43,7 @@ const upload = multer({
 // Retorna: preview com summary, blockers, distribuição por subclube
 // NÃO escreve nada no banco.
 
-router.post('/preview', requireAuth, requireTenant, upload.single('file'), async (req: Request, res: Response) => {
+router.post('/preview', requireAuth, requireTenant, requirePermission('page:import'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       res.status(400).json({ success: false, error: 'Arquivo XLSX obrigatório' });
@@ -96,6 +98,7 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
+  requirePermission('page:import'),
   upload.single('file'),
   async (req: Request, res: Response) => {
     try {
@@ -139,6 +142,7 @@ router.post(
         uploadedBy: req.userId!,
       });
 
+      logAudit(req, 'CREATE', 'settlement', result.settlement_id || '', undefined, { club_id, week_start, fileName: req.file!.originalname });
       res.status(201).json({ success: true, data: result });
     } catch (err: unknown) {
       if (err instanceof ConfirmError) {
@@ -168,6 +172,7 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
+  requirePermission('page:import'),
   upload.single('file'),
   async (req: Request, res: Response) => {
     try {
@@ -280,6 +285,7 @@ router.delete(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
+  requirePermission('page:import'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
@@ -288,7 +294,7 @@ router.delete(
       // Verify import exists and belongs to tenant
       const { data: imp, error: fetchErr } = await supabaseAdmin
         .from('imports')
-        .select('id, settlement_id')
+        .select('id')
         .eq('id', importId)
         .eq('tenant_id', tenantId)
         .single();
@@ -298,42 +304,41 @@ router.delete(
         return;
       }
 
-      // Cascade: clean up related data if settlement exists
-      if (imp.settlement_id) {
-        const sid = imp.settlement_id;
+      // Find associated settlement (relationship is settlements.import_id → imports.id)
+      const { data: settlement } = await supabaseAdmin
+        .from('settlements')
+        .select('id, status')
+        .eq('import_id', importId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
 
+      if (settlement) {
         // Guard: block deletion if settlement is finalized or voided
-        const { data: settlement } = await supabaseAdmin
-          .from('settlements')
-          .select('status')
-          .eq('id', sid)
-          .single();
-
-        if (settlement?.status === 'FINAL' || settlement?.status === 'VOID') {
+        if (settlement.status === 'FINAL' || settlement.status === 'VOID') {
           res.status(422).json({ success: false, error: 'Nao e possivel excluir: settlement ja finalizado' });
           return;
         }
 
-        // 1) Delete player_week_metrics for this settlement
-        const { error: pwmErr } = await supabaseAdmin
-          .from('player_week_metrics')
-          .delete()
-          .eq('settlement_id', sid);
-        if (pwmErr) throw pwmErr;
+        const sid = settlement.id;
 
-        // 2) Delete agent_week_metrics for this settlement
-        const { error: awmErr } = await supabaseAdmin
-          .from('agent_week_metrics')
-          .delete()
-          .eq('settlement_id', sid);
-        if (awmErr) throw awmErr;
+        // Cascade delete in dependency order (child → parent).
+        const cascadeSteps = [
+          { table: 'player_week_metrics', label: 'player metrics' },
+          { table: 'agent_week_metrics', label: 'agent metrics' },
+          { table: 'settlements', label: 'settlement' },
+        ] as const;
 
-        // 3) Delete the settlement itself
-        const { error: setErr } = await supabaseAdmin
-          .from('settlements')
-          .delete()
-          .eq('id', sid);
-        if (setErr) throw setErr;
+        for (const step of cascadeSteps) {
+          const col = step.table === 'settlements' ? 'id' : 'settlement_id';
+          const { error } = await supabaseAdmin
+            .from(step.table)
+            .delete()
+            .eq(col, sid)
+            .eq('tenant_id', tenantId);
+          if (error) {
+            throw new Error(`Falha ao excluir ${step.label} (${step.table}): ${error.message}`);
+          }
+        }
       }
 
       // Delete import record
@@ -345,6 +350,7 @@ router.delete(
 
       if (delErr) throw delErr;
 
+      logAudit(req, 'DELETE', 'import', importId);
       res.json({ success: true });
     } catch (err: unknown) {
       console.error('[DELETE /api/imports/:id]', err);

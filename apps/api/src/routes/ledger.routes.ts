@@ -5,8 +5,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { ledgerService } from '../services/ledger.service';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -26,6 +28,7 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('tab:extrato'),
   async (req: Request, res: Response) => {
     try {
       const parsed = createEntrySchema.safeParse(req.body);
@@ -41,6 +44,7 @@ router.post(
       const tenantId = req.tenantId!;
       const data = await ledgerService.createEntry(tenantId, parsed.data, req.userId!);
 
+      logAudit(req, 'CREATE', 'ledger_entry', data?.id || '', undefined, parsed.data);
       res.status(201).json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -113,11 +117,13 @@ router.delete(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('tab:extrato'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
       const data = await ledgerService.deleteEntry(tenantId, req.params.id, req.userId!);
 
+      logAudit(req, 'DELETE', 'ledger_entry', req.params.id);
       res.json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -131,6 +137,7 @@ router.patch(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('tab:extrato'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
@@ -144,6 +151,7 @@ router.patch(
 
       const data = await ledgerService.toggleReconciled(tenantId, entryId, is_reconciled);
 
+      logAudit(req, 'UPDATE', 'ledger_entry', entryId, undefined, { is_reconciled });
       res.json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });

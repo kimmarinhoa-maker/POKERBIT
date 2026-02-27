@@ -25,6 +25,7 @@ import ofxRoutes from './routes/ofx.routes';
 import chipPixRoutes from './routes/chippix.routes';
 import usersRoutes from './routes/users.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
+import permissionsRoutes from './routes/permissions.routes';
 
 const app = express();
 
@@ -86,6 +87,24 @@ const whatsappLimiter = rateLimit({
   message: { success: false, error: 'Rate limit exceeded for WhatsApp' },
 });
 
+// Heavy endpoints (sync-agents, full, sync-rates, finalize): 10 requests per minute
+const heavyLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas requisicoes pesadas. Aguarde 1 minuto.' },
+});
+
+// Write endpoints (carry-forward, ofx, chippix, ledger): 30 requests per minute
+const writeLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas operacoes de escrita. Aguarde 1 minuto.' },
+});
+
 // ─── Health check ──────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
@@ -99,17 +118,18 @@ app.get('/health', (_req, res) => {
 // ─── Rotas da API ──────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/imports', importLimiter, importRoutes);
-app.use('/api/settlements', settlementRoutes);
-app.use('/api/ledger', ledgerRoutes);
+app.use('/api/settlements', heavyLimiter, settlementRoutes);
+app.use('/api/ledger', writeLimiter, ledgerRoutes);
 app.use('/api/players', playersRoutes);
 app.use('/api/organizations', organizationsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/links', linksRoutes);
-app.use('/api/carry-forward', carryForwardRoutes);
-app.use('/api/ofx', ofxRoutes);
-app.use('/api/chippix', chipPixRoutes);
+app.use('/api/carry-forward', writeLimiter, carryForwardRoutes);
+app.use('/api/ofx', writeLimiter, ofxRoutes);
+app.use('/api/chippix', writeLimiter, chipPixRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);
+app.use('/api/permissions', permissionsRoutes);
 
 // ─── 404 handler ───────────────────────────────────────────────────
 app.use((_req, res) => {

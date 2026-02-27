@@ -4,8 +4,10 @@
 
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -24,7 +26,7 @@ router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Respon
 });
 
 // ─── PUT /api/config/fees — Atualiza taxas ───────────────────────────
-router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { fees } = req.body;
@@ -55,6 +57,7 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), a
     // Retornar estado atualizado
     const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).order('name');
 
+    logAudit(req, 'UPDATE', 'fee_config', tenantId, undefined, { fees: upsertRows });
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -88,7 +91,7 @@ router.get('/adjustments', requireAuth, requireTenant, async (req: Request, res:
 });
 
 // ─── PUT /api/config/adjustments — Upsert lançamentos ────────────────
-router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('tab:ajustes'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { subclub_id, week_start, overlay, compras, security, outros, obs } = req.body;
@@ -135,6 +138,7 @@ router.put('/adjustments', requireAuth, requireTenant, requireRole('OWNER', 'ADM
       .single();
 
     if (error) throw error;
+    logAudit(req, 'UPDATE', 'club_adjustments', subclub_id, undefined, { week_start, overlay, compras, security, outros });
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });

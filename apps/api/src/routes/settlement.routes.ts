@@ -3,13 +3,25 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { settlementService } from '../services/settlement.service';
 import { supabaseAdmin } from '../config/supabase';
 import { normName } from '../utils/normName';
 import { safeErrorMessage, AppError } from '../utils/apiError';
+import { batchExecute } from '../utils/batch';
+import { logAudit } from '../utils/audit';
+import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
 
 const router = Router();
+
+// ─── Zod Schemas ────────────────────────────────────────────────────
+const uuidParam = z.string().uuid();
+const notesSchema = z.object({ notes: z.string().nullable() });
+const rbRateSchema = z.object({
+  rb_rate: z.number().min(0).max(100),
+});
 
 /** Calcula rb_value_brl e resultado_brl de um jogador a partir de winnings, rake e rbRate */
 function calcPlayerResultado(winnings: number, rake: number, rbRate: number) {
@@ -66,14 +78,30 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
 // ─── GET /api/settlements/:id/full — Breakdown por subclube ─────────
 // Coração da paridade funcional: retorna tudo agrupado por subclube
 // com fees, adjustments, acertoLiga e dashboardTotals
-router.get('/:id/full', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// Cache: finalized settlements are cached for 5 min
+router.get('/:id/full', requireAuth, requireTenant, requirePermission('page:overview'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const data = await settlementService.getSettlementWithSubclubs(tenantId, req.params.id, req.allowedSubclubIds);
+    const settlementId = req.params.id;
+    const cacheKey = `settlement:${settlementId}`;
+
+    // Try cache first
+    const cached = cacheGet<any>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached });
+      return;
+    }
+
+    const data = await settlementService.getSettlementWithSubclubs(tenantId, settlementId, req.allowedSubclubIds);
 
     if (!data) {
       res.status(404).json({ success: false, error: 'Settlement não encontrado' });
       return;
+    }
+
+    // Cache only finalized settlements (5 min)
+    if (data.settlement?.status === 'FINAL') {
+      cacheSet(cacheKey, data, 300_000);
     }
 
     res.json({ success: true, data });
@@ -89,15 +117,23 @@ router.patch(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('page:overview'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
-      const { notes } = req.body;
-
-      if (notes !== null && typeof notes !== 'string') {
-        res.status(400).json({ success: false, error: 'Campo "notes" deve ser string ou null' });
+      const idParsed = uuidParam.safeParse(req.params.id);
+      if (!idParsed.success) {
+        res.status(400).json({ success: false, error: 'ID invalido' });
         return;
       }
+
+      const parsed = notesSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: 'Campo "notes" deve ser string ou null', details: parsed.error.flatten().fieldErrors });
+        return;
+      }
+
+      const { notes } = parsed.data;
 
       const { data, error } = await supabaseAdmin
         .from('settlements')
@@ -113,6 +149,7 @@ router.patch(
         return;
       }
 
+      logAudit(req, 'UPDATE', 'settlement', req.params.id, undefined, { notes });
       res.json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -129,9 +166,17 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
+      const idParsed = uuidParam.safeParse(req.params.id);
+      if (!idParsed.success) {
+        res.status(400).json({ success: false, error: 'ID invalido' });
+        return;
+      }
 
       const data = await settlementService.finalizeSettlement(tenantId, req.params.id, req.userId!);
 
+      logAudit(req, 'FINALIZE', 'settlement', req.params.id);
+      // Invalidate cache since status changed
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
       const status = err instanceof AppError ? err.statusCode : 500;
@@ -190,6 +235,7 @@ router.patch(
         .update({ payment_type })
         .eq('settlement_id', settlementId)
         .eq('id', agentId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
 
@@ -213,10 +259,16 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
+  requirePermission('page:overview'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
+      const idParsed = uuidParam.safeParse(settlementId);
+      if (!idParsed.success) {
+        res.status(400).json({ success: false, error: 'ID invalido' });
+        return;
+      }
 
       // Buscar settlement + club_id
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -380,12 +432,16 @@ router.post(
 
       // ── Fase 3: Batch fix parent_id (paralelo) ──────────────────────
       if (toFixParent.length > 0) {
-        await Promise.all(
+        const results = await Promise.allSettled(
           toFixParent.map(({ orgId, correctParentId }) =>
             supabaseAdmin.from('organizations').update({ parent_id: correctParentId }).eq('id', orgId),
           ),
         );
-        fixed = toFixParent.length;
+        fixed = results.filter((r) => r.status === 'fulfilled').length;
+        const failures = results.filter((r) => r.status === 'rejected');
+        if (failures.length > 0) {
+          console.warn(`[sync-agents] Phase 3: ${failures.length}/${toFixParent.length} parent_id updates failed`);
+        }
       }
 
       // ── Fase 4: Batch link metrics + fix subclub_id (paralelo) ──────
@@ -399,15 +455,16 @@ router.post(
 
         // Vincular metrics sem agent_id
         if (orgId) {
-          const linkP = supabaseAdmin
-            .from('agent_week_metrics')
-            .update({ agent_id: orgId })
-            .eq('settlement_id', settlementId)
-            .eq('agent_name', agentName)
-            .is('agent_id', null)
-            .select('id');
           allPromises.push(
-            Promise.resolve(linkP).then(({ data: updated }) => {
+            Promise.resolve(
+              supabaseAdmin
+                .from('agent_week_metrics')
+                .update({ agent_id: orgId })
+                .eq('settlement_id', settlementId)
+                .eq('agent_name', agentName)
+                .is('agent_id', null)
+                .select('id'),
+            ).then(({ data: updated }) => {
               linked += updated?.length || 0;
             }),
           );
@@ -483,19 +540,25 @@ router.post(
             .not('agent_id', 'is', null);
 
           if (metricsToUpdate) {
-            for (const m of metricsToUpdate) {
-              if (m.rb_rate && Number(m.rb_rate) > 0) continue; // Already has a rate set
-              const defaultRate = agentRateMap.get(m.agent_id);
-              if (defaultRate != null && defaultRate > 0) {
-                const rakeTotal = Number(m.rake_total_brl) || 0;
-                const commission = Math.round(((rakeTotal * defaultRate) / 100 + Number.EPSILON) * 100) / 100;
-                await supabaseAdmin
-                  .from('agent_week_metrics')
-                  .update({ rb_rate: defaultRate, commission_brl: commission })
-                  .eq('id', m.id);
-                ratesPopulated++;
-              }
-            }
+            // Collect items to batch update (Phase 5a)
+            const agentUpdates = metricsToUpdate
+              .filter((m) => !(m.rb_rate && Number(m.rb_rate) > 0))
+              .filter((m) => {
+                const defaultRate = agentRateMap.get(m.agent_id);
+                return defaultRate != null && defaultRate > 0;
+              })
+              .map((m) => ({ m, defaultRate: agentRateMap.get(m.agent_id)! }));
+
+            const { ok } = await batchExecute(agentUpdates, async ({ m, defaultRate }) => {
+              const rakeTotal = Number(m.rake_total_brl) || 0;
+              const commission = Math.round(((rakeTotal * defaultRate) / 100 + Number.EPSILON) * 100) / 100;
+              await supabaseAdmin
+                .from('agent_week_metrics')
+                .update({ rb_rate: defaultRate, commission_brl: commission })
+                .eq('id', m.id)
+                .eq('tenant_id', tenantId);
+            });
+            ratesPopulated += ok;
           }
         }
 
@@ -520,24 +583,29 @@ router.post(
             .eq('settlement_id', settlementId);
 
           if (playerMetrics) {
-            for (const pm of playerMetrics) {
-              if (pm.rb_rate && Number(pm.rb_rate) > 0) continue; // Already has a rate
-              const defaultRate = playerRateMap.get(pm.player_id);
-              if (defaultRate != null && defaultRate > 0) {
-                const rake = Number(pm.rake_total_brl) || 0;
-                const winnings = Number(pm.winnings_brl) || 0;
-                const { rbValue, resultado } = calcPlayerResultado(winnings, rake, defaultRate);
-                await supabaseAdmin
-                  .from('player_week_metrics')
-                  .update({ rb_rate: defaultRate, rb_value_brl: rbValue, resultado_brl: resultado })
-                  .eq('id', pm.id);
-                ratesPopulated++;
-              }
-            }
+            const playerUpdates = playerMetrics
+              .filter((pm) => !(pm.rb_rate && Number(pm.rb_rate) > 0))
+              .filter((pm) => {
+                const defaultRate = playerRateMap.get(pm.player_id);
+                return defaultRate != null && defaultRate > 0;
+              })
+              .map((pm) => ({ pm, defaultRate: playerRateMap.get(pm.player_id)! }));
+
+            const { ok } = await batchExecute(playerUpdates, async ({ pm, defaultRate }) => {
+              const rake = Number(pm.rake_total_brl) || 0;
+              const winnings = Number(pm.winnings_brl) || 0;
+              const { rbValue, resultado } = calcPlayerResultado(winnings, rake, defaultRate);
+              await supabaseAdmin
+                .from('player_week_metrics')
+                .update({ rb_rate: defaultRate, rb_value_brl: rbValue, resultado_brl: resultado })
+                .eq('id', pm.id)
+                .eq('tenant_id', tenantId);
+            });
+            ratesPopulated += ok;
           }
         }
+
         // 5c: Propagate agent rates to players without individual rate
-        // Build agent_id -> rb_rate map from agent_week_metrics (already updated in 5a)
         const { data: agentMetricsForRates } = await supabaseAdmin
           .from('agent_week_metrics')
           .select('agent_id, agent_name, rb_rate')
@@ -560,21 +628,25 @@ router.post(
             .or('rb_rate.eq.0,rb_rate.is.null');
 
           if (playersNoRate) {
-            for (const pm of playersNoRate) {
-              // Try to find agent rate by agent_id first, then by agent_name
-              const agentRate = (pm.agent_id && agentIdRateMap.get(pm.agent_id))
-                || agentNameRateMap.get(pm.agent_name || '') || 0;
-              if (agentRate > 0) {
-                const rake = Number(pm.rake_total_brl) || 0;
-                const winnings = Number(pm.winnings_brl) || 0;
-                const { rbValue, resultado } = calcPlayerResultado(winnings, rake, agentRate);
-                await supabaseAdmin
-                  .from('player_week_metrics')
-                  .update({ rb_rate: agentRate, rb_value_brl: rbValue, resultado_brl: resultado })
-                  .eq('id', pm.id);
-                ratesPopulated++;
-              }
-            }
+            const propagateItems = playersNoRate
+              .map((pm) => {
+                const agentRate = (pm.agent_id && agentIdRateMap.get(pm.agent_id))
+                  || agentNameRateMap.get(pm.agent_name || '') || 0;
+                return { pm, agentRate };
+              })
+              .filter(({ agentRate }) => agentRate > 0);
+
+            const { ok } = await batchExecute(propagateItems, async ({ pm, agentRate }) => {
+              const rake = Number(pm.rake_total_brl) || 0;
+              const winnings = Number(pm.winnings_brl) || 0;
+              const { rbValue, resultado } = calcPlayerResultado(winnings, rake, agentRate);
+              await supabaseAdmin
+                .from('player_week_metrics')
+                .update({ rb_rate: agentRate, rb_value_brl: rbValue, resultado_brl: resultado })
+                .eq('id', pm.id)
+                .eq('tenant_id', tenantId);
+            });
+            ratesPopulated += ok;
           }
         }
       } catch (rateErr) {
@@ -596,19 +668,18 @@ router.patch(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('page:overview'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
       const { id: settlementId, agentId } = req.params;
-      const { rb_rate } = req.body;
 
-      if (rb_rate == null || rb_rate < 0 || rb_rate > 100) {
-        res.status(400).json({
-          success: false,
-          error: 'rb_rate deve ser entre 0 e 100',
-        });
+      const parsed = rbRateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: 'rb_rate deve ser entre 0 e 100', details: parsed.error.flatten().fieldErrors });
         return;
       }
+      const { rb_rate } = parsed.data;
 
       // Verificar se settlement existe e está em DRAFT
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -653,10 +724,13 @@ router.patch(
         .update({ rb_rate, commission_brl })
         .eq('id', agentId)
         .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId)
         .select()
         .single();
 
       if (error) throw error;
+
+      logAudit(req, 'UPDATE', 'agent_week_metrics', agentId, undefined, { rb_rate, commission_brl });
 
       // Also persist rate to agent_rb_rates (non-blocking)
       const orgId = metric.agent_id || await (async () => {
@@ -694,7 +768,7 @@ router.patch(
         }
       }
 
-      // ── Propagate agent rate to player_week_metrics ──────────────
+      // ── Propagate agent rate to player_week_metrics (batched) ──────
       let playersPropagated = 0;
       try {
         // Fetch players of this agent in this settlement
@@ -720,20 +794,21 @@ router.patch(
             }
           }
 
-          for (const pm of agentPlayers) {
-            // Skip players with individual persistent rate
-            if (pm.player_id && playerIndividualRates.has(pm.player_id)) continue;
+          const toPropagate = agentPlayers.filter(
+            (pm) => !(pm.player_id && playerIndividualRates.has(pm.player_id)),
+          );
 
+          const { ok } = await batchExecute(toPropagate, async (pm) => {
             const rake = Number(pm.rake_total_brl) || 0;
             const winnings = Number(pm.winnings_brl) || 0;
             const { rbValue, resultado } = calcPlayerResultado(winnings, rake, rb_rate);
-
             await supabaseAdmin
               .from('player_week_metrics')
               .update({ rb_rate, rb_value_brl: rbValue, resultado_brl: resultado })
-              .eq('id', pm.id);
-            playersPropagated++;
-          }
+              .eq('id', pm.id)
+              .eq('tenant_id', tenantId);
+          });
+          playersPropagated = ok;
         }
       } catch (propErr) {
         console.warn('[rb-rate] Failed to propagate to players:', propErr);
@@ -753,10 +828,16 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('page:overview'),
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
+      const idParsed = uuidParam.safeParse(settlementId);
+      if (!idParsed.success) {
+        res.status(400).json({ success: false, error: 'ID invalido' });
+        return;
+      }
 
       // Only DRAFT settlements
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -778,7 +859,7 @@ router.post(
       let agentsUpdated = 0;
       let playersUpdated = 0;
 
-      // ── Sync agent rates ──────────────────────────────────────────
+      // ── Sync agent rates (batched) ─────────────────────────────────
       const { data: agentMetrics } = await supabaseAdmin
         .from('agent_week_metrics')
         .select('id, agent_id, agent_name, rb_rate, rake_total_brl')
@@ -808,30 +889,34 @@ router.post(
 
         const nameToOrgId = new Map<string, string>();
         for (const org of agentOrgs || []) {
-          nameToOrgId.set(org.name.toLowerCase(), org.id);
+          nameToOrgId.set(normName(org.name), org.id);
         }
 
-        for (const m of agentMetrics) {
-          const orgId = m.agent_id || nameToOrgId.get((m.agent_name || '').toLowerCase());
-          if (!orgId) continue;
-          const persistentRate = agentRateMap.get(orgId);
-          if (persistentRate == null || persistentRate < 0) continue;
+        // Collect items needing update
+        const agentUpdates = agentMetrics
+          .map((m) => {
+            const orgId = m.agent_id || nameToOrgId.get(normName(m.agent_name || ''));
+            if (!orgId) return null;
+            const persistentRate = agentRateMap.get(orgId);
+            if (persistentRate == null || persistentRate < 0) return null;
+            if (Number(m.rb_rate) === persistentRate) return null;
+            return { m, persistentRate };
+          })
+          .filter(Boolean) as { m: any; persistentRate: number }[];
 
-          // Skip if rate is already the same
-          if (Number(m.rb_rate) === persistentRate) continue;
-
+        const { ok } = await batchExecute(agentUpdates, async ({ m, persistentRate }) => {
           const rake = Number(m.rake_total_brl) || 0;
           const commission = Math.round(((rake * persistentRate) / 100 + Number.EPSILON) * 100) / 100;
-
           await supabaseAdmin
             .from('agent_week_metrics')
             .update({ rb_rate: persistentRate, commission_brl: commission })
-            .eq('id', m.id);
-          agentsUpdated++;
-        }
+            .eq('id', m.id)
+            .eq('tenant_id', tenantId);
+        });
+        agentsUpdated = ok;
       }
 
-      // ── Sync player rates ─────────────────────────────────────────
+      // ── Sync player rates (batched) ────────────────────────────────
       const { data: playerMetrics } = await supabaseAdmin
         .from('player_week_metrics')
         .select('id, player_id, agent_id, agent_name, rb_rate, rake_total_brl, winnings_brl')
@@ -875,35 +960,36 @@ router.post(
           if (am.agent_name) agentNameRateMap.set(am.agent_name, Number(am.rb_rate));
         }
 
-        for (const m of playerMetrics) {
-          // First try player-specific rate, then fall back to agent rate
-          let targetRate: number | undefined;
+        // Collect items needing update
+        const playerUpdates = playerMetrics
+          .map((m) => {
+            let targetRate: number | undefined;
+            if (m.player_id && playerRateMap.has(m.player_id)) {
+              targetRate = playerRateMap.get(m.player_id);
+            } else {
+              targetRate = (m.agent_id && agentIdRateMap.get(m.agent_id))
+                || agentNameRateMap.get(m.agent_name || '') || undefined;
+            }
+            if (targetRate == null || targetRate < 0) return null;
+            if (Number(m.rb_rate) === targetRate) return null;
+            return { m, targetRate };
+          })
+          .filter(Boolean) as { m: any; targetRate: number }[];
 
-          if (m.player_id && playerRateMap.has(m.player_id)) {
-            targetRate = playerRateMap.get(m.player_id);
-          } else {
-            // Fall back to agent rate
-            targetRate = (m.agent_id && agentIdRateMap.get(m.agent_id))
-              || agentNameRateMap.get(m.agent_name || '') || undefined;
-          }
-
-          if (targetRate == null || targetRate < 0) continue;
-
-          // Skip if rate is already the same
-          if (Number(m.rb_rate) === targetRate) continue;
-
+        const { ok } = await batchExecute(playerUpdates, async ({ m, targetRate }) => {
           const rake = Number(m.rake_total_brl) || 0;
           const winnings = Number(m.winnings_brl) || 0;
           const { rbValue, resultado } = calcPlayerResultado(winnings, rake, targetRate);
-
           await supabaseAdmin
             .from('player_week_metrics')
             .update({ rb_rate: targetRate, rb_value_brl: rbValue, resultado_brl: resultado })
-            .eq('id', m.id);
-          playersUpdated++;
-        }
+            .eq('id', m.id)
+            .eq('tenant_id', tenantId);
+        });
+        playersUpdated = ok;
       }
 
+      logAudit(req, 'UPDATE', 'settlement', settlementId, undefined, { agentsUpdated, playersUpdated });
       res.json({ success: true, data: { agentsUpdated, playersUpdated } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -929,6 +1015,9 @@ router.post(
 
       const data = await settlementService.voidSettlement(tenantId, req.params.id, req.userId!, reason);
 
+      logAudit(req, 'VOID', 'settlement', req.params.id, undefined, { reason });
+      // Invalidate cache since status changed
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
       const status = err instanceof AppError ? err.statusCode : 500;

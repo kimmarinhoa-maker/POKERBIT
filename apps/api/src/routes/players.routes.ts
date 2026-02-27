@@ -3,11 +3,26 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
+
+// ─── Zod Schemas ────────────────────────────────────────────────────
+const patchPlayerSchema = z.object({
+  full_name: z.string().max(200).optional(),
+  phone: z.string().max(30).optional(),
+  email: z.string().email().max(200).optional().or(z.literal('')),
+});
+
+const playerRateSchema = z.object({
+  rate: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().min(0).max(100)),
+  effective_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
 
 // ─── GET /api/players — Listar jogadores do tenant ─────────────────
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
@@ -33,18 +48,30 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 
       let filteredAgents = agents || [];
 
+      // "SEM AGENTE" variants are always treated as direct (convention used across the app)
+      const semAgentePattern = /^(sem agente|\(sem agente\)|none)$/i;
+
       // Filter by is_direct flag in metadata
       if (isDirect === 'true') {
         filteredAgents = filteredAgents.filter(
-          (a) => (a.metadata as any)?.is_direct === true,
+          (a) => (a.metadata as any)?.is_direct === true || semAgentePattern.test(a.name),
         );
       } else if (isDirect === 'false') {
         filteredAgents = filteredAgents.filter(
-          (a) => !(a.metadata as any)?.is_direct,
+          (a) => !(a.metadata as any)?.is_direct && !semAgentePattern.test(a.name),
         );
       }
 
       const agentNames = filteredAgents.map((a) => a.name).filter(Boolean);
+
+      // When filtering direct agents, always include "SEM AGENTE" variants
+      // even if no org exists for them (players may have these as agent_name)
+      if (isDirect === 'true') {
+        const semVariants = ['SEM AGENTE', '(sem agente)', 'None', ''];
+        for (const v of semVariants) {
+          if (!agentNames.includes(v)) agentNames.push(v);
+        }
+      }
 
       if (agentNames.length === 0) {
         res.json({ success: true, data: [], meta: { total: 0, page, limit, pages: 0 } });
@@ -52,11 +79,19 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       }
 
       // Match via agent_name (text) — agent_id UUID is often NULL in imported data
-      const { data: metrics } = await supabaseAdmin
+      // Also filter by subclub_id to scope results to the selected subclub
+      let metricsQuery = supabaseAdmin
         .from('player_week_metrics')
         .select('player_id')
         .eq('tenant_id', tenantId)
         .in('agent_name', agentNames);
+
+      // Scope to subclub so "SEM AGENTE" variants don't leak across subclubs
+      if (subclubId) {
+        metricsQuery = metricsQuery.eq('subclub_id', subclubId);
+      }
+
+      const { data: metrics } = await metricsQuery;
 
       playerIdFilter = [...new Set((metrics || []).map((m) => m.player_id).filter(Boolean))];
 
@@ -159,11 +194,17 @@ router.get('/rates/current', requireAuth, requireTenant, async (req: Request, re
 });
 
 // ─── PATCH /api/players/:id — Atualizar dados do player ─────────────
-router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const playerId = req.params.id;
-    const { full_name, phone, email } = req.body;
+
+    const parsed = patchPlayerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: 'Dados invalidos', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+    const { full_name, phone, email } = parsed.data;
 
     // Build update object
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -197,19 +238,7 @@ router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
 
     if (error) throw error;
 
-    // Audit (non-blocking — don't fail the request if audit insert fails)
-    try {
-      await supabaseAdmin.from('audit_log').insert({
-        tenant_id: tenantId,
-        user_id: req.userId,
-        action: 'UPDATE',
-        entity_type: 'player',
-        entity_id: playerId,
-        new_data: { full_name, phone, email },
-      });
-    } catch (auditErr) {
-      console.warn('[audit] Failed to log:', auditErr);
-    }
+    logAudit(req, 'UPDATE', 'player', playerId, undefined, { full_name, phone, email });
 
     res.json({ success: true, data });
   } catch (err: unknown) {
@@ -218,18 +247,17 @@ router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
 });
 
 // ─── PUT /api/players/:id/rate — Atualizar rate do player ──────────
-router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const { rate, effective_from } = req.body;
 
-    const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
-    if (numRate == null || isNaN(numRate) || numRate < 0 || numRate > 100) {
-      res.status(400).json({ success: false, error: 'Rate deve ser um numero entre 0 e 100' });
+    const parsed = playerRateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: 'Rate deve ser um numero entre 0 e 100', details: parsed.error.flatten().fieldErrors });
       return;
     }
-
-    const dateFrom = effective_from || new Date().toISOString().split('T')[0];
+    const numRate = parsed.data.rate as number;
+    const dateFrom = parsed.data.effective_from || new Date().toISOString().split('T')[0];
 
     // Check if there's already a rate for this player on this date
     const { data: existing } = await supabaseAdmin
@@ -276,19 +304,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
       data = inserted;
     }
 
-    // Audit (non-blocking — don't fail the request if audit insert fails)
-    try {
-      await supabaseAdmin.from('audit_log').insert({
-        tenant_id: tenantId,
-        user_id: req.userId,
-        action: 'UPDATE',
-        entity_type: 'player_rb_rate',
-        entity_id: req.params.id,
-        new_data: { rate: numRate, effective_from: dateFrom },
-      });
-    } catch (auditErr) {
-      console.warn('[audit] Failed to log:', auditErr);
-    }
+    logAudit(req, 'UPDATE', 'player_rb_rate', req.params.id, undefined, { rate: numRate, effective_from: dateFrom });
 
     res.json({ success: true, data });
   } catch (err: unknown) {

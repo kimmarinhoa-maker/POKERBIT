@@ -5,14 +5,16 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { ofxService } from '../services/ofx.service';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ─── POST /api/ofx/upload — Upload + parse OFX file ────────────────
-router.post('/upload', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), upload.single('file'), async (req: Request, res: Response) => {
+router.post('/upload', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const file = (req as any).file;
@@ -60,7 +62,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── PATCH /api/ofx/:id/link — Vincular a entidade ──────────────────
-router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { entity_id, entity_name, category } = req.body;
@@ -79,7 +81,7 @@ router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMI
 });
 
 // ─── PATCH /api/ofx/:id/unlink — Desvincular ────────────────────────
-router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await ofxService.unlinkTransaction(tenantId, req.params.id);
@@ -90,7 +92,7 @@ router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'AD
 });
 
 // ─── PATCH /api/ofx/:id/ignore — Ignorar/restaurar ──────────────────
-router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { ignore } = req.body;
@@ -102,7 +104,7 @@ router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'AD
 });
 
 // ─── POST /api/ofx/auto-match — Auto-classificar transações ─────────
-router.post('/auto-match', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.post('/auto-match', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { week_start } = req.body;
@@ -120,7 +122,7 @@ router.post('/auto-match', requireAuth, requireTenant, requireRole('OWNER', 'ADM
 });
 
 // ─── POST /api/ofx/apply — Aplicar vinculadas → criar ledger ────────
-router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { week_start } = req.body;
@@ -131,6 +133,7 @@ router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 
     }
 
     const data = await ofxService.applyLinked(tenantId, week_start, req.userId!);
+    logAudit(req, 'CREATE', 'ledger', tenantId, undefined, { source: 'ofx', week_start });
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -138,7 +141,7 @@ router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 
 });
 
 // ─── DELETE /api/ofx/:id — Deletar transação ─────────────────────────
-router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await ofxService.deleteTransaction(tenantId, req.params.id);

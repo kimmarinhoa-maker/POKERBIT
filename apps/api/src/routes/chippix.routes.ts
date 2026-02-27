@@ -5,14 +5,16 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { chipPixService } from '../services/chippix.service';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ─── POST /api/chippix/upload — Upload + parse XLSX ChipPix ──────
-router.post('/upload', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), upload.single('file'), async (req: Request, res: Response) => {
+router.post('/upload', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const file = (req as any).file;
@@ -45,6 +47,7 @@ router.post(
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
+  requirePermission('tab:conciliacao'),
   upload.single('file'),
   async (req: Request, res: Response) => {
     try {
@@ -118,7 +121,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── PATCH /api/chippix/:id/link — Vincular a entidade ───────────
-router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { entity_id, entity_name } = req.body;
@@ -137,7 +140,7 @@ router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMI
 });
 
 // ─── PATCH /api/chippix/:id/unlink — Desvincular ─────────────────
-router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.unlinkTransaction(tenantId, req.params.id);
@@ -148,7 +151,7 @@ router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'AD
 });
 
 // ─── PATCH /api/chippix/:id/ignore — Ignorar/restaurar ───────────
-router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { ignore } = req.body;
@@ -160,7 +163,7 @@ router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'AD
 });
 
 // ─── POST /api/chippix/apply — Aplicar vinculadas → ledger ───────
-router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { week_start } = req.body;
@@ -171,6 +174,7 @@ router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 
     }
 
     const data = await chipPixService.applyLinked(tenantId, week_start, req.userId!);
+    logAudit(req, 'CREATE', 'ledger', tenantId, undefined, { source: 'chippix', week_start });
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -178,7 +182,7 @@ router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 
 });
 
 // ─── DELETE /api/chippix/:id — Deletar transação ─────────────────
-router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.deleteTransaction(tenantId, req.params.id);

@@ -4,9 +4,10 @@
 
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { carryForwardService } from '../services/carry-forward.service';
-import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 // ─── POST /api/carry-forward/close-week — Fechar semana ─────────────
 // Body: { settlement_id: string }
 // Computa saldoFinal de cada agente e grava carry para próxima semana
-router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:import'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { settlement_id } = req.body;
@@ -65,18 +66,10 @@ router.post('/close-week', requireAuth, requireTenant, requireRole('OWNER', 'ADM
 
     const result = await carryForwardService.computeAndPersist(tenantId, settlement_id);
 
-    // Audit log
-    await supabaseAdmin.from('audit_log').insert({
-      tenant_id: tenantId,
-      user_id: req.userId!,
-      action: 'CLOSE_WEEK',
-      entity_type: 'carry_forward',
-      entity_id: settlement_id,
-      new_data: {
-        week_closed: result.week_closed,
-        next_week: result.next_week,
-        count: result.count,
-      },
+    logAudit(req, 'FINALIZE', 'carry_forward', settlement_id, undefined, {
+      week_closed: result.week_closed,
+      next_week: result.next_week,
+      count: result.count,
     });
 
     res.json({ success: true, data: result });

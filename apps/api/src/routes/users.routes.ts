@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -99,7 +100,7 @@ router.patch('/:id/role', ...adminOnly, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    const validRoles = ['OWNER', 'ADMIN', 'FINANCEIRO', 'AUDITOR', 'AGENTE'];
+    const validRoles = ['ADMIN', 'FINANCEIRO', 'AUDITOR', 'AGENTE'];
     if (!role || !validRoles.includes(role)) {
       res.status(400).json({
         success: false,
@@ -139,6 +140,7 @@ router.patch('/:id/role', ...adminOnly, async (req: Request, res: Response) => {
       .single();
 
     if (error) throw error;
+    logAudit(req, 'UPDATE', 'user_tenant', id, undefined, { role });
     res.json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -176,6 +178,7 @@ router.delete('/:id', ...adminOnly, async (req: Request, res: Response) => {
     const { error } = await supabaseAdmin.from('user_tenants').delete().eq('id', id).eq('tenant_id', tenantId);
 
     if (error) throw error;
+    logAudit(req, 'DELETE', 'user_tenant', id);
     res.json({ success: true, data: { deleted: true } });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -283,6 +286,7 @@ router.post('/invite', ...adminOnly, async (req: Request, res: Response) => {
 
     if (error) throw error;
 
+    logAudit(req, 'CREATE', 'user_tenant', data?.id || '', undefined, { email, role: role || 'FINANCEIRO' });
     res.status(201).json({
       success: true,
       data,

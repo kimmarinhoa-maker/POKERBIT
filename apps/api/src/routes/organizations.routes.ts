@@ -6,8 +6,10 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { logAudit } from '../utils/audit';
 
 const router = Router();
 
@@ -149,7 +151,7 @@ const prefixRuleSchema = z.object({
   priority: z.number().int().default(0),
 });
 
-router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const parsed = prefixRuleSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -182,6 +184,7 @@ router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'A
       throw error;
     }
 
+    logAudit(req, 'CREATE', 'prefix_rule', data.id, undefined, parsed.data);
     res.status(201).json({ success: true, data });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -189,7 +192,7 @@ router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'A
 });
 
 // ─── POST /api/organizations/:id/logo — Upload logo ─────────────
-router.post('/:id/logo', requireAuth, requireTenant, logoUpload.single('logo'), async (req: Request, res: Response) => {
+router.post('/:id/logo', requireAuth, requireTenant, requirePermission('page:clubs'), logoUpload.single('logo'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -256,7 +259,7 @@ router.post('/:id/logo', requireAuth, requireTenant, logoUpload.single('logo'), 
 });
 
 // ─── DELETE /api/organizations/:id/logo — Remover logo ──────────
-router.delete('/:id/logo', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/:id/logo', requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -353,6 +356,75 @@ router.post('/', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), asyn
     }
 
     res.status(201).json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── PUT /api/organizations/prefix-rules/:id — Atualizar regra ─────
+const updatePrefixSchema = z.object({
+  prefix: z.string().min(1).max(20).optional(),
+  subclub_id: z.string().uuid().optional(),
+  priority: z.number().int().optional(),
+});
+
+router.put('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const parsed = updatePrefixSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Dados invalidos',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const tenantId = req.tenantId!;
+    const ruleId = req.params.id;
+
+    const updates: any = {};
+    if (parsed.data.prefix !== undefined) updates.prefix = parsed.data.prefix.trim().toUpperCase();
+    if (parsed.data.subclub_id !== undefined) updates.subclub_id = parsed.data.subclub_id;
+    if (parsed.data.priority !== undefined) updates.priority = parsed.data.priority;
+
+    const { data, error } = await supabaseAdmin
+      .from('agent_prefix_map')
+      .update(updates)
+      .eq('id', ruleId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        res.status(409).json({ success: false, error: 'Prefixo ja existe' });
+        return;
+      }
+      throw error;
+    }
+
+    if (!data) {
+      res.status(404).json({ success: false, error: 'Regra nao encontrada' });
+      return;
+    }
+
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── DELETE /api/organizations/prefix-rules/:id — Deletar regra ────
+router.delete('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const ruleId = req.params.id;
+
+    const { error } = await supabaseAdmin.from('agent_prefix_map').delete().eq('id', ruleId).eq('tenant_id', tenantId);
+
+    if (error) throw error;
+    res.json({ success: true });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
@@ -456,75 +528,6 @@ router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'),
     }
 
     const { error } = await supabaseAdmin.from('organizations').delete().eq('id', orgId).eq('tenant_id', tenantId);
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err: unknown) {
-    res.status(500).json({ success: false, error: safeErrorMessage(err) });
-  }
-});
-
-// ─── PUT /api/organizations/prefix-rules/:id — Atualizar regra ─────
-const updatePrefixSchema = z.object({
-  prefix: z.string().min(1).max(20).optional(),
-  subclub_id: z.string().uuid().optional(),
-  priority: z.number().int().optional(),
-});
-
-router.put('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
-  try {
-    const parsed = updatePrefixSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        success: false,
-        error: 'Dados invalidos',
-        details: parsed.error.flatten().fieldErrors,
-      });
-      return;
-    }
-
-    const tenantId = req.tenantId!;
-    const ruleId = req.params.id;
-
-    const updates: any = {};
-    if (parsed.data.prefix !== undefined) updates.prefix = parsed.data.prefix.trim().toUpperCase();
-    if (parsed.data.subclub_id !== undefined) updates.subclub_id = parsed.data.subclub_id;
-    if (parsed.data.priority !== undefined) updates.priority = parsed.data.priority;
-
-    const { data, error } = await supabaseAdmin
-      .from('agent_prefix_map')
-      .update(updates)
-      .eq('id', ruleId)
-      .eq('tenant_id', tenantId)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === '23505') {
-        res.status(409).json({ success: false, error: 'Prefixo ja existe' });
-        return;
-      }
-      throw error;
-    }
-
-    if (!data) {
-      res.status(404).json({ success: false, error: 'Regra nao encontrada' });
-      return;
-    }
-
-    res.json({ success: true, data });
-  } catch (err: unknown) {
-    res.status(500).json({ success: false, error: safeErrorMessage(err) });
-  }
-});
-
-// ─── DELETE /api/organizations/prefix-rules/:id — Deletar regra ────
-router.delete('/prefix-rules/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.tenantId!;
-    const ruleId = req.params.id;
-
-    const { error } = await supabaseAdmin.from('agent_prefix_map').delete().eq('id', ruleId).eq('tenant_id', tenantId);
 
     if (error) throw error;
     res.json({ success: true });
@@ -637,19 +640,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
       data = inserted;
     }
 
-    // Audit (non-blocking — don't fail the request if audit insert fails)
-    try {
-      await supabaseAdmin.from('audit_log').insert({
-        tenant_id: tenantId,
-        user_id: req.userId!,
-        action: 'UPDATE',
-        entity_type: 'agent_rb_rate',
-        entity_id: agentId,
-        new_data: { rate: numRate, effective_from: dateFrom },
-      });
-    } catch (auditErr) {
-      console.warn('[audit] Failed to log:', auditErr);
-    }
+    logAudit(req, 'UPDATE', 'agent_rb_rate', agentId, undefined, { rate: numRate, effective_from: dateFrom });
 
     res.json({ success: true, data });
   } catch (err: unknown) {
