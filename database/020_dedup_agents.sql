@@ -36,9 +36,9 @@ to_delete AS (
 )
 -- Update agent_rb_rates to point to keeper
 UPDATE agent_rb_rates
-SET organization_id = td.keeper_id
+SET agent_id = td.keeper_id
 FROM to_delete td
-WHERE agent_rb_rates.organization_id = td.dupe_id;
+WHERE agent_rb_rates.agent_id = td.dupe_id;
 
 -- Step 2: Update agent_week_metrics.agent_id references
 WITH dupes AS (
