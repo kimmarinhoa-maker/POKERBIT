@@ -34,7 +34,7 @@ router.get('/unlinked', requireAuth, requireTenant, async (req: Request, res: Re
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!latestSett) {
         res.json({ success: true, data: { unlinked: [], total: 0 } });

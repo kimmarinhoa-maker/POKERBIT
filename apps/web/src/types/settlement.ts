@@ -65,7 +65,7 @@ export interface AgentMetric {
  * Ledger entry (movimentacao financeira).
  * Superset of all usages across settlement tabs and pages:
  * - Minimal (Rakeback): id, entity_id, dir, amount
- * - Full (Extrato/Liquidacao/Comprovantes): + entity_name, method, description, created_at
+ * - Full (Extrato/Comprovantes): + entity_name, method, description, created_at
  * - Extended (Conciliacao/Caixa Geral): + source, external_ref, is_reconciled
  */
 export interface LedgerEntry {
