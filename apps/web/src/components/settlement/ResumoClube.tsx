@@ -250,10 +250,10 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                 </div>
               </div>
 
-              <div className="border-t border-dark-700/50 mb-2" />
+              <div className="border-t border-dark-700/50 mb-3" />
 
               {/* 2. Resumo financeiro — 4 KPIs */}
-              <div className="grid grid-cols-4 gap-2 mb-2">
+              <div className="grid grid-cols-4 gap-2 mb-3">
                 <StatBox label="Ganhos (P/L)" value={totals.ganhos} color={totals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'} border="border-t-red-500" />
                 <StatBox label="Rake" value={totals.rake} color="text-poker-400" border="border-t-poker-500" />
                 <StatBox label="GGR Rodeio" value={totals.ggr} color="text-purple-400" border="border-t-purple-500" />
@@ -261,7 +261,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
               </div>
 
               {/* 2b. Taxas + Lançamentos (detalhado, lado a lado) */}
-              <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2 mb-3">
                 {/* Taxas Automáticas */}
                 <div className="bg-dark-800/40 rounded-lg px-3 py-2.5 border border-dark-700/50">
                   <div className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-1.5">Taxas Automáticas</div>
@@ -293,7 +293,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
               {/* 3. Acerto Liga (destaque) */}
               <div
-                className={`rounded-xl px-4 py-3 mb-2 flex justify-between items-center ${
+                className={`rounded-xl px-4 py-3 mb-3 flex justify-between items-center ${
                   acertoLiga < 0
                     ? 'bg-red-900/20 border-2 border-red-500'
                     : 'bg-emerald-900/20 border-2 border-emerald-500'
@@ -315,7 +315,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
               {/* 4. Tabela de agentes */}
               {agentGroups.length > 0 && (
-                <div className="rounded-xl border border-dark-700 overflow-hidden mb-2">
+                <div className="rounded-xl border border-dark-700 overflow-hidden mb-3">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-dark-800/80">
@@ -330,13 +330,13 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                     <tbody className="divide-y divide-dark-800">
                       {agentGroups.map((g) => (
                         <tr key={g.agentName}>
-                          <td className="py-1 px-3 text-dark-100 font-medium">{g.agentName}</td>
-                          <td className="py-1 px-3 text-center text-dark-300">{g.players}</td>
-                          <td className="py-1 px-3 text-right font-mono text-dark-300">{formatBRL(g.rake)}</td>
+                          <td className="py-1.5 px-3 text-dark-100 font-medium">{g.agentName}</td>
+                          <td className="py-1.5 px-3 text-center text-dark-300">{g.players}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-dark-300">{formatBRL(g.rake)}</td>
                           <td className={`py-1 px-3 text-right font-mono ${g.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatBRL(g.ganhos)}
                           </td>
-                          <td className="py-1 px-3 text-right font-mono text-purple-400">{formatBRL(g.ggr)}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-purple-400">{formatBRL(g.ggr)}</td>
                           <td className={`py-1 px-3 text-right font-mono font-bold ${g.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatBRL(g.resultado)}
                           </td>
