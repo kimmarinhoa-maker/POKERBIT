@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build --workspace=@poker-manager/web"]
+
+[start]
+cmd = "npm run start --workspace=@poker-manager/web"
