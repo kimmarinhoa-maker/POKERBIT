@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { formatBRL } from '@/lib/api';
-import { round2 } from '@/lib/formatters';
+import { round2, normalizeKey } from '@/lib/formatters';
 import { buildLigaMessage } from '@/lib/whatsappMessages';
 import { useToast } from '@/components/Toast';
 import ClubLogo from '@/components/ClubLogo';
@@ -111,7 +111,7 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {}, weekS
                         className={`font-medium flex items-center gap-2 ${isCurrent ? 'text-poker-400' : 'text-white'}`}
                       >
                         <ClubLogo
-                          logoUrl={logoMap[sc.name.toLowerCase()]}
+                          logoUrl={logoMap[normalizeKey(sc.name)]}
                           name={sc.name}
                           size="sm"
                           className="!w-6 !h-6 !text-[10px]"

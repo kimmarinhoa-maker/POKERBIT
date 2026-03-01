@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
-import { round2 } from '@/lib/formatters';
+import { round2, normalizeKey } from '@/lib/formatters';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
 import ClubLogo from '@/components/ClubLogo';
@@ -70,7 +70,7 @@ export default function LigaGlobalPage() {
           const map: Record<string, string | null> = {};
           for (const club of treeRes.data) {
             for (const sub of club.subclubes || []) {
-              map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+              map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
             }
           }
           setLogoMap(map);
@@ -443,7 +443,7 @@ export default function LigaGlobalPage() {
                         <td className="px-4 py-3 text-white font-medium">
                           <span className="flex items-center gap-2">
                             <ClubLogo
-                              logoUrl={logoMap[sc.name.toLowerCase()]}
+                              logoUrl={logoMap[normalizeKey(sc.name)]}
                               name={sc.name}
                               size="sm"
                               className="!w-6 !h-6 !text-[10px]"

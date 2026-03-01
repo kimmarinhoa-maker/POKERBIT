@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { formatBRL, round2 } from '@/lib/formatters';
+import { formatBRL, round2, normalizeKey } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
 import DeltaBadge from '@/components/ui/DeltaBadge';
@@ -140,7 +140,7 @@ export default function DashboardPage() {
           rakeback: round2(scRakeback),
           lancamentos: round2(scLancamentos),
           status: 'Em Aberto',
-          logoUrl: logoMapRef.current[sc.name.toLowerCase()] || null,
+          logoUrl: logoMapRef.current[normalizeKey(sc.name)] || null,
         });
       }
 
@@ -185,7 +185,7 @@ export default function DashboardPage() {
           const map: Record<string, string | null> = {};
           for (const club of treeRes.data) {
             for (const sub of club.subclubes || []) {
-              map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+              map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
             }
           }
           logoMapRef.current = map;

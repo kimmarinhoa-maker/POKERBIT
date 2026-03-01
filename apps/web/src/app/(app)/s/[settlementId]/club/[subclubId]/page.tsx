@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
 import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
+import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
 import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
@@ -71,8 +72,8 @@ export default function SubclubPanelPage() {
         const waMap: Record<string, string | null> = {};
         for (const club of treeRes.data) {
           for (const sub of club.subclubes || []) {
-            map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
-            waMap[sub.name.toLowerCase()] = sub.whatsapp_group_link || null;
+            map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
+            waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;
           }
         }
         setLogoMap(map);
@@ -193,8 +194,8 @@ export default function SubclubPanelPage() {
               fees={fees}
               weekStart={settlement.week_start}
               weekEnd={weekEnd}
-              logoUrl={logoMap[subclubId.toLowerCase()] || null}
-              whatsappGroupLink={whatsappLinkMap[subclubId.toLowerCase()] || null}
+              logoUrl={logoMap[normalizeKey(subclubId)] || null}
+              whatsappGroupLink={whatsappLinkMap[normalizeKey(subclubId)] || null}
             />
           </TabErrorBoundary>
         );
@@ -261,7 +262,7 @@ export default function SubclubPanelPage() {
               weekStart={settlement.week_start}
               clubId={settlement.club_id}
               fees={fees}
-              logoUrl={logoMap[subclubId.toLowerCase()] || null}
+              logoUrl={logoMap[normalizeKey(subclubId)] || null}
               settlementId={settlementId}
               settlementStatus={settlement.status}
               onDataChange={loadData}

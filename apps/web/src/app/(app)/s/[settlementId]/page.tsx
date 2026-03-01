@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { getSettlementFull, voidSettlement, formatBRL, getOrgTree } from '@/lib/api';
+import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import KpiCard from '@/components/ui/KpiCard';
@@ -43,7 +44,7 @@ export default function SettlementOverviewPage() {
         const map: Record<string, string | null> = {};
         for (const club of treeRes.data) {
           for (const sub of club.subclubes || []) {
-            map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+            map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
           }
         }
         setLogoMap(map);
@@ -213,7 +214,7 @@ export default function SettlementOverviewPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <ClubLogo
-                          logoUrl={logoMap[sc.name.toLowerCase()]}
+                          logoUrl={logoMap[normalizeKey(sc.name)]}
                           name={sc.name}
                           size="md"
                           className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"

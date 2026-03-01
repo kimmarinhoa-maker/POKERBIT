@@ -20,3 +20,8 @@ export function fmtDateTime(dt: string): string {
     minute: '2-digit',
   });
 }
+
+/** Normalize a string for map keys: lowercase + strip accents (e.g. "Império" → "imperio") */
+export function normalizeKey(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
