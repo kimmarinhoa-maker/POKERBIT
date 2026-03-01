@@ -456,6 +456,7 @@ export async function updateOrganization(
     name?: string;
     external_id?: string;
     is_active?: boolean;
+    whatsapp_group_link?: string | null;
   },
 ) {
   return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -564,7 +565,11 @@ export async function saveClubAdjustments(data: {
 
 // ─── Tenant Config ──────────────────────────────────────────────
 
-export async function updateTenantConfig(data: { has_subclubs?: boolean }) {
+export async function getTenantConfig() {
+  return apiFetch('/config/tenant');
+}
+
+export async function updateTenantConfig(data: { has_subclubs?: boolean; pix_key?: string | null; pix_key_type?: string | null }) {
   return apiFetch('/config/tenant', {
     method: 'PATCH',
     body: JSON.stringify(data),

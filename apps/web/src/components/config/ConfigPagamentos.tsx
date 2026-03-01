@@ -10,6 +10,8 @@ import {
   createBankAccount,
   updateBankAccount,
   deleteBankAccount,
+  getTenantConfig,
+  updateTenantConfig,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
@@ -44,14 +46,21 @@ export default function ConfigPagamentos() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [banks, setBanks] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('');
+  const [savingPix, setSavingPix] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [mRes, bRes] = await Promise.all([listPaymentMethods(), listBankAccounts()]);
+      const [mRes, bRes, tRes] = await Promise.all([listPaymentMethods(), listBankAccounts(), getTenantConfig()]);
       if (mRes.success) setMethods(mRes.data || []);
       if (bRes.success) setBanks(bRes.data || []);
+      if (tRes.success && tRes.data) {
+        setPixKey(tRes.data.pix_key || '');
+        setPixKeyType(tRes.data.pix_key_type || '');
+      }
     } catch {
       toast('Erro ao carregar configuracoes de pagamento', 'error');
     } finally {
@@ -64,6 +73,25 @@ export default function ConfigPagamentos() {
     loadData();
   }, [loadData]);
 
+  async function handleSavePix() {
+    setSavingPix(true);
+    try {
+      const res = await updateTenantConfig({
+        pix_key: pixKey.trim() || null,
+        pix_key_type: pixKeyType || null,
+      });
+      if (res.success) {
+        toast('Chave PIX salva!', 'success');
+      } else {
+        toast(res.error || 'Erro ao salvar', 'error');
+      }
+    } catch {
+      toast('Erro de conexao', 'error');
+    } finally {
+      setSavingPix(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -74,6 +102,46 @@ export default function ConfigPagamentos() {
 
   return (
     <div>
+      {/* PIX Key for billing */}
+      <div className="card mb-6">
+        <h3 className="text-sm font-semibold text-dark-200 mb-1">Chave PIX para Cobrancas</h3>
+        <p className="text-xs text-dark-500 mb-4">Usada nas mensagens de cobranca via WhatsApp.</p>
+        <div className="flex items-end gap-3">
+          <div className="w-36">
+            <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1 block">Tipo</label>
+            <select
+              value={pixKeyType}
+              onChange={(e) => setPixKeyType(e.target.value)}
+              className="input w-full text-sm"
+            >
+              <option value="">Selecione</option>
+              <option value="cpf">CPF</option>
+              <option value="cnpj">CNPJ</option>
+              <option value="email">E-mail</option>
+              <option value="phone">Telefone</option>
+              <option value="random">Aleatoria</option>
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1 block">Chave PIX</label>
+            <input
+              type="text"
+              placeholder="Digite a chave PIX"
+              value={pixKey}
+              onChange={(e) => setPixKey(e.target.value)}
+              className="input w-full text-sm"
+            />
+          </div>
+          <button
+            onClick={handleSavePix}
+            disabled={savingPix}
+            className="btn-primary text-xs px-4 py-2 whitespace-nowrap"
+          >
+            {savingPix ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+
       {/* Section tabs — pill style */}
       <div className="flex gap-2 mb-6">
         <button

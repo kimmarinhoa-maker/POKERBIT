@@ -435,6 +435,7 @@ const updateOrgSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   external_id: z.string().optional(),
   is_active: z.boolean().optional(),
+  whatsapp_group_link: z.string().max(255).nullable().optional(),
 });
 
 router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
@@ -473,6 +474,7 @@ router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), as
     if (parsed.data.name !== undefined) updates.name = parsed.data.name.trim();
     if (parsed.data.external_id !== undefined) updates.external_id = parsed.data.external_id.trim() || null;
     if (parsed.data.is_active !== undefined) updates.is_active = parsed.data.is_active;
+    if (parsed.data.whatsapp_group_link !== undefined) updates.whatsapp_group_link = parsed.data.whatsapp_group_link || null;
 
     const { data, error } = await supabaseAdmin
       .from('organizations')

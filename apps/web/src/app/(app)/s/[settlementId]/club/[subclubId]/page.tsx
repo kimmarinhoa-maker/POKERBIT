@@ -51,6 +51,7 @@ export default function SubclubPanelPage() {
   const [showLockModal, setShowLockModal] = useState(false);
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
+  const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -66,12 +67,15 @@ export default function SubclubPanelPage() {
       const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
       if (treeRes.success && treeRes.data) {
         const map: Record<string, string | null> = {};
+        const waMap: Record<string, string | null> = {};
         for (const club of treeRes.data) {
           for (const sub of club.subclubes || []) {
             map[sub.name.toLowerCase()] = sub.metadata?.logo_url || null;
+            waMap[sub.name.toLowerCase()] = sub.whatsapp_group_link || null;
           }
         }
         setLogoMap(map);
+        setWhatsappLinkMap(waMap);
       }
       if (res.success && res.data) {
         setData(res.data);
@@ -189,6 +193,7 @@ export default function SubclubPanelPage() {
               weekStart={settlement.week_start}
               weekEnd={weekEnd}
               logoUrl={logoMap[subclubId.toLowerCase()] || null}
+              whatsappGroupLink={whatsappLinkMap[subclubId.toLowerCase()] || null}
             />
           </TabErrorBoundary>
         );
@@ -214,7 +219,7 @@ export default function SubclubPanelPage() {
       case 'dre':
         return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} /></TabErrorBoundary>;
       case 'liga':
-        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} weekStart={settlement.week_start} weekEnd={weekEnd} /></TabErrorBoundary>;
       case 'caixa':
         return (
           <TabErrorBoundary tabName="Caixa">

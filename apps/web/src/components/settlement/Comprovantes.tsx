@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry } from '@/lib/api';
+import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry, getTenantConfig } from '@/lib/api';
+import { buildCobrancaMessage, openWhatsApp } from '@/lib/whatsappMessages';
 import { round2, fmtDateTime } from '@/lib/formatters';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
@@ -84,6 +85,11 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
   const [fechamentoTipo, setFechamentoTipo] = useState<'avista' | 'profitloss'>('profitloss');
   const [hidePlayers, setHidePlayers] = useState(false);
 
+  // ─── Agent phone map + PIX key (for WhatsApp billing) ───────────────
+  const [agentPhoneMap, setAgentPhoneMap] = useState<Record<string, string>>({});
+  const [pixKey, setPixKey] = useState('');
+  const [showCobrarModal, setShowCobrarModal] = useState(false);
+
   // ─── Quick-pay state (modal) ──────────────────────────────────────
   const [payModalAgent, setPayModalAgent] = useState<AgentMetric | null>(null);
   const [payForm, setPayForm] = useState({ amount: '', method: 'PIX', description: '', dir: 'OUT' as 'IN' | 'OUT' });
@@ -112,6 +118,28 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+
+  // Load agent phones + PIX key (for WhatsApp billing)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [tenantRes] = await Promise.all([getTenantConfig()]);
+        if (tenantRes.success && tenantRes.data?.pix_key) {
+          setPixKey(tenantRes.data.pix_key);
+        }
+      } catch { /* non-critical */ }
+    })();
+  }, []);
+
+  // Build phone map from agent metadata (agents come from org tree with metadata.phone)
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    for (const a of agents) {
+      const phone = (a as any).metadata?.phone || (a as any).phone;
+      if (phone) map[a.agent_name.toLowerCase()] = phone;
+    }
+    setAgentPhoneMap(map);
+  }, [agents]);
 
   // ─── Quick-pay handlers ─────────────────────────────────────────
   function openQuickPay(agent: AgentMetric, pendente: number) {
@@ -460,30 +488,46 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
             Demonstrativos por agente — Semana {fmtDate(weekStart)} a {fmtDate(weekEnd)}
           </p>
         </div>
-        <button
-          onClick={() => {
-            const withMov = filteredData.filter((d) => Math.abs(d.pendente) > 0.01 || Math.abs(d.totalDevido) > 0.01);
-            if (withMov.length === 0) {
-              toast('Nenhum agente com movimentacao', 'info');
-              return;
-            }
-            toast(`Exportando ${withMov.length} comprovantes...`, 'info');
-            // Sequential export
-            let idx = 0;
-            function next() {
-              if (idx >= withMov.length) {
-                toast('Todos exportados!', 'success');
+        <div className="flex items-center gap-2">
+          {(() => {
+            const pendentes = activeData.filter((d) => d.pendente < -0.01);
+            const comPhone = pendentes.filter((d) => !!agentPhoneMap[d.agent.agent_name.toLowerCase()]);
+            if (pendentes.length === 0) return null;
+            return (
+              <button
+                onClick={() => setShowCobrarModal(true)}
+                className="text-sm text-green-400 hover:text-green-300 border border-green-500/30 hover:border-green-500/50 bg-green-500/5 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Cobrar Pendentes ({comPhone.length}/{pendentes.length})
+              </button>
+            );
+          })()}
+          <button
+            onClick={() => {
+              const withMov = filteredData.filter((d) => Math.abs(d.pendente) > 0.01 || Math.abs(d.totalDevido) > 0.01);
+              if (withMov.length === 0) {
+                toast('Nenhum agente com movimentacao', 'info');
                 return;
               }
-              setSelectedAgent(withMov[idx]);
-              idx++;
-            }
-            next();
-          }}
-          className="text-sm text-dark-400 hover:text-white border border-dark-700 hover:border-dark-600 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-        >
-          Exportar Todos
-        </button>
+              toast(`Exportando ${withMov.length} comprovantes...`, 'info');
+              // Sequential export
+              let idx = 0;
+              function next() {
+                if (idx >= withMov.length) {
+                  toast('Todos exportados!', 'success');
+                  return;
+                }
+                setSelectedAgent(withMov[idx]);
+                idx++;
+              }
+              next();
+            }}
+            className="text-sm text-dark-400 hover:text-white border border-dark-700 hover:border-dark-600 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          >
+            Exportar Todos
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -601,6 +645,26 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                   onOpenPay={() => openQuickPay(d.agent, d.pendente)}
                   onDeleteEntry={handleDeleteEntry}
                   deletingEntry={deletingEntry}
+                  agentPhone={agentPhoneMap[d.agent.agent_name.toLowerCase()] || ''}
+                  onCobrar={() => {
+                    const phone = agentPhoneMap[d.agent.agent_name.toLowerCase()];
+                    if (!phone) {
+                      toast('Cadastre o WhatsApp do agente em Cadastro > Agentes > Dados', 'info');
+                      return;
+                    }
+                    const msg = buildCobrancaMessage({
+                      agentName: d.agent.agent_name,
+                      weekStart,
+                      weekEnd,
+                      playersCount: d.agent.player_count,
+                      rake: d.rakeTotal,
+                      ganhos: d.ganhos,
+                      resultado: d.resultado,
+                      saldo: d.pendente,
+                      pixKey: pixKey || undefined,
+                    });
+                    openWhatsApp(phone, msg);
+                  }}
                 />
               ))}
             </tbody>
@@ -853,6 +917,100 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
           </div>
         </div>
       )}
+
+      {/* ─── Cobrar Pendentes Modal ─────────────────────────────────── */}
+      {showCobrarModal && (() => {
+        const pendentes = activeData.filter((d) => d.pendente < -0.01);
+        const comPhone = pendentes.filter((d) => !!agentPhoneMap[d.agent.agent_name.toLowerCase()]);
+
+        function enviarCobrancas() {
+          let delay = 0;
+          for (const d of comPhone) {
+            const phone = agentPhoneMap[d.agent.agent_name.toLowerCase()];
+            if (!phone) continue;
+            const msg = buildCobrancaMessage({
+              agentName: d.agent.agent_name,
+              weekStart,
+              weekEnd,
+              playersCount: d.agent.player_count,
+              rake: d.rakeTotal,
+              ganhos: d.ganhos,
+              resultado: d.resultado,
+              saldo: d.pendente,
+              pixKey: pixKey || undefined,
+            });
+            setTimeout(() => openWhatsApp(phone, msg), delay);
+            delay += 500;
+          }
+          toast(`${comPhone.length} cobrancas enviadas!`, 'success');
+          setShowCobrarModal(false);
+        }
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowCobrarModal(false); }}
+          >
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+            <div className="relative w-full max-w-lg mx-4 animate-slide-up">
+              <div className="bg-dark-900 border border-dark-700 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Cobrar Agentes Pendentes</h3>
+                    <p className="text-sm text-dark-400 mt-0.5">Cada agente sera aberto em uma nova aba do WhatsApp</p>
+                  </div>
+                  <button
+                    onClick={() => setShowCobrarModal(false)}
+                    className="text-dark-500 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-dark-800/80 border border-dark-700 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto mb-4">
+                  {pendentes.map((d) => {
+                    const phone = agentPhoneMap[d.agent.agent_name.toLowerCase()];
+                    return (
+                      <div key={d.agent.id} className="flex items-center justify-between p-3 bg-dark-800/50 rounded-lg">
+                        <div>
+                          <span className="text-white text-sm font-medium">{d.agent.agent_name}</span>
+                          <span className="text-red-400 text-sm font-mono ml-3">{formatBRL(d.pendente)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {phone ? (
+                            <>
+                              <span className="text-xs text-dark-500 font-mono">{phone.slice(-4)}</span>
+                              <span className="text-green-400 text-xs">✓</span>
+                            </>
+                          ) : (
+                            <span className="text-yellow-400 text-xs">Sem WhatsApp</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCobrarModal(false)}
+                    className="flex-1 px-4 py-2 bg-dark-800 hover:bg-dark-700 text-dark-300 rounded-lg text-sm transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={enviarCobrancas}
+                    disabled={comPhone.length === 0}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    Enviar {comPhone.length} cobrancas
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -868,6 +1026,8 @@ function AgentRow({
   onOpenPay,
   onDeleteEntry,
   deletingEntry,
+  agentPhone,
+  onCobrar,
 }: {
   data: AgentFinancials;
   isExpanded: boolean;
@@ -877,6 +1037,8 @@ function AgentRow({
   onOpenPay: () => void;
   onDeleteEntry: (id: string) => void;
   deletingEntry: string | null;
+  agentPhone?: string;
+  onCobrar?: () => void;
 }) {
   const { agent, players, ganhos, rbAgente, saldoAnterior, pago, pendente } = data;
   const isDirect = agent.is_direct;
@@ -974,6 +1136,19 @@ function AgentRow({
                 }`}
               >
                 {pendente > 0.01 ? 'Pagar' : 'Receber'}
+              </button>
+            )}
+            {hasMov && !isQuitado && pendente < -0.01 && onCobrar && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onCobrar(); }}
+                className={`text-[11px] px-2.5 py-1 whitespace-nowrap rounded-md transition-colors border font-medium ${
+                  agentPhone
+                    ? 'border-green-500/30 text-green-400 bg-green-500/5 hover:bg-green-500/15'
+                    : 'border-dark-600 text-dark-500 cursor-not-allowed'
+                }`}
+                title={agentPhone ? `Cobrar via WhatsApp (${agentPhone})` : 'Cadastre o WhatsApp do agente'}
+              >
+                Cobrar
               </button>
             )}
           </div>

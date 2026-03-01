@@ -61,12 +61,13 @@ export default function ConfigEstrutura() {
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   // Subclub form
-  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string }>(
+  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string; whatsappGroupLink: string }>(
     {
       show: false,
       editingId: null,
       name: '',
       externalId: '',
+      whatsappGroupLink: '',
     },
   );
   const [subSaving, setSubSaving] = useState(false);
@@ -113,17 +114,17 @@ export default function ConfigEstrutura() {
   // ── Subclub handlers ────────────────────────────────────────────
 
   function openSubCreate() {
-    setSubForm({ show: true, editingId: null, name: '', externalId: '' });
+    setSubForm({ show: true, editingId: null, name: '', externalId: '', whatsappGroupLink: '' });
     setSubError(null);
   }
 
   function openSubEdit(sub: Org) {
-    setSubForm({ show: true, editingId: sub.id, name: sub.name, externalId: sub.external_id || '' });
+    setSubForm({ show: true, editingId: sub.id, name: sub.name, externalId: sub.external_id || '', whatsappGroupLink: (sub as any).whatsapp_group_link || '' });
     setSubError(null);
   }
 
   function closeSubForm() {
-    setSubForm({ show: false, editingId: null, name: '', externalId: '' });
+    setSubForm({ show: false, editingId: null, name: '', externalId: '', whatsappGroupLink: '' });
     setSubError(null);
   }
 
@@ -142,6 +143,7 @@ export default function ConfigEstrutura() {
         res = await updateOrganization(subForm.editingId, {
           name: subForm.name.trim(),
           external_id: subForm.externalId.trim() || undefined,
+          whatsapp_group_link: subForm.whatsappGroupLink.trim() || null,
         });
       } else {
         res = await createOrganization({
@@ -512,6 +514,19 @@ export default function ConfigEstrutura() {
                     />
                   </div>
                 </div>
+                {subForm.editingId && (
+                  <div className="mt-3">
+                    <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>
+                    <input
+                      type="url"
+                      value={subForm.whatsappGroupLink}
+                      onChange={(e) => setSubForm((p) => ({ ...p, whatsappGroupLink: e.target.value }))}
+                      className="input w-full text-sm"
+                      placeholder="https://chat.whatsapp.com/ABC123..."
+                    />
+                    <p className="text-[10px] text-dark-600 mt-1">Cole o link de convite do grupo aqui</p>
+                  </div>
+                )}
                 <div className="flex justify-end gap-2 mt-3">
                   <button
                     onClick={closeSubForm}

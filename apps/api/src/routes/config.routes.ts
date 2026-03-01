@@ -475,14 +475,33 @@ router.put('/whatsapp', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
   }
 });
 
+// ─── GET /api/config/tenant — Get tenant settings ──
+router.get('/tenant', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('pix_key, pix_key_type')
+      .eq('id', tenantId)
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
 // ─── PATCH /api/config/tenant — Update tenant settings (OWNER only) ──
 router.patch('/tenant', requireAuth, requireTenant, requireRole('OWNER'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const { has_subclubs } = req.body;
+    const { has_subclubs, pix_key, pix_key_type } = req.body;
 
     const updates: Record<string, any> = {};
     if (typeof has_subclubs === 'boolean') updates.has_subclubs = has_subclubs;
+    if (pix_key !== undefined) updates.pix_key = pix_key || null;
+    if (pix_key_type !== undefined) updates.pix_key_type = pix_key_type || null;
 
     if (Object.keys(updates).length === 0) {
       res.status(400).json({ success: false, error: 'Nenhum campo para atualizar' });
