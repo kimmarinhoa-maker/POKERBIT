@@ -263,28 +263,28 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
               {/* 2b. Taxas + Lançamentos (detalhado, lado a lado) */}
               <div className="grid grid-cols-2 gap-3 mb-5">
                 {/* Taxas Automáticas */}
-                <div className="bg-dark-800/40 rounded-lg p-4 border border-dark-700/50">
-                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-3">Taxas Automáticas</div>
+                <div className="bg-dark-800/40 rounded-lg px-3 py-2.5 border border-dark-700/50">
+                  <div className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-1.5">Taxas Automáticas</div>
                   <StmtDetailRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}%`} value={-feesComputed.taxaApp} />
                   <StmtDetailRow label="Taxa Liga" sublabel={`${fees.taxaLiga}%`} value={-feesComputed.taxaLiga} />
                   <StmtDetailRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}%`} value={-feesComputed.taxaRodeoGGR} />
                   <StmtDetailRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}%`} value={-feesComputed.taxaRodeoApp} isLast />
-                  <div className="border-t border-dark-600 mt-1 pt-2 flex justify-between">
-                    <span className="text-[11px] font-bold text-dark-200">Total Taxas</span>
-                    <span className="font-mono text-[11px] font-bold text-red-400">{formatBRL(feesComputed.totalTaxasSigned)}</span>
+                  <div className="border-t border-dark-600 mt-1 pt-1.5 flex justify-between">
+                    <span className="text-[10px] font-bold text-dark-200">Total Taxas</span>
+                    <span className="font-mono text-[10px] font-bold text-red-400">{formatBRL(feesComputed.totalTaxasSigned)}</span>
                   </div>
                 </div>
 
                 {/* Lançamentos */}
-                <div className="bg-dark-800/40 rounded-lg p-4 border border-dark-700/50">
-                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-3">Lançamentos</div>
+                <div className="bg-dark-800/40 rounded-lg px-3 py-2.5 border border-dark-700/50">
+                  <div className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-1.5">Lançamentos</div>
                   <StmtDetailRow label="Overlay" value={adjustments.overlay} />
                   <StmtDetailRow label="Compras" value={adjustments.compras} />
                   <StmtDetailRow label="Security" value={adjustments.security} />
                   <StmtDetailRow label="Outros" value={adjustments.outros} isLast />
-                  <div className="border-t border-dark-600 mt-1 pt-2 flex justify-between">
-                    <span className="text-[11px] font-bold text-dark-200">Total Lanç.</span>
-                    <span className={`font-mono text-[11px] font-bold ${totalLancamentos < 0 ? 'text-red-400' : totalLancamentos > 0 ? 'text-emerald-400' : 'text-dark-500'}`}>
+                  <div className="border-t border-dark-600 mt-1 pt-1.5 flex justify-between">
+                    <span className="text-[10px] font-bold text-dark-200">Total Lanç.</span>
+                    <span className={`font-mono text-[10px] font-bold ${totalLancamentos < 0 ? 'text-red-400' : totalLancamentos > 0 ? 'text-emerald-400' : 'text-dark-500'}`}>
                       {formatBRL(totalLancamentos)}
                     </span>
                   </div>
@@ -521,12 +521,12 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 function StmtDetailRow({ label, sublabel, value, isLast }: { label: string; sublabel?: string; value: number; isLast?: boolean }) {
   const isEmpty = value === undefined || value === null || value === 0;
   return (
-    <div className={`flex justify-between items-center py-1.5 ${isLast ? '' : 'border-b border-dark-800/60'}`}>
+    <div className={`flex justify-between items-center py-[3px] ${isLast ? '' : 'border-b border-dark-800/40'}`}>
       <div>
-        <span className={`text-[11px] ${isEmpty ? 'text-dark-500' : 'text-dark-200'}`}>{label}</span>
-        {sublabel && <span className="text-[9px] text-dark-500 ml-1">{sublabel}</span>}
+        <span className={`text-[10px] ${isEmpty ? 'text-dark-500' : 'text-dark-200'}`}>{label}</span>
+        {sublabel && <span className="text-[8px] text-dark-500 ml-1">{sublabel}</span>}
       </div>
-      <span className={`font-mono text-[11px] ${isEmpty ? 'text-dark-600' : value > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+      <span className={`font-mono text-[10px] ${isEmpty ? 'text-dark-600' : value > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
         {isEmpty ? '—' : formatBRL(value)}
       </span>
     </div>
