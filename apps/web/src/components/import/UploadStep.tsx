@@ -3,9 +3,19 @@ import Spinner from '@/components/Spinner';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (same as backend)
 
+export type Platform = 'suprema' | 'pppoker' | 'clubgg';
+
+const PLATFORMS: { value: Platform; label: string; hint: string; enabled: boolean }[] = [
+  { value: 'suprema', label: 'Suprema Poker', hint: 'Arquivo .xlsx com aba "Grand Union Member Resume"', enabled: true },
+  { value: 'pppoker', label: 'PPPoker', hint: 'Em breve', enabled: false },
+  { value: 'clubgg', label: 'ClubGG', hint: 'Em breve', enabled: false },
+];
+
 interface UploadStepProps {
   file: File | null;
   setFile: (f: File | null) => void;
+  platform: Platform;
+  setPlatform: (p: Platform) => void;
   clubs: Array<{ id: string; name: string }>;
   clubId: string;
   setClubId: (id: string) => void;
@@ -34,6 +44,8 @@ function validateFile(f: File): string | null {
 export default function UploadStep({
   file,
   setFile,
+  platform,
+  setPlatform,
   clubs,
   clubId,
   setClubId,
@@ -71,8 +83,35 @@ export default function UploadStep({
     if (dropped) trySetFile(dropped);
   }
 
+  const activePlatform = PLATFORMS.find((p) => p.value === platform) || PLATFORMS[0];
+
   return (
     <div>
+      {/* Platform selector */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-dark-300 mb-2">Plataforma</label>
+        <div className="flex gap-2">
+          {PLATFORMS.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              disabled={!p.enabled}
+              onClick={() => p.enabled && setPlatform(p.value)}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
+                platform === p.value
+                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                  : p.enabled
+                    ? 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
+                    : 'bg-dark-900/50 border-dark-800 text-dark-600 cursor-not-allowed'
+              }`}
+            >
+              {p.label}
+              {!p.enabled && <span className="block text-[10px] text-dark-600 mt-0.5">Em breve</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div
         onDrop={handleDrop}
         onDragOver={(e) => {
@@ -126,6 +165,9 @@ export default function UploadStep({
           </div>
         )}
       </div>
+
+      {/* Format hint */}
+      <p className="mt-2 text-xs text-dark-500">{activePlatform.hint}</p>
 
       {fileError && (
         <div className="mt-3 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">

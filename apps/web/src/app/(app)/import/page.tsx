@@ -7,7 +7,7 @@ import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 
 import StepIndicator from '@/components/import/StepIndicator';
-import UploadStep from '@/components/import/UploadStep';
+import UploadStep, { type Platform } from '@/components/import/UploadStep';
 import PreviewStep from '@/components/import/PreviewStep';
 import PendenciesStep from '@/components/import/PendenciesStep';
 import ConfirmStep from '@/components/import/ConfirmStep';
@@ -22,6 +22,7 @@ export default function ImportWizardPage() {
   const [clubId, setClubId] = useState('');
   const [weekStartOverride, setWeekStartOverride] = useState('');
   const [showWeekOverride, setShowWeekOverride] = useState(false);
+  const [platform, setPlatform] = useState<Platform>('suprema');
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -68,7 +69,7 @@ export default function ImportWizardPage() {
     setPreview(null);
 
     try {
-      const res = await importPreview(file, weekStartOverride || undefined);
+      const res = await importPreview(file, weekStartOverride || undefined, platform);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');
@@ -190,7 +191,7 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart);
+      const res = await importConfirm(file, clubId, weekStart, platform);
       if (res.success && res.data) {
         setConfirmResult(res.data);
       } else {
@@ -219,6 +220,7 @@ export default function ImportWizardPage() {
     setBulkMode('direct');
     setBulkAgentName('');
     setBulkNewAgentName('');
+    setPlatform('suprema');
   }
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -234,6 +236,8 @@ export default function ImportWizardPage() {
             setFile(f);
             setError('');
           }}
+          platform={platform}
+          setPlatform={setPlatform}
           clubs={clubs}
           clubId={clubId}
           setClubId={setClubId}

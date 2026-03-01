@@ -52,12 +52,14 @@ router.post('/preview', requireAuth, requireTenant, requirePermission('page:impo
 
     const tenantId = req.tenantId!;
     const weekStartOverride = req.body.week_start || undefined;
+    const platform = req.body.platform || 'suprema';
 
     const preview = await importPreviewService.preview({
       tenantId,
       fileBuffer: req.file.buffer,
       fileName: req.file.originalname,
       weekStartOverride,
+      platform,
     });
 
     // Também retornar subclubes do tenant para os dropdowns de vinculação
@@ -119,6 +121,7 @@ router.post(
 
       const { club_id, week_start } = parsed.data;
       const tenantId = req.tenantId!;
+      const platform = req.body.platform || 'suprema';
 
       // Validate club belongs to this tenant
       const { data: club } = await supabaseAdmin
@@ -140,6 +143,7 @@ router.post(
         fileName: req.file.originalname,
         fileBuffer: req.file.buffer,
         uploadedBy: req.userId!,
+        platform,
       });
 
       logAudit(req, 'CREATE', 'settlement', result.settlement_id || '', undefined, { club_id, week_start, fileName: req.file!.originalname });

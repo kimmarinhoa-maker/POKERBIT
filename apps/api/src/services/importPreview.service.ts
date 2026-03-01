@@ -122,11 +122,27 @@ class ImportPreviewService {
     fileBuffer: Buffer;
     fileName: string;
     weekStartOverride?: string; // Se o usuário forçar uma semana
+    platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
   }): Promise<ImportPreviewResponse> {
-    const { tenantId, fileBuffer, fileName, weekStartOverride } = params;
+    const { tenantId, fileBuffer, fileName, weekStartOverride, platform = 'suprema' } = params;
 
     // 1) Ler o XLSX
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+
+    // 1.5) Validate platform support
+    if (platform !== 'suprema') {
+      return {
+        week: { week_start: '', week_end: '', detected_from: 'fallback', confidence: 'low' },
+        summary: { total_players: 0, total_agents: 0, total_subclubs: 0, total_winnings_brl: 0, total_rake_brl: 0, total_ggr_brl: 0 },
+        readiness: { ready: false, blockers_count: 1 },
+        blockers: { unknown_agencies: [], players_without_agency: [] },
+        subclubs_found: [],
+        duplicate_players: [],
+        available_agents: [],
+        warnings: [`Plataforma "${platform}" ainda nao suportada. Use Suprema Poker.`],
+        players: [],
+      };
+    }
 
     // 2) Detectar semana automaticamente
     const week = detectWeekStart(workbook, fileName, weekStartOverride);

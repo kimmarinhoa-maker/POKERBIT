@@ -47,12 +47,18 @@ interface ConfirmOptions {
   fileName: string;
   fileBuffer: Buffer;
   uploadedBy: string;
+  platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
 }
 
 class ImportConfirmService {
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
-    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy } = opts;
+    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema' } = opts;
     const warnings: string[] = [];
+
+    // ── 0) Platform guard ─────────────────────────────────────────
+    if (platform !== 'suprema') {
+      throw new ConfirmError(400, `Plataforma "${platform}" ainda nao suportada. Use Suprema Poker.`);
+    }
 
     // ── 1) Re-parse + Validate (guardrail) ────────────────────────
 
