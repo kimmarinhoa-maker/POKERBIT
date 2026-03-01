@@ -3,11 +3,11 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Redirect legacy /config/users to /config/equipe
+// Redirect legacy /config/users to /config (Equipe tab)
 export default function UsersPageRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/config/equipe');
+    router.replace('/config');
   }, [router]);
   return null;
 }

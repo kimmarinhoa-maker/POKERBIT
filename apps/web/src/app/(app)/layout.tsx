@@ -12,10 +12,8 @@ import {
   Receipt,
   Building2,
   Trophy,
-  Wallet,
   Users,
   Settings,
-  UserCog,
   Spade,
   Menu,
   LogOut,
@@ -54,7 +52,6 @@ const navSections: NavSection[] = [
     items: [
       { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
       { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
     ],
   },
   {
@@ -68,7 +65,6 @@ const navSections: NavSection[] = [
     adminOnly: true,
     items: [
       { href: '/config', label: 'Configuracao', icon: Settings },
-      { href: '/config/equipe', label: 'Equipe', icon: UserCog },
     ],
   },
 ];

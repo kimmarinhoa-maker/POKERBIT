@@ -11,11 +11,9 @@ import {
   Building2,
   Eye,
   Trophy,
-  Wallet,
   Users,
   Link as LinkIcon,
   Settings,
-  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,16 +29,13 @@ const commands: CommandItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'Operacao', keywords: 'home inicio' },
   { label: 'Importar', href: '/import', icon: Upload, section: 'Operacao', keywords: 'upload planilha' },
   { label: 'Historico', href: '/import/history', icon: Clock, section: 'Operacao', keywords: 'imports passados' },
+  { label: 'Vincular', href: '/import/vincular', icon: LinkIcon, section: 'Operacao', keywords: 'link associar jogadores' },
   { label: 'Lancamentos', href: '/lancamentos', icon: Receipt, section: 'Operacao', keywords: 'manual ajuste' },
   { label: 'Clubes (Settlement)', href: '/s', icon: Building2, section: 'Fechamentos', keywords: 'settlement acerto' },
   { label: 'Visao Geral', href: '/s', icon: Eye, section: 'Fechamentos', keywords: 'overview resumo settlement' },
   { label: 'Liga Global', href: '/liga-global', icon: Trophy, section: 'Fechamentos', keywords: 'consolidado total' },
-  { label: 'Caixa Geral', href: '/caixa-geral', icon: Wallet, section: 'Fechamentos', keywords: 'financeiro banco' },
   { label: 'Agentes / Jogadores', href: '/players', icon: Users, section: 'Cadastro', keywords: 'player agent cadastro' },
-  { label: 'Clubes', href: '/clubs', icon: Building2, section: 'Cadastro', keywords: 'clube organizar' },
-  { label: 'Vincular', href: '/links', icon: LinkIcon, section: 'Cadastro', keywords: 'link associar' },
-  { label: 'Configuracao', href: '/config', icon: Settings, section: 'Config', keywords: 'settings setup' },
-  { label: 'Equipe', href: '/config/equipe', icon: UserCog, section: 'Config', keywords: 'usuarios roles permissoes membros' },
+  { label: 'Configuracao', href: '/config', icon: Settings, section: 'Config', keywords: 'settings setup equipe membros permissoes' },
 ];
 
 const RECENT_KEY = 'cmd-palette-recent';

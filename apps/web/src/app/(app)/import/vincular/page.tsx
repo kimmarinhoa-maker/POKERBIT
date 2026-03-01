@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { getUnlinkedPlayers, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
+import EmptyState from '@/components/ui/EmptyState';
+import { LinkIcon } from 'lucide-react';
 
 interface UnlinkedPlayer {
   id: string;
@@ -40,8 +42,7 @@ function getClubStyle(name: string) {
   return CLUB_COLORS[name] || 'bg-dark-700/50 text-dark-300 border-dark-600 hover:bg-dark-700';
 }
 
-export default function LinksPage() {
-  const router = useRouter();
+export default function ImportVincularPage() {
   const searchParams = useSearchParams();
   const settlementId = searchParams.get('settlement_id') || undefined;
 
@@ -86,7 +87,7 @@ export default function LinksPage() {
         newLinked[key] = subclub.name;
         setLinked(newLinked);
         toast(
-          `${agentName} → ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`,
+          `${agentName} \u2192 ${subclub.name} (${players.length} jogador${players.length !== 1 ? 'es' : ''})`,
           'success',
         );
       } else {
@@ -106,7 +107,7 @@ export default function LinksPage() {
       const res = await linkPlayer(player.externalId, subclub.id);
       if (res.success) {
         setLinked((prev) => ({ ...prev, [key]: subclub.name }));
-        toast(`${player.nickname} → ${subclub.name}`, 'success');
+        toast(`${player.nickname} \u2192 ${subclub.name}`, 'success');
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
@@ -136,7 +137,7 @@ export default function LinksPage() {
           newLinked[p.externalId] = subclub.name;
         });
         setLinked(newLinked);
-        toast(`${players.length} jogadores sem agente → ${subclub.name}`, 'success');
+        toast(`${players.length} jogadores sem agente \u2192 ${subclub.name}`, 'success');
       } else {
         toast(`Erro: ${res.error}`, 'error');
       }
@@ -153,7 +154,7 @@ export default function LinksPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-8 flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Spinner className="mx-auto mb-3" />
           <p className="text-dark-400">Carregando jogadores...</p>
@@ -164,20 +165,18 @@ export default function LinksPage() {
 
   if (error) {
     return (
-      <div className="p-4 lg:p-8 max-w-3xl mx-auto">
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">{error}</div>
-      </div>
+      <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">{error}</div>
     );
   }
 
   if (!data || totalUnlinked === 0) {
     return (
-      <div className="p-4 lg:p-8 max-w-3xl mx-auto text-center py-16">
-        <h2 className="text-xl lg:text-2xl font-bold text-white mb-2">Todos vinculados!</h2>
-        <p className="text-dark-400 mb-6">Nenhum jogador pendente de vinculacao.</p>
-        <button onClick={() => router.push('/dashboard')} className="btn-primary px-6 py-2">
-          Voltar ao Dashboard
-        </button>
+      <div className="card">
+        <EmptyState
+          icon={LinkIcon}
+          title="Todos vinculados!"
+          description="Nenhum jogador pendente de vinculacao."
+        />
       </div>
     );
   }
@@ -186,15 +185,11 @@ export default function LinksPage() {
   const byAgent: Record<string, UnlinkedPlayer[]> = data.byAgent || {};
 
   return (
-    <div className="p-4 lg:p-8 max-w-4xl">
+    <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">Vincular Jogadores</h2>
-          <p className="text-dark-400 mt-1">
-            {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido. Vincule antes de validar os
-            numeros.
-          </p>
-        </div>
+        <p className="text-dark-400">
+          {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido
+        </p>
         <div className="text-right">
           <div className="text-sm text-dark-400">Progresso</div>
           <div className="text-2xl font-bold text-poker-400">
@@ -203,7 +198,7 @@ export default function LinksPage() {
         </div>
       </div>
 
-      <div className="w-full bg-dark-700 rounded-full h-2 mb-8">
+      <div className="w-full bg-dark-700 rounded-full h-2 mb-6">
         <div
           className="bg-poker-500 h-2 rounded-full transition-all duration-300"
           style={{ width: `${totalUnlinked > 0 ? (totalLinked / totalUnlinked) * 100 : 0}%` }}
@@ -230,7 +225,7 @@ export default function LinksPage() {
                   <h3 className="text-white font-semibold">{isNoneAgent ? 'Jogadores Sem Agente' : agentName}</h3>
                   <p className="text-dark-400 text-xs">
                     {players.length} jogador{players.length !== 1 ? 'es' : ''}
-                    {!isNoneAgent && ' · Prefixo nao reconhecido'}
+                    {!isNoneAgent && ' \u00b7 Prefixo nao reconhecido'}
                   </p>
                 </div>
               </div>
@@ -255,7 +250,7 @@ export default function LinksPage() {
 
               {agentLinkedClub && (
                 <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getClubStyle(agentLinkedClub)}`}>
-                  ✓ {agentLinkedClub}
+                  {'\u2713'} {agentLinkedClub}
                 </span>
               )}
             </div>
@@ -300,7 +295,7 @@ export default function LinksPage() {
                       <span className="text-poker-400 font-mono text-xs shrink-0">{player.externalId}</span>
                       <span className="text-white text-sm truncate">{player.nickname}</span>
                       {player.agentName && player.agentName !== agentName && (
-                        <span className="text-dark-500 text-xs">· {player.agentName}</span>
+                        <span className="text-dark-500 text-xs">{'\u00b7'} {player.agentName}</span>
                       )}
                     </div>
 
@@ -308,7 +303,7 @@ export default function LinksPage() {
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 ${getClubStyle(playerLinked)}`}
                       >
-                        ✓ {playerLinked}
+                        {'\u2713'} {playerLinked}
                       </span>
                     ) : (
                       <div className="flex gap-1 shrink-0">
@@ -336,33 +331,13 @@ export default function LinksPage() {
         );
       })}
 
-      <div className="sticky bottom-0 bg-dark-900/95 backdrop-blur-sm border-t border-dark-700 py-4 mt-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl">
-          <div className="text-sm">
-            {remaining > 0 ? (
-              <span className="text-yellow-400">
-                {remaining} jogador{remaining !== 1 ? 'es' : ''} ainda sem vinculo
-              </span>
-            ) : (
-              <span className="text-green-400">Todos vinculados! Reimporte para aplicar.</span>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 text-sm text-dark-300 hover:text-white transition-colors"
-            >
-              Voltar
-            </button>
-            <button
-              onClick={() => router.push('/import')}
-              className={`btn-primary px-6 py-2 ${remaining > 0 ? 'opacity-70' : ''}`}
-            >
-              {remaining > 0 ? 'Reimportar (com pendencias)' : 'Reimportar Agora'}
-            </button>
-          </div>
-        </div>
-      </div>
+      {remaining > 0 ? (
+        <p className="text-yellow-400 text-sm mt-4">
+          {remaining} jogador{remaining !== 1 ? 'es' : ''} ainda sem vinculo
+        </p>
+      ) : (
+        <p className="text-green-400 text-sm mt-4">Todos vinculados! Reimporte para aplicar.</p>
+      )}
     </div>
   );
 }

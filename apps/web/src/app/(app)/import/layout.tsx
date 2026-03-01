@@ -7,6 +7,7 @@ import RoleGuard from '@/components/RoleGuard';
 const TABS = [
   { href: '/import', label: 'Nova Importacao', icon: '\u{1F4E4}' },
   { href: '/import/history', label: 'Historico', icon: '\u{1F4CB}' },
+  { href: '/import/vincular', label: 'Vincular', icon: '\u{1F517}' },
 ];
 
 export default function ImportLayout({ children }: { children: React.ReactNode }) {
