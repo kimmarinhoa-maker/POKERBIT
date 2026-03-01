@@ -12,7 +12,9 @@ import {
   uploadClubLogo,
   deleteClubLogo,
   toggleAgentDirect,
+  updateTenantConfig,
 } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
@@ -46,6 +48,7 @@ interface PrefixRule {
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function ConfigEstrutura() {
+  const { hasSubclubs, setHasSubclubs, isAdmin } = useAuth();
   const [tree, setTree] = useState<Club[]>([]);
   const [prefixRules, setPrefixRules] = useState<PrefixRule[]>([]);
   const [togglingDirect, setTogglingDirect] = useState<Set<string>>(new Set());
@@ -53,6 +56,7 @@ export default function ConfigEstrutura() {
   const [agentSearch, setAgentSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<'subclubes' | 'agentes'>('subclubes');
+  const [togglingMode, setTogglingMode] = useState(false);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
@@ -377,8 +381,61 @@ export default function ConfigEstrutura() {
     );
   }
 
+  async function handleToggleSubclubs() {
+    const newValue = !hasSubclubs;
+    const ok = await confirm({
+      title: newValue ? 'Ativar modo multi-clubes' : 'Ativar modo clube unico',
+      message: newValue
+        ? 'O sistema voltara a gerenciar subclubes independentes.'
+        : 'O sistema operara como clube unico, sem subclubes.',
+    });
+    if (!ok) return;
+    setTogglingMode(true);
+    try {
+      const res = await updateTenantConfig({ has_subclubs: newValue });
+      if (res.success) {
+        setHasSubclubs(newValue);
+        toast(newValue ? 'Modo multi-clubes ativado' : 'Modo clube unico ativado', 'success');
+      } else {
+        toast(res.error || 'Erro ao atualizar modo', 'error');
+      }
+    } catch {
+      toast('Erro ao atualizar modo', 'error');
+    } finally {
+      setTogglingMode(false);
+    }
+  }
+
   return (
     <div>
+      {/* SaaS mode toggle */}
+      {isAdmin && (
+        <div className="card mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-dark-200">Modo de Operacao</h3>
+            <p className="text-xs text-dark-500 mt-0.5">
+              {hasSubclubs
+                ? 'Multi-clubes: gerencie subclubes independentes'
+                : 'Clube unico: operacao simplificada sem subclubes'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggleSubclubs}
+            disabled={togglingMode}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+              hasSubclubs ? 'bg-poker-600' : 'bg-dark-700'
+            }`}
+            title={hasSubclubs ? 'Desativar subclubes' : 'Ativar subclubes'}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                hasSubclubs ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      )}
+
       {/* Sub-tabs: Sub Clubes | Agentes — pill style */}
       <div className="flex gap-2 mb-6">
         <button

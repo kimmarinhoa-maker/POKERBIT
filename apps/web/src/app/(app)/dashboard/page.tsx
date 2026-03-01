@@ -51,7 +51,7 @@ interface WeekData {
 export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasSubclubs } = useAuth();
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -414,6 +414,7 @@ export default function DashboardPage() {
               value={formatBRL(f?.ggrTotal ?? 0)}
               accentColor="bg-purple-500"
               valueColor="text-purple-400"
+              hideIfZero
             />
             <KpiCard
               label="Resultado"
@@ -433,10 +434,18 @@ export default function DashboardPage() {
               accentColor={(f?.acertoLiga ?? 0) >= 0 ? 'bg-amber-500' : 'bg-red-500'}
               valueColor={(f?.acertoLiga ?? 0) >= 0 ? 'text-amber-400' : 'text-red-400'}
             />
+            {!hasSubclubs && (
+              <KpiCard
+                label="Lucro Liquido"
+                value={formatBRL((f?.acertoLiga ?? 0) - (f?.despesas.rakeback ?? 0))}
+                accentColor={((f?.acertoLiga ?? 0) - (f?.despesas.rakeback ?? 0)) >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
+                valueColor={((f?.acertoLiga ?? 0) - (f?.despesas.rakeback ?? 0)) >= 0 ? 'text-emerald-400' : 'text-red-400'}
+              />
+            )}
           </div>
 
           {/* Filter indicator */}
-          {disabledClubs.size > 0 && (
+          {hasSubclubs && disabledClubs.size > 0 && (
             <div className="flex items-center gap-2 mb-4 -mt-3">
               <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-1.5">
                 Filtro ativo: {d.clubes.length - disabledClubs.size} de {d.clubes.length} clubes
@@ -450,8 +459,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Clubes */}
-          {d.clubes.length > 0 && (
+          {/* Clubes (only when has_subclubs) */}
+          {hasSubclubs && d.clubes.length > 0 && (
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <h2 className="text-lg font-bold text-dark-100">Clubes</h2>

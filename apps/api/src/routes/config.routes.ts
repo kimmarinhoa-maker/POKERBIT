@@ -475,4 +475,32 @@ router.put('/whatsapp', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
   }
 });
 
+// ─── PATCH /api/config/tenant — Update tenant settings (OWNER only) ──
+router.patch('/tenant', requireAuth, requireTenant, requireRole('OWNER'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { has_subclubs } = req.body;
+
+    const updates: Record<string, any> = {};
+    if (typeof has_subclubs === 'boolean') updates.has_subclubs = has_subclubs;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ success: false, error: 'Nenhum campo para atualizar' });
+      return;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('tenants')
+      .update(updates)
+      .eq('id', tenantId);
+
+    if (error) throw error;
+
+    logAudit(req, 'UPDATE', 'tenant', tenantId, undefined, updates);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
 export default router;

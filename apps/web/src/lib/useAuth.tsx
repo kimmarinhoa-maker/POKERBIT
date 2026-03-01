@@ -21,12 +21,14 @@ interface AuthContextValue {
   isAdmin: boolean;
   canWrite: boolean;
   isScoped: boolean;
+  hasSubclubs: boolean;
   allowedSubclubs: string[] | null; // null = all access
   permissions: Record<string, boolean> | null;
   loading: boolean;
   canAccess: (...roles: string[]) => boolean;
   canEditSubclub: (subclubId: string) => boolean;
   hasPermission: (resource: string) => boolean;
+  setHasSubclubs: (v: boolean) => void;
   logout: () => void;
 }
 
@@ -38,12 +40,14 @@ const AuthContext = createContext<AuthContextValue>({
   isAdmin: false,
   canWrite: false,
   isScoped: false,
+  hasSubclubs: true,
   allowedSubclubs: null,
   permissions: null,
   loading: true,
   canAccess: () => false,
   canEditSubclub: () => false,
   hasPermission: () => false,
+  setHasSubclubs: () => {},
   logout: () => {},
 });
 
@@ -64,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [allowedSubclubs, setAllowedSubclubs] = useState<string[] | null>(null);
+  const [hasSubclubs, setHasSubclubs] = useState(true);
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -144,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole(tenant?.role || 'FINANCEIRO');
     setTenantId(tenant?.id || null);
     setTenantName(tenant?.name || null);
+    setHasSubclubs(tenant?.has_subclubs !== false); // default true
     // allowed_subclubs: array of subclub IDs or null/undefined for full access
     const subclubs = tenant?.allowed_subclubs;
     setAllowedSubclubs(Array.isArray(subclubs) && subclubs.length > 0 ? subclubs.map((s: any) => typeof s === 'string' ? s : s?.id) : null);
@@ -265,12 +271,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         canWrite,
         isScoped,
+        hasSubclubs,
         allowedSubclubs,
         permissions,
         loading,
         canAccess,
         canEditSubclub,
         hasPermission,
+        setHasSubclubs,
         logout,
       }}
     >

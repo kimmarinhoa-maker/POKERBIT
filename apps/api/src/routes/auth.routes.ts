@@ -40,7 +40,7 @@ router.post('/login', async (req: Request, res: Response) => {
     // Buscar tenants do usuário
     const { data: tenants } = await supabaseAdmin
       .from('user_tenants')
-      .select('tenant_id, role, tenants!inner(id, name, slug)')
+      .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs)')
       .eq('user_id', data.user.id)
       .eq('is_active', true);
 
@@ -77,6 +77,7 @@ router.post('/login', async (req: Request, res: Response) => {
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
+          has_subclubs: (t as any).tenants.has_subclubs ?? true,
           allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role) ? null : orgAccessByTenant.get(t.tenant_id) || [],
         })),
       },
@@ -127,7 +128,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     // Buscar tenants
     const { data: tenants } = await supabaseAdmin
       .from('user_tenants')
-      .select('tenant_id, role, tenants!inner(id, name, slug)')
+      .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs)')
       .eq('user_id', req.userId!)
       .eq('is_active', true);
 
@@ -159,6 +160,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
+          has_subclubs: (t as any).tenants.has_subclubs ?? true,
           allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
             ? null // null = acesso total
             : orgAccessByTenant.get(t.tenant_id) || [],

@@ -36,6 +36,7 @@ interface NavSection {
   label: string;
   items: NavItem[];
   adminOnly?: boolean; // section visible only to OWNER/ADMIN
+  requireSubclubs?: boolean; // section visible only when has_subclubs=true
 }
 
 const navSections: NavSection[] = [
@@ -49,6 +50,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'FECHAMENTOS',
+    requireSubclubs: true,
     items: [
       { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
       { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
@@ -84,7 +86,7 @@ function isRouteActive(pathname: string, href: string): boolean {
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, role, tenantName, isAdmin, hasPermission, logout, loading } = useAuth();
+  const { user, role, tenantName, isAdmin, hasSubclubs, hasPermission, logout, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -167,7 +169,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-5' : 'p-4 space-y-5'}`} aria-label="Menu principal">
           {navSections
-            .filter((section) => !section.adminOnly || isAdmin)
+            .filter((section) => (!section.adminOnly || isAdmin) && (!section.requireSubclubs || hasSubclubs))
             .map((section) => {
               const visibleItems = section.items.filter((item) => !item.permKey || hasPermission(item.permKey));
               if (visibleItems.length === 0) return null;
