@@ -308,7 +308,7 @@ export default function SubclubPanelPage() {
               status={settlement.status}
               onNotFound={() => setWeekNotFound(true)}
             />
-            <span className="text-dark-500 text-xs">v{settlement.version}</span>
+            {settlement.version > 1 && <span className="text-dark-500 text-xs">v{settlement.version}</span>}
           </div>
           <div className="h-4 w-px bg-dark-700 hidden md:block" />
           <div className="relative">

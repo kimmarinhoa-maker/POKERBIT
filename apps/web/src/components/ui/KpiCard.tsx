@@ -9,6 +9,8 @@ interface KpiCardProps {
   ring?: string;
   /** Formula tooltip — shows on hover over value to explain the calculation */
   tooltip?: string;
+  /** Hide this card when value is zero or "R$ 0,00" */
+  hideIfZero?: boolean;
 }
 
 export default function KpiCard({
@@ -19,7 +21,12 @@ export default function KpiCard({
   subtitle,
   ring,
   tooltip,
+  hideIfZero,
 }: KpiCardProps) {
+  if (hideIfZero) {
+    const numVal = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^\d,.-]/g, '').replace(',', '.'));
+    if (numVal === 0 || isNaN(numVal)) return null;
+  }
   return (
     <div
       className={`bg-dark-900 border border-dark-700 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 hover:border-dark-600 cursor-default ${ring || ''}`}

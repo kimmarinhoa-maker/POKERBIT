@@ -75,6 +75,14 @@ export default function WeekSelector({
     return `${d}/${m}`;
   }
 
+  function navigateWeek(delta: number) {
+    const current = startDate || weekStart;
+    const d = new Date(current + 'T00:00:00');
+    d.setDate(d.getDate() + delta * 7);
+    const newStart = d.toISOString().slice(0, 10);
+    handleStartChange(newStart);
+  }
+
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-3">
@@ -83,11 +91,30 @@ export default function WeekSelector({
 
         <div className="h-4 w-px bg-dark-700" />
 
+        {/* Prev/Next week arrows */}
+        <button
+          onClick={() => navigateWeek(-1)}
+          className="text-dark-400 hover:text-white p-1 rounded hover:bg-dark-800 transition-colors"
+          title="Semana anterior"
+          aria-label="Semana anterior"
+        >
+          {'\u2039'}
+        </button>
+
         {/* Date pickers */}
         <div className="flex items-end gap-2">
           <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
           <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
         </div>
+
+        <button
+          onClick={() => navigateWeek(1)}
+          className="text-dark-400 hover:text-white p-1 rounded hover:bg-dark-800 transition-colors"
+          title="Proxima semana"
+          aria-label="Proxima semana"
+        >
+          {'\u203A'}
+        </button>
 
         {/* Not found inline */}
         {notFound && startDate && endDate && (

@@ -142,7 +142,7 @@ export default function SettlementOverviewPage() {
             status={settlement.status}
             onNotFound={() => setWeekNotFound(true)}
           />
-          <span className="text-dark-500 text-xs">v{settlement.version}</span>
+          {settlement.version > 1 && <span className="text-dark-500 text-xs">v{settlement.version}</span>}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -185,7 +185,7 @@ export default function SettlementOverviewPage() {
               <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" tooltip="Total de jogadores na semana" />
               <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" tooltip="Total de agentes ativos" />
               <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" tooltip={`Soma do rake de todos subclubes = ${formatBRL(t.rake)}`} />
-              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" tooltip={`Soma do GGR de todos subclubes = ${formatBRL(t.ggr)}`} />
+              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" tooltip={`Soma do GGR de todos subclubes = ${formatBRL(t.ggr)}`} hideIfZero />
               <KpiCard
                 label="Resultado Total"
                 value={formatBRL(t.resultado)}
