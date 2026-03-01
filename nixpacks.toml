@@ -5,7 +5,11 @@ nixPkgs = ["nodejs_22", "npm-9_x"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build --workspace=@poker-manager/web"]
+cmds = [
+  "npm run build --workspace=@poker-manager/web",
+  "cp -r apps/web/public apps/web/.next/standalone/apps/web/public",
+  "cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static"
+]
 
 [start]
-cmd = "npm run start --workspace=@poker-manager/web"
+cmd = "node apps/web/.next/standalone/apps/web/server.js"
