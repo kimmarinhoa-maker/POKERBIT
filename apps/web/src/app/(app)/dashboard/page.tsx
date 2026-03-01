@@ -326,11 +326,11 @@ export default function DashboardPage() {
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
-    <div className="bg-dark-950 min-h-screen p-8">
+    <div className="bg-dark-950 min-h-screen p-4 lg:p-8">
       {/* ── HEADER ── */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl font-extrabold text-dark-100 mb-2">Dashboard</h1>
+          <h1 className="text-xl lg:text-2xl font-extrabold text-dark-100 mb-2">Dashboard</h1>
           <div className="flex items-center gap-3">
             {/* Status badge */}
             {d && !notFoundEmpty && (
@@ -349,7 +349,7 @@ export default function DashboardPage() {
             )}
 
             {/* Date pickers */}
-            <div className="flex items-end gap-2">
+            <div className="flex flex-wrap items-end gap-2">
               <WeekDatePicker value={startDate} onChange={handleStartChange} allowedDay={1} label="Data Inicial" />
               <WeekDatePicker value={endDate} onChange={setEndDate} allowedDay={0} label="Data Final" />
             </div>
@@ -460,7 +460,7 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {d.clubes.map((clube) => (
                   <ClubCard
                     key={clube.nome}

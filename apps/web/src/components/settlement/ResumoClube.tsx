@@ -74,7 +74,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
         </div>
 
         {/* ── KPI Cards ── 5 cards com borda colorida no topo ────── */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-5">
           <KpiCard
             label="Jogadores Ativos"
             value={String(totals.players)}

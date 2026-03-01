@@ -90,6 +90,10 @@ export default function SubclubPanelPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setWeekNotFound(false);
+  }, [settlementId]);
+
   // Keyboard shortcuts: 1-9 for tab navigation
   const tabList = getVisibleTabList(hasPermission);
   useEffect(() => {
@@ -128,7 +132,7 @@ export default function SubclubPanelPage() {
   if (loading && !data) {
     return (
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => (
             <CardSkeleton key={i} />
           ))}
@@ -140,7 +144,7 @@ export default function SubclubPanelPage() {
 
   if (error || !data) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card">
           <EmptyState icon={AlertCircle} title={error || 'Settlement nao encontrado'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
@@ -155,7 +159,7 @@ export default function SubclubPanelPage() {
 
   if (!foundSubclub) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card">
           <EmptyState icon={AlertCircle} title={`Subclube "${subclubId}" nao encontrado`} action={{ label: 'Voltar para Semana', onClick: () => router.push(`/s/${settlementId}`) }} />
         </div>
@@ -313,8 +317,8 @@ export default function SubclubPanelPage() {
               {settlement.status}
             </span>
           </nav>
-          <div className="h-4 w-px bg-dark-700 hidden lg:block" />
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="h-4 w-px bg-dark-700 hidden sm:block" />
+          <div className="hidden sm:flex items-center gap-4">
             <WeekSelector
               currentSettlementId={settlementId}
               weekStart={settlement.week_start}
@@ -356,21 +360,21 @@ export default function SubclubPanelPage() {
 
       {/* Status banner */}
       {settlement.status === 'DRAFT' && (
-        <div className="flex items-center gap-2 px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/30 shrink-0">
+        <div className="flex items-center gap-2 px-4 lg:px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/30 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
           <span className="text-xs text-yellow-300 font-medium">RASCUNHO</span>
           <span className="text-xs text-yellow-300/60">— Dados podem ser editados. Finalize para travar.</span>
         </div>
       )}
       {settlement.status === 'FINAL' && (
-        <div className="flex items-center gap-2 px-6 py-2 bg-poker-900/20 border-b border-poker-700/30 shrink-0">
+        <div className="flex items-center gap-2 px-4 lg:px-6 py-2 bg-poker-900/20 border-b border-poker-700/30 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-poker-400" />
           <span className="text-xs text-poker-300 font-medium">FINALIZADO</span>
           <span className="text-xs text-poker-300/60">— Semana travada. Somente leitura.</span>
         </div>
       )}
       {settlement.status === 'VOID' && (
-        <div className="flex items-center gap-2 px-6 py-2 bg-red-900/20 border-b border-red-700/30 shrink-0">
+        <div className="flex items-center gap-2 px-4 lg:px-6 py-2 bg-red-900/20 border-b border-red-700/30 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
           <span className="text-xs text-red-300 font-medium">ANULADO</span>
           <span className="text-xs text-red-300/60">— Esta semana foi anulada.</span>

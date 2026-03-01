@@ -51,7 +51,7 @@ export default function MySubclubRedirect() {
 
   if (error) {
     return (
-      <div className="p-8 text-center py-20">
+      <div className="p-4 lg:p-8 text-center py-20">
         <p className="text-red-400 mb-4">{error}</p>
         <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">
           Voltar ao Dashboard

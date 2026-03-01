@@ -26,7 +26,7 @@ export default function SemanaRedirectPage() {
 
   if (error) {
     return (
-      <div className="p-8 text-center py-20">
+      <div className="p-4 lg:p-8 text-center py-20">
         <h2 className="text-xl font-bold text-white mb-2">Nenhuma semana encontrada</h2>
         <p className="text-dark-400 mb-6">Importe um XLSX para criar o primeiro fechamento.</p>
         <button onClick={() => router.push('/import')} className="btn-primary px-6 py-2">

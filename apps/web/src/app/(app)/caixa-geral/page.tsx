@@ -157,7 +157,7 @@ export default function CaixaGeralPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-6xl">
+      <div className="p-4 lg:p-8 max-w-6xl">
         <div className="h-8 skeleton-shimmer rounded w-48 mb-2" />
         <div className="h-4 skeleton-shimmer rounded w-72 mb-6" />
         <KpiSkeleton count={5} />
@@ -167,11 +167,11 @@ export default function CaixaGeralPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 lg:p-8 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white">Caixa Geral</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-white">Caixa Geral</h2>
           <p className="text-dark-400 text-sm">Cash flow consolidado — todas as movimentacoes</p>
         </div>
 
@@ -198,7 +198,7 @@ export default function CaixaGeralPage() {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
             <KpiCard label="Movimentacoes" value={kpis.total} accentColor="bg-blue-500" />
             <KpiCard label="Entradas" value={formatBRL(kpis.totalIn)} accentColor="bg-emerald-500" valueColor="text-emerald-400" />
             <KpiCard label="Saidas" value={formatBRL(kpis.totalOut)} accentColor="bg-red-500" valueColor="text-red-400" />

@@ -219,7 +219,7 @@ async function _apiFetchOnce<T = any>(
   let res: Response;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     res = await fetch(`${base}${path}`, {
       ...options,
       headers,
@@ -228,7 +228,7 @@ async function _apiFetchOnce<T = any>(
     clearTimeout(timeout);
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      return { success: false, error: 'Timeout: o servidor demorou mais de 15s para responder.' };
+      return { success: false, error: 'Timeout: o servidor demorou mais de 30s para responder.' };
     }
     return { success: false, error: 'Servidor indisponivel. Tente novamente em alguns segundos.' };
   }

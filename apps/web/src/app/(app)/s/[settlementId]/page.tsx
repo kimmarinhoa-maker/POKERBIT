@@ -64,6 +64,10 @@ export default function SettlementOverviewPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setWeekNotFound(false);
+  }, [settlementId]);
+
   function handleFinalize() {
     setShowLockModal(true);
   }
@@ -101,7 +105,7 @@ export default function SettlementOverviewPage() {
 
   if (error || !data) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card">
           <EmptyState icon={AlertCircle} title={error || 'Settlement nao encontrado'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
@@ -122,7 +126,7 @@ export default function SettlementOverviewPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 lg:px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
@@ -141,7 +145,7 @@ export default function SettlementOverviewPage() {
           <span className="text-dark-500 text-xs">v{settlement.version}</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {settlement.status === 'DRAFT' && canAccess('OWNER', 'ADMIN') && (
             <button onClick={handleFinalize} className="btn-primary text-sm flex items-center gap-2">
               Finalizar
@@ -164,7 +168,7 @@ export default function SettlementOverviewPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30">
         {weekNotFound && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
@@ -177,7 +181,7 @@ export default function SettlementOverviewPage() {
         {!weekNotFound && (
           <>
             {/* Global KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
               <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" tooltip="Total de jogadores na semana" />
               <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" tooltip="Total de agentes ativos" />
               <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" tooltip={`Soma do rake de todos subclubes = ${formatBRL(t.rake)}`} />

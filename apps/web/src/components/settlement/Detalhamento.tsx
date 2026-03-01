@@ -167,7 +167,7 @@ export default function Detalhamento({ subclub }: Props) {
   return (
     <div>
       {/* ── 5 KPI Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-5">
         <KpiCard
           label="Jogadores Ativos"
           value={grandTotals.ativos}

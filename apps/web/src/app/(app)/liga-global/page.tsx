@@ -195,7 +195,7 @@ export default function LigaGlobalPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl">
+      <div className="p-4 lg:p-8 max-w-7xl">
         <div className="h-8 skeleton-shimmer rounded w-48 mb-2" />
         <div className="h-4 skeleton-shimmer rounded w-72 mb-6" />
         <KpiSkeleton count={5} />
@@ -205,11 +205,11 @@ export default function LigaGlobalPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 lg:p-8 max-w-7xl">
       {/* ═══ HEADER ═══ */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white">Liga — Consolidado</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-white">Liga — Consolidado</h2>
           <p className="text-dark-400 text-sm">
             Acerto global da liga · Todos os clubes · Sem rakeback
           </p>
@@ -251,7 +251,7 @@ export default function LigaGlobalPage() {
       ) : (
         <>
           {/* ═══ KPIs ═══ */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
             <KpiCard
               label="Profit/Loss"
               subtitle="TODOS OS CLUBES"

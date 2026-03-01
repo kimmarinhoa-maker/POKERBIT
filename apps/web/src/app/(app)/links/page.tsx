@@ -153,7 +153,7 @@ export default function LinksPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center h-64">
+      <div className="p-4 lg:p-8 flex items-center justify-center h-64">
         <div className="text-center">
           <Spinner className="mx-auto mb-3" />
           <p className="text-dark-400">Carregando jogadores...</p>
@@ -164,7 +164,7 @@ export default function LinksPage() {
 
   if (error) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="p-4 lg:p-8 max-w-3xl mx-auto">
         <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300">{error}</div>
       </div>
     );
@@ -172,8 +172,8 @@ export default function LinksPage() {
 
   if (!data || totalUnlinked === 0) {
     return (
-      <div className="p-8 max-w-3xl mx-auto text-center py-16">
-        <h2 className="text-2xl font-bold text-white mb-2">Todos vinculados!</h2>
+      <div className="p-4 lg:p-8 max-w-3xl mx-auto text-center py-16">
+        <h2 className="text-xl lg:text-2xl font-bold text-white mb-2">Todos vinculados!</h2>
         <p className="text-dark-400 mb-6">Nenhum jogador pendente de vinculacao.</p>
         <button onClick={() => router.push('/dashboard')} className="btn-primary px-6 py-2">
           Voltar ao Dashboard
@@ -186,10 +186,10 @@ export default function LinksPage() {
   const byAgent: Record<string, UnlinkedPlayer[]> = data.byAgent || {};
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 lg:p-8 max-w-4xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">Vincular Jogadores</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">Vincular Jogadores</h2>
           <p className="text-dark-400 mt-1">
             {totalUnlinked} jogador{totalUnlinked !== 1 ? 'es' : ''} sem clube atribuido. Vincule antes de validar os
             numeros.
@@ -236,7 +236,7 @@ export default function LinksPage() {
               </div>
 
               {!isNoneAgent && !agentLinkedClub && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-dark-500 text-xs mr-1">Vincular todos:</span>
                   {subclubs.map((sc) => (
                     <button
@@ -337,7 +337,7 @@ export default function LinksPage() {
       })}
 
       <div className="sticky bottom-0 bg-dark-900/95 backdrop-blur-sm border-t border-dark-700 py-4 mt-6">
-        <div className="flex items-center justify-between max-w-4xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl">
           <div className="text-sm">
             {remaining > 0 ? (
               <span className="text-yellow-400">

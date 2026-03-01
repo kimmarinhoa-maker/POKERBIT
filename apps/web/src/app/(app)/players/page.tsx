@@ -93,11 +93,11 @@ export default function PlayersPage() {
   }, [tree, selectedSubclubId]);
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white">Cadastro</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-white">Cadastro</h2>
           <p className="text-dark-400 text-sm">Gestao de agentes e jogadores</p>
         </div>
       </div>
@@ -116,11 +116,11 @@ export default function PlayersPage() {
       ) : (
         <div className="mb-6">
           <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1.5 block">Subclube</label>
-          <div className="relative w-fit">
+          <div className="relative w-full sm:w-fit">
             <select
               value={selectedSubclubId}
               onChange={(e) => setSelectedSubclubId(e.target.value)}
-              className="appearance-none bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2.5 pr-10 text-sm text-white font-medium focus:border-poker-500 focus:outline-none min-w-[280px] cursor-pointer"
+              className="appearance-none bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2.5 pr-10 text-sm text-white font-medium focus:border-poker-500 focus:outline-none min-w-0 w-full sm:min-w-[280px] sm:w-auto cursor-pointer"
             >
               {subclubOptions.map((sub) => (
                 <option key={sub.id} value={sub.id}>

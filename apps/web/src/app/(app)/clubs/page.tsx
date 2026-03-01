@@ -66,15 +66,15 @@ export default function ClubsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 lg:p-8 max-w-5xl">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">Clubes e Subclubes</h2>
+        <h2 className="text-xl lg:text-2xl font-bold text-white">Clubes e Subclubes</h2>
         <p className="text-dark-400 text-sm">Hierarquia de organizacoes</p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <KpiCard label="Clubes" value={kpis.clubs} accentColor="bg-poker-500" valueColor="text-poker-400" />
         <KpiCard label="Subclubes" value={kpis.subclubes} accentColor="bg-blue-500" valueColor="text-blue-400" />
         <KpiCard label="Agentes" value={kpis.agents} accentColor="bg-amber-500" valueColor="text-amber-400" />

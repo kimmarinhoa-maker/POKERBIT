@@ -25,7 +25,7 @@ export default function ScrollToTop() {
         const main = document.querySelector('main');
         main?.scrollTo({ top: 0, behavior: 'smooth' });
       }}
-      className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-dark-800 border border-dark-600 text-dark-300 hover:text-white hover:bg-dark-700 hover:border-dark-500 shadow-lg transition-all duration-200 flex items-center justify-center animate-fade-in"
+      className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 z-50 w-10 h-10 rounded-full bg-dark-800 border border-dark-600 text-dark-300 hover:text-white hover:bg-dark-700 hover:border-dark-500 shadow-lg transition-all duration-200 flex items-center justify-center animate-fade-in"
       title="Voltar ao topo"
       aria-label="Voltar ao topo"
     >

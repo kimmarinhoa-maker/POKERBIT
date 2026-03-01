@@ -76,6 +76,10 @@ export default function CrossClubPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setWeekNotFound(false);
+  }, [settlementId]);
+
   // Flatten and consolidate agents from all subclubs
   const { crossAgents, subclubNames } = useMemo(() => {
     if (!data?.subclubs) return { crossAgents: [], subclubNames: [] };
@@ -193,7 +197,7 @@ export default function CrossClubPage() {
 
   if (error || !data) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card">
           <EmptyState icon={AlertCircle} title={error || 'Dados nao encontrados'} action={{ label: 'Voltar ao Dashboard', onClick: () => router.push('/dashboard') }} />
         </div>
@@ -211,7 +215,7 @@ export default function CrossClubPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 lg:px-6 py-3 bg-dark-900/80 border-b border-dark-700 shrink-0">
         <div className="flex items-center gap-4">
           <Link
             href={`/s/${settlementId}`}
@@ -232,7 +236,7 @@ export default function CrossClubPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 bg-dark-950/30">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30">
         {weekNotFound ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
@@ -247,7 +251,7 @@ export default function CrossClubPage() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
               <KpiCard label="Agentes" value={String(kpis.total)} accentColor="bg-purple-500" />
               <KpiCard label="Jogadores" value={String(kpis.totalPlayers)} accentColor="bg-blue-500" />
               <KpiCard label="Multi-Club" value={String(kpis.multiClub)} accentColor="bg-amber-500" />

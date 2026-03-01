@@ -14,14 +14,14 @@ export default function ImportLayout({ children }: { children: React.ReactNode }
 
   return (
     <RoleGuard allowed={['OWNER', 'ADMIN']}>
-      <div className="p-8 max-w-4xl">
+      <div className="p-4 lg:p-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <div className="w-14 h-14 rounded-xl bg-dark-800 flex items-center justify-center text-3xl">
             {'\u{1F4E4}'}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Importar Planilha</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-white">Importar Planilha</h1>
             <p className="text-dark-400 text-sm">Upload XLSX, pre-analise e confirmacao</p>
           </div>
         </div>

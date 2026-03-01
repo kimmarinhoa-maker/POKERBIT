@@ -93,7 +93,8 @@ export default function CommandPalette() {
     if (open) {
       setQuery('');
       setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -162,7 +163,7 @@ export default function CommandPalette() {
   let lastIsRecent: boolean | null = null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]" role="dialog" aria-modal="true" aria-label="Busca rapida">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] sm:pt-[20vh]" role="dialog" aria-modal="true" aria-label="Busca rapida">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -193,7 +194,7 @@ export default function CommandPalette() {
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[300px] overflow-y-auto py-2">
+        <div ref={listRef} className="max-h-[50vh] sm:max-h-[300px] overflow-y-auto py-2">
           {items.length === 0 ? (
             <p className="text-center text-dark-500 text-sm py-8">Nenhum resultado</p>
           ) : (
