@@ -252,14 +252,43 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
               <div className="border-t border-dark-700/50 mb-5" />
 
-              {/* 2. Resumo financeiro — 2 rows de 3 (clean layout) */}
-              <div className="grid grid-cols-3 gap-3 mb-5">
+              {/* 2. Resumo financeiro — 4 KPIs */}
+              <div className="grid grid-cols-4 gap-3 mb-5">
                 <StatBox label="Ganhos (P/L)" value={totals.ganhos} color={totals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'} border="border-t-red-500" />
                 <StatBox label="Rake" value={totals.rake} color="text-poker-400" border="border-t-poker-500" />
-                <StatBox label="GGR" value={totals.ggr} color="text-purple-400" border="border-t-purple-500" />
+                <StatBox label="GGR Rodeio" value={totals.ggr} color="text-purple-400" border="border-t-purple-500" />
                 <StatBox label="Resultado" value={totals.resultado} color={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'} border="border-t-amber-500" />
-                <StatBox label="Taxas" value={feesComputed.totalTaxasSigned} color="text-red-400" border="border-t-red-500" />
-                <StatBox label="Lançamentos" value={totalLancamentos} color={totalLancamentos < 0 ? 'text-red-400' : 'text-dark-400'} border="border-t-dark-600" />
+              </div>
+
+              {/* 2b. Taxas + Lançamentos (detalhado, lado a lado) */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {/* Taxas Automáticas */}
+                <div className="bg-dark-800/40 rounded-lg p-4 border border-dark-700/50">
+                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-3">Taxas Automáticas</div>
+                  <StmtDetailRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}%`} value={-feesComputed.taxaApp} />
+                  <StmtDetailRow label="Taxa Liga" sublabel={`${fees.taxaLiga}%`} value={-feesComputed.taxaLiga} />
+                  <StmtDetailRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}%`} value={-feesComputed.taxaRodeoGGR} />
+                  <StmtDetailRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}%`} value={-feesComputed.taxaRodeoApp} isLast />
+                  <div className="border-t border-dark-600 mt-1 pt-2 flex justify-between">
+                    <span className="text-[11px] font-bold text-dark-200">Total Taxas</span>
+                    <span className="font-mono text-[11px] font-bold text-red-400">{formatBRL(feesComputed.totalTaxasSigned)}</span>
+                  </div>
+                </div>
+
+                {/* Lançamentos */}
+                <div className="bg-dark-800/40 rounded-lg p-4 border border-dark-700/50">
+                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-3">Lançamentos</div>
+                  <StmtDetailRow label="Overlay" value={adjustments.overlay} />
+                  <StmtDetailRow label="Compras" value={adjustments.compras} />
+                  <StmtDetailRow label="Security" value={adjustments.security} />
+                  <StmtDetailRow label="Outros" value={adjustments.outros} isLast />
+                  <div className="border-t border-dark-600 mt-1 pt-2 flex justify-between">
+                    <span className="text-[11px] font-bold text-dark-200">Total Lanç.</span>
+                    <span className={`font-mono text-[11px] font-bold ${totalLancamentos < 0 ? 'text-red-400' : totalLancamentos > 0 ? 'text-emerald-400' : 'text-dark-500'}`}>
+                      {formatBRL(totalLancamentos)}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* 3. Acerto Liga (destaque) */}
@@ -294,7 +323,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                         <th className="py-2 px-3 text-center text-[9px] text-dark-400 uppercase font-bold tracking-wider">Jog.</th>
                         <th className="py-2 px-3 text-right text-[9px] text-dark-400 uppercase font-bold tracking-wider">Rake</th>
                         <th className="py-2 px-3 text-right text-[9px] text-dark-400 uppercase font-bold tracking-wider">Ganhos</th>
-                        <th className="py-2 px-3 text-right text-[9px] text-dark-400 uppercase font-bold tracking-wider">GGR</th>
+                        <th className="py-2 px-3 text-right text-[9px] text-dark-400 uppercase font-bold tracking-wider">GGR Rodeio</th>
                         <th className="py-2 px-3 text-right text-[9px] text-dark-400 uppercase font-bold tracking-wider">Resultado</th>
                       </tr>
                     </thead>
@@ -488,7 +517,23 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
 // ─── Sub-components ──────────────────────────────────────────────
 
-/** Stat box for the statement 2x3 grid */
+/** Detail row for statement taxas/lancamentos cards */
+function StmtDetailRow({ label, sublabel, value, isLast }: { label: string; sublabel?: string; value: number; isLast?: boolean }) {
+  const isEmpty = value === undefined || value === null || value === 0;
+  return (
+    <div className={`flex justify-between items-center py-1.5 ${isLast ? '' : 'border-b border-dark-800/60'}`}>
+      <div>
+        <span className={`text-[11px] ${isEmpty ? 'text-dark-500' : 'text-dark-200'}`}>{label}</span>
+        {sublabel && <span className="text-[9px] text-dark-500 ml-1">{sublabel}</span>}
+      </div>
+      <span className={`font-mono text-[11px] ${isEmpty ? 'text-dark-600' : value > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        {isEmpty ? '—' : formatBRL(value)}
+      </span>
+    </div>
+  );
+}
+
+/** Stat box for the statement KPI grid */
 function StatBox({ label, value, color, border }: { label: string; value: number; color: string; border: string }) {
   return (
     <div className={`bg-dark-800/60 rounded-lg p-3 border-t-2 ${border}`}>
