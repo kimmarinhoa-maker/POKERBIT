@@ -6,7 +6,11 @@ import Link from 'next/link';
 import { formatBRL, round2 } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
+import DeltaBadge from '@/components/ui/DeltaBadge';
+import DraftBanner from '@/components/ui/DraftBanner';
 import ClubCard from '@/components/dashboard/ClubCard';
+import PendenciasCard from '@/components/dashboard/PendenciasCard';
+import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import WeekDatePicker from '@/components/WeekDatePicker';
 import Spinner from '@/components/Spinner';
 import { useToast } from '@/components/Toast';
@@ -64,6 +68,12 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState<string | null>(null);
   const [_searching, setSearching] = useState(false);
   const [notFoundSearch, setNotFoundSearch] = useState(false);
+
+  // Previous week data (for delta comparison)
+  const [prevWeek, setPrevWeek] = useState<WeekData | null>(null);
+
+  // Chart data (multiple weeks)
+  const [chartData, setChartData] = useState<Array<{ label: string; rake: number; resultado: number; acerto: number }>>([]);
 
   // Logo map: subclub name -> logo_url
   const logoMapRef = useRef<Record<string, string | null>>({});
@@ -200,6 +210,32 @@ export default function DashboardPage() {
           const dtEnd = new Date(ws + 'T00:00:00');
           dtEnd.setDate(dtEnd.getDate() + 6);
           setEndDate(dtEnd.toISOString().slice(0, 10));
+
+          // Load previous week (for delta badges) + chart data — non-blocking
+          if (res.data.length >= 2) {
+            loadWeekData(res.data[1]).then((prev) => {
+              if (prev) setPrevWeek(prev);
+            });
+          }
+
+          // Build chart data from recent settlements (up to 8)
+          const chartPoints: typeof chartData = [];
+          const recentSettlements = res.data.slice(0, 8).reverse();
+          for (const s of recentSettlements) {
+            const full = await getSettlementFull(s.id);
+            if (full.success && full.data?.dashboardTotals) {
+              const dt = full.data.dashboardTotals;
+              const ws2 = s.week_start;
+              const [, m2, d2] = ws2.split('-');
+              chartPoints.push({
+                label: `${d2}/${m2}`,
+                rake: Number(dt.rake ?? 0),
+                resultado: Number(dt.resultado ?? 0),
+                acerto: Number(dt.acertoLiga ?? 0),
+              });
+            }
+          }
+          setChartData(chartPoints);
         } else {
           setNotFoundEmpty(true);
         }
@@ -442,6 +478,51 @@ export default function DashboardPage() {
                 valueColor={((f?.acertoLiga ?? 0) - (f?.despesas.rakeback ?? 0)) >= 0 ? 'text-emerald-400' : 'text-red-400'}
               />
             )}
+          </div>
+
+          {/* Delta badges (vs previous week) */}
+          {prevWeek && (
+            <div className="flex flex-wrap items-center gap-3 -mt-3 mb-4">
+              <span className="text-[10px] text-dark-500 uppercase font-semibold">vs semana anterior:</span>
+              <span className="text-xs text-dark-400 flex items-center gap-1">
+                Rake <DeltaBadge current={f?.rakeTotal ?? 0} previous={prevWeek.rakeTotal} format="percent" />
+              </span>
+              <span className="text-xs text-dark-400 flex items-center gap-1">
+                Resultado <DeltaBadge current={f?.resultadoFinal ?? 0} previous={prevWeek.resultadoFinal} format="percent" />
+              </span>
+              <span className="text-xs text-dark-400 flex items-center gap-1">
+                Acerto <DeltaBadge current={f?.acertoLiga ?? 0} previous={prevWeek.acertoLiga} format="percent" />
+              </span>
+            </div>
+          )}
+
+          {/* Draft banner */}
+          {d.settlement?.status === 'DRAFT' && isAdmin && (
+            <DraftBanner
+              settlementId={d.settlement.id}
+              weekLabel={`${formatDDMM(d.settlement.week_start)} - ${formatDDMM(endDate || '')}`}
+            />
+          )}
+
+          {/* Chart + Pendencias row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div className="lg:col-span-2">
+              <WeeklyChart data={chartData} />
+            </div>
+            <PendenciasCard
+              items={[
+                {
+                  label: 'Jogadores sem agencia',
+                  count: 0, // TODO: integrate with real data from unlinked players
+                  href: '/import/vincular',
+                },
+                {
+                  label: 'Fechamentos em rascunho',
+                  count: status === 'DRAFT' ? 1 : 0,
+                  href: `/s/${d.settlement?.id}`,
+                },
+              ]}
+            />
           </div>
 
           {/* Filter indicator */}
