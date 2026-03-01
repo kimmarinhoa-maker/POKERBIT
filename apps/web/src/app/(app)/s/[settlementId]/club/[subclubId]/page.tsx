@@ -28,10 +28,9 @@ const Jogadores = dynamic(() => import('@/components/settlement/Jogadores'), { l
 const Ajustes = dynamic(() => import('@/components/settlement/Ajustes'), { loading: () => <TabSkeleton />, ssr: false });
 const DRE = dynamic(() => import('@/components/settlement/DRE'), { loading: () => <TabSkeleton />, ssr: false });
 const Liga = dynamic(() => import('@/components/settlement/Liga'), { loading: () => <TabSkeleton />, ssr: false });
-const Extrato = dynamic(() => import('@/components/settlement/Extrato'), { loading: () => <TabSkeleton />, ssr: false });
+const Caixa = dynamic(() => import('@/components/settlement/Caixa'), { loading: () => <TabSkeleton />, ssr: false });
 const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), { loading: () => <TabSkeleton />, ssr: false });
 const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
-const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), { loading: () => <TabSkeleton />, ssr: false });
 
 export default function SubclubPanelPage() {
   const params = useParams();
@@ -216,10 +215,10 @@ export default function SubclubPanelPage() {
         return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} /></TabErrorBoundary>;
       case 'liga':
         return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} /></TabErrorBoundary>;
-      case 'extrato':
+      case 'caixa':
         return (
-          <TabErrorBoundary tabName="Extrato">
-            <Extrato weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
+          <TabErrorBoundary tabName="Caixa">
+            <Caixa weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
           </TabErrorBoundary>
         );
       case 'rakeback':
@@ -250,23 +249,6 @@ export default function SubclubPanelPage() {
             />
           </TabErrorBoundary>
         );
-      case 'conciliacao':
-        return (
-          <TabErrorBoundary tabName="Conciliacao">
-            <Conciliacao
-              weekStart={settlement.week_start}
-              clubId={settlement.club_id}
-              settlementStatus={settlement.status}
-              onDataChange={loadData}
-              agents={(subclub.agents || []).map((a: any) => ({ agent_id: a.agent_id, agent_name: a.agent_name }))}
-              players={(subclub.players || []).map((p: any) => ({
-                external_player_id: p.external_player_id,
-                nickname: p.nickname,
-              }))}
-            />
-          </TabErrorBoundary>
-        );
-
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 text-center">

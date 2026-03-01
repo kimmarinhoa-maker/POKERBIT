@@ -7,8 +7,7 @@ import {
   Percent,
   Users,
   FileText,
-  BookOpen,
-  Landmark,
+  Wallet,
   SlidersHorizontal,
   TrendingUp,
   Trophy,
@@ -43,13 +42,12 @@ const sections: TabSection[] = [
     items: [
       { key: 'jogadores', icon: Users, label: 'Jogadores', permKey: 'tab:jogadores' },
       { key: 'comprovantes', icon: FileText, label: 'Comprovantes', permKey: 'tab:comprovantes' },
-      { key: 'extrato', icon: BookOpen, label: 'Extrato', permKey: 'tab:extrato' },
     ],
   },
   {
     label: 'FINANCEIRO',
     items: [
-      { key: 'conciliacao', icon: Landmark, label: 'Conciliacao', permKey: 'tab:conciliacao' },
+      { key: 'caixa', icon: Wallet, label: 'Caixa', permKey: 'tab:extrato' },
       { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', permKey: 'tab:ajustes' },
     ],
   },
