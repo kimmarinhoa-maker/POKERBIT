@@ -7,8 +7,6 @@ const API_BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND_URL || 'http://local
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Standalone output for Railway/Docker container deployment
-  output: 'standalone',
   // Monorepo: tell Next.js the root is two levels up
   outputFileTracingRoot: path.join(__dirname, '../../'),
   typescript: {
