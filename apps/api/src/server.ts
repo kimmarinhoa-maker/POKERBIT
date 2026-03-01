@@ -30,6 +30,9 @@ import permissionsRoutes from './routes/permissions.routes';
 
 const app = express();
 
+// Trust Railway/Vercel proxy (required for express-rate-limit + X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // ─── Middleware global ─────────────────────────────────────────────
 
 // Gzip compression — reduce response size by 60-80%
