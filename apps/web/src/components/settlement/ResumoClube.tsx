@@ -239,103 +239,55 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
               className="bg-[#0f0f13] text-white p-8 rounded-xl border border-dark-700"
             >
               {/* 1. Cabecalho */}
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-5 mb-6">
                 <ClubLogo logoUrl={logoUrl} name={name} size="lg" className="shadow-lg shadow-poker-900/20" />
                 <div>
                   <p className="text-[10px] text-dark-500 uppercase tracking-wider font-bold">Fechamento Semanal</p>
-                  <h2 className="text-xl font-bold text-white tracking-tight">{name}</h2>
+                  <h2 className="text-xl font-bold text-poker-400 mt-0.5">{name}</h2>
                   <p className="text-dark-400 text-xs mt-0.5">
                     {fmtDate(weekStart)} &rarr; {fmtDate(weekEnd)}
                   </p>
                 </div>
               </div>
 
-              {/* 2. KPI Cards — mesmos 5 da pagina */}
-              <div className="grid grid-cols-5 gap-2 mb-5">
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-blue-500">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-1">Jogadores Ativos</div>
-                  <div className="font-mono text-lg font-bold text-blue-400">{totals.players}</div>
-                </div>
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-red-500">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-1">Profit/Loss</div>
-                  <div className="text-[8px] text-dark-500 -mt-0.5 mb-0.5">Ganhos e Perdas</div>
-                  <div className={`font-mono text-lg font-bold ${totals.ganhos < 0 ? 'text-red-400' : 'text-poker-400'}`}>{formatBRL(totals.ganhos)}</div>
-                </div>
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-poker-500">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-1">Rake Gerado</div>
-                  <div className="font-mono text-lg font-bold text-poker-400">{formatBRL(totals.rake)}</div>
-                </div>
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-purple-500">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-1">GGR Rodeo P/L</div>
-                  <div className="font-mono text-lg font-bold text-purple-400">{formatBRL(totals.ggr)}</div>
-                </div>
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-3 border-t-2 border-t-amber-500 ring-1 ring-amber-700/30">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-1">Resultado do Clube</div>
-                  <div className="text-[8px] text-dark-500 -mt-0.5 mb-0.5">P/L + Rake + GGR</div>
-                  <div className={`font-mono text-lg font-bold ${totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{formatBRL(totals.resultado)}</div>
-                </div>
+              <div className="border-t border-dark-700/50 mb-5" />
+
+              {/* 2. Resumo financeiro — 2 rows de 3 (clean layout) */}
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <StatBox label="Ganhos (P/L)" value={totals.ganhos} color={totals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'} border="border-t-red-500" />
+                <StatBox label="Rake" value={totals.rake} color="text-poker-400" border="border-t-poker-500" />
+                <StatBox label="GGR" value={totals.ggr} color="text-purple-400" border="border-t-purple-500" />
+                <StatBox label="Resultado" value={totals.resultado} color={totals.resultado >= 0 ? 'text-amber-400' : 'text-red-400'} border="border-t-amber-500" />
+                <StatBox label="Taxas" value={feesComputed.totalTaxasSigned} color="text-red-400" border="border-t-red-500" />
+                <StatBox label="Lançamentos" value={totalLancamentos} color={totalLancamentos < 0 ? 'text-red-400' : 'text-dark-400'} border="border-t-dark-600" />
               </div>
 
-              {/* 3. Taxas + Lancamentos (side by side) — mesmos cards da pagina */}
-              <div className="grid grid-cols-2 gap-4 mb-5">
-                {/* TAXAS AUTOMATICAS */}
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                  <h3 className="text-[9px] font-bold uppercase tracking-widest text-dark-400 mb-3">Taxas Automáticas</h3>
-                  <StmtTaxaRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}% do Rake`} value={feesComputed.taxaApp} />
-                  <StmtTaxaRow label="Taxa Liga" sublabel={`${fees.taxaLiga}% do Rake`} value={feesComputed.taxaLiga} />
-                  <StmtTaxaRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}% do GGR`} value={feesComputed.taxaRodeoGGR} />
-                  <StmtTaxaRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}% do GGR`} value={feesComputed.taxaRodeoApp} isLast />
-                  <div className="border-t-2 border-red-500/30 mt-1 pt-2 flex justify-between">
-                    <span className="text-xs font-bold text-dark-100">Total Taxas</span>
-                    <span className="font-mono text-red-400 font-bold text-xs">{formatBRL(feesComputed.totalTaxasSigned)}</span>
-                  </div>
-                </div>
-
-                {/* LANCAMENTOS */}
-                <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                  <div className="mb-3">
-                    <h3 className="text-[9px] font-bold uppercase tracking-widest text-dark-400">Lançamentos</h3>
-                    <span className="text-[8px] text-dark-600">(editáveis em Lançamentos)</span>
-                  </div>
-                  <StmtLancRow label="Overlay (parte do clube)" value={adjustments.overlay} />
-                  <StmtLancRow label="Compras" value={adjustments.compras} />
-                  <StmtLancRow label="Security" value={adjustments.security} />
-                  <StmtLancRow label="Outros" value={adjustments.outros} isLast />
-                  <div className="border-t border-dark-700 mt-1 pt-2 flex justify-between">
-                    <span className="text-xs font-bold text-dark-100">Total Lanc.</span>
-                    <span className={`font-mono font-bold text-xs ${totalLancamentos < 0 ? 'text-red-400' : totalLancamentos > 0 ? 'text-poker-400' : 'text-dark-500'}`}>
-                      {formatBRL(totalLancamentos)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Acerto Liga (destaque) */}
+              {/* 3. Acerto Liga (destaque) */}
               <div
                 className={`rounded-xl p-5 mb-5 flex justify-between items-center ${
                   acertoLiga < 0
                     ? 'bg-red-900/20 border-2 border-red-500'
-                    : 'bg-poker-900/20 border-2 border-poker-500'
+                    : 'bg-emerald-900/20 border-2 border-emerald-500'
                 }`}
               >
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-dark-400 mb-1">ACERTO TOTAL LIGA</div>
-                  <div className="text-xs text-dark-400">Resultado + Taxas + Lançamentos</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-dark-400">Acerto Liga</div>
+                  <div className="text-xs text-dark-400 mt-0.5">Resultado + Taxas + Lançamentos</div>
                 </div>
                 <div className="text-right">
-                  <div className={`font-mono text-2xl font-bold ${acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}>
+                  <div className={`font-mono text-2xl font-bold ${acertoLiga < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                     {formatBRL(acertoLiga)}
                   </div>
-                  <div className={`text-[10px] mt-0.5 ${acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}>
+                  <div className={`text-[10px] mt-0.5 ${acertoLiga < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                     {acertoLiga < 0 ? `${name} deve pagar à Liga` : `Liga deve pagar ao ${name}`}
                   </div>
                 </div>
               </div>
 
-              {/* 5. Tabela de agentes */}
+              {/* 4. Tabela de agentes */}
               {agentGroups.length > 0 && (
                 <div className="rounded-xl border border-dark-700 overflow-hidden mb-5">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-dark-800/80">
                         <th className="py-2 px-3 text-left text-[9px] text-dark-400 uppercase font-bold tracking-wider">Agente</th>
@@ -349,14 +301,14 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                     <tbody className="divide-y divide-dark-800">
                       {agentGroups.map((g) => (
                         <tr key={g.agentName}>
-                          <td className="py-1.5 px-3 text-dark-100 text-xs font-medium">{g.agentName}</td>
-                          <td className="py-1.5 px-3 text-center text-dark-300 text-xs">{g.players}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-dark-300 text-xs">{formatBRL(g.rake)}</td>
-                          <td className={`py-1.5 px-3 text-right font-mono text-xs ${g.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <td className="py-1.5 px-3 text-dark-100 font-medium">{g.agentName}</td>
+                          <td className="py-1.5 px-3 text-center text-dark-300">{g.players}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-dark-300">{formatBRL(g.rake)}</td>
+                          <td className={`py-1.5 px-3 text-right font-mono ${g.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatBRL(g.ganhos)}
                           </td>
-                          <td className="py-1.5 px-3 text-right font-mono text-purple-400 text-xs">{formatBRL(g.ggr)}</td>
-                          <td className={`py-1.5 px-3 text-right font-mono font-bold text-xs ${g.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <td className="py-1.5 px-3 text-right font-mono text-purple-400">{formatBRL(g.ggr)}</td>
+                          <td className={`py-1.5 px-3 text-right font-mono font-bold ${g.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatBRL(g.resultado)}
                           </td>
                         </tr>
@@ -364,14 +316,14 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                     </tbody>
                     <tfoot>
                       <tr className="bg-dark-800/80 border-t-2 border-dark-600">
-                        <td className="py-2 px-3 text-dark-100 font-bold text-xs">TOTAL</td>
-                        <td className="py-2 px-3 text-center text-dark-100 font-bold text-xs">{agentTotals.players}</td>
-                        <td className="py-2 px-3 text-right font-mono text-dark-100 font-bold text-xs">{formatBRL(agentTotals.rake)}</td>
-                        <td className={`py-2 px-3 text-right font-mono font-bold text-xs ${agentTotals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <td className="py-2 px-3 text-dark-100 font-bold">TOTAL</td>
+                        <td className="py-2 px-3 text-center text-dark-100 font-bold">{agentTotals.players}</td>
+                        <td className="py-2 px-3 text-right font-mono text-dark-100 font-bold">{formatBRL(agentTotals.rake)}</td>
+                        <td className={`py-2 px-3 text-right font-mono font-bold ${agentTotals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {formatBRL(agentTotals.ganhos)}
                         </td>
-                        <td className="py-2 px-3 text-right font-mono text-purple-400 font-bold text-xs">{formatBRL(agentTotals.ggr)}</td>
-                        <td className={`py-2 px-3 text-right font-mono font-bold text-xs ${agentTotals.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <td className="py-2 px-3 text-right font-mono text-purple-400 font-bold">{formatBRL(agentTotals.ggr)}</td>
+                        <td className={`py-2 px-3 text-right font-mono font-bold ${agentTotals.resultado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {formatBRL(agentTotals.resultado)}
                         </td>
                       </tr>
@@ -380,7 +332,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                 </div>
               )}
 
-              {/* 6. Rodape */}
+              {/* 5. Rodape */}
               <div className="flex justify-between items-center text-[10px] text-dark-600 pt-2 border-t border-dark-800">
                 <span>{name}</span>
                 <span>{new Date().toLocaleString('pt-BR')}</span>
@@ -536,34 +488,12 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
 // ─── Sub-components ──────────────────────────────────────────────
 
-/** Taxa row for the statement view */
-function StmtTaxaRow({ label, sublabel, value, isLast }: { label: string; sublabel: string; value: number; isLast?: boolean }) {
+/** Stat box for the statement 2x3 grid */
+function StatBox({ label, value, color, border }: { label: string; value: number; color: string; border: string }) {
   return (
-    <div className={`flex justify-between items-center py-2 ${isLast ? '' : 'border-b border-dark-800'}`}>
-      <div>
-        <span className="text-xs text-dark-100">{label}</span>
-        <span className="text-[9px] text-dark-400 ml-1.5">{sublabel}</span>
-      </div>
-      <span className="font-mono text-xs text-red-400">{formatBRL(-value)}</span>
-    </div>
-  );
-}
-
-/** Lancamento row for the statement view */
-function StmtLancRow({ label, value, isLast }: { label: string; value: number; isLast?: boolean }) {
-  if (value === undefined || value === null)
-    return (
-      <div className={`flex justify-between items-center py-2 ${isLast ? '' : 'border-b border-dark-800'}`}>
-        <span className="text-xs text-dark-400">{label}</span>
-        <span className="text-dark-600 text-xs">—</span>
-      </div>
-    );
-  return (
-    <div className={`flex justify-between items-center py-2 ${isLast ? '' : 'border-b border-dark-800'}`}>
-      <span className={`text-xs ${value !== 0 ? 'text-dark-100' : 'text-dark-400'}`}>{label}</span>
-      <span className={`font-mono text-xs ${value > 0 ? 'text-poker-400' : value < 0 ? 'text-red-400' : 'text-dark-600'}`}>
-        {value === 0 ? '—' : formatBRL(value)}
-      </span>
+    <div className={`bg-dark-800/60 rounded-lg p-3 border-t-2 ${border}`}>
+      <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">{label}</div>
+      <div className={`font-mono text-sm font-bold ${color}`}>{formatBRL(value)}</div>
     </div>
   );
 }
