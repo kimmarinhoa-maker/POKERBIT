@@ -18,7 +18,7 @@ const sizeMap = {
 export default function ClubLogo({ logoUrl, name, size = 'md', className = '' }: ClubLogoProps) {
   const [imgError, setImgError] = useState(false);
   const sizeClass = sizeMap[size];
-  const initial = (name || '?').charAt(0).toUpperCase();
+  const initials = (name || '?').slice(0, 2).toUpperCase();
 
   // Reset error state when URL changes (new upload)
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function ClubLogo({ logoUrl, name, size = 'md', className = '' }:
       className={`${sizeClass} rounded-lg bg-dark-800 flex items-center justify-center font-bold text-dark-400 shrink-0 ${className}`}
       title={name}
     >
-      {initial}
+      {initials}
     </div>
   );
 }

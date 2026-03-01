@@ -9,13 +9,11 @@ import { AuthProvider, useAuth } from '@/lib/useAuth';
 import {
   LayoutDashboard,
   Upload,
-  Clock,
   Receipt,
   Building2,
   Trophy,
   Wallet,
   Users,
-  Link as LinkIcon,
   Settings,
   UserCog,
   Spade,
@@ -48,7 +46,6 @@ const navSections: NavSection[] = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permKey: 'page:dashboard' },
       { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
-      { href: '/import/history', label: 'Historico', icon: Clock, permKey: 'page:import_history' },
       { href: '/lancamentos', label: 'Lancamentos', icon: Receipt, permKey: 'page:lancamentos' },
     ],
   },
@@ -64,8 +61,6 @@ const navSections: NavSection[] = [
     label: 'CADASTRO',
     items: [
       { href: '/players', label: 'Agentes / Jogadores', icon: Users, permKey: 'page:players' },
-      { href: '/clubs', label: 'Clubes', icon: Building2, permKey: 'page:clubs' },
-      { href: '/links', label: 'Vincular', icon: LinkIcon, permKey: 'page:links' },
     ],
   },
   {
