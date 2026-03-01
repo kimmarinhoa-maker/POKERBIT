@@ -8,6 +8,7 @@ import {
   Users,
   FileText,
   Wallet,
+  Landmark,
   SlidersHorizontal,
   TrendingUp,
   Trophy,
@@ -48,6 +49,7 @@ const sections: TabSection[] = [
     label: 'FINANCEIRO',
     items: [
       { key: 'caixa', icon: Wallet, label: 'Caixa', permKey: 'tab:extrato' },
+      { key: 'conciliacao', icon: Landmark, label: 'Conciliacao', permKey: 'tab:conciliacao' },
       { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', permKey: 'tab:ajustes' },
     ],
   },

@@ -17,6 +17,7 @@ interface Props {
   weekStart: string;
   settlementStatus: string;
   onDataChange: () => void;
+  onGoToTab?: (tab: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ function MethodBadge({ method }: { method: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────
 
-export default function Caixa({ weekStart, settlementStatus, onDataChange }: Props) {
+export default function Caixa({ weekStart, settlementStatus, onDataChange, onGoToTab }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const { toast } = useToast();
   const { canAccess } = useAuth();
@@ -339,9 +340,12 @@ export default function Caixa({ weekStart, settlementStatus, onDataChange }: Pro
         </div>
       )}
 
-      {/* Conciliation progress bar */}
+      {/* Conciliation progress bar — clickable link to Conciliacao tab */}
       {entries.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-dark-800/30 rounded-lg border border-dark-700 mb-5">
+        <button
+          onClick={() => onGoToTab?.('conciliacao')}
+          className="w-full flex items-center justify-between p-4 bg-dark-800/30 rounded-lg border border-dark-700 mb-5 hover:border-dark-600 transition-colors cursor-pointer group"
+        >
           <span className="text-sm text-dark-400">Conciliacao</span>
           <div className="flex items-center gap-3">
             <div className="w-48 h-2 bg-dark-700 rounded-full overflow-hidden">
@@ -353,8 +357,9 @@ export default function Caixa({ weekStart, settlementStatus, onDataChange }: Pro
             <span className={`text-sm font-mono ${reconciled.pct === 100 ? 'text-emerald-400' : 'text-dark-300'}`}>
               {reconciled.done}/{reconciled.total} ({reconciled.pct}%)
             </span>
+            <span className="text-xs text-dark-600 group-hover:text-dark-400 transition-colors">Ver detalhes →</span>
           </div>
-        </div>
+        </button>
       )}
 
       {/* ── Camada 2: Extrato Bancario ────────────────────────────────── */}

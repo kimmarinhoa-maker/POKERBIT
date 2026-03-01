@@ -30,6 +30,7 @@ const DRE = dynamic(() => import('@/components/settlement/DRE'), { loading: () =
 const Liga = dynamic(() => import('@/components/settlement/Liga'), { loading: () => <TabSkeleton />, ssr: false });
 const Caixa = dynamic(() => import('@/components/settlement/Caixa'), { loading: () => <TabSkeleton />, ssr: false });
 const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), { loading: () => <TabSkeleton />, ssr: false });
+const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), { loading: () => <TabSkeleton />, ssr: false });
 const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
 
 export default function SubclubPanelPage() {
@@ -223,7 +224,20 @@ export default function SubclubPanelPage() {
       case 'caixa':
         return (
           <TabErrorBoundary tabName="Caixa">
-            <Caixa weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} />
+            <Caixa weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} onGoToTab={handleTabChange} />
+          </TabErrorBoundary>
+        );
+      case 'conciliacao':
+        return (
+          <TabErrorBoundary tabName="Conciliacao">
+            <Conciliacao
+              weekStart={settlement.week_start}
+              clubId={settlement.club_id}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+              agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}
+              players={(subclub.players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null }))}
+            />
           </TabErrorBoundary>
         );
       case 'rakeback':
