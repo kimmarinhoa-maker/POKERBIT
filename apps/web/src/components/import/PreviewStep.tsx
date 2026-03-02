@@ -503,7 +503,7 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                           <td className="p-2 text-dark-400 font-mono">{p.id}</td>
                           <td className="p-2 text-dark-300">{p.aname || '-'}</td>
                           <td className="p-2">
-                            {canEditLinks && (p._status === 'sem_vinculo' || p._status === 'unknown_subclub') ? (
+                            {canEditLinks && p.aname ? (
                               editingAgent === p.aname ? (
                                 <div className="flex items-center gap-1">
                                   <select
