@@ -239,12 +239,12 @@ export default function ChipPixTab({
   }
 
   async function handleLink(txId: string) {
-    if (!linkForm.entity_id || !linkForm.entity_name) {
-      toast('Selecione um agente ou jogador para vincular', 'error');
+    if (!linkForm.entity_id && !linkForm.category_id) {
+      toast('Selecione um agente/jogador ou uma categoria', 'error');
       return;
     }
     try {
-      const res = await linkChipPixTransaction(txId, linkForm.entity_id, linkForm.entity_name, linkForm.category_id || undefined);
+      const res = await linkChipPixTransaction(txId, linkForm.entity_id || null, linkForm.entity_name || null, linkForm.category_id || undefined);
       if (res.success) {
         setLinkingId(null);
         setLinkForm({ entity_id: '', entity_name: '', category_id: '' });
@@ -330,19 +330,6 @@ export default function ChipPixTab({
     { key: 'pending', label: 'Pendentes', count: kpis.pending },
     { key: 'ignored', label: 'Ignorados', count: kpis.ignored },
   ];
-
-  // Guard: subclub without chippixManagerId should not see ChipPix data
-  if (!chippixManagerId) {
-    return (
-      <div className="card text-center py-12">
-        <Upload className="w-8 h-8 text-dark-600 mx-auto mb-3" />
-        <p className="text-dark-400 mb-2">ChipPix nao configurado para este subclube</p>
-        <p className="text-dark-500 text-xs">
-          Configure o <strong className="text-amber-400">ChipPix Manager ID</strong> em <strong>Config &gt; Estrutura</strong> para habilitar.
-        </p>
-      </div>
-    );
-  }
 
   if (loading) {
     return <SettlementSkeleton kpis={5} />;
@@ -714,11 +701,13 @@ export default function ChipPixTab({
                                 ✕
                               </button>
                             </div>
-                          ) : tx.entity_name && tx.status === 'linked' ? (
+                          ) : (tx.entity_name || (tx as any).category_id) && tx.status === 'linked' ? (
                             <div className="flex items-center gap-1.5">
+                              {tx.entity_name && (
                               <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
                                 {tx.entity_name}
                               </span>
+                              )}
                               {(tx as any).category_id && (() => {
                                 const cat = categories.find((c) => c.id === (tx as any).category_id);
                                 return cat ? (

@@ -358,6 +358,8 @@ export class ChipPixService {
   private deriveStatus(row: any): string {
     if (row.source === 'chippix_ignored') return 'ignored';
     if (row.is_reconciled) return 'applied';
+    // Category-only (no entity but has category) counts as linked
+    if (row.category_id) return 'linked';
     const eid = String(row.entity_id || '');
     // _noid_ entries (GP withdrawals, service fees), unlinked, and unmatched entries → pending
     if (eid && !eid.includes('_noid_') && !eid.startsWith('_unlinked_') && !eid.startsWith('_unmatched_')) return 'linked';
@@ -754,8 +756,9 @@ export class ChipPixService {
   }
 
   // ─── Vincular entidade ─────────────────────────────────────────────
-  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, categoryId?: string) {
-    const updatePayload: Record<string, any> = { entity_id: entityId, entity_name: entityName };
+  async linkTransaction(tenantId: string, txId: string, entityId: string | null, entityName: string | null, categoryId?: string) {
+    const updatePayload: Record<string, any> = {};
+    if (entityId) { updatePayload.entity_id = entityId; updatePayload.entity_name = entityName; }
     if (categoryId !== undefined) updatePayload.category_id = categoryId || null;
 
     const { data, error } = await supabaseAdmin

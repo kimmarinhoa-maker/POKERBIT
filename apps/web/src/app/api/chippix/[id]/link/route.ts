@@ -15,14 +15,14 @@ export async function PATCH(
         const body = await req.json();
         const { entity_id, entity_name, category_id } = body || {};
 
-        if (!entity_id || !entity_name) {
+        if (!entity_id && !category_id) {
           return NextResponse.json(
-            { success: false, error: 'entity_id e entity_name obrigatorios' },
+            { success: false, error: 'entity_id ou category_id obrigatorio' },
             { status: 400 },
           );
         }
 
-        const data = await chipPixService.linkTransaction(ctx.tenantId, id, entity_id, entity_name, category_id);
+        const data = await chipPixService.linkTransaction(ctx.tenantId, id, entity_id || null, entity_name || null, category_id);
         return NextResponse.json({ success: true, data });
       } catch (err: unknown) {
         return NextResponse.json(

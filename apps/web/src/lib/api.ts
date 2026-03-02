@@ -999,10 +999,13 @@ export async function listChipPixTransactions(weekStart?: string, status?: strin
   return apiFetch(`/chippix?${params}`);
 }
 
-export async function linkChipPixTransaction(txId: string, entityId: string, entityName: string, categoryId?: string) {
+export async function linkChipPixTransaction(txId: string, entityId: string | null, entityName: string | null, categoryId?: string) {
+  const payload: Record<string, any> = {};
+  if (entityId) { payload.entity_id = entityId; payload.entity_name = entityName; }
+  if (categoryId) payload.category_id = categoryId;
   return apiFetch(`/chippix/${txId}/link`, {
     method: 'PATCH',
-    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category_id: categoryId }),
+    body: JSON.stringify(payload),
   });
 }
 
