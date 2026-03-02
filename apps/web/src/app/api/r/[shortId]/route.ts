@@ -120,17 +120,17 @@ export async function GET(
       .eq('tenant_id', tenantId)
       .maybeSingle();
 
-    // 10. Organization logo
+    // 10. Organization logo (stored in metadata JSONB, not a top-level column)
     let logoUrl: string | null = null;
     if (subclubName) {
       const { data: org } = await supabaseAdmin
         .from('organizations')
-        .select('logo_url')
+        .select('metadata')
         .eq('tenant_id', tenantId)
         .eq('name', subclubName)
         .eq('type', 'SUBCLUB')
         .maybeSingle();
-      logoUrl = org?.logo_url || null;
+      logoUrl = (org?.metadata as Record<string, any>)?.logo_url || null;
     }
 
     return NextResponse.json({

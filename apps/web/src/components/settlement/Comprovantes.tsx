@@ -818,8 +818,14 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                                 const linkRes = await generateReceiptLink(settlementId, selectedAgent.agent.id);
                                 if (linkRes.success && linkRes.data?.url) {
                                   comprovanteUrl = window.location.origin + linkRes.data.url;
+                                } else {
+                                  console.error('[Comprovantes] generateReceiptLink failed:', linkRes.error || linkRes);
+                                  toast('Link do comprovante nao gerado: ' + (linkRes.error || 'erro desconhecido'), 'error');
                                 }
-                              } catch { /* non-critical */ }
+                              } catch (err) {
+                                console.error('[Comprovantes] generateReceiptLink exception:', err);
+                                toast('Erro ao gerar link do comprovante', 'error');
+                              }
                             }
                             const msg = buildCobrancaMessage({
                               agentName: selectedAgent.agent.agent_name,

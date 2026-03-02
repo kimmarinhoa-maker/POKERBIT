@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/server/auth';
 import { safeErrorMessage } from '@/lib/server/apiError';
 import { supabaseAdmin } from '@/lib/server/supabase';
-import { randomBytes } from 'crypto';
 
 const EXPIRY_DAYS = 30;
 
 function generateShortId(): string {
-  return randomBytes(6).toString('base64url').slice(0, 8);
+  // Use Web Crypto API (works in Node.js, Edge, and Vercel)
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 }
 
 export async function POST(req: NextRequest) {
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         data: { url: `/r/${shortId}` },
       });
     } catch (err: unknown) {
+      console.error('[generate] Exception:', err);
       return NextResponse.json(
         { success: false, error: safeErrorMessage(err) },
         { status: 500 },
