@@ -11,6 +11,7 @@ interface FeeConfig {
   rate: number;
   base: 'rake' | 'ggr';
   is_active: boolean;
+  platform?: string;
 }
 
 const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' | 'ggr' | 'conversion' }> = {
@@ -25,9 +26,18 @@ const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' |
   },
 };
 
-const rakeKeys = ['taxaApp', 'taxaLiga'];
-const ggrKeys = ['taxaRodeoGGR', 'taxaRodeoApp'];
-const conversionKeys = ['GU_TO_BRL'];
+// Suprema: all fees + GU_TO_BRL conversion
+const supremaRakeKeys = ['taxaApp', 'taxaLiga'];
+const supremaGgrKeys = ['taxaRodeoGGR', 'taxaRodeoApp'];
+const supremaConversionKeys = ['GU_TO_BRL'];
+
+// PPPoker: only rake-based fees (no GGR, no GU conversion — values already in BRL)
+const pppokerRakeKeys = ['taxaApp', 'taxaLiga'];
+
+const platforms = [
+  { id: 'suprema', label: 'Suprema Poker' },
+  { id: 'pppoker', label: 'PPPoker' },
+];
 
 export default function ConfigTaxas() {
   const [fees, setFees] = useState<FeeConfig[]>([]);
@@ -37,18 +47,20 @@ export default function ConfigTaxas() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [platform, setPlatform] = useState<string>('suprema');
 
   useEffect(() => {
-    loadFees();
+    loadFees(platform);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [platform]);
 
   // ─── Fee Config Logic ────────────────────────────────────────────
 
-  async function loadFees() {
+  async function loadFees(plat: string) {
     setLoading(true);
+    setEditing(false);
     try {
-      const res = await getFeeConfig();
+      const res = await getFeeConfig(plat);
       if (res.success) {
         setFees(res.data || []);
       }
@@ -64,9 +76,15 @@ export default function ConfigTaxas() {
     return fee ? Number(fee.rate) : 0;
   }
 
+  const isSuprema = platform === 'suprema';
+  const rakeKeys = isSuprema ? supremaRakeKeys : pppokerRakeKeys;
+  const ggrKeys = isSuprema ? supremaGgrKeys : [];
+  const conversionKeys = isSuprema ? supremaConversionKeys : [];
+  const allKeys = [...rakeKeys, ...ggrKeys, ...conversionKeys];
+
   function handleStartEdit() {
     const formData: Record<string, string> = {};
-    for (const key of [...rakeKeys, ...ggrKeys, ...conversionKeys]) {
+    for (const key of allKeys) {
       const val = getRateByName(key);
       formData[key] = key === 'GU_TO_BRL' ? String(val || 5) : String(val);
     }
@@ -84,13 +102,13 @@ export default function ConfigTaxas() {
     setSaving(true);
     setError(null);
     try {
-      const feesPayload = [...rakeKeys, ...ggrKeys, ...conversionKeys].map((key) => ({
+      const feesPayload = allKeys.map((key) => ({
         name: key,
         rate: parseFloat(form[key]) || 0,
         base: feesMeta[key].base,
       }));
 
-      const res = await updateFeeConfig(feesPayload);
+      const res = await updateFeeConfig(feesPayload, platform);
       if (res.success) {
         setFees(res.data || []);
         setEditing(false);
@@ -107,124 +125,161 @@ export default function ConfigTaxas() {
 
   // ─── Render ──────────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
-  }
-
   return (
     <div>
-      {/* Edit button */}
-      <div className="flex justify-end mb-4">
-        {!editing && (
-          <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2" aria-label="Editar taxas">
-            Editar
+      {/* Platform tabs */}
+      <div className="flex gap-1 mb-6 bg-dark-800/50 rounded-lg p-1 w-fit">
+        {platforms.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setPlatform(p.id)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              platform === p.id
+                ? 'bg-dark-700 text-white shadow-sm'
+                : 'text-dark-400 hover:text-dark-200'
+            }`}
+          >
+            {p.label}
           </button>
-        )}
+        ))}
       </div>
 
-      {/* Feedback */}
-      {error && (
-        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{error}</div>
-      )}
-
-      {/* Fees card */}
-      <div className="card">
-        {/* Rake section */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre Rake</h3>
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Spinner />
         </div>
-
-        <div className="space-y-4 mb-6">
-          {rakeKeys.map((key) => (
-            <FeeRow
-              key={key}
-              name={key}
-              meta={feesMeta[key]}
-              rate={getRateByName(key)}
-              editing={editing}
-              formValue={form[key] || ''}
-              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
-            />
-          ))}
-        </div>
-
-        {/* GGR section */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre GGR</h3>
-        </div>
-
-        <div className="space-y-4 mb-6">
-          {ggrKeys.map((key) => (
-            <FeeRow
-              key={key}
-              name={key}
-              meta={feesMeta[key]}
-              rate={getRateByName(key)}
-              editing={editing}
-              formValue={form[key] || ''}
-              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
-            />
-          ))}
-        </div>
-
-        {/* Conversion section */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Conversao de Moeda</h3>
-        </div>
-
-        <div className="space-y-4">
-          {conversionKeys.map((key) => (
-            <FeeRow
-              key={key}
-              name={key}
-              meta={feesMeta[key]}
-              rate={getRateByName(key) || 5}
-              editing={editing}
-              formValue={form[key] || '5'}
-              onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
-              unit="x"
-            />
-          ))}
-        </div>
-
-        {/* Edit actions */}
-        {editing && (
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-dark-700/50">
-            <button
-              onClick={handleCancel}
-              disabled={saving}
-              className="px-4 py-2 text-dark-400 hover:text-white text-sm transition-colors"
-              aria-label="Cancelar edicao"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-primary text-sm px-6 py-2"
-              aria-label="Salvar taxas"
-            >
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
+      ) : (
+        <>
+          {/* Edit button */}
+          <div className="flex justify-end mb-4">
+            {!editing && (
+              <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2" aria-label="Editar taxas">
+                Editar
+              </button>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Info card */}
-      <div className="mt-6 card bg-dark-800/30 border-dark-700/40">
-        <div className="text-sm text-dark-400 space-y-1">
-          <p>Estas taxas sao aplicadas automaticamente no calculo do acerto de cada subclube.</p>
-          <p>
-            <strong className="text-dark-300">Rake:</strong> incide sobre o rake gerado pelos jogadores.
-            <strong className="text-dark-300 ml-2">GGR:</strong> incide sobre o GGR Rodeo (receita bruta de jogos
-            rodeo).
-          </p>
-        </div>
-      </div>
+          {/* Feedback */}
+          {error && (
+            <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{error}</div>
+          )}
+
+          {/* Fees card */}
+          <div className="card">
+            {/* Rake section */}
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
+              <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre Rake</h3>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {rakeKeys.map((key) => (
+                <FeeRow
+                  key={key}
+                  name={key}
+                  meta={feesMeta[key]}
+                  rate={getRateByName(key)}
+                  editing={editing}
+                  formValue={form[key] || ''}
+                  onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
+                />
+              ))}
+            </div>
+
+            {/* GGR section — Suprema only */}
+            {ggrKeys.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
+                  <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Taxas sobre GGR</h3>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  {ggrKeys.map((key) => (
+                    <FeeRow
+                      key={key}
+                      name={key}
+                      meta={feesMeta[key]}
+                      rate={getRateByName(key)}
+                      editing={editing}
+                      formValue={form[key] || ''}
+                      onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Conversion section — Suprema only */}
+            {conversionKeys.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
+                  <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Conversao de Moeda</h3>
+                </div>
+
+                <div className="space-y-4">
+                  {conversionKeys.map((key) => (
+                    <FeeRow
+                      key={key}
+                      name={key}
+                      meta={feesMeta[key]}
+                      rate={getRateByName(key) || 5}
+                      editing={editing}
+                      formValue={form[key] || '5'}
+                      onChange={(val) => setForm((prev) => ({ ...prev, [key]: val }))}
+                      unit="x"
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Edit actions */}
+            {editing && (
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-dark-700/50">
+                <button
+                  onClick={handleCancel}
+                  disabled={saving}
+                  className="px-4 py-2 text-dark-400 hover:text-white text-sm transition-colors"
+                  aria-label="Cancelar edicao"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="btn-primary text-sm px-6 py-2"
+                  aria-label="Salvar taxas"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Info card */}
+          <div className="mt-6 card bg-dark-800/30 border-dark-700/40">
+            <div className="text-sm text-dark-400 space-y-1">
+              {isSuprema ? (
+                <>
+                  <p>Estas taxas sao aplicadas automaticamente no calculo do acerto de cada subclube.</p>
+                  <p>
+                    <strong className="text-dark-300">Rake:</strong> incide sobre o rake gerado pelos jogadores.
+                    <strong className="text-dark-300 ml-2">GGR:</strong> incide sobre o GGR Rodeo (receita bruta de jogos
+                    rodeo).
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>Taxas aplicadas aos settlements PPPoker. Valores ja em BRL (sem conversao GU).</p>
+                  <p>
+                    <strong className="text-dark-300">Rake:</strong> incide sobre o rake gerado pelos jogadores.
+                    PPPoker nao possui GGR Rodeo.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

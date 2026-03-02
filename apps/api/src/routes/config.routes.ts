@@ -15,8 +15,11 @@ const router = Router();
 router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
+    const platform = (req.query.platform as string) || undefined;
 
-    const { data, error } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).order('name');
+    let query = supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId);
+    if (platform) query = query.eq('platform', platform);
+    const { data, error } = await query.order('name');
 
     if (error) throw error;
     res.json({ success: true, data });
@@ -36,6 +39,8 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), r
       return;
     }
 
+    const platform = req.body.platform || 'suprema';
+
     // Build batch and upsert in a single query
     const upsertRows = fees
       .filter((fee: any) => fee.name && fee.rate !== undefined)
@@ -45,17 +50,18 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), r
         rate: Number(fee.rate),
         base: fee.base || 'rake',
         is_active: fee.is_active !== false,
+        platform,
       }));
 
     if (upsertRows.length > 0) {
       const { error: upsertErr } = await supabaseAdmin.from('fee_config').upsert(upsertRows, {
-        onConflict: 'tenant_id,name',
+        onConflict: 'tenant_id,name,platform',
       });
       if (upsertErr) throw upsertErr;
     }
 
     // Retornar estado atualizado
-    const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).order('name');
+    const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('platform', platform).order('name');
 
     logAudit(req, 'UPDATE', 'fee_config', tenantId, undefined, { fees: upsertRows });
     res.json({ success: true, data });

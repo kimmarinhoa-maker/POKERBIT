@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { login } from '@/lib/api';
+import { signup } from '@/lib/api';
 import Spinner from '@/components/Spinner';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [clubName, setClubName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,11 +22,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await login(email, password);
+      const res = await signup(name, email, password, clubName);
       if (res.success) {
-        router.push('/dashboard');
+        router.push('/onboarding');
       } else {
-        setError(res.error || 'Credenciais invalidas');
+        setError(res.error || 'Erro ao criar conta');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao conectar');
@@ -50,12 +52,25 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-poker-500 to-poker-700 mb-5 shadow-lg shadow-poker-900/30">
             <span className="text-2xl font-bold text-white">PM</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Poker Manager</h1>
-          <p className="text-dark-400 mt-2 text-sm">Sistema de Gestao Financeira</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Criar Conta</h1>
+          <p className="text-dark-400 mt-2 text-sm">Configure seu clube em minutos</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="card space-y-5 animate-slide-up">
+        <form onSubmit={handleSubmit} className="card space-y-4 animate-slide-up">
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1.5">Seu nome</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input w-full"
+              placeholder="Nome completo"
+              required
+              autoFocus
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-1.5">Email</label>
             <input
@@ -65,7 +80,6 @@ export default function LoginPage() {
               className="input w-full"
               placeholder="seu@email.com"
               required
-              autoFocus
             />
           </div>
 
@@ -77,8 +91,9 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input w-full pr-10"
-                placeholder="••••••••"
+                placeholder="Minimo 6 caracteres"
                 required
+                minLength={6}
               />
               <button
                 type="button"
@@ -89,6 +104,19 @@ export default function LoginPage() {
                 {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1.5">Nome do Clube</label>
+            <input
+              type="text"
+              value={clubName}
+              onChange={(e) => setClubName(e.target.value)}
+              className="input w-full"
+              placeholder="Ex: Suprema Poker"
+              required
+            />
+            <p className="text-[11px] text-dark-500 mt-1">Esse sera o nome da sua operacao no sistema</p>
           </div>
 
           {error && (
@@ -102,19 +130,19 @@ export default function LoginPage() {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <Spinner size="sm" variant="white" />
-                Entrando...
+                Criando conta...
               </span>
             ) : (
-              'Entrar'
+              'Criar conta'
             )}
           </button>
         </form>
 
-        {/* Signup link */}
+        {/* Link to login */}
         <p className="text-center text-dark-400 text-sm mt-6">
-          Nao tem conta?{' '}
-          <Link href="/signup" className="text-poker-400 hover:text-poker-300 transition-colors">
-            Criar conta
+          Ja tem conta?{' '}
+          <Link href="/login" className="text-poker-400 hover:text-poker-300 transition-colors">
+            Entrar
           </Link>
         </p>
 

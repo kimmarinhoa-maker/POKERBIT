@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
+import TenantSelector from '@/components/TenantSelector';
 
 // ─── Sidebar structure ──────────────────────────────────────────────
 
@@ -155,17 +156,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         ${collapsed ? 'lg:w-[68px] w-64' : 'w-64'}
       `}
       >
-        {/* Logo */}
-        <div className={`border-b border-dark-700 ${collapsed ? 'lg:p-3 p-6' : 'p-6'}`}>
+        {/* Logo + Tenant Selector */}
+        <div className={`border-b border-dark-700 ${collapsed ? 'lg:p-3 p-6' : 'px-4 pt-5 pb-4'}`}>
           <Link href="/dashboard" className="flex items-center gap-3" title={collapsed ? 'Poker Manager' : undefined}>
             <div className="w-10 h-10 rounded-xl bg-poker-600 flex items-center justify-center shrink-0">
               <Spade className="w-5 h-5 text-white" />
             </div>
             <div className={collapsed ? 'lg:hidden' : ''}>
               <h1 className="font-bold text-white text-lg leading-tight">Poker Manager</h1>
-              <p className="text-xs text-dark-400">{tenantName || 'SaaS'}</p>
             </div>
           </Link>
+          <TenantSelector collapsed={collapsed} />
         </div>
 
         {/* Navigation */}

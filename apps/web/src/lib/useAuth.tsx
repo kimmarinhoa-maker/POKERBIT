@@ -13,11 +13,20 @@ interface AuthUser {
   email: string;
 }
 
+interface TenantInfo {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  has_subclubs: boolean;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   role: string;
   tenantId: string | null;
   tenantName: string | null;
+  tenants: TenantInfo[];
   isAdmin: boolean;
   canWrite: boolean;
   isScoped: boolean;
@@ -29,6 +38,7 @@ interface AuthContextValue {
   canEditSubclub: (subclubId: string) => boolean;
   hasPermission: (resource: string) => boolean;
   setHasSubclubs: (v: boolean) => void;
+  switchTenant: (tenantId: string) => void;
   logout: () => void;
 }
 
@@ -37,6 +47,7 @@ const AuthContext = createContext<AuthContextValue>({
   role: 'FINANCEIRO',
   tenantId: null,
   tenantName: null,
+  tenants: [],
   isAdmin: false,
   canWrite: false,
   isScoped: false,
@@ -48,6 +59,7 @@ const AuthContext = createContext<AuthContextValue>({
   canEditSubclub: () => false,
   hasPermission: () => false,
   setHasSubclubs: () => {},
+  switchTenant: () => {},
   logout: () => {},
 });
 
@@ -67,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<string>('FINANCEIRO');
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
+  const [tenants, setTenants] = useState<TenantInfo[]>([]);
   const [allowedSubclubs, setAllowedSubclubs] = useState<string[] | null>(null);
   const [hasSubclubs, setHasSubclubs] = useState(true);
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
@@ -145,7 +158,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: auth.user?.id || '',
       email: auth.user?.email || '',
     });
-    const tenant = auth.tenants?.[0];
+    const allTenants: TenantInfo[] = (auth.tenants || []).map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      slug: t.slug || '',
+      role: t.role,
+      has_subclubs: t.has_subclubs !== false,
+    }));
+    setTenants(allTenants);
+    const selectedId = localStorage.getItem('poker_selected_tenant');
+    const tenant = allTenants.find(t => t.id === selectedId) || auth.tenants?.[0];
     setRole(tenant?.role || 'FINANCEIRO');
     setTenantId(tenant?.id || null);
     setTenantName(tenant?.name || null);
@@ -254,9 +276,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [], // stable identity — reads from refs
   );
 
+  const switchTenant = useCallback((newTenantId: string) => {
+    localStorage.setItem('poker_selected_tenant', newTenantId);
+    window.location.href = '/dashboard';
+  }, []);
+
   const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    localStorage.removeItem('poker_selected_tenant');
     clearAuth();
     router.push('/login');
   }, [router]);
@@ -268,6 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         tenantId,
         tenantName,
+        tenants,
         isAdmin,
         canWrite,
         isScoped,
@@ -279,6 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canEditSubclub,
         hasPermission,
         setHasSubclubs,
+        switchTenant,
         logout,
       }}
     >

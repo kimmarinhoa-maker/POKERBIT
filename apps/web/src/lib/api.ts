@@ -41,7 +41,11 @@ function getToken(): string | null {
 
 function getTenantId(): string | null {
   const auth = getStoredAuth();
-  return auth?.tenants?.[0]?.id || null;
+  const tenants = auth?.tenants || [];
+  const selectedId =
+    typeof window !== 'undefined' ? localStorage.getItem('poker_selected_tenant') : null;
+  const match = tenants.find((t: any) => t.id === selectedId);
+  return match?.id || tenants[0]?.id || null;
 }
 
 // ─── Token refresh ─────────────────────────────────────────────────
@@ -258,8 +262,51 @@ export async function login(email: string, password: string) {
   return res;
 }
 
+export async function signup(
+  name: string,
+  email: string,
+  password: string,
+  clubName: string,
+) {
+  const res = await apiFetch('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password, club_name: clubName }),
+  });
+  if (res.success && res.data) {
+    setStoredAuth(res.data);
+  }
+  return res;
+}
+
 export async function getMe() {
   return apiFetch('/auth/me');
+}
+
+// ─── Tenant management ──────────────────────────────────────────
+
+export async function createTenant(clubName: string) {
+  return apiFetch('/tenants', {
+    method: 'POST',
+    body: JSON.stringify({ club_name: clubName }),
+  });
+}
+
+export async function createTenantSubclubes(tenantId: string, names: string[]) {
+  return apiFetch(`/tenants/${tenantId}/subclubes`, {
+    method: 'POST',
+    body: JSON.stringify({ names }),
+  });
+}
+
+export async function refreshTenantList() {
+  const res = await apiFetch('/auth/me');
+  if (res.success && res.data) {
+    const auth = getStoredAuth();
+    if (auth) {
+      setStoredAuth({ ...auth, tenants: (res.data as any).tenants });
+    }
+  }
+  return res;
 }
 
 // ─── RBAC helpers ────────────────────────────────────────────────
@@ -530,14 +577,15 @@ export async function deleteLedgerEntry(id: string) {
 
 // ─── Config (fees + adjustments) ──────────────────────────────────
 
-export async function getFeeConfig() {
-  return apiFetch('/config/fees');
+export async function getFeeConfig(platform?: string) {
+  const params = platform ? `?platform=${platform}` : '';
+  return apiFetch(`/config/fees${params}`);
 }
 
-export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>) {
+export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, platform: string = 'suprema') {
   return apiFetch('/config/fees', {
     method: 'PUT',
-    body: JSON.stringify({ fees }),
+    body: JSON.stringify({ fees, platform }),
   });
 }
 

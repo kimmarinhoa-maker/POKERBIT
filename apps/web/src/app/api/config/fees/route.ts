@@ -11,11 +11,14 @@ import { logAudit } from '@/lib/server/audit';
 export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {
     try {
-      const { data, error } = await supabaseAdmin
+      const platform = req.nextUrl.searchParams.get('platform') || undefined;
+
+      let query = supabaseAdmin
         .from('fee_config')
         .select('*')
-        .eq('tenant_id', ctx.tenantId)
-        .order('name');
+        .eq('tenant_id', ctx.tenantId);
+      if (platform) query = query.eq('platform', platform);
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       return NextResponse.json({ success: true, data });
@@ -43,6 +46,8 @@ export async function PUT(req: NextRequest) {
           );
         }
 
+        const platform = body.platform || 'suprema';
+
         // Build batch and upsert in a single query
         const upsertRows = fees
           .filter((fee: any) => fee.name && fee.rate !== undefined)
@@ -52,12 +57,13 @@ export async function PUT(req: NextRequest) {
             rate: Number(fee.rate),
             base: fee.base || 'rake',
             is_active: fee.is_active !== false,
+            platform,
           }));
 
         if (upsertRows.length > 0) {
           const { error: upsertErr } = await supabaseAdmin
             .from('fee_config')
-            .upsert(upsertRows, { onConflict: 'tenant_id,name' });
+            .upsert(upsertRows, { onConflict: 'tenant_id,name,platform' });
           if (upsertErr) throw upsertErr;
         }
 
@@ -66,6 +72,7 @@ export async function PUT(req: NextRequest) {
           .from('fee_config')
           .select('*')
           .eq('tenant_id', ctx.tenantId)
+          .eq('platform', platform)
           .order('name');
 
         logAudit(req, ctx, 'UPDATE', 'fee_config', ctx.tenantId, undefined, {

@@ -165,7 +165,7 @@ export class SettlementService {
         .eq('settlement_id', settlementId)
         .eq('tenant_id', tenantId)
         .order('agent_name'),
-      supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('is_active', true),
+      supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('is_active', true).eq('platform', settlement.platform || 'suprema'),
       supabaseAdmin
         .from('club_adjustments')
         .select('*')
