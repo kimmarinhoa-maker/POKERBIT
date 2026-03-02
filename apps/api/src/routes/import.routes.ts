@@ -365,19 +365,30 @@ router.delete(
           // Last import for this week → full cascade delete
           const sid = settlement.id;
 
+          // Full cascade: metrics → ledger → bank_tx → carry → settlement
           const cascadeSteps = [
-            { table: 'player_week_metrics', label: 'player metrics' },
-            { table: 'agent_week_metrics', label: 'agent metrics' },
-            { table: 'settlements', label: 'settlement' },
+            { table: 'player_week_metrics', col: 'settlement_id', label: 'player metrics' },
+            { table: 'agent_week_metrics', col: 'settlement_id', label: 'agent metrics' },
+            { table: 'ledger_entries', col: 'settlement_id', label: 'ledger entries' },
+            { table: 'bank_transactions', col: 'week_start', label: 'bank transactions', useWeek: true },
+            { table: 'carry_forward', col: 'source_settlement_id', label: 'carry forward' },
+            { table: 'settlements', col: 'id', label: 'settlement' },
           ] as const;
 
           for (const step of cascadeSteps) {
-            const col = step.table === 'settlements' ? 'id' : 'settlement_id';
-            const { error } = await supabaseAdmin
+            let query = supabaseAdmin
               .from(step.table)
               .delete()
-              .eq(col, sid)
               .eq('tenant_id', tenantId);
+
+            if ('useWeek' in step && step.useWeek) {
+              // bank_transactions usa week_start, nao settlement_id
+              query = query.eq(step.col, imp.week_start);
+            } else {
+              query = query.eq(step.col, sid);
+            }
+
+            const { error } = await query;
             if (error) {
               throw new Error(`Falha ao excluir ${step.label} (${step.table}): ${error.message}`);
             }

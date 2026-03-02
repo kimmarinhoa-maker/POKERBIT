@@ -706,6 +706,7 @@ export class ChipPixService {
   // ─── Aplicar vinculadas → marcar is_reconciled = true ───────────
   async applyLinked(tenantId: string, weekStart: string, userId: string) {
     // Records already live in ledger_entries; "apply" = mark reconciled
+    // Filtra placeholders (_unmatched_, _unlinked_, cp_) que nao sao vinculos reais
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
       .update({ is_reconciled: true })
@@ -714,6 +715,9 @@ export class ChipPixService {
       .eq('week_start', weekStart)
       .eq('is_reconciled', false)
       .not('entity_id', 'is', null)
+      .not('entity_id', 'like', '_unmatched_%')
+      .not('entity_id', 'like', '_unlinked_%')
+      .not('entity_id', 'like', 'cp_%')
       .select('id');
 
     if (error) throw new Error(`Erro ao aplicar vinculadas: ${error.message}`);

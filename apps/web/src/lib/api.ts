@@ -326,12 +326,20 @@ export async function refreshTenantList() {
 
 export function getStoredUserRole(): string | null {
   const auth = getStoredAuth();
-  return auth?.tenants?.[0]?.role ?? null;
+  const tenants = auth?.tenants || [];
+  const selectedId =
+    typeof window !== 'undefined' ? localStorage.getItem('poker_selected_tenant') : null;
+  const match = tenants.find((t: any) => t.id === selectedId);
+  return match?.role ?? tenants[0]?.role ?? null;
 }
 
 export function getStoredAllowedSubclubs(): { id: string; name: string }[] | null {
   const auth = getStoredAuth();
-  return auth?.tenants?.[0]?.allowed_subclubs ?? null;
+  const tenants = auth?.tenants || [];
+  const selectedId =
+    typeof window !== 'undefined' ? localStorage.getItem('poker_selected_tenant') : null;
+  const match = tenants.find((t: any) => t.id === selectedId);
+  return match?.allowed_subclubs ?? tenants[0]?.allowed_subclubs ?? null;
 }
 
 export function isAdmin(): boolean {

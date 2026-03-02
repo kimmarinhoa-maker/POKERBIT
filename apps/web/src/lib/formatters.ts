@@ -1,6 +1,6 @@
-/** Round to 2 decimal places (financial precision) */
+/** Round to 2 decimal places (financial precision) — usa Math.abs para negativos */
 export function round2(v: number): number {
-  return Math.round((v + Number.EPSILON) * 100) / 100;
+  return Math.sign(v) * Math.round((Math.abs(v) + Number.EPSILON) * 100) / 100;
 }
 
 /** Format a number as BRL currency using Intl (R$ 1.234,56) */

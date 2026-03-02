@@ -67,6 +67,7 @@ export default function ChipPixTab({
 
   // Import summary (Manager Trade Record from Suprema)
   const [importSummary, setImportSummary] = useState<Record<string, any> | null>(null);
+  const [managerToClub, setManagerToClub] = useState<Record<string, { org_id: string; org_name: string }>>({});
   const [comparisonOpen, setComparisonOpen] = useState(true);
 
   const loadTxns = useCallback(async () => {
@@ -85,6 +86,9 @@ export default function ChipPixTab({
       setTxns(all);
       if (importRes.success && importRes.data?.has_data) {
         setImportSummary(importRes.data.operators);
+        setManagerToClub(importRes.data.manager_to_club || {});
+      } else if (importRes.success && importRes.data) {
+        setManagerToClub(importRes.data.manager_to_club || {});
       }
       if (catRes.success) setCategories(catRes.data || []);
     } catch {
@@ -430,9 +434,26 @@ export default function ChipPixTab({
 
       {/* ── Comparison View (ChipPix Extrato vs Suprema Trade) ──── */}
       {importSummary && Object.keys(importSummary).length > 0 && (() => {
-        // Use chippixManagerId prop (from getOrgTree, proven to work) to find this subclub's operator
-        const myOp = chippixManagerId ? importSummary[chippixManagerId] : null;
-        // Also check if there's extrato data (uploaded ChipPix)
+        // Resolve operators to display from import data
+        // 1. Try chippixManagerId directly
+        // 2. Try matching via manager_to_club map (managerId → org_id matches clubId)
+        // 3. Fall back: show ALL operators so data is never hidden
+        let opsToShow: any[] = [];
+        if (chippixManagerId && importSummary[chippixManagerId]) {
+          opsToShow = [importSummary[chippixManagerId]];
+        }
+        if (opsToShow.length === 0) {
+          for (const [mgrId, info] of Object.entries(managerToClub)) {
+            if (info.org_id === clubId && importSummary[mgrId]) {
+              opsToShow = [importSummary[mgrId]];
+              break;
+            }
+          }
+        }
+        if (opsToShow.length === 0) {
+          // Show ALL operators as fallback
+          opsToShow = Object.values(importSummary);
+        }
         const hasExtrato = txns.length > 0;
 
         return (
@@ -449,19 +470,12 @@ export default function ChipPixTab({
 
             {comparisonOpen && (
               <div className="mt-3 space-y-3">
-                {!chippixManagerId && (
-                  <div className="text-[11px] text-amber-400 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
-                    Este subclube nao tem <strong>ChipPix Manager ID</strong> configurado.
-                    Configure em <strong>Config &gt; Estrutura</strong> para cruzar dados automaticamente.
-                  </div>
-                )}
-
-                {myOp && (
-                  <div className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-4">
+                {opsToShow.map((op: any, idx: number) => (
+                  <div key={op.managerId || idx} className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-bold text-blue-400">{myOp.manager}</span>
+                      <span className="text-sm font-bold text-blue-400">{op.manager}</span>
                       <span className="text-[10px] text-dark-500">
-                        {myOp.txnCount} txns &middot; {myOp.playerCount} jogadores
+                        {op.txnCount} txns &middot; {op.playerCount} jogadores
                       </span>
                     </div>
 
@@ -480,9 +494,9 @@ export default function ChipPixTab({
                           {hasExtrato && (
                             <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(kpis.totalEntrada)}</td>
                           )}
-                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(myOp.totalIN)}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(op.totalIN)}</td>
                           {hasExtrato && (() => {
-                            const diff = Math.abs(kpis.totalEntrada - myOp.totalIN);
+                            const diff = Math.abs(kpis.totalEntrada - op.totalIN);
                             const ok = diff < 1;
                             return (
                               <td className={`py-1.5 pl-3 text-right font-mono font-bold ${ok ? 'text-green-400' : 'text-red-400'}`}>
@@ -496,9 +510,9 @@ export default function ChipPixTab({
                           {hasExtrato && (
                             <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(kpis.totalSaida)}</td>
                           )}
-                          <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(myOp.totalOUT)}</td>
+                          <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(op.totalOUT)}</td>
                           {hasExtrato && (() => {
-                            const diff = Math.abs(kpis.totalSaida - myOp.totalOUT);
+                            const diff = Math.abs(kpis.totalSaida - op.totalOUT);
                             const ok = diff < 1;
                             return (
                               <td className={`py-1.5 pl-3 text-right font-mono font-bold ${ok ? 'text-green-400' : 'text-red-400'}`}>
@@ -522,12 +536,12 @@ export default function ChipPixTab({
                               {formatBRL(kpis.impacto - kpis.totalTaxas)}
                             </td>
                           )}
-                          <td className={`py-1.5 px-3 text-right font-mono ${myOp.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatBRL(myOp.saldo)}
+                          <td className={`py-1.5 px-3 text-right font-mono ${op.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {formatBRL(op.saldo)}
                           </td>
                           {hasExtrato && (
                             <td className="py-1.5 pl-3 text-right font-mono text-dark-400">
-                              {formatBRL(Math.abs((kpis.impacto - kpis.totalTaxas) - myOp.saldo))}
+                              {formatBRL(Math.abs((kpis.impacto - kpis.totalTaxas) - op.saldo))}
                             </td>
                           )}
                         </tr>
@@ -535,8 +549,8 @@ export default function ChipPixTab({
                     </table>
 
                     {hasExtrato && (() => {
-                      const okIN = Math.abs(kpis.totalEntrada - myOp.totalIN) < 1;
-                      const okOUT = Math.abs(kpis.totalSaida - myOp.totalOUT) < 1;
+                      const okIN = Math.abs(kpis.totalEntrada - op.totalIN) < 1;
+                      const okOUT = Math.abs(kpis.totalSaida - op.totalOUT) < 1;
                       return okIN && okOUT ? (
                         <div className="mt-2 text-[10px] text-green-400">
                           Valores brutos cruzam com a planilha Suprema
@@ -554,7 +568,7 @@ export default function ChipPixTab({
                       </div>
                     )}
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>

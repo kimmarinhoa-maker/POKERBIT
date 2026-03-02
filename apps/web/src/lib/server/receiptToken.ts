@@ -8,7 +8,9 @@ import { createHmac, timingSafeEqual } from 'crypto';
 const EXPIRY_DAYS = 30;
 
 function getSecret(): string {
-  return process.env.RECEIPT_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const secret = process.env.RECEIPT_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error('RECEIPT_TOKEN_SECRET ou SUPABASE_SERVICE_ROLE_KEY deve estar configurado');
+  return secret;
 }
 
 function sign(settlementId: string, agentMetricId: string, expiry: number): string {

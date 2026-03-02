@@ -14,6 +14,7 @@ import { batchExecute } from '../utils/batch';
 import { logAudit } from '../utils/audit';
 import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
 import { logger } from '../utils/logger';
+import { round2 } from '../utils/round2';
 
 const router = Router();
 
@@ -26,8 +27,8 @@ const rbRateSchema = z.object({
 
 /** Calcula rb_value_brl e resultado_brl de um jogador a partir de winnings, rake e rbRate */
 function calcPlayerResultado(winnings: number, rake: number, rbRate: number) {
-  const rbValue = Math.round(((rake * rbRate) / 100 + Number.EPSILON) * 100) / 100;
-  const resultado = Math.round(((winnings + rbValue) + Number.EPSILON) * 100) / 100;
+  const rbValue = round2((rake * rbRate) / 100);
+  const resultado = round2(winnings + rbValue);
   return { rbValue, resultado };
 }
 

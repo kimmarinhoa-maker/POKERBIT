@@ -1,9 +1,10 @@
 // ══════════════════════════════════════════════════════════════════════
 //  Carry-Forward Service — Saldo anterior entre semanas
 //
-//  Fórmula canônica (NUNCA MUDAR SINAL):
-//    saldoFinal = saldoAnterior + resultado - ledgerNet
+//  Fórmula canônica (consistente com settlement.service.ts):
+//    saldoFinal = saldoAnterior + resultado + ledgerNet
 //    ledgerNet  = entradas(IN) - saídas(OUT)
+//    (IN=+positivo reduz divida, OUT=-negativo reduz credito)
 //
 //  A tabela carry_forward armazena o saldo com week_start = semana DESTINO
 //  (a semana que vai LER esse valor como saldoAnterior).
@@ -11,6 +12,7 @@
 
 import { supabaseAdmin } from '../config/supabase';
 import type { CarryForwardResult, CloseWeekResponse } from '../types';
+import { round2 } from '../utils/round2';
 
 export class CarryForwardService {
   // ─── Ler carry map: entity_id → amount para uma semana/clube ─────
@@ -152,8 +154,8 @@ export class CarryForwardService {
       }
       const ledgerNet = entradas - saidas;
 
-      // Fórmula canônica: saldoFinal = saldoAnterior + resultado - ledgerNet
-      const saldoFinal = saldoAnterior + info.resultado - ledgerNet;
+      // Fórmula canônica: saldoFinal = saldoAnterior + resultado + ledgerNet
+      const saldoFinal = round2(saldoAnterior + info.resultado + ledgerNet);
 
       results.push({
         entity_id: agentId,
