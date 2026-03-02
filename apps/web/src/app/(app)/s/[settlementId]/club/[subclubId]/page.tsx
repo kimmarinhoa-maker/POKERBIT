@@ -233,7 +233,7 @@ export default function SubclubPanelPage() {
           <TabErrorBoundary tabName="Conciliacao">
             <Conciliacao
               weekStart={settlement.week_start}
-              clubId={settlement.club_id}
+              clubId={subclub.id}
               settlementStatus={settlement.status}
               onDataChange={loadData}
               agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}
