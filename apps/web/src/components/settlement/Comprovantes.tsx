@@ -783,10 +783,18 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                         </button>
                         <div className="border-t border-dark-700" />
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setWaDropdownOpen(false);
                             if (!selectedAgent) return;
-                            const phone = agentPhoneMap[selectedAgent.agent.agent_name.toLowerCase()];
+                            // Look up phone same way as Enviar Comprovante (from players metadata)
+                            let phone = agentPhoneMap[selectedAgent.agent.agent_name.toLowerCase()] || '';
+                            if (!phone) {
+                              try {
+                                const res = await listPlayers(selectedAgent.agent.agent_name, 1);
+                                const match = (res.data || []).find((p: any) => p.metadata?.phone);
+                                phone = match?.metadata?.phone || '';
+                              } catch { /* ignore */ }
+                            }
                             if (!phone) {
                               toast('Cadastre o WhatsApp deste agente em Cadastro > Agentes > Dados', 'info');
                               return;
@@ -1340,7 +1348,8 @@ function StatementView({
             await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
           }
           toast(res.error || 'Evolution API indisponivel. Comprovante copiado, cole no WhatsApp.', 'info');
-          window.open(`https://wa.me/${cleanPhone}`, '_blank');
+          const fallbackMsg = encodeURIComponent(`Comprovante - ${agent.agent_name} (${weekStart})`);
+          window.open(`https://wa.me/${cleanPhone}?text=${fallbackMsg}`, '_blank');
         }
       } catch {
         toast('Erro ao enviar. Verifique a config em Configuracoes > WhatsApp.', 'error');

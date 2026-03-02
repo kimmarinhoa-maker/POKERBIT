@@ -44,6 +44,11 @@ export function buildCobrancaMessage(opts: {
   const { agentName, weekStart, weekEnd, playersCount, rake, ganhos, resultado, saldo, pixKey } = opts;
   const range = dateRange(weekStart, weekEnd);
 
+  // saldo > 0 = agent owes club (a pagar), saldo < 0 = club owes agent (a receber)
+  const isPagar = saldo > 0;
+  const valorLabel = isPagar ? 'Valor a pagar' : 'Valor a receber';
+  const valorEmoji = isPagar ? '💸' : '💰';
+
   const lines = [
     `Ola *${agentName}* 👋`,
     ``,
@@ -54,11 +59,11 @@ export function buildCobrancaMessage(opts: {
     `📉 Ganhos/Perdas: ${formatBRL(ganhos)}`,
     `📋 Resultado: ${formatBRL(resultado)}`,
     ``,
-    `💸 *Valor a pagar: ${formatBRL(Math.abs(saldo))}*`,
+    `${valorEmoji} *${valorLabel}: ${formatBRL(Math.abs(saldo))}*`,
     ``,
   ];
 
-  if (pixKey) {
+  if (isPagar && pixKey) {
     lines.push(`Favor realizar o pagamento via PIX:`);
     lines.push(`Chave: ${pixKey}`);
     lines.push(``);
