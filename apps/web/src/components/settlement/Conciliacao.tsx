@@ -216,17 +216,17 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
         ))}
       </div>
 
-      {/* Verificador — always visible when ChipPix data exists */}
-      {chipPixLedgerStats && backendChipPixStats && (
-        <VerificadorConciliacao
-          extrato={chipPixLedgerStats}
-          ledger={backendChipPixStats}
-          onVerificado={setVerificadoOk}
-        />
-      )}
-
       {/* Tab content */}
       {activeSubTab === 'chippix' && (
+        <>
+        {/* Verificador — only in ChipPix tab */}
+        {chipPixLedgerStats && backendChipPixStats && (
+          <VerificadorConciliacao
+            extrato={chipPixLedgerStats}
+            ledger={backendChipPixStats}
+            onVerificado={setVerificadoOk}
+          />
+        )}
         <ChipPixTab
           weekStart={weekStart}
           clubId={clubId}
@@ -237,6 +237,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           players={players}
           verificadoOk={verificadoOk}
         />
+        </>
       )}
       {activeSubTab === 'ofx' && (
         <OFXTab
