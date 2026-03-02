@@ -250,9 +250,27 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 
     if (error) throw error;
 
+    // Enrich with settlement_status
+    const imports = data || [];
+    const settlementIds = imports.map((i: any) => i.settlement_id).filter(Boolean);
+    let statusMap: Record<string, string> = {};
+    if (settlementIds.length > 0) {
+      const { data: settlements } = await supabaseAdmin
+        .from('settlements')
+        .select('id, status')
+        .in('id', settlementIds);
+      for (const s of settlements || []) {
+        statusMap[s.id] = s.status;
+      }
+    }
+    const enriched = imports.map((i: any) => ({
+      ...i,
+      settlement_status: i.settlement_id ? statusMap[i.settlement_id] || null : null,
+    }));
+
     res.json({
       success: true,
-      data: data || [],
+      data: enriched,
       meta: { total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit) },
     });
   } catch (err: unknown) {

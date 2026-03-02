@@ -364,6 +364,10 @@ export async function finalizeSettlement(id: string) {
   return apiFetch(`/settlements/${id}/finalize`, { method: 'POST' });
 }
 
+export async function deleteSettlement(id: string) {
+  return apiFetch(`/settlements/${id}`, { method: 'DELETE' });
+}
+
 export async function voidSettlement(id: string, reason: string) {
   return apiFetch(`/settlements/${id}/void`, {
     method: 'POST',

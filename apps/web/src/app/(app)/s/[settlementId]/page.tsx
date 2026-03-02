@@ -29,6 +29,7 @@ export default function SettlementOverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [showVoidModal, setShowVoidModal] = useState(false);
+
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidConfirmText, setVoidConfirmText] = useState('');

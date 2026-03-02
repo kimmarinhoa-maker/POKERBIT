@@ -1012,6 +1012,121 @@ router.post(
   },
 );
 
+// ─── DELETE /api/settlements/:id — Apagar settlement DRAFT ─────────
+router.delete(
+  '/:id',
+  requireAuth,
+  requireTenant,
+  requireRole('OWNER', 'ADMIN'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.tenantId!;
+      const settlementId = req.params.id;
+
+      const idParsed = uuidParam.safeParse(settlementId);
+      if (!idParsed.success) {
+        res.status(400).json({ success: false, error: 'ID invalido' });
+        return;
+      }
+
+      // 1. Verificar se settlement existe, pertence ao tenant, status DRAFT
+      const { data: settlement, error: sErr } = await supabaseAdmin
+        .from('settlements')
+        .select('id, status, import_id, club_id')
+        .eq('id', settlementId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (sErr || !settlement) {
+        res.status(404).json({ success: false, error: 'Settlement nao encontrado' });
+        return;
+      }
+
+      if (settlement.status !== 'DRAFT') {
+        res.status(422).json({
+          success: false,
+          error: 'Apenas settlements DRAFT podem ser apagados. Use "Anular" para settlements finalizados.',
+        });
+        return;
+      }
+
+      // 2. Coletar agent_ids (para cleanup de orgs orfas depois)
+      const { data: agentMetrics } = await supabaseAdmin
+        .from('agent_week_metrics')
+        .select('agent_id')
+        .eq('settlement_id', settlementId)
+        .not('agent_id', 'is', null);
+
+      const agentOrgIds = [...new Set((agentMetrics || []).map((m) => m.agent_id).filter(Boolean))];
+
+      // 3. Deletar carry_forward gerado por este settlement
+      await supabaseAdmin
+        .from('carry_forward')
+        .delete()
+        .eq('source_settlement_id', settlementId);
+
+      // 4. Deletar ledger_entries deste settlement
+      await supabaseAdmin
+        .from('ledger_entries')
+        .delete()
+        .eq('settlement_id', settlementId);
+
+      // 5. Deletar settlement (CASCADE auto-deleta player_week_metrics + agent_week_metrics)
+      const { error: delErr } = await supabaseAdmin
+        .from('settlements')
+        .delete()
+        .eq('id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      if (delErr) throw delErr;
+
+      // 6. Cleanup: AGENT orgs orfas (sem nenhum agent_week_metrics restante)
+      let orphansRemoved = 0;
+      if (agentOrgIds.length > 0) {
+        for (const orgId of agentOrgIds) {
+          const { count } = await supabaseAdmin
+            .from('agent_week_metrics')
+            .select('id', { count: 'exact', head: true })
+            .eq('agent_id', orgId);
+
+          if (count === 0) {
+            await supabaseAdmin
+              .from('organizations')
+              .delete()
+              .eq('id', orgId)
+              .eq('type', 'AGENT')
+              .eq('tenant_id', tenantId);
+            orphansRemoved++;
+          }
+        }
+      }
+
+      // 7. Deletar import associado (se existir)
+      if (settlement.import_id) {
+        await supabaseAdmin
+          .from('imports')
+          .delete()
+          .eq('id', settlement.import_id)
+          .eq('tenant_id', tenantId);
+      }
+
+      // 8. Invalidar cache
+      cacheInvalidate(`settlement:${settlementId}`);
+
+      // 9. Log de auditoria
+      logAudit(req, 'DELETE', 'settlement', settlementId, undefined, {
+        status: settlement.status,
+        orphansRemoved,
+        import_id: settlement.import_id,
+      });
+
+      res.json({ success: true, data: { deleted: true, orphansRemoved } });
+    } catch (err: unknown) {
+      res.status(500).json({ success: false, error: safeErrorMessage(err) });
+    }
+  },
+);
+
 // ─── POST /api/settlements/:id/void — FINAL → VOID ────────────────
 router.post(
   '/:id/void',

@@ -6,9 +6,11 @@ import { listImports, deleteImport, formatDate } from '@/lib/api';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
+import { useAuth } from '@/lib/useAuth';
+import DeleteSettlementModal from '@/components/settlement/DeleteSettlementModal';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, Trash2 } from 'lucide-react';
 
 interface ImportRecord {
   id: string;
@@ -19,6 +21,7 @@ interface ImportRecord {
   agent_count?: number;
   settlement_id?: string;
   settlement_version?: number;
+  settlement_status?: string;
   created_at: string;
 }
 
@@ -35,8 +38,10 @@ export default function ImportHistoryPage() {
   const [imports, setImports] = useState<ImportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteSettlementId, setDeleteSettlementId] = useState<string | null>(null);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
+  const { canAccess } = useAuth();
 
   const getImportSortValue = useCallback((imp: ImportRecord, key: ImportSortKey): string | number => {
     switch (key) {
@@ -166,6 +171,15 @@ export default function ImportHistoryPage() {
                             Ver {'\u2192'}
                           </Link>
                         )}
+                        {imp.settlement_id && imp.settlement_status === 'DRAFT' && canAccess('OWNER', 'ADMIN') && (
+                          <button
+                            onClick={() => setDeleteSettlementId(imp.settlement_id!)}
+                            className="text-red-500/70 hover:text-red-400 transition-colors"
+                            title="Apagar settlement e todos os dados"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(imp)}
                           disabled={deleting === imp.id}
@@ -182,6 +196,18 @@ export default function ImportHistoryPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {deleteSettlementId && (
+        <DeleteSettlementModal
+          show={!!deleteSettlementId}
+          settlementId={deleteSettlementId}
+          onClose={() => setDeleteSettlementId(null)}
+          onSuccess={() => {
+            setDeleteSettlementId(null);
+            loadImports();
+          }}
+        />
       )}
 
       {ConfirmDialogElement}
