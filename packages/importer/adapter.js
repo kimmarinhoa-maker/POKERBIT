@@ -302,13 +302,32 @@ function parseStatisticsBreakdown(statsRows) {
   const headers = statsRows[hIdx];
   const col = mapCols(headers);
 
-  // Helper: find column by exact name or prefix match
+  // All header names for diagnostics
+  const allHeaders = (headers || []).map(c => String(c || '').trim()).filter(Boolean);
+  console.log('[Statistics] All headers:', JSON.stringify(allHeaders));
+
+  // Helper: find column by exact name, alternatives, or fuzzy search
   function findCol(exactName, altNames) {
     if (col[exactName] !== undefined) return col[exactName];
     if (altNames) {
       for (const alt of altNames) {
         if (col[alt] !== undefined) return col[alt];
       }
+    }
+    // Fuzzy: case-insensitive exact match
+    const lower = exactName.toLowerCase();
+    for (const [name, idx] of Object.entries(col)) {
+      if (name.toLowerCase() === lower) return idx;
+    }
+    return undefined;
+  }
+
+  // Fuzzy search: find a column containing ALL specified terms (case-insensitive)
+  function findColFuzzy(...terms) {
+    const lowerTerms = terms.map(t => t.toLowerCase());
+    for (const [name, idx] of Object.entries(col)) {
+      const lowerName = name.toLowerCase();
+      if (lowerTerms.every(t => lowerName.includes(t))) return idx;
     }
     return undefined;
   }
@@ -331,28 +350,38 @@ function parseStatisticsBreakdown(statsRows) {
     winMTT:    findCol('MTT(GU)'),
     winSNG:    findCol('SNG(GU)'),
     winSPIN:   findCol('SPIN(GU)'),
-    // Rake by modality (GU values)
-    rakeNLH:   findCol('NLH Fee(GU)', ['NLH Total Fee(GU)']),
-    rakePLO4:  findCol('PLO4 Fee(GU)', ['PLO4 Total Fee(GU)']),
-    rakePLO5:  findCol('PLO5 Fee(GU)', ['PLO5 Total Fee(GU)']),
-    rakePLO6:  findCol('PLO6 Fee(GU)', ['PLO6 Total Fee(GU)']),
-    rakeMixGame: findCol('Mix Game Fee(GU)', ['MixGame Fee(GU)']),
-    rakeOFC:   findCol('OFC Fee(GU)', ['OFC Total Fee(GU)']),
-    rakeMTT:   findCol('MTT Fee(GU)', ['MTT Total Fee(GU)']),
-    rakeSNG:   findCol('SNG Fee(GU)', ['SNG Total Fee(GU)']),
-    rakeSPIN:  findCol('SPIN Fee(GU)', ['SPIN Total Fee(GU)']),
+    // Rake by modality (GU values) — exact + fuzzy fallback
+    rakeNLH:   findCol('NLH Fee(GU)', ['NLH Total Fee(GU)'])         ?? findColFuzzy('nlh', 'fee', 'gu'),
+    rakePLO4:  findCol('PLO4 Fee(GU)', ['PLO4 Total Fee(GU)'])       ?? findColFuzzy('plo4', 'fee', 'gu'),
+    rakePLO5:  findCol('PLO5 Fee(GU)', ['PLO5 Total Fee(GU)'])       ?? findColFuzzy('plo5', 'fee', 'gu'),
+    rakePLO6:  findCol('PLO6 Fee(GU)', ['PLO6 Total Fee(GU)'])       ?? findColFuzzy('plo6', 'fee', 'gu'),
+    rakeMixGame: findCol('Mix Game Fee(GU)', ['MixGame Fee(GU)'])     ?? findColFuzzy('mix', 'fee', 'gu'),
+    rakeOFC:   findCol('OFC Fee(GU)', ['OFC Total Fee(GU)'])         ?? findColFuzzy('ofc', 'fee', 'gu'),
+    rakeMTT:   findCol('MTT Fee(GU)', ['MTT Total Fee(GU)'])         ?? findColFuzzy('mtt', 'fee', 'gu'),
+    rakeSNG:   findCol('SNG Fee(GU)', ['SNG Total Fee(GU)'])         ?? findColFuzzy('sng', 'fee', 'gu'),
+    rakeSPIN:  findCol('SPIN Fee(GU)', ['SPIN Total Fee(GU)'])       ?? findColFuzzy('spin', 'fee', 'gu'),
     // Hands by modality
     handsTotal: findCol('Hands'),
-    handsNLH:  findCol('NLH Hands', ['NLH(Hands)']),
-    handsPLO4: findCol('PLO4 Hands', ['PLO4(Hands)']),
-    handsPLO5: findCol('PLO5 Hands', ['PLO5(Hands)']),
-    handsPLO6: findCol('PLO6 Hands', ['PLO6(Hands)']),
-    handsMixGame: findCol('Mix Game Hands', ['MixGame(Hands)']),
-    handsOFC:  findCol('OFC Hands', ['OFC(Hands)']),
-    handsMTT:  findCol('MTT Hands', ['MTT(Hands)']),
-    handsSNG:  findCol('SNG Hands', ['SNG(Hands)']),
-    handsSPIN: findCol('SPIN Hands', ['SPIN(Hands)']),
+    handsNLH:  findCol('NLH Hands', ['NLH(Hands)'])                  ?? findColFuzzy('nlh', 'hands'),
+    handsPLO4: findCol('PLO4 Hands', ['PLO4(Hands)'])                ?? findColFuzzy('plo4', 'hands'),
+    handsPLO5: findCol('PLO5 Hands', ['PLO5(Hands)'])                ?? findColFuzzy('plo5', 'hands'),
+    handsPLO6: findCol('PLO6 Hands', ['PLO6(Hands)'])                ?? findColFuzzy('plo6', 'hands'),
+    handsMixGame: findCol('Mix Game Hands', ['MixGame(Hands)'])       ?? findColFuzzy('mix', 'hands'),
+    handsOFC:  findCol('OFC Hands', ['OFC(Hands)'])                  ?? findColFuzzy('ofc', 'hands'),
+    handsMTT:  findCol('MTT Hands', ['MTT(Hands)'])                  ?? findColFuzzy('mtt', 'hands'),
+    handsSNG:  findCol('SNG Hands', ['SNG(Hands)'])                  ?? findColFuzzy('sng', 'hands'),
+    handsSPIN: findCol('SPIN Hands', ['SPIN(Hands)'])                ?? findColFuzzy('spin', 'hands'),
   };
+
+  // Log which columns were found/not found for diagnostics
+  const found = {};
+  const notFound = [];
+  for (const [key, idx] of Object.entries(C)) {
+    if (idx !== undefined) found[key] = idx;
+    else notFound.push(key);
+  }
+  console.log('[Statistics] Columns found:', JSON.stringify(found));
+  if (notFound.length > 0) console.log('[Statistics] Columns NOT found:', JSON.stringify(notFound));
 
   if (C.playerId === undefined) return {};
 
@@ -361,6 +390,11 @@ function parseStatisticsBreakdown(statsRows) {
   function safeGet(r, idx) {
     return idx !== undefined ? parseNum(r[idx]) : 0;
   }
+
+  // Track whether ANY row had per-modality rake data from GU columns
+  const hasRakeGUColumns = C.rakeNLH !== undefined || C.rakePLO4 !== undefined ||
+    C.rakePLO5 !== undefined || C.rakePLO6 !== undefined || C.rakeMTT !== undefined ||
+    C.rakeSNG !== undefined || C.rakeSPIN !== undefined;
 
   for (let i = hIdx + 1; i < statsRows.length; i++) {
     const r = statsRows[i];
@@ -419,20 +453,50 @@ function parseStatisticsBreakdown(statsRows) {
       spin:    safeGet(r, C.handsSPIN),
     };
 
-    // ── Fallback: when GU columns don't exist, populate nested objects
-    //    from the Local (flat) values so the dashboard has data ─────────
+    // ── Fallback: when GU Fee columns don't exist, distribute total rake
+    //    PROPORTIONALLY based on per-modality winnings (instead of dumping
+    //    everything into NLH) ──────────────────────────────────────────────
     const rakeHasData = Object.values(entry.rake).some(v => v > 0);
     if (!rakeHasData && entry.total > 0) {
-      // Local values are already in BRL — map tournament modalities directly,
-      // ringGame goes to nlh as best-effort (can't split cash sub-modalities)
-      entry.rake.nlh     = entry.ringGame || 0;
-      entry.rake.mtt     = entry.mtt      || 0;
-      entry.rake.sng     = entry.sng      || 0;
-      entry.rake.spin    = entry.spin     || 0;
+      // Check if we have per-modality winnings to distribute proportionally
+      const winEntries = Object.entries(entry.winnings).filter(([, v]) => Math.abs(v) > 0);
+      if (winEntries.length > 0) {
+        // Distribute total rake proportionally by |winnings| per modality
+        const totalAbsWin = winEntries.reduce((s, [, v]) => s + Math.abs(v), 0);
+        if (totalAbsWin > 0) {
+          // Cash modalities share ringGame, tournament modalities use their own Local values
+          const cashMods = ['nlh', 'plo4', 'plo5', 'plo6', 'mixgame', 'ofc'];
+          const tourneyMods = ['mtt', 'sng', 'spin'];
+
+          // Distribute ringGame (cash total) proportionally among cash modalities by |winnings|
+          const cashWins = cashMods.map(m => [m, Math.abs(entry.winnings[m] || 0)]);
+          const totalCashWin = cashWins.reduce((s, [, v]) => s + v, 0);
+          if (totalCashWin > 0 && entry.ringGame > 0) {
+            for (const [mod, absWin] of cashWins) {
+              entry.rake[mod] = round2val((absWin / totalCashWin) * entry.ringGame);
+            }
+          }
+
+          // Tournament modalities: use their flat Local values directly
+          for (const mod of tourneyMods) {
+            entry.rake[mod] = entry[mod] || 0;
+          }
+        }
+      } else {
+        // No winnings data either — map tournament modalities directly,
+        // ringGame goes to nlh as last resort
+        entry.rake.nlh     = entry.ringGame || 0;
+        entry.rake.mtt     = entry.mtt      || 0;
+        entry.rake.sng     = entry.sng      || 0;
+        entry.rake.spin    = entry.spin     || 0;
+      }
     }
 
     map[pid] = entry;
   }
+
+  // Attach metadata to the result for diagnostics
+  map.__meta = { allHeaders, found, notFound, hasRakeGUColumns };
 
   return map;
 }

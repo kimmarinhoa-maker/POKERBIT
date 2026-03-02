@@ -232,9 +232,15 @@ function parseWorkbook(workbook, config = {}) {
   // 4) Ler aba Statistics (enriquecimento)
   const statsSheet = workbook.Sheets['Grand Union Member Statistics'];
   let breakdown = {};
+  let statsMeta = null;
   if (statsSheet) {
     const statsRows = XLSX.utils.sheet_to_json(statsSheet, { header: 1, defval: '' });
     breakdown = parseStatisticsBreakdown(statsRows);
+    // Extract diagnostics metadata (attached by parseStatisticsBreakdown)
+    if (breakdown.__meta) {
+      statsMeta = breakdown.__meta;
+      delete breakdown.__meta;
+    }
   }
 
   // 4b) Ler aba Manager Trade Record (ChipPix cross-reference)
@@ -288,6 +294,7 @@ function parseWorkbook(workbook, config = {}) {
       sheets: workbook.SheetNames,
       hasStatistics: !!statsSheet,
       hasTradeRecord,
+      statsMeta,
     },
   };
 }
