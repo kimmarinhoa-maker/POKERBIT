@@ -1071,7 +1071,28 @@ router.delete(
         .delete()
         .eq('settlement_id', settlementId);
 
-      // 5. Deletar settlement (CASCADE auto-deleta player_week_metrics + agent_week_metrics)
+      // 5. Deletar player_week_metrics (explicito, nao depende de CASCADE)
+      await supabaseAdmin
+        .from('player_week_metrics')
+        .delete()
+        .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      // 6. Deletar agent_week_metrics (explicito)
+      await supabaseAdmin
+        .from('agent_week_metrics')
+        .delete()
+        .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      // 7. Deletar bank_transactions vinculadas (chippix/ofx)
+      await supabaseAdmin
+        .from('bank_transactions')
+        .delete()
+        .eq('settlement_id', settlementId)
+        .eq('tenant_id', tenantId);
+
+      // 8. Deletar settlement
       const { error: delErr } = await supabaseAdmin
         .from('settlements')
         .delete()
@@ -1080,7 +1101,7 @@ router.delete(
 
       if (delErr) throw delErr;
 
-      // 6. Cleanup: AGENT orgs orfas (sem nenhum agent_week_metrics restante)
+      // 9. Cleanup: AGENT orgs orfas (sem nenhum agent_week_metrics restante)
       let orphansRemoved = 0;
       if (agentOrgIds.length > 0) {
         for (const orgId of agentOrgIds) {
@@ -1101,7 +1122,7 @@ router.delete(
         }
       }
 
-      // 7. Deletar import associado (se existir)
+      // 10. Deletar import associado (se existir)
       if (settlement.import_id) {
         await supabaseAdmin
           .from('imports')
@@ -1110,10 +1131,10 @@ router.delete(
           .eq('tenant_id', tenantId);
       }
 
-      // 8. Invalidar cache
+      // 11. Invalidar cache
       cacheInvalidate(`settlement:${settlementId}`);
 
-      // 9. Log de auditoria
+      // 12. Log de auditoria
       logAudit(req, 'DELETE', 'settlement', settlementId, undefined, {
         status: settlement.status,
         orphansRemoved,

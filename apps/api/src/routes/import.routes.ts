@@ -250,22 +250,24 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 
     if (error) throw error;
 
-    // Enrich with settlement_status
+    // Enrich with settlement_id + settlement_status (relationship: settlements.import_id → imports.id)
     const imports = data || [];
-    const settlementIds = imports.map((i: any) => i.settlement_id).filter(Boolean);
-    let statusMap: Record<string, string> = {};
-    if (settlementIds.length > 0) {
+    const importIds = imports.map((i: any) => i.id);
+    const settlementMap: Record<string, { id: string; status: string }> = {};
+    if (importIds.length > 0) {
       const { data: settlements } = await supabaseAdmin
         .from('settlements')
-        .select('id, status')
-        .in('id', settlementIds);
+        .select('id, status, import_id')
+        .eq('tenant_id', tenantId)
+        .in('import_id', importIds);
       for (const s of settlements || []) {
-        statusMap[s.id] = s.status;
+        settlementMap[s.import_id] = { id: s.id, status: s.status };
       }
     }
     const enriched = imports.map((i: any) => ({
       ...i,
-      settlement_status: i.settlement_id ? statusMap[i.settlement_id] || null : null,
+      settlement_id: i.settlement_id || settlementMap[i.id]?.id || null,
+      settlement_status: settlementMap[i.id]?.status || null,
     }));
 
     res.json({
