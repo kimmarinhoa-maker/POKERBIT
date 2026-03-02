@@ -268,13 +268,11 @@ function parseWorkbook(workbook, config = {}) {
   function round2(v) { return Math.round(v * 100) / 100; }
 
   for (const p of dedupPlayers) {
-    if (p._status === 'ignored') continue;
     const bd = breakdown[p.id];
     if (bd) {
       p.rakeBreakdown = bd;
     } else {
       // No Statistics match — create breakdown from Resume rake
-      // Put all rake into 'nlh' as best guess (can't split without data)
       const resumeRake = p.rake || 0;
       p.rakeBreakdown = {
         ringGame: 0, mttLocal: 0, sngLocal: 0, spinLocal: 0, tlt: 0,
@@ -283,29 +281,34 @@ function parseWorkbook(workbook, config = {}) {
         winnings: {},
         hands: {},
       };
-      unmatchedCount++;
-      unmatchedRake += resumeRake;
+      if (p._status !== 'ignored') {
+        unmatchedCount++;
+        unmatchedRake += resumeRake;
+      }
     }
+
+    if (p._status === 'ignored') continue;
 
     // Reconcile: ensure sum(rake.*) matches p.rake (Resume = authoritative)
     const rb = p.rakeBreakdown;
     if (rb.rake && typeof rb.rake === 'object' && p.rake > 0) {
-      const rakeKeys = Object.keys(rb.rake);
-      const rakeSum = rakeKeys.reduce((s, k) => s + (rb.rake[k] || 0), 0);
+      const rakeSum = Object.values(rb.rake).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
       const playerGap = round2(p.rake - rakeSum);
 
       if (Math.abs(playerGap) > 0.5) {
         // Find largest modality to absorb the difference
-        let maxKey = rakeKeys[0] || 'nlh';
+        const rakeEntries = Object.entries(rb.rake);
+        let maxKey = 'nlh';
         let maxVal = 0;
-        for (const k of rakeKeys) {
-          if ((rb.rake[k] || 0) > maxVal) { maxVal = rb.rake[k]; maxKey = k; }
+        for (const [k, v] of rakeEntries) {
+          if (v > maxVal) { maxVal = v; maxKey = k; }
         }
         rb.rake[maxKey] = round2((rb.rake[maxKey] || 0) + playerGap);
         reconciledGap += playerGap;
       }
 
-      breakdownRakeSum += rakeKeys.reduce((s, k) => s + (rb.rake[k] || 0), 0);
+      // Sum AFTER reconciliation
+      breakdownRakeSum += Object.values(rb.rake).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
     }
 
     resumeRakeSum += (p.rake || 0);
