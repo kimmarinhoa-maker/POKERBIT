@@ -11,7 +11,9 @@ import {
   applyChipPixTransactions,
   clearChipPixWeek,
   getChipPixImportSummary,
+  listTransactionCategories,
 } from '@/lib/api';
+import type { TransactionCategory } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
@@ -59,8 +61,9 @@ export default function ChipPixTab({
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
-  const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
+  const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '', category_id: '' });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
 
   // Import summary (Manager Trade Record from Suprema)
   const [importSummary, setImportSummary] = useState<Record<string, any> | null>(null);
@@ -69,9 +72,10 @@ export default function ChipPixTab({
   const loadTxns = useCallback(async () => {
     setLoading(true);
     try {
-      const [txnRes, importRes] = await Promise.all([
+      const [txnRes, importRes, catRes] = await Promise.all([
         listChipPixTransactions(weekStart),
         getChipPixImportSummary(weekStart),
+        listTransactionCategories(),
       ]);
       if (!txnRes.success) {
         toast('Erro ao carregar transacoes ChipPix', 'error');
@@ -82,6 +86,7 @@ export default function ChipPixTab({
       if (importRes.success && importRes.data?.has_data) {
         setImportSummary(importRes.data.operators);
       }
+      if (catRes.success) setCategories(catRes.data || []);
     } catch {
       toast('Erro ao carregar transacoes ChipPix', 'error');
     } finally {
@@ -236,10 +241,10 @@ export default function ChipPixTab({
   async function handleLink(txId: string) {
     if (!linkForm.entity_id || !linkForm.entity_name) return;
     try {
-      const res = await linkChipPixTransaction(txId, linkForm.entity_id, linkForm.entity_name);
+      const res = await linkChipPixTransaction(txId, linkForm.entity_id, linkForm.entity_name, linkForm.category_id || undefined);
       if (res.success) {
         setLinkingId(null);
-        setLinkForm({ entity_id: '', entity_name: '' });
+        setLinkForm({ entity_id: '', entity_name: '', category_id: '' });
         await loadTxns();
       }
     } catch {
@@ -671,16 +676,29 @@ export default function ChipPixTab({
                         {/* Status */}
                         <td className="px-3 py-2.5 align-middle">
                           {isLinking ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <EntityPicker
                                 agents={agents}
                                 players={players}
                                 value={linkForm.entity_name}
                                 onChange={(entityId, entityName) =>
-                                  setLinkForm({ entity_id: entityId, entity_name: entityName })
+                                  setLinkForm((p) => ({ ...p, entity_id: entityId, entity_name: entityName }))
                                 }
                                 autoFocus
                               />
+                              {categories.length > 0 && (
+                                <select
+                                  value={linkForm.category_id}
+                                  onChange={(e) => setLinkForm((p) => ({ ...p, category_id: e.target.value }))}
+                                  className="input text-[10px] py-0.5 px-1.5 w-32"
+                                  title="Categoria"
+                                >
+                                  <option value="">Sem categoria</option>
+                                  {categories.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.direction === 'in' ? '↓' : '↑'} {c.name}</option>
+                                  ))}
+                                </select>
+                              )}
                               <button onClick={() => handleLink(tx.id)} className="btn-primary text-[10px] px-2 py-0.5">
                                 OK
                               </button>
@@ -696,6 +714,14 @@ export default function ChipPixTab({
                               <span className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-semibold">
                                 {tx.entity_name}
                               </span>
+                              {(tx as any).category_id && (() => {
+                                const cat = categories.find((c) => c.id === (tx as any).category_id);
+                                return cat ? (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-dark-600/30 text-dark-400" style={{ borderColor: cat.color + '40', color: cat.color }}>
+                                    {cat.name}
+                                  </span>
+                                ) : null;
+                              })()}
                               {isDraft && (
                                 <button
                                   onClick={() => handleUnlink(tx.id)}
@@ -728,7 +754,7 @@ export default function ChipPixTab({
                                   <button
                                     onClick={() => {
                                       setLinkingId(tx.id);
-                                      setLinkForm({ entity_id: '', entity_name: '' });
+                                      setLinkForm({ entity_id: '', entity_name: '', category_id: (tx as any).category_id || '' });
                                     }}
                                     className="text-[10px] text-dark-500 hover:text-blue-400 transition-colors"
                                   >

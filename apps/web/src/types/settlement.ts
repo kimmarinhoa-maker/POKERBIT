@@ -80,6 +80,7 @@ export interface LedgerEntry {
   created_at?: string;
   external_ref?: string | null;
   is_reconciled?: boolean;
+  category_id?: string | null;
 }
 
 /** Subclub panel data retornada pelo GET /api/settlements/:id/full */
@@ -128,6 +129,7 @@ export interface SettlementFull {
   created_at: string;
   updated_at: string;
   subclubs: SubclubData[];
+  organizations?: { id: string; name: string; external_id?: string | null; metadata?: Record<string, any> };
 }
 
 /** Shape returned by GET /api/settlements/:id/full */

@@ -11,8 +11,9 @@ import {
   applyOFXTransactions,
   deleteOFXTransaction,
   ofxAutoMatch,
+  listTransactionCategories,
 } from '@/lib/api';
-import type { AutoMatchSuggestion } from '@/lib/api';
+import type { AutoMatchSuggestion, TransactionCategory } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import TableSkeleton from '@/components/ui/TableSkeleton';
@@ -53,8 +54,9 @@ export default function OFXTab({
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
-  const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
+  const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '', category_id: '' });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
 
   // Auto-match state
   const [autoMatching, setAutoMatching] = useState(false);
@@ -66,7 +68,10 @@ export default function OFXTab({
   const loadTxns = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listOFXTransactions(weekStart);
+      const [res, catRes] = await Promise.all([
+        listOFXTransactions(weekStart),
+        listTransactionCategories(),
+      ]);
       if (!res.success) {
         toast('Erro ao carregar transacoes OFX', 'error');
         return;
@@ -76,6 +81,7 @@ export default function OFXTab({
       setTxns(subclubEntityIds
         ? all.filter((t) => !t.entity_id || subclubEntityIds.has(t.entity_id))
         : all);
+      if (catRes.success) setCategories(catRes.data || []);
     } catch {
       toast('Erro ao carregar transacoes OFX', 'error');
     } finally {
@@ -130,10 +136,10 @@ export default function OFXTab({
   async function handleLink(txId: string) {
     if (!linkForm.entity_id || !linkForm.entity_name) return;
     try {
-      const res = await linkOFXTransaction(txId, linkForm.entity_id, linkForm.entity_name);
+      const res = await linkOFXTransaction(txId, linkForm.entity_id, linkForm.entity_name, undefined, linkForm.category_id || undefined);
       if (res.success) {
         setLinkingId(null);
-        setLinkForm({ entity_id: '', entity_name: '' });
+        setLinkForm({ entity_id: '', entity_name: '', category_id: '' });
         loadTxns();
       }
     } catch {
@@ -592,16 +598,29 @@ export default function OFXTab({
                           </span>
                         </div>
                         {isLinking && (
-                          <div className="mt-2 pt-2 border-t border-dark-700/30 flex items-center gap-2">
+                          <div className="mt-2 pt-2 border-t border-dark-700/30 flex items-center gap-2 flex-wrap">
                             <EntityPicker
                               agents={agents}
                               players={players}
                               value={linkForm.entity_name}
                               onChange={(entityId, entityName) =>
-                                setLinkForm({ entity_id: entityId, entity_name: entityName })
+                                setLinkForm((p) => ({ ...p, entity_id: entityId, entity_name: entityName }))
                               }
                               autoFocus
                             />
+                            {categories.length > 0 && (
+                              <select
+                                value={linkForm.category_id}
+                                onChange={(e) => setLinkForm((p) => ({ ...p, category_id: e.target.value }))}
+                                className="input text-[10px] py-1 px-1.5 w-36"
+                                title="Categoria"
+                              >
+                                <option value="">Sem categoria</option>
+                                {categories.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.direction === 'in' ? '↓' : '↑'} {c.name}</option>
+                                ))}
+                              </select>
+                            )}
                             <button
                               onClick={() => handleLink(tx.id)}
                               aria-label="Confirmar vinculacao OFX"
@@ -645,17 +664,27 @@ export default function OFXTab({
                       </td>
                       <td className="px-3 py-2.5">
                         {tx.entity_name ? (
-                          <span
-                            className="text-xs text-blue-400 font-medium truncate block max-w-[140px]"
-                            title={tx.entity_name}
-                          >
-                            {tx.entity_name}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="text-xs text-blue-400 font-medium truncate max-w-[140px]"
+                              title={tx.entity_name}
+                            >
+                              {tx.entity_name}
+                            </span>
+                            {(tx as any).category_id && (() => {
+                              const cat = categories.find((c) => c.id === (tx as any).category_id);
+                              return cat ? (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded border" style={{ borderColor: cat.color + '40', color: cat.color }}>
+                                  {cat.name}
+                                </span>
+                              ) : null;
+                            })()}
+                          </div>
                         ) : tx.status === 'pending' && isDraft ? (
                           <button
                             onClick={() => {
                               setLinkingId(tx.id);
-                              setLinkForm({ entity_id: '', entity_name: '' });
+                              setLinkForm({ entity_id: '', entity_name: '', category_id: (tx as any).category_id || '' });
                             }}
                             aria-label="Vincular transacao OFX"
                             className="text-xs text-dark-500 hover:text-blue-400 transition-colors"

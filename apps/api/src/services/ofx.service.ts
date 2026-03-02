@@ -30,6 +30,7 @@ interface BankTransaction {
   dir: string;
   status: string;
   category: string | null;
+  category_id: string | null;
   entity_id: string | null;
   entity_name: string | null;
   week_start: string | null;
@@ -142,6 +143,9 @@ export class OFXService {
 
       if (error) throw new Error(`Erro ao salvar transações: ${error.message}`);
       inserted = data || [];
+
+      // Auto-categorize by regex match
+      await this.autoCategorize(tenantId, inserted);
     }
 
     return {
@@ -150,6 +154,40 @@ export class OFXService {
       total_parsed: parsed.length,
       transactions: inserted,
     };
+  }
+
+  // ─── Auto-categorize transactions by regex match ─────────────────
+  private async autoCategorize(tenantId: string, txns: BankTransaction[]) {
+    try {
+      const { data: cats } = await supabaseAdmin
+        .from('transaction_categories')
+        .select('id, direction, auto_match')
+        .eq('tenant_id', tenantId)
+        .not('auto_match', 'is', null);
+
+      if (!cats || cats.length === 0) return;
+
+      for (const tx of txns) {
+        if (tx.category_id) continue;
+        const memo = tx.memo || '';
+        const matchingCat = cats.find((c) => {
+          if (c.direction !== tx.dir) return false;
+          try {
+            return new RegExp(c.auto_match!, 'i').test(memo);
+          } catch {
+            return false;
+          }
+        });
+        if (matchingCat) {
+          await supabaseAdmin
+            .from('bank_transactions')
+            .update({ category_id: matchingCat.id })
+            .eq('id', tx.id);
+        }
+      }
+    } catch {
+      // Non-critical: don't fail the import
+    }
   }
 
   // ─── Listar transações de uma semana ──────────────────────────────
@@ -191,15 +229,18 @@ export class OFXService {
   }
 
   // ─── Vincular transação a uma entidade ────────────────────────────
-  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, category?: string) {
+  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, category?: string, categoryId?: string) {
+    const updatePayload: Record<string, any> = {
+      entity_id: entityId,
+      entity_name: entityName,
+      category: category || null,
+      status: 'linked',
+    };
+    if (categoryId !== undefined) updatePayload.category_id = categoryId || null;
+
     const { data, error } = await supabaseAdmin
       .from('bank_transactions')
-      .update({
-        entity_id: entityId,
-        entity_name: entityName,
-        category: category || null,
-        status: 'linked',
-      })
+      .update(updatePayload)
       .eq('id', txId)
       .eq('tenant_id', tenantId)
       .select()
@@ -275,6 +316,7 @@ export class OFXService {
       source: 'ofx',
       external_ref: tx.fitid,
       created_by: userId,
+      category_id: tx.category_id || null,
     }));
 
     // Batch insert all ledger entries

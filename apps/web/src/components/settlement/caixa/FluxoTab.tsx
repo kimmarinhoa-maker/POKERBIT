@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL } from '@/lib/api';
+import { listLedger, createLedgerEntry, deleteLedgerEntry, formatBRL, listTransactionCategories } from '@/lib/api';
+import type { TransactionCategory } from '@/lib/api';
 import { fmtDateTime } from '@/lib/formatters';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useToast } from '@/components/Toast';
@@ -54,6 +55,8 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirFilter, setDirFilter] = useState<'all' | 'IN' | 'OUT'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm);
   const mountedRef = useRef(true);
@@ -70,12 +73,16 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listLedger(weekStart);
+      const [res, catRes] = await Promise.all([
+        listLedger(weekStart),
+        listTransactionCategories(),
+      ]);
       if (!mountedRef.current) return;
       if (res.success) {
         const all: LedgerEntry[] = res.data || [];
         setEntries(subclubEntityIds ? all.filter((e) => subclubEntityIds.has(e.entity_id)) : all);
       }
+      if (catRes.success) setCategories(catRes.data || []);
     } catch {
       if (!mountedRef.current) return;
       toast('Erro ao carregar fluxo', 'error');
@@ -101,9 +108,18 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
 
   // ─── Filtered + Running balance ──────────────────────────────────
 
+  const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
   const filteredEntries = useMemo(() => {
     let result = entries;
     if (dirFilter !== 'all') result = result.filter(e => e.dir === dirFilter);
+    if (categoryFilter !== 'all') {
+      if (categoryFilter === 'none') {
+        result = result.filter(e => !e.category_id);
+      } else {
+        result = result.filter(e => e.category_id === categoryFilter);
+      }
+    }
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(e =>
@@ -113,7 +129,7 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
       );
     }
     return result.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
-  }, [entries, dirFilter, debouncedSearch]);
+  }, [entries, dirFilter, categoryFilter, debouncedSearch]);
 
   const entriesWithBalance = useMemo(() => {
     let balance = 0;
@@ -272,6 +288,20 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
               </button>
             ))}
           </div>
+          {categories.length > 0 && (
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="input text-xs py-1.5 px-2 w-44"
+              title="Filtrar por categoria"
+            >
+              <option value="all">Todas categorias</option>
+              <option value="none">Sem categoria</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.direction === 'in' ? '↓' : '↑'} {c.name}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             placeholder="Buscar entidade..."
@@ -301,6 +331,7 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
                   <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider w-10">Dir</th>
                   <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Entidade</th>
                   <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Descricao</th>
+                  <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Categoria</th>
                   <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Entrada</th>
                   <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Saida</th>
                   <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider">Saldo</th>
@@ -329,6 +360,21 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
                     <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">
                       <Highlight text={e.description || '\u2014'} query={debouncedSearch} />
                     </td>
+                    <td className="px-3 py-2.5">
+                      {(() => {
+                        const cat = e.category_id ? catMap.get(e.category_id) : null;
+                        return cat ? (
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap"
+                            style={{ borderColor: cat.color + '40', color: cat.color, backgroundColor: cat.color + '10' }}
+                          >
+                            {cat.name}
+                          </span>
+                        ) : (
+                          <span className="text-dark-600 text-[10px]">{'\u2014'}</span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-3 py-2.5 text-right font-mono text-emerald-400">
                       {e.dir === 'IN' ? formatBRL(Number(e.amount)) : ''}
                     </td>
@@ -356,7 +402,7 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
               {/* Total footer */}
               <tfoot className="sticky bottom-0 z-10">
                 <tr className="bg-dark-900/95 backdrop-blur-sm font-semibold border-t-2 border-dark-600">
-                  <td className="px-3 py-2.5 text-white font-bold text-xs" colSpan={4}>TOTAL</td>
+                  <td className="px-3 py-2.5 text-white font-bold text-xs" colSpan={5}>TOTAL</td>
                   <td className="px-3 py-2.5 text-right font-mono text-emerald-400 font-bold">{formatBRL(totals.totalIn)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-red-400 font-bold">{formatBRL(totals.totalOut)}</td>
                   <td className={`px-3 py-2.5 text-right font-mono font-bold ${totals.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

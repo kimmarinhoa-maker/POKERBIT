@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getOrgTree, updateOrgMetadata } from '@/lib/api';
+import { getOrgTree, updateOrgMetadata, updateOrganization } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
-import { Building2 } from 'lucide-react';
+import { Building2, Check, X } from 'lucide-react';
 
 const PLATFORM_OPTIONS = [
   { value: 'suprema', label: 'Suprema Poker' },
@@ -20,6 +20,9 @@ export default function ClubsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
+  const [editingExtId, setEditingExtId] = useState<string | null>(null);
+  const [extIdInput, setExtIdInput] = useState('');
+  const [savingExtId, setSavingExtId] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -88,6 +91,35 @@ export default function ClubsPage() {
     }
   }
 
+  function startEditExtId(clubId: string, currentValue: string) {
+    setEditingExtId(clubId);
+    setExtIdInput(currentValue || '');
+  }
+
+  async function handleSaveExternalId(clubId: string) {
+    setSavingExtId(true);
+    try {
+      const res = await updateOrganization(clubId, { external_id: extIdInput.trim() });
+      if (res.success) {
+        setTree((prev) =>
+          prev.map((c) =>
+            c.id === clubId
+              ? { ...c, external_id: extIdInput.trim() || null }
+              : c,
+          ),
+        );
+        setEditingExtId(null);
+        toast('ID do clube atualizado', 'success');
+      } else {
+        toast(res.error || 'Erro ao atualizar ID', 'error');
+      }
+    } catch {
+      toast('Erro ao atualizar ID', 'error');
+    } finally {
+      setSavingExtId(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-4 lg:p-8 max-w-5xl animate-tab-fade">
@@ -125,12 +157,55 @@ export default function ClubsPage() {
           {tree.map((club) => (
             <div key={club.id} className="card">
               {/* Club header */}
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-dark-700">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-4 border-b border-dark-700">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white">{club.name}</h3>
-                  <p className="text-xs text-dark-400">
-                    ID: <span className="font-mono">{club.external_id}</span> · {club.subclubes?.length || 0} subclubes
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {editingExtId === club.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-dark-500">ID:</span>
+                        <input
+                          type="text"
+                          value={extIdInput}
+                          onChange={(e) => setExtIdInput(e.target.value)}
+                          className="input text-xs py-0.5 px-2 w-32 font-mono"
+                          placeholder="ID do clube"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveExternalId(club.id);
+                            if (e.key === 'Escape') setEditingExtId(null);
+                          }}
+                        />
+                        <button
+                          onClick={() => handleSaveExternalId(club.id)}
+                          disabled={savingExtId}
+                          className="text-green-400 hover:text-green-300 transition-colors"
+                          aria-label="Salvar ID"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => setEditingExtId(null)}
+                          className="text-dark-500 hover:text-dark-300 transition-colors"
+                          aria-label="Cancelar"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-dark-400">
+                        ID:{' '}
+                        <button
+                          onClick={() => startEditExtId(club.id, club.external_id || '')}
+                          className="font-mono text-poker-400 hover:text-poker-300 transition-colors cursor-pointer"
+                          title="Clique para editar o ID do clube"
+                        >
+                          {club.external_id || '—'}
+                        </button>
+                        <span className="ml-2">· {club.subclubes?.length || 0} subclubes</span>
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {/* Platform selector */}
                 <div className="flex items-center gap-2">

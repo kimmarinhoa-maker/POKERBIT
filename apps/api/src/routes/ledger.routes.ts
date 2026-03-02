@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { requirePermission } from '../middleware/permission';
 import { ledgerService } from '../services/ledger.service';
+import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
 
@@ -158,5 +159,70 @@ router.patch(
     }
   },
 );
+
+// ─── GET /api/ledger/categorized-totals — Totais por categoria ────
+router.get('/categorized-totals', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const weekStart = req.query.week_start as string;
+
+    if (!weekStart) {
+      res.status(400).json({ success: false, error: 'Query param week_start obrigatório' });
+      return;
+    }
+
+    // Fetch ledger entries with category_id for this week
+    const { data: entries, error: entryErr } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('category_id, amount, dir')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .not('category_id', 'is', null);
+
+    if (entryErr) throw entryErr;
+
+    if (!entries || entries.length === 0) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+
+    // Fetch categories for this tenant
+    const categoryIds = [...new Set(entries.map((e) => e.category_id))];
+    const { data: cats, error: catErr } = await supabaseAdmin
+      .from('transaction_categories')
+      .select('id, name, direction, dre_type, dre_group, color')
+      .in('id', categoryIds);
+
+    if (catErr) throw catErr;
+
+    const catMap = new Map((cats || []).map((c) => [c.id, c]));
+
+    // Aggregate by category_id
+    const totals: Record<string, { category_id: string; name: string; dre_type: string | null; dre_group: string | null; color: string; total: number }> = {};
+
+    for (const e of entries) {
+      const cat = catMap.get(e.category_id);
+      if (!cat) continue;
+
+      if (!totals[e.category_id]) {
+        totals[e.category_id] = {
+          category_id: e.category_id,
+          name: cat.name,
+          dre_type: cat.dre_type,
+          dre_group: cat.dre_group,
+          color: cat.color,
+          total: 0,
+        };
+      }
+
+      const amount = Math.abs(Number(e.amount));
+      totals[e.category_id].total += amount;
+    }
+
+    res.json({ success: true, data: Object.values(totals) });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
 
 export default router;

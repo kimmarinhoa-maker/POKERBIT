@@ -124,14 +124,14 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const { entity_id, entity_name } = req.body;
+    const { entity_id, entity_name, category_id } = req.body;
 
     if (!entity_id || !entity_name) {
       res.status(400).json({ success: false, error: 'entity_id e entity_name obrigatórios' });
       return;
     }
 
-    const data = await chipPixService.linkTransaction(tenantId, req.params.id, entity_id, entity_name);
+    const data = await chipPixService.linkTransaction(tenantId, req.params.id, entity_id, entity_name, category_id);
 
     res.json({ success: true, data });
   } catch (err: unknown) {

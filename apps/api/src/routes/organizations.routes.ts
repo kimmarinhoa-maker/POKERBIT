@@ -465,8 +465,8 @@ router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), as
       res.status(404).json({ success: false, error: 'Organizacao nao encontrada' });
       return;
     }
-    if (existing.type !== 'SUBCLUB') {
-      res.status(400).json({ success: false, error: 'Apenas subclubes podem ser editados' });
+    if (existing.type !== 'SUBCLUB' && existing.type !== 'CLUB') {
+      res.status(400).json({ success: false, error: 'Apenas clubes e subclubes podem ser editados' });
       return;
     }
 

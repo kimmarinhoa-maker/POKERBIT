@@ -152,12 +152,13 @@ export default function SettlementOverviewPage() {
   const { settlement, subclubs, dashboardTotals } = data;
 
   // Build club groups (current + siblings)
-  const clubGroups: Array<{ clubId: string; label: string; settlementId: string; subclubs: any[]; totals: any }> = [];
+  const clubGroups: Array<{ clubId: string; label: string; externalId?: string | null; settlementId: string; subclubs: any[]; totals: any }> = [];
 
   const currentClubName = settlement.organizations?.name || 'Clube';
   clubGroups.push({
     clubId: settlement.club_id,
     label: currentClubName,
+    externalId: settlement.organizations?.external_id,
     settlementId,
     subclubs,
     totals: dashboardTotals,
@@ -168,6 +169,7 @@ export default function SettlementOverviewPage() {
     clubGroups.push({
       clubId: sib.settlement.club_id,
       label: sibClubName,
+      externalId: sib.settlement?.organizations?.external_id,
       settlementId: sib.settlement.id,
       subclubs: sib.subclubs || [],
       totals: sib.dashboardTotals || { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
@@ -273,10 +275,11 @@ export default function SettlementOverviewPage() {
             </div>
 
             {/* Subclub cards grouped by club */}
-            {clubGroups.map(({ clubId: cId, label, settlementId: grpSettId, subclubs: grpSubclubs }) => (
+            {clubGroups.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
               <div key={cId} className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   {hasMultipleClubs ? label : 'Subclubes'}
+                  {externalId && <span className="text-xs font-mono font-normal text-dark-500">#{externalId}</span>}
                   <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

@@ -24,6 +24,7 @@ interface Props {
   };
   weekStart: string;
   clubId: string;
+  clubExternalId?: string | null;
   fees: Record<string, number>;
   logoUrl?: string | null;
   settlementId?: string;
@@ -69,7 +70,7 @@ function clrPrint(v: number): string {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, settlementId, settlementStatus, onDataChange }: Props) {
+export default function Comprovantes({ subclub, weekStart, clubId, clubExternalId, logoUrl, settlementId, settlementStatus, onDataChange }: Props) {
   const agents = useMemo(() => subclub.agents || [], [subclub.agents]);
   const players = useMemo(() => subclub.players || [], [subclub.players]);
   const subclubEntityIds = useMemo(() => buildSubclubEntityIds(agents, players), [agents, players]);
@@ -865,6 +866,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
             <StatementView
               data={selectedAgent}
               subclubName={subclub.name}
+              clubExternalId={clubExternalId}
               weekStart={weekStart}
               weekEnd={weekEnd}
               fechamentoTipo={fechamentoTipo}
@@ -1266,6 +1268,7 @@ function FinRow({
 function StatementView({
   data,
   subclubName,
+  clubExternalId,
   weekStart,
   weekEnd,
   fechamentoTipo,
@@ -1275,6 +1278,7 @@ function StatementView({
 }: {
   data: AgentFinancials;
   subclubName: string;
+  clubExternalId?: string | null;
   weekStart: string;
   weekEnd: string;
   fechamentoTipo: 'avista' | 'profitloss';
@@ -1448,6 +1452,7 @@ function StatementView({
             </h2>
             <p className="text-dark-400 print:text-gray-500 text-xs mt-0.5">
               {fmtDate(weekStart)} a {fmtDate(weekEnd)} · {players.length} jogador{players.length !== 1 ? 'es' : ''} · {subclubName}
+              {clubExternalId && <span className="font-mono ml-1">(ID: {clubExternalId})</span>}
             </p>
           </div>
         </div>
@@ -1624,7 +1629,7 @@ function StatementView({
         {/* ─── Footer ─── */}
         <div className="text-center mt-5 pt-3 border-t border-dark-800/50 print:border-gray-200">
           <p className="text-[10px] text-dark-600 print:text-gray-400">
-            {subclubName} · {tipoLabel} · Gerado em {new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {subclubName}{clubExternalId ? ` (${clubExternalId})` : ''} · {tipoLabel} · Gerado em {new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
       </div>

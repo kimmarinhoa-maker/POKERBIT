@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
-import { formatBRL } from '@/lib/api';
+import { useMemo, useEffect, useState, type ReactNode } from 'react';
+import { formatBRL, getCategorizedTotals } from '@/lib/api';
+import type { CategorizedTotal } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { cc } from '@/lib/colorUtils';
 import KpiCard from '@/components/ui/KpiCard';
@@ -10,6 +11,7 @@ import { SubclubData } from '@/types/settlement';
 interface Props {
   subclub: Pick<SubclubData, 'name' | 'totals' | 'feesComputed' | 'adjustments' | 'totalLancamentos' | 'acertoLiga' | 'acertoDirecao'>;
   fees: Record<string, number>;
+  weekStart?: string;
 }
 
 // ─── DRE Calculation ─────────────────────────────────────────────
@@ -89,10 +91,24 @@ const clr = cc;
 
 // ─── Component ────────────────────────────────────────────────────
 
-export default function DRE({ subclub, fees }: Props) {
+export default function DRE({ subclub, fees, weekStart }: Props) {
   const { totals, feesComputed, adjustments, totalLancamentos, acertoLiga, acertoDirecao, name } = subclub;
 
   const dre = useMemo(() => calcDRE(subclub), [subclub]);
+
+  // Fetch categorized totals
+  const [catTotals, setCatTotals] = useState<CategorizedTotal[]>([]);
+  useEffect(() => {
+    if (!weekStart) return;
+    getCategorizedTotals(weekStart).then((res) => {
+      if (res.success) setCatTotals(res.data || []);
+    });
+  }, [weekStart]);
+
+  const catExpenses = useMemo(() => catTotals.filter((c) => c.dre_type === 'expense'), [catTotals]);
+  const catRevenues = useMemo(() => catTotals.filter((c) => c.dre_type === 'revenue'), [catTotals]);
+  const totalCatExpenses = useMemo(() => round2(catExpenses.reduce((s, c) => s + c.total, 0)), [catExpenses]);
+  const totalCatRevenues = useMemo(() => round2(catRevenues.reduce((s, c) => s + c.total, 0)), [catRevenues]);
 
   // ── Waterfall steps (revenue → lucro) ──
   const waterfallSteps = useMemo(() => {
@@ -262,6 +278,26 @@ export default function DRE({ subclub, fees }: Props) {
               <Row key={i} label={l.label} value={-l.value} color="text-orange-400" />
             ))}
             <TotalRow label="Total Custos" value={-dre.totalCustos} />
+          </SectionCard>
+        )}
+
+        {/* DESPESAS CATEGORIZADAS */}
+        {catExpenses.length > 0 && (
+          <SectionCard title="(-) Despesas Categorizadas" accentColor="border-t-pink-500">
+            {catExpenses.map((c) => (
+              <Row key={c.category_id} label={c.name} value={-c.total} color="text-pink-400" />
+            ))}
+            <TotalRow label="Total Desp. Categorizadas" value={-totalCatExpenses} />
+          </SectionCard>
+        )}
+
+        {/* RECEITAS CATEGORIZADAS */}
+        {catRevenues.length > 0 && (
+          <SectionCard title="(+) Receitas Categorizadas" accentColor="border-t-cyan-500">
+            {catRevenues.map((c) => (
+              <Row key={c.category_id} label={c.name} value={c.total} color="text-cyan-400" />
+            ))}
+            <TotalRow label="Total Rec. Categorizadas" value={totalCatRevenues} />
           </SectionCard>
         )}
 

@@ -310,6 +310,9 @@ export class ChipPixService {
 
       if (error) throw new Error(`Erro ao salvar transações ChipPix: ${error.message}`);
       inserted = (data || []).map((r) => this.enrichRow(r));
+
+      // Auto-categorize by regex match
+      await this.autoCategorize(tenantId, inserted);
     }
 
     return {
@@ -319,6 +322,41 @@ export class ChipPixService {
       total_players: parsed.length,
       transactions: inserted,
     };
+  }
+
+  // ─── Auto-categorize entries by regex match ──────────────────────
+  private async autoCategorize(tenantId: string, entries: ChipPixRow[]) {
+    try {
+      const { data: cats } = await supabaseAdmin
+        .from('transaction_categories')
+        .select('id, direction, auto_match')
+        .eq('tenant_id', tenantId)
+        .not('auto_match', 'is', null);
+
+      if (!cats || cats.length === 0) return;
+
+      for (const entry of entries) {
+        if ((entry as any).category_id) continue;
+        const dir = (entry as any).dir === 'IN' ? 'in' : 'out';
+        const memo = (entry as any).description || (entry as any).memo || '';
+        const matchingCat = cats.find((c) => {
+          if (c.direction !== dir) return false;
+          try {
+            return new RegExp(c.auto_match!, 'i').test(memo);
+          } catch {
+            return false;
+          }
+        });
+        if (matchingCat) {
+          await supabaseAdmin
+            .from('ledger_entries')
+            .update({ category_id: matchingCat.id })
+            .eq('id', (entry as any).id);
+        }
+      }
+    } catch {
+      // Non-critical: don't fail the import
+    }
   }
 
   // ─── Derive virtual status from ledger_entries fields ────────────
@@ -694,10 +732,13 @@ export class ChipPixService {
   }
 
   // ─── Vincular entidade ─────────────────────────────────────────────
-  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string) {
+  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, categoryId?: string) {
+    const updatePayload: Record<string, any> = { entity_id: entityId, entity_name: entityName };
+    if (categoryId !== undefined) updatePayload.category_id = categoryId || null;
+
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
-      .update({ entity_id: entityId, entity_name: entityName })
+      .update(updatePayload)
       .eq('id', txId)
       .eq('tenant_id', tenantId)
       .select()

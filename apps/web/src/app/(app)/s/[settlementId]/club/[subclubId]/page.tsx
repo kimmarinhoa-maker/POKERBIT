@@ -268,7 +268,7 @@ export default function SubclubPanelPage() {
           </TabErrorBoundary>
         );
       case 'dre':
-        return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} weekStart={settlement.week_start} /></TabErrorBoundary>;
       case 'liga':
         return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} weekStart={settlement.week_start} weekEnd={weekEnd} /></TabErrorBoundary>;
       case 'caixa':
@@ -320,6 +320,7 @@ export default function SubclubPanelPage() {
               subclub={subclub}
               weekStart={settlement.week_start}
               clubId={settlement.club_id}
+              clubExternalId={settlement.organizations?.external_id}
               fees={fees}
               logoUrl={logoMap[normalizeKey(subclubId)] || null}
               settlementId={settlementId}
@@ -374,6 +375,9 @@ export default function SubclubPanelPage() {
             </button>
             <span className="mx-1.5 text-dark-600">/</span>
             <span className="text-white font-medium truncate max-w-[120px] lg:max-w-none">{subclub.name}</span>
+            {settlement.organizations?.external_id && (
+              <span className="ml-1.5 text-[10px] font-mono text-dark-500">#{settlement.organizations.external_id}</span>
+            )}
             <span className={`ml-2 badge-${settlement.status.toLowerCase()}`}>
               {settlement.status}
             </span>

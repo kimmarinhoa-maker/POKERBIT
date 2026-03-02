@@ -551,4 +551,190 @@ router.patch('/tenant', requireAuth, requireTenant, requireRole('OWNER'), async 
   }
 });
 
+// ═════════════════════════════════════════════════════════════════════
+//  Transaction Categories CRUD (with lazy-seed defaults)
+// ═════════════════════════════════════════════════════════════════════
+
+const DEFAULT_CATEGORIES = [
+  // Entradas (direction='in')
+  { name: 'Pagamento Agente', direction: 'in', dre_type: null, dre_group: null, is_system: true, auto_match: null, sort_order: 1 },
+  { name: 'Depósito Jogador', direction: 'in', dre_type: null, dre_group: null, is_system: true, auto_match: null, sort_order: 2 },
+  { name: 'Aporte Sócio', direction: 'in', dre_type: null, dre_group: null, is_system: false, auto_match: null, sort_order: 3 },
+  { name: 'Transferência Interna', direction: 'in', dre_type: null, dre_group: null, is_system: false, auto_match: null, sort_order: 4 },
+  // Saídas (direction='out')
+  { name: 'Mensalidade ChipPix', direction: 'out', dre_type: 'expense', dre_group: 'custos_operacionais', is_system: true, auto_match: 'mensalidade', sort_order: 1 },
+  { name: 'Saque GP (Operador)', direction: 'out', dre_type: null, dre_group: null, is_system: true, auto_match: 'GP\\s', sort_order: 2 },
+  { name: 'Pagamento Liga', direction: 'out', dre_type: 'expense', dre_group: 'acerto_liga', is_system: true, auto_match: null, sort_order: 3 },
+  { name: 'Saque Jogador', direction: 'out', dre_type: null, dre_group: null, is_system: true, auto_match: null, sort_order: 4 },
+  { name: 'Taxa Plataforma', direction: 'out', dre_type: 'expense', dre_group: 'taxas', is_system: true, auto_match: 'taxa', sort_order: 5 },
+  { name: 'Overlay', direction: 'out', dre_type: 'expense', dre_group: 'custos_operacionais', is_system: false, auto_match: 'overlay', sort_order: 6 },
+  { name: 'Security', direction: 'out', dre_type: 'expense', dre_group: 'custos_operacionais', is_system: false, auto_match: 'security', sort_order: 7 },
+  { name: 'Compras', direction: 'out', dre_type: 'expense', dre_group: 'custos_operacionais', is_system: false, auto_match: 'compra', sort_order: 8 },
+  { name: 'Pagamento Sócio', direction: 'out', dre_type: null, dre_group: null, is_system: false, auto_match: null, sort_order: 9 },
+];
+
+async function lazySeedCategories(tenantId: string) {
+  const { count } = await supabaseAdmin
+    .from('transaction_categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId);
+
+  if ((count ?? 0) > 0) return;
+
+  const rows = DEFAULT_CATEGORIES.map((c) => ({
+    tenant_id: tenantId,
+    ...c,
+    color: '#6B7280',
+  }));
+
+  await supabaseAdmin.from('transaction_categories').insert(rows);
+}
+
+// ─── GET /api/config/transaction-categories — Listar (com lazy-seed) ─
+router.get('/transaction-categories', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+
+    await lazySeedCategories(tenantId);
+
+    const { data, error } = await supabaseAdmin
+      .from('transaction_categories')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('direction')
+      .order('sort_order');
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── POST /api/config/transaction-categories — Criar ────────────────
+router.post('/transaction-categories', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { name, direction, dre_type, dre_group, color, auto_match, icon } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ success: false, error: 'Campo "name" obrigatório' });
+      return;
+    }
+    if (!direction || !['in', 'out'].includes(direction)) {
+      res.status(400).json({ success: false, error: 'Campo "direction" deve ser "in" ou "out"' });
+      return;
+    }
+
+    // Get max sort_order for this direction
+    const { data: maxRow } = await supabaseAdmin
+      .from('transaction_categories')
+      .select('sort_order')
+      .eq('tenant_id', tenantId)
+      .eq('direction', direction)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextOrder = (maxRow?.sort_order ?? 0) + 1;
+
+    const { data, error } = await supabaseAdmin
+      .from('transaction_categories')
+      .insert({
+        tenant_id: tenantId,
+        name: name.trim(),
+        direction,
+        dre_type: dre_type || null,
+        dre_group: dre_group || null,
+        color: color || '#6B7280',
+        icon: icon || null,
+        auto_match: auto_match || null,
+        is_system: false,
+        sort_order: nextOrder,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    logAudit(req, 'CREATE', 'transaction_categories', data.id, undefined, { name, direction });
+    res.status(201).json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── PUT /api/config/transaction-categories/:id — Atualizar ─────────
+router.put('/transaction-categories/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { id } = req.params;
+    const { name, direction, dre_type, dre_group, color, auto_match, icon, sort_order } = req.body;
+
+    const update: Record<string, any> = {};
+    if (name !== undefined) update.name = name.trim();
+    if (direction !== undefined) update.direction = direction;
+    if (dre_type !== undefined) update.dre_type = dre_type || null;
+    if (dre_group !== undefined) update.dre_group = dre_group || null;
+    if (color !== undefined) update.color = color || '#6B7280';
+    if (auto_match !== undefined) update.auto_match = auto_match || null;
+    if (icon !== undefined) update.icon = icon || null;
+    if (sort_order !== undefined) update.sort_order = sort_order;
+
+    const { data, error } = await supabaseAdmin
+      .from('transaction_categories')
+      .update(update)
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      res.status(404).json({ success: false, error: 'Categoria não encontrada' });
+      return;
+    }
+    logAudit(req, 'UPDATE', 'transaction_categories', id, undefined, update);
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── DELETE /api/config/transaction-categories/:id — Deletar ────────
+router.delete('/transaction-categories/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { id } = req.params;
+
+    // Check if is_system
+    const { data: existing } = await supabaseAdmin
+      .from('transaction_categories')
+      .select('is_system')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (!existing) {
+      res.status(404).json({ success: false, error: 'Categoria não encontrada' });
+      return;
+    }
+    if (existing.is_system) {
+      res.status(403).json({ success: false, error: 'Categorias do sistema não podem ser excluídas' });
+      return;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('transaction_categories')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+
+    if (error) throw error;
+    logAudit(req, 'DELETE', 'transaction_categories', id);
+    res.json({ success: true, data: { deleted: true } });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
 export default router;
