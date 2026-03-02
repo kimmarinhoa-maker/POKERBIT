@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { apiFetch, uploadClubLogo, refreshTenantList, deleteTenant } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 import { ChevronDown, Plus, Check, Pencil, Camera, Trash2 } from 'lucide-react';
 
 interface TenantSelectorProps {
@@ -11,6 +12,7 @@ interface TenantSelectorProps {
 
 export default function TenantSelector({ collapsed }: TenantSelectorProps) {
   const { tenantId, tenantName, tenants, switchTenant, isAdmin, role } = useAuth();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -62,7 +64,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
         await refreshTenantList();
         window.location.reload();
       }
-    } catch { /* ignore */ }
+    } catch (err) { toast(err instanceof Error ? err.message : 'Erro ao salvar nome', 'error'); }
     finally { setSaving(false); }
   }
 
@@ -82,7 +84,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
       await uploadClubLogo(orgId, file);
       await refreshTenantList();
       window.location.reload();
-    } catch { /* ignore */ }
+    } catch (err) { toast(err instanceof Error ? err.message : 'Erro ao enviar logo', 'error'); }
     finally { setSaving(false); }
   }
 
@@ -104,7 +106,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
           window.location.href = '/login';
         }
       }
-    } catch { /* ignore */ }
+    } catch (err) { toast(err instanceof Error ? err.message : 'Erro ao deletar operacao', 'error'); }
     finally { setDeleting(false); }
   }
 

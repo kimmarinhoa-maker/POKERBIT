@@ -215,8 +215,9 @@ router.get('/categorized-totals', requireAuth, requireTenant, async (req: Reques
         };
       }
 
-      const amount = Math.abs(Number(e.amount));
-      totals[e.category_id].total += amount;
+      const raw = Number(e.amount) || 0;
+      const signed = e.dir === 'OUT' ? -raw : raw;
+      totals[e.category_id].total += signed;
     }
 
     res.json({ success: true, data: Object.values(totals) });

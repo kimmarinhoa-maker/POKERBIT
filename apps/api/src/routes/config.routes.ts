@@ -198,7 +198,7 @@ router.get('/payment-methods', requireAuth, requireTenant, async (req: Request, 
 });
 
 // ─── POST /api/config/payment-methods — Criar método de pagamento ───
-router.post('/payment-methods', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.post('/payment-methods', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { name, is_default, sort_order } = req.body;
@@ -306,7 +306,7 @@ router.get('/bank-accounts', requireAuth, requireTenant, async (req: Request, re
 });
 
 // ─── POST /api/config/bank-accounts — Criar conta bancária ──────────
-router.post('/bank-accounts', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.post('/bank-accounts', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { name, bank_code, agency, account_nr, is_default } = req.body;

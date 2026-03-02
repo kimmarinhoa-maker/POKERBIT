@@ -57,7 +57,7 @@ app.use(
       ? (origin, cb) => {
           // Allow requests with no origin (mobile apps, curl, server-to-server)
           if (!origin) return cb(null, true);
-          if (allowedOrigins.includes(origin) || origin.endsWith('.up.railway.app')) {
+          if (allowedOrigins.includes(origin)) {
             return cb(null, true);
           }
           cb(new Error('CORS not allowed'));
@@ -148,7 +148,7 @@ app.use('/api/links', linksRoutes);
 app.use('/api/carry-forward', writeLimiter, carryForwardRoutes);
 app.use('/api/ofx', writeLimiter, ofxRoutes);
 app.use('/api/chippix', writeLimiter, chipPixRoutes);
-app.use('/api/users', usersRoutes);
+app.use('/api/users', writeLimiter, usersRoutes);
 app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);
 app.use('/api/permissions', permissionsRoutes);
 

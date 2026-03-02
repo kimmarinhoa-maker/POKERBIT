@@ -2,8 +2,6 @@
 //  JPG Export — Captura um elemento DOM como imagem JPG
 // ══════════════════════════════════════════════════════════════════════
 
-import html2canvas from 'html2canvas';
-
 /**
  * Captura o conteudo de um elemento DOM e faz download como JPG.
  *
@@ -19,6 +17,7 @@ export async function exportElementAsJpg(
     scale?: number;
   },
 ): Promise<void> {
+  const { default: html2canvas } = await import('html2canvas');
   const canvas = await html2canvas(element, {
     backgroundColor: options?.backgroundColor || '#ffffff',
     scale: options?.scale || 2,

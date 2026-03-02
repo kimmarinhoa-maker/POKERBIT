@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { getStoredAuth, clearAuth, refreshAuthToken, getMyPermissions } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -303,29 +303,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   }, [router]);
 
+  const value = useMemo<AuthContextValue>(() => ({
+    user,
+    role,
+    tenantId,
+    tenantName,
+    tenants,
+    isAdmin,
+    canWrite,
+    isScoped,
+    hasSubclubs,
+    allowedSubclubs,
+    permissions,
+    loading,
+    canAccess,
+    canEditSubclub,
+    hasPermission,
+    setHasSubclubs,
+    switchTenant,
+    logout,
+  }), [user, role, tenantId, tenantName, tenants, isAdmin, canWrite, isScoped, hasSubclubs, allowedSubclubs, permissions, loading, canAccess, canEditSubclub, hasPermission, setHasSubclubs, switchTenant, logout]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        role,
-        tenantId,
-        tenantName,
-        tenants,
-        isAdmin,
-        canWrite,
-        isScoped,
-        hasSubclubs,
-        allowedSubclubs,
-        permissions,
-        loading,
-        canAccess,
-        canEditSubclub,
-        hasPermission,
-        setHasSubclubs,
-        switchTenant,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

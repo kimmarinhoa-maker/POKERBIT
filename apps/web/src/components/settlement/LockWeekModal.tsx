@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { finalizeSettlement, updateSettlementNotes, closeWeek } from '@/lib/api';
 import { SubclubData } from '@/types/settlement';
 
@@ -51,6 +51,18 @@ export default function LockWeekModal({
     finalized: false,
     carryCount: 0,
   });
+
+  // Reset state whenever modal opens
+  useEffect(() => {
+    if (show) {
+      setChecked(new Set());
+      setNotes(initialNotes);
+      setStep('checklist');
+      setError(null);
+      setConfirmText('');
+      setResults({ finalized: false, carryCount: 0 });
+    }
+  }, [show, initialNotes]);
 
   const CONFIRM_WORD = 'FINALIZAR';
   const allChecked = CHECKLIST.every((c) => checked.has(c.key));

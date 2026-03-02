@@ -15,9 +15,9 @@ export const logger = {
     console.error(`[${tag}]`, ...args);
   },
 
-  /** Logged in dev + production (non-critical warnings) */
+  /** Always logged — auth failures, deprecations, config issues */
   warn(tag: string, ...args: unknown[]) {
-    if (!isProd) console.warn(`[${tag}]`, ...args);
+    console.warn(`[${tag}]`, ...args);
   },
 
   /** Dev only */
