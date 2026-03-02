@@ -266,7 +266,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     }
     const enriched = imports.map((i: any) => ({
       ...i,
-      settlement_id: i.settlement_id || settlementMap[i.id]?.id || null,
+      settlement_id: settlementMap[i.id]?.id || null,
       settlement_status: settlementMap[i.id]?.status || null,
     }));
 
