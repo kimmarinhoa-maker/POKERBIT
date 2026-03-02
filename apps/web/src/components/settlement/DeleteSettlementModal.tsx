@@ -18,7 +18,7 @@ export default function DeleteSettlementModal({ show, settlementId, onClose, onS
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { addToast } = useToast();
+  const { toast } = useToast();
 
   if (!show) return null;
 
@@ -31,7 +31,7 @@ export default function DeleteSettlementModal({ show, settlementId, onClose, onS
     try {
       const res = await deleteSettlement(settlementId);
       if (res.success) {
-        addToast('Settlement apagado com sucesso', 'success');
+        toast('Settlement apagado com sucesso', 'success');
         setConfirmText('');
         onSuccess();
       } else {
