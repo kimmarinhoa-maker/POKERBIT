@@ -404,6 +404,8 @@ export async function GET(req: NextRequest) {
               cashTotal += sumModalities(rb.rake, CASH_MODALITIES);
               tournamentTotal += sumModalities(rb.rake, TOURNAMENT_MODALITIES);
             }
+            // Skip weeks with no rake_breakdown data (avoids empty bars)
+            if (cashTotal === 0 && tournamentTotal === 0) continue;
             const [, mm, dd] = s.week_start.split('-');
             compPoints.push({ label: `${dd}/${mm}`, cash: cashTotal, tournament: tournamentTotal });
           }
