@@ -437,44 +437,51 @@ function parseStatisticsBreakdown(statsRows) {
     // ── Fallback: when GU Fee columns produce all zeros ───────────────
     const rakeHasData = ALL_MOD_KEYS.some(k => entry.rake[k] > 0);
     if (!rakeHasData && entry.total > 0) {
-      const hasWinnings = ALL_MOD_KEYS.some(k => Math.abs(entry.winnings[k]) > 0);
+      // Each category distributes independently:
+      // If sub-mod winnings exist → proportional; otherwise → first sub-mod key
 
-      if (hasWinnings) {
-        // ── Cash: distribute ringGame proportionally by |winnings| ──
+      // ── Cash: distribute ringGame ──
+      if (entry.ringGame > 0) {
         const cashWins = CASH_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
         const totalCashWin = cashWins.reduce((s, [, v]) => s + v, 0);
-        if (totalCashWin > 0 && entry.ringGame > 0) {
+        if (totalCashWin > 0) {
           for (const [mod, absWin] of cashWins) {
             entry.rake[mod] = round2val((absWin / totalCashWin) * entry.ringGame);
           }
+        } else {
+          entry.rake.nlh = entry.ringGame;
         }
+      }
 
-        // ── MTT: distribute mttLocal proportionally by |winnings| ──
+      // ── MTT: distribute mttLocal ──
+      if (entry.mttLocal > 0) {
         const mttWins = MTT_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
         const totalMttWin = mttWins.reduce((s, [, v]) => s + v, 0);
-        if (totalMttWin > 0 && entry.mttLocal > 0) {
+        if (totalMttWin > 0) {
           for (const [mod, absWin] of mttWins) {
             entry.rake[mod] = round2val((absWin / totalMttWin) * entry.mttLocal);
           }
+        } else {
+          entry.rake.mtt_nlh = entry.mttLocal;
         }
+      }
 
-        // ── SNG: distribute sngLocal proportionally by |winnings| ──
+      // ── SNG: distribute sngLocal ──
+      if (entry.sngLocal > 0) {
         const sngWins = SNG_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
         const totalSngWin = sngWins.reduce((s, [, v]) => s + v, 0);
-        if (totalSngWin > 0 && entry.sngLocal > 0) {
+        if (totalSngWin > 0) {
           for (const [mod, absWin] of sngWins) {
             entry.rake[mod] = round2val((absWin / totalSngWin) * entry.sngLocal);
           }
+        } else {
+          entry.rake.sng_nlh = entry.sngLocal;
         }
+      }
 
-        // ── Spin: direct ──
-        entry.rake.spin = entry.spinLocal || 0;
-      } else {
-        // No winnings data — last resort: put totals into first sub-modality
-        entry.rake.nlh      = entry.ringGame || 0;
-        entry.rake.mtt_nlh  = entry.mttLocal || 0;
-        entry.rake.sng_nlh  = entry.sngLocal || 0;
-        entry.rake.spin     = entry.spinLocal || 0;
+      // ── Spin: direct ──
+      if (entry.spinLocal > 0) {
+        entry.rake.spin = entry.spinLocal;
       }
     }
 
