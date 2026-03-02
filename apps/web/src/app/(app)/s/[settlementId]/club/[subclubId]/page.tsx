@@ -54,6 +54,7 @@ export default function SubclubPanelPage() {
   const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
+  const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -70,14 +71,17 @@ export default function SubclubPanelPage() {
       if (treeRes.success && treeRes.data) {
         const map: Record<string, string | null> = {};
         const waMap: Record<string, string | null> = {};
+        const cpMap: Record<string, string> = {};
         for (const club of treeRes.data) {
           for (const sub of club.subclubes || []) {
             map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
             waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;
+            if (sub.chippix_manager_id) cpMap[sub.id] = sub.chippix_manager_id;
           }
         }
         setLogoMap(map);
         setWhatsappLinkMap(waMap);
+        setChippixManagerMap(cpMap);
       }
       if (res.success && res.data) {
         setData(res.data);
@@ -234,6 +238,7 @@ export default function SubclubPanelPage() {
             <Conciliacao
               weekStart={settlement.week_start}
               clubId={subclub.id}
+              chippixManagerId={chippixManagerMap[subclub.id] || null}
               settlementStatus={settlement.status}
               onDataChange={loadData}
               agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}

@@ -26,6 +26,7 @@ type ChipPixFilter = 'all' | 'pending' | 'linked' | 'locked' | 'applied' | 'igno
 export interface ChipPixTabProps {
   weekStart: string;
   clubId: string;
+  chippixManagerId?: string | null;
   isDraft: boolean;
   canEdit: boolean;
   onDataChange: () => void;
@@ -39,6 +40,7 @@ export interface ChipPixTabProps {
 export default function ChipPixTab({
   weekStart,
   clubId,
+  chippixManagerId,
   isDraft,
   canEdit,
   onDataChange,
@@ -62,7 +64,6 @@ export default function ChipPixTab({
 
   // Import summary (Manager Trade Record from Suprema)
   const [importSummary, setImportSummary] = useState<Record<string, any> | null>(null);
-  const [managerToClub, setManagerToClub] = useState<Record<string, { org_id: string; org_name: string }>>({});
   const [comparisonOpen, setComparisonOpen] = useState(true);
 
   const loadTxns = useCallback(async () => {
@@ -77,9 +78,8 @@ export default function ChipPixTab({
         return;
       }
       setTxns(txnRes.data || []);
-      if (importRes.success && importRes.data) {
-        if (importRes.data.has_data) setImportSummary(importRes.data.operators);
-        if (importRes.data.manager_to_club) setManagerToClub(importRes.data.manager_to_club);
+      if (importRes.success && importRes.data?.has_data) {
+        setImportSummary(importRes.data.operators);
       }
     } catch {
       toast('Erro ao carregar transacoes ChipPix', 'error');
@@ -410,11 +410,8 @@ export default function ChipPixTab({
 
       {/* ── Comparison View (ChipPix Extrato vs Suprema Trade) ──── */}
       {importSummary && Object.keys(importSummary).length > 0 && (() => {
-        // Find which operator belongs to the current subclub
-        const myManagerKey = Object.keys(managerToClub).find(
-          (k) => managerToClub[k].org_id === clubId,
-        );
-        const myOp = myManagerKey ? importSummary[myManagerKey] : null;
+        // Use chippixManagerId prop (from getOrgTree, proven to work) to find this subclub's operator
+        const myOp = chippixManagerId ? importSummary[chippixManagerId] : null;
         // Also check if there's extrato data (uploaded ChipPix)
         const hasExtrato = txns.length > 0;
 
@@ -432,7 +429,7 @@ export default function ChipPixTab({
 
             {comparisonOpen && (
               <div className="mt-3 space-y-3">
-                {!myManagerKey && (
+                {!chippixManagerId && (
                   <div className="text-[11px] text-amber-400 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
                     Este subclube nao tem <strong>ChipPix Manager ID</strong> configurado.
                     Configure em <strong>Config &gt; Estrutura</strong> para cruzar dados automaticamente.

@@ -54,6 +54,8 @@ function entryGrossValues(e: LedgerEntry): { entrada: number; saida: number } {
 interface Props {
   weekStart: string;
   clubId: string;
+  clubName?: string;
+  chippixManagerId?: string | null;
   settlementStatus: string;
   onDataChange: () => void;
   agents: AgentOption[];
@@ -64,7 +66,7 @@ type SubTab = 'chippix' | 'ofx' | 'ledger';
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Conciliacao({ weekStart, clubId, settlementStatus, onDataChange, agents, players }: Props) {
+export default function Conciliacao({ weekStart, clubId, clubName, chippixManagerId, settlementStatus, onDataChange, agents, players }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('ledger');
   const { toast } = useToast();
@@ -230,6 +232,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
         <ChipPixTab
           weekStart={weekStart}
           clubId={clubId}
+          chippixManagerId={chippixManagerId || null}
           isDraft={isDraft}
           canEdit={canEdit}
           onDataChange={() => { onDataChange(); loadEntries(); loadBackendSummary(); }}
