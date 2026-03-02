@@ -259,9 +259,27 @@ function parseWorkbook(workbook, config = {}) {
 
   // 5) Merge breakdown
   let rakeValidation = { matches: 0, diffs: 0, diffDetails: [] };
+  let unmatchedCount = 0;
+  let unmatchedRake = 0;
+  let breakdownRakeSum = 0;
+  let resumeRakeSum = 0;
   for (const p of dedupPlayers) {
-    p.rakeBreakdown = breakdown[p.id] || { ringGame: 0, mtt: 0, sng: 0, spin: 0, tlt: 0, total: 0 };
-    if (p._status !== 'ignored' && p.rakeBreakdown.total > 0) {
+    if (p._status === 'ignored') continue;
+    const bd = breakdown[p.id];
+    if (bd) {
+      p.rakeBreakdown = bd;
+      // Sum up distributed rake (rake sub-object) for diagnostic
+      if (bd.rake && typeof bd.rake === 'object') {
+        const rakeSubSum = Object.values(bd.rake).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+        breakdownRakeSum += rakeSubSum;
+      }
+    } else {
+      p.rakeBreakdown = { ringGame: 0, mttLocal: 0, sngLocal: 0, spinLocal: 0, tlt: 0, total: 0 };
+      unmatchedCount++;
+      unmatchedRake += (p.rake || 0);
+    }
+    resumeRakeSum += (p.rake || 0);
+    if (p.rakeBreakdown.total > 0) {
       const diff = Math.abs(p.rake - p.rakeBreakdown.total);
       if (diff > 0.1) {
         rakeValidation.diffs++;
@@ -272,6 +290,11 @@ function parseWorkbook(workbook, config = {}) {
         rakeValidation.matches++;
       }
     }
+  }
+  console.log(`[breakdown-diag] Resume rake total: ${resumeRakeSum.toFixed(2)}, Breakdown rake.* sum: ${breakdownRakeSum.toFixed(2)}, Gap: ${(resumeRakeSum - breakdownRakeSum).toFixed(2)}`);
+  console.log(`[breakdown-diag] Unmatched players (no Statistics): ${unmatchedCount}, their rake: ${unmatchedRake.toFixed(2)}`);
+  if (rakeValidation.diffs > 0) {
+    console.log(`[breakdown-diag] Players with Resume vs Statistics diff: ${rakeValidation.diffs}`, JSON.stringify(rakeValidation.diffDetails.slice(0, 3)));
   }
 
   // 6) Agrupar por status

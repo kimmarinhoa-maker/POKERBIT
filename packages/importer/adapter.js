@@ -434,64 +434,82 @@ function parseStatisticsBreakdown(statsRows) {
       entry.hands[key]    = safeGet(r, mc.hands);
     }
 
-    // ── Fallback: when GU Fee columns produce all zeros ───────────────
-    const rakeHasData = ALL_MOD_KEYS.some(k => entry.rake[k] > 0);
-    if (!rakeHasData && entry.total > 0) {
-      // Each category distributes independently:
-      // If sub-mod winnings exist → proportional; otherwise → first sub-mod key
+    // ── Per-category fallback: if GU Fee columns produced zero for a
+    //    category, use Local total instead. Each category is independent.
+    //    TLT always uses Local (no GU column exists). ─────────────────
 
-      // ── Cash: distribute ringGame ──
-      if (entry.ringGame > 0) {
-        const cashWins = CASH_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
-        const totalCashWin = cashWins.reduce((s, [, v]) => s + v, 0);
-        if (totalCashWin > 0) {
-          for (const [mod, absWin] of cashWins) {
-            entry.rake[mod] = round2val((absWin / totalCashWin) * entry.ringGame);
-          }
-        } else {
-          entry.rake.nlh = entry.ringGame;
+    // Cash: use Local if GU Fee produced zero
+    const cashGU = CASH_KEYS.reduce((s, k) => s + (entry.rake[k] || 0), 0);
+    if (cashGU === 0 && entry.ringGame > 0) {
+      const cashWins = CASH_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
+      const totalCashWin = cashWins.reduce((s, [, v]) => s + v, 0);
+      if (totalCashWin > 0) {
+        for (const [mod, absWin] of cashWins) {
+          entry.rake[mod] = round2val((absWin / totalCashWin) * entry.ringGame);
         }
+      } else {
+        entry.rake.nlh = entry.ringGame;
       }
+    }
 
-      // ── MTT: distribute mttLocal ──
-      if (entry.mttLocal > 0) {
-        const mttWins = MTT_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
-        const totalMttWin = mttWins.reduce((s, [, v]) => s + v, 0);
-        if (totalMttWin > 0) {
-          for (const [mod, absWin] of mttWins) {
-            entry.rake[mod] = round2val((absWin / totalMttWin) * entry.mttLocal);
-          }
-        } else {
-          entry.rake.mtt_nlh = entry.mttLocal;
+    // MTT: use Local if GU Fee produced zero
+    const mttGU = MTT_KEYS.reduce((s, k) => s + (entry.rake[k] || 0), 0);
+    if (mttGU === 0 && entry.mttLocal > 0) {
+      const mttWins = MTT_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
+      const totalMttWin = mttWins.reduce((s, [, v]) => s + v, 0);
+      if (totalMttWin > 0) {
+        for (const [mod, absWin] of mttWins) {
+          entry.rake[mod] = round2val((absWin / totalMttWin) * entry.mttLocal);
         }
+      } else {
+        entry.rake.mtt_nlh = entry.mttLocal;
       }
+    }
 
-      // ── SNG: distribute sngLocal ──
-      if (entry.sngLocal > 0) {
-        const sngWins = SNG_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
-        const totalSngWin = sngWins.reduce((s, [, v]) => s + v, 0);
-        if (totalSngWin > 0) {
-          for (const [mod, absWin] of sngWins) {
-            entry.rake[mod] = round2val((absWin / totalSngWin) * entry.sngLocal);
-          }
-        } else {
-          entry.rake.sng_nlh = entry.sngLocal;
+    // SNG: use Local if GU Fee produced zero
+    const sngGU = SNG_KEYS.reduce((s, k) => s + (entry.rake[k] || 0), 0);
+    if (sngGU === 0 && entry.sngLocal > 0) {
+      const sngWins = SNG_KEYS.map(k => [k, Math.abs(entry.winnings[k] || 0)]);
+      const totalSngWin = sngWins.reduce((s, [, v]) => s + v, 0);
+      if (totalSngWin > 0) {
+        for (const [mod, absWin] of sngWins) {
+          entry.rake[mod] = round2val((absWin / totalSngWin) * entry.sngLocal);
         }
+      } else {
+        entry.rake.sng_nlh = entry.sngLocal;
       }
+    }
 
-      // ── Spin: direct ──
-      if (entry.spinLocal > 0) {
-        entry.rake.spin = entry.spinLocal;
-      }
+    // Spin: use Local if GU Fee produced zero
+    if ((entry.rake.spin || 0) === 0 && entry.spinLocal > 0) {
+      entry.rake.spin = entry.spinLocal;
+    }
 
-      // ── TLT (Time Limited Tournament): add to mtt_nlh ──
-      if (entry.tlt > 0) {
-        entry.rake.mtt_nlh = (entry.rake.mtt_nlh || 0) + entry.tlt;
+    // TLT: ALWAYS add to mtt_nlh (no GU Fee column exists for TLT)
+    if (entry.tlt > 0) {
+      entry.rake.mtt_nlh = (entry.rake.mtt_nlh || 0) + entry.tlt;
+    }
+
+    // Diagnostic: verify sum of rake.* matches entry.total
+    const rakeDistSum = ALL_MOD_KEYS.reduce((s, k) => s + (entry.rake[k] || 0), 0);
+    const gap = entry.total - rakeDistSum;
+    if (Math.abs(gap) > 0.1) {
+      if (!map._diagGaps) map._diagGaps = [];
+      if (map._diagGaps.length < 5) {
+        map._diagGaps.push({ pid, total: entry.total, distributed: round2val(rakeDistSum), gap: round2val(gap), tlt: entry.tlt, cashGU, mttGU, sngGU, spin: entry.rake.spin || 0 });
       }
     }
 
     map[pid] = entry;
   }
+
+  // Log gap diagnostics
+  if (map._diagGaps && map._diagGaps.length > 0) {
+    console.log(`[Statistics] Players with rake gap (total vs distributed):`, JSON.stringify(map._diagGaps));
+  }
+
+  // Log TLT column status
+  console.log(`[Statistics] TLT column index: ${C.tlt}, spinLocal column: ${C.spinLocal}`);
 
   // Attach metadata for diagnostics
   map.__meta = { allHeaders, found, notFound };
