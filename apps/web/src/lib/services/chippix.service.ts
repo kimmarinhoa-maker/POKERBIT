@@ -311,7 +311,7 @@ export class ChipPixService {
           description: `${descPrefix} · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
           dir: saldoLiq >= 0 ? 'IN' : 'OUT',
           method: 'chippix',
-          entity_id: matchResult?.entityId || (p.idJog.startsWith('_noid_') ? null : `cp_${p.idJog}`),
+          entity_id: matchResult?.entityId || `cp_${p.idJog}`,
           entity_name: matchResult?.entityName || p.nome || p.idJog,
           week_start: weekStart || null,
           settlement_id: settlementId,  // Fix 1: vincular ao settlement
@@ -358,7 +358,9 @@ export class ChipPixService {
   private deriveStatus(row: any): string {
     if (row.source === 'chippix_ignored') return 'ignored';
     if (row.is_reconciled) return 'applied';
-    if (row.entity_id) return 'linked';
+    const eid = String(row.entity_id || '');
+    // _noid_ entries (GP withdrawals, service fees), unlinked, and unmatched entries → pending
+    if (eid && !eid.includes('_noid_') && !eid.startsWith('_unlinked_') && !eid.startsWith('_unmatched_')) return 'linked';
     return 'pending';
   }
 
@@ -529,7 +531,7 @@ export class ChipPixService {
       if (amount > 0) {
         toInsert.push({
           tenant_id: tenantId,
-          entity_id: player?.id || null,
+          entity_id: player?.id || `_unmatched_${row.idOperacao}`,
           entity_name: player?.name || row.integrante || null,
           week_start: semana,
           settlement_id: settlementId,
@@ -549,7 +551,7 @@ export class ChipPixService {
       if (row.taxaOperacao > 0 && !existingRefs.has(`${row.idOperacao}_fee`)) {
         toInsert.push({
           tenant_id: tenantId,
-          entity_id: player?.id || null,
+          entity_id: player?.id || `_unmatched_${row.idOperacao}_fee`,
           entity_name: player?.name || row.integrante || null,
           week_start: semana,
           settlement_id: settlementId,
@@ -767,9 +769,19 @@ export class ChipPixService {
 
   // ─── Desvincular entidade ──────────────────────────────────────────
   async unlinkTransaction(tenantId: string, txId: string) {
+    // Get external_ref to use as placeholder entity_id (DB requires NOT NULL)
+    const { data: current } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('external_ref')
+      .eq('id', txId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    const pendingId = `_unlinked_${current?.external_ref || txId}`;
+
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
-      .update({ entity_id: null, entity_name: null })
+      .update({ entity_id: pendingId, entity_name: null })
       .eq('id', txId)
       .eq('tenant_id', tenantId)
       .select()
