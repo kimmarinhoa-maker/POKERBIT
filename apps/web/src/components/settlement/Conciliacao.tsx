@@ -1,14 +1,53 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, toggleReconciled } from '@/lib/api';
-import { fmtDateTime } from '@/lib/formatters';
+import { listLedger, toggleReconciled, getChipPixLedgerSummary } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import ChipPixTab from './conciliacao/ChipPixTab';
 import OFXTab from './conciliacao/OFXTab';
 import LedgerTab from './conciliacao/LedgerTab';
+import VerificadorConciliacao from './conciliacao/VerificadorConciliacao';
+import type { VerificadorStats } from './conciliacao/VerificadorConciliacao';
 import type { LedgerEntry, AgentOption, PlayerOption, FilterMode } from './conciliacao/types';
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+/** Parse gross entrada/saida/taxa from ChipPix description memo.
+ *  Matches the format: "ChipPix · Nome · ent 1000.00 − saí 500.00 · taxa 50.00 · 5 txns"
+ *  Used by the uploadChipPix pathway (aggregated per player). */
+function parseGross(desc: string | null): { entrada: number; saida: number; taxa: number } {
+  if (!desc) return { entrada: 0, saida: 0, taxa: 0 };
+  const entMatch = desc.match(/ent\s+([\d.]+)/);
+  const saiMatch = desc.match(/sa[íi]\s+([\d.]+)/);
+  const taxMatch = desc.match(/taxa\s+([\d.]+)/);
+  return {
+    entrada: entMatch ? parseFloat(entMatch[1]) : 0,
+    saida: saiMatch ? parseFloat(saiMatch[1]) : 0,
+    taxa: taxMatch ? parseFloat(taxMatch[1]) : 0,
+  };
+}
+
+/** Compute gross entrada/saida for a single ledger entry.
+ *  For ChipPix (uploadChipPix pathway): parses gross from description.
+ *  For ChipPix (importExtrato pathway): amount is already gross per txn.
+ *  For fees/other: uses amount + dir directly. */
+function entryGrossValues(e: LedgerEntry): { entrada: number; saida: number } {
+  if (e.source === 'chippix_fee') return { entrada: 0, saida: Number(e.amount) };
+  if (e.source === 'chippix_ignored') return { entrada: 0, saida: 0 };
+
+  // Try parsing gross from description (uploadChipPix aggregated entries)
+  const gross = parseGross(e.description);
+  if (gross.entrada > 0 || gross.saida > 0) {
+    return { entrada: gross.entrada, saida: gross.saida };
+  }
+
+  // Fallback: amount is already the gross value (importExtrato per-txn or non-ChipPix)
+  return {
+    entrada: e.dir === 'IN' ? Number(e.amount) : 0,
+    saida: e.dir === 'OUT' ? Number(e.amount) : 0,
+  };
+}
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -31,6 +70,8 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const [verificadoOk, setVerificadoOk] = useState(false);
+  const [backendChipPixStats, setBackendChipPixStats] = useState<VerificadorStats | null>(null);
 
   // Reset sub-tab when week changes
   useEffect(() => { setActiveSubTab('ledger'); }, [weekStart]);
@@ -56,19 +97,72 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
     }
   }, [weekStart, toast]);
 
+  // Fetch backend-computed ChipPix summary (independent computation path for Verificador)
+  const loadBackendSummary = useCallback(async () => {
+    try {
+      const res = await getChipPixLedgerSummary(weekStart);
+      if (mountedRef.current && res.success && res.data) setBackendChipPixStats(res.data);
+    } catch {
+      /* silent — verificador just won't have backend data */
+    }
+  }, [weekStart]);
+
   useEffect(() => {
     loadEntries();
-  }, [loadEntries]);
+    loadBackendSummary();
+  }, [loadEntries, loadBackendSummary]);
 
-  // KPIs (Ledger)
+  // KPIs (Ledger) — uses gross values for ChipPix entries so numbers match ChipPix tab
   const kpis = useMemo(() => {
     const total = entries.length;
     const reconciled = entries.filter((e) => e.is_reconciled).length;
     const pending = total - reconciled;
-    const totalIn = entries.filter((e) => e.dir === 'IN').reduce((s, e) => s + Number(e.amount), 0);
-    const totalOut = entries.filter((e) => e.dir === 'OUT').reduce((s, e) => s + Number(e.amount), 0);
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const e of entries) {
+      const g = entryGrossValues(e);
+      totalIn += g.entrada;
+      totalOut += g.saida;
+    }
     const pendingAmount = entries.filter((e) => !e.is_reconciled).reduce((s, e) => s + Number(e.amount), 0);
     return { total, reconciled, pending, totalIn, totalOut, pendingAmount };
+  }, [entries]);
+
+  // ChipPix-specific stats computed from ledger entries (for Verificador)
+  const chipPixLedgerStats = useMemo<VerificadorStats | null>(() => {
+    const cpEntries = entries.filter((e) => e.source === 'chippix' || e.source === 'chippix_fee');
+    if (cpEntries.length === 0) return null;
+
+    const playerIds = new Set<string>();
+    let entradas = 0;
+    let saidas = 0;
+    let taxas = 0;
+
+    for (const e of cpEntries) {
+      if (e.source === 'chippix_fee') {
+        taxas += Number(e.amount);
+        continue;
+      }
+      if (e.entity_id) playerIds.add(e.entity_id);
+      const gross = parseGross(e.description);
+      if (gross.entrada > 0 || gross.saida > 0) {
+        entradas += gross.entrada;
+        saidas += gross.saida;
+        taxas += gross.taxa;
+      } else {
+        // importExtrato pathway
+        if (e.dir === 'IN') entradas += Number(e.amount);
+        else saidas += Number(e.amount);
+      }
+    }
+
+    return {
+      jogadores: playerIds.size || cpEntries.filter((e) => e.source === 'chippix').length,
+      entradas: Math.round(entradas * 100) / 100,
+      saidas: Math.round(saidas * 100) / 100,
+      impacto: Math.round((entradas - saidas) * 100) / 100,
+      taxas: Math.round(taxas * 100) / 100,
+    };
   }, [entries]);
 
   // Filter
@@ -91,8 +185,6 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
       setToggling(null);
     }
   }
-
-  // fmtDateTime imported from @/lib/formatters
 
   // Sub-tab config
   const subTabs: { key: SubTab; label: string; count?: number }[] = [
@@ -124,6 +216,15 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
         ))}
       </div>
 
+      {/* Verificador — always visible when ChipPix data exists */}
+      {chipPixLedgerStats && backendChipPixStats && (
+        <VerificadorConciliacao
+          extrato={chipPixLedgerStats}
+          ledger={backendChipPixStats}
+          onVerificado={setVerificadoOk}
+        />
+      )}
+
       {/* Tab content */}
       {activeSubTab === 'chippix' && (
         <ChipPixTab
@@ -131,9 +232,10 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
           clubId={clubId}
           isDraft={isDraft}
           canEdit={canEdit}
-          onDataChange={onDataChange}
+          onDataChange={() => { onDataChange(); loadEntries(); loadBackendSummary(); }}
           agents={agents}
           players={players}
+          verificadoOk={verificadoOk}
         />
       )}
       {activeSubTab === 'ofx' && (

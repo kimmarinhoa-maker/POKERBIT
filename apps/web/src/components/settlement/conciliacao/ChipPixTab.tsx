@@ -10,10 +10,7 @@ import {
   ignoreChipPixTransaction,
   applyChipPixTransactions,
   deleteChipPixTransaction,
-  getChipPixLedgerSummary,
 } from '@/lib/api';
-import VerificadorConciliacao from './VerificadorConciliacao';
-import type { VerificadorStats } from './VerificadorConciliacao';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
@@ -33,6 +30,7 @@ export interface ChipPixTabProps {
   onDataChange: () => void;
   agents: AgentOption[];
   players: PlayerOption[];
+  verificadoOk?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -45,6 +43,7 @@ export default function ChipPixTab({
   onDataChange,
   agents,
   players,
+  verificadoOk = false,
 }: ChipPixTabProps) {
   const [txns, setTxns] = useState<BankTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,17 +58,6 @@ export default function ChipPixTab({
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
   const [linkForm, setLinkForm] = useState({ entity_id: '', entity_name: '' });
   const fileRef = useRef<HTMLInputElement>(null);
-  const [verificadoOk, setVerificadoOk] = useState(false);
-  const [ledgerStats, setLedgerStats] = useState<VerificadorStats | null>(null);
-
-  const loadLedgerSummary = useCallback(async () => {
-    try {
-      const res = await getChipPixLedgerSummary(weekStart);
-      if (res.success && res.data) setLedgerStats(res.data);
-    } catch {
-      /* silent -- verificador just won't show */
-    }
-  }, [weekStart]);
 
   const loadTxns = useCallback(async () => {
     setLoading(true);
@@ -90,9 +78,6 @@ export default function ChipPixTab({
   useEffect(() => {
     loadTxns();
   }, [loadTxns]);
-  useEffect(() => {
-    if (txns.length > 0) loadLedgerSummary();
-  }, [txns.length, loadLedgerSummary]);
 
   // Parse memo: "ChipPix . Nome . ent X.XX - sai Y.YY . taxa Z.ZZ . N txns"
   function parseMemo(memo: string | null) {
@@ -157,29 +142,6 @@ export default function ChipPixTab({
     };
   }, [txns]);
 
-  // Extrato stats for verificador (gross values from memo — matches backend parseMemo)
-  const extratoStats = useMemo<VerificadorStats>(() => {
-    const nonIgnored = txns.filter((t) => t.status !== 'ignored');
-    const playerIds = new Set<string>();
-    let entradas = 0;
-    let saidas = 0;
-    let taxas = 0;
-    for (const tx of nonIgnored) {
-      if (tx.entity_id) playerIds.add(tx.entity_id);
-      const p = parseMemo(tx.memo);
-      entradas += p.entrada;
-      saidas += p.saida;
-      taxas += p.taxa;
-    }
-    return {
-      jogadores: playerIds.size || nonIgnored.length,
-      entradas: Math.round(entradas * 100) / 100,
-      saidas: Math.round(saidas * 100) / 100,
-      impacto: Math.round((entradas - saidas) * 100) / 100,
-      taxas: Math.round(taxas * 100) / 100,
-    };
-  }, [txns]);
-
   // Filter + search
   const filtered = useMemo(() => {
     let result = txns;
@@ -212,7 +174,6 @@ export default function ChipPixTab({
         const d = res.data;
         toast(`${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados)`, 'success');
         loadTxns();
-        loadLedgerSummary();
       } else {
         toast(res.error || 'Erro ao importar', 'error');
       }
@@ -248,7 +209,6 @@ export default function ChipPixTab({
       if (count > 0) {
         toast(`${count} jogadores vinculados`, 'success');
         loadTxns();
-        loadLedgerSummary();
       } else {
         toast('Nenhum jogador encontrado para vincular', 'info');
       }
@@ -292,7 +252,6 @@ export default function ChipPixTab({
       if (res.success) {
         toast(`${res.data?.applied || 0} movimentacoes aplicadas ao Ledger`, 'success');
         loadTxns();
-        loadLedgerSummary();
         onDataChange();
       }
     } catch {
@@ -435,11 +394,6 @@ export default function ChipPixTab({
           </div>
         </div>
       </div>
-
-      {/* ── Verificador de Conciliacao ───────────────────────────── */}
-      {txns.length > 0 && ledgerStats && (
-        <VerificadorConciliacao extrato={extratoStats} ledger={ledgerStats} onVerificado={setVerificadoOk} />
-      )}
 
       {/* ── Search + Filters ─────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
