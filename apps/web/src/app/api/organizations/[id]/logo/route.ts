@@ -80,11 +80,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 
         const logoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
-        // Update org metadata
+        // Update dedicated column + metadata (dual-write for backward compat)
         const newMetadata = { ...(org.metadata || {}), logo_url: logoUrl };
         const { data: updated, error: updateError } = await supabaseAdmin
           .from('organizations')
-          .update({ metadata: newMetadata })
+          .update({ logo_url: logoUrl, metadata: newMetadata })
           .eq('id', orgId)
           .eq('tenant_id', ctx.tenantId)
           .select()
@@ -131,13 +131,13 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         const paths = extensions.map((ext) => `${ctx.tenantId}/${orgId}${ext}`);
         await supabaseAdmin.storage.from('club-logos').remove(paths);
 
-        // Remove logo_url from metadata
+        // Remove logo_url from dedicated column + metadata
         const newMetadata = { ...(org.metadata || {}) };
         delete newMetadata.logo_url;
 
         const { error: updateError } = await supabaseAdmin
           .from('organizations')
-          .update({ metadata: newMetadata })
+          .update({ logo_url: null, metadata: newMetadata })
           .eq('id', orgId)
           .eq('tenant_id', ctx.tenantId);
 

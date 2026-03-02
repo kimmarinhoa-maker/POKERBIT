@@ -116,12 +116,12 @@ export async function GET(
     if (subclubName) {
       const { data: org } = await supabaseAdmin
         .from('organizations')
-        .select('logo_url')
+        .select('logo_url, metadata')
         .eq('tenant_id', tenantId)
         .eq('name', subclubName)
         .eq('type', 'SUBCLUB')
         .maybeSingle();
-      logoUrl = org?.logo_url || null;
+      logoUrl = org?.logo_url || (org?.metadata as Record<string, any>)?.logo_url || null;
     }
 
     return NextResponse.json({

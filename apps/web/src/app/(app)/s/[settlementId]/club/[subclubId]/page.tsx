@@ -74,7 +74,7 @@ export default function SubclubPanelPage() {
         const cpMap: Record<string, string> = {};
         for (const club of treeRes.data) {
           for (const sub of club.subclubes || []) {
-            map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
+            map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
             waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;
             if (sub.chippix_manager_id) {
               cpMap[sub.id] = sub.chippix_manager_id;

@@ -70,7 +70,7 @@ export default function LigaGlobalPage() {
           const map: Record<string, string | null> = {};
           for (const club of treeRes.data) {
             for (const sub of club.subclubes || []) {
-              map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
+              map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
             }
           }
           setLogoMap(map);

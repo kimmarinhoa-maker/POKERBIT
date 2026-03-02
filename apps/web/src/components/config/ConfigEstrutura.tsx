@@ -29,6 +29,7 @@ interface Org {
   type: string;
   parent_id: string | null;
   is_active: boolean;
+  logo_url?: string | null;
   metadata?: { logo_url?: string; [key: string]: any };
   agents?: Org[];
 }
@@ -592,11 +593,11 @@ export default function ConfigEstrutura() {
                       <tr key={sub.id} className="border-b border-dark-800/30 hover:bg-dark-800/20 transition-colors">
                         <td className="py-2.5 px-2 text-center">
                           <div className="relative group inline-flex items-center justify-center">
-                            <ClubLogo logoUrl={sub.metadata?.logo_url} name={sub.name} size="sm" />
+                            <ClubLogo logoUrl={sub.logo_url || sub.metadata?.logo_url} name={sub.name} size="sm" />
                             {/* Upload overlay */}
                             <label
                               className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
-                              title={sub.metadata?.logo_url ? 'Trocar logo' : 'Upload logo'}
+                              title={(sub.logo_url || sub.metadata?.logo_url) ? 'Trocar logo' : 'Upload logo'}
                             >
                               {uploadingLogoId === sub.id ? (
                                 <Spinner size="sm" variant="white" />
@@ -633,7 +634,7 @@ export default function ConfigEstrutura() {
                         </td>
                         <td className="py-2.5 px-2 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {sub.metadata?.logo_url && (
+                            {(sub.logo_url || sub.metadata?.logo_url) && (
                               <button
                                 onClick={() => handleLogoDelete(sub)}
                                 className="text-dark-500 hover:text-red-400 text-xs transition-colors"

@@ -239,12 +239,12 @@ router.post('/:id/logo', requireAuth, requireTenant, requirePermission('page:clu
 
     const logoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
-    // Atualizar metadata da org
+    // Atualizar coluna dedicada + metadata (dual-write para backward compat)
     const newMetadata = { ...(org.metadata || {}), logo_url: logoUrl };
 
     const { data: updated, error: updateError } = await supabaseAdmin
       .from('organizations')
-      .update({ metadata: newMetadata })
+      .update({ logo_url: logoUrl, metadata: newMetadata })
       .eq('id', orgId)
       .eq('tenant_id', tenantId)
       .select()
@@ -282,13 +282,13 @@ router.delete('/:id/logo', requireAuth, requireTenant, requirePermission('page:c
     const paths = extensions.map((ext) => `${tenantId}/${orgId}${ext}`);
     await supabaseAdmin.storage.from('club-logos').remove(paths);
 
-    // Remover logo_url do metadata
+    // Remover logo_url da coluna dedicada + metadata
     const newMetadata = { ...(org.metadata || {}) };
     delete newMetadata.logo_url;
 
     const { error: updateError } = await supabaseAdmin
       .from('organizations')
-      .update({ metadata: newMetadata })
+      .update({ logo_url: null, metadata: newMetadata })
       .eq('id', orgId)
       .eq('tenant_id', tenantId);
 
