@@ -233,6 +233,14 @@ class ImportConfirmService {
         settlementId = settlement.id;
       }
 
+      // ── 7b) Persist chippix_import_data from Manager Trade Record ──
+      if (parseResult.chippixTrades && Object.keys(parseResult.chippixTrades).length > 0) {
+        await supabaseAdmin
+          .from('settlements')
+          .update({ chippix_import_data: parseResult.chippixTrades })
+          .eq('id', settlementId);
+      }
+
       // ── 8) Persist metrics ────────────────────────────────────────
 
       await this.persistPlayerMetrics(

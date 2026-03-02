@@ -17,6 +17,7 @@ const updateOrgSchema = z.object({
   external_id: z.string().optional(),
   is_active: z.boolean().optional(),
   whatsapp_group_link: z.string().max(255).nullable().optional(),
+  chippix_manager_id: z.string().max(50).nullable().optional(),
 });
 
 export async function PUT(req: NextRequest, { params }: Params) {
@@ -61,6 +62,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
         if (parsed.data.is_active !== undefined) updates.is_active = parsed.data.is_active;
         if (parsed.data.whatsapp_group_link !== undefined)
           updates.whatsapp_group_link = parsed.data.whatsapp_group_link || null;
+        if (parsed.data.chippix_manager_id !== undefined)
+          updates.chippix_manager_id = parsed.data.chippix_manager_id || null;
 
         const { data, error } = await supabaseAdmin
           .from('organizations')

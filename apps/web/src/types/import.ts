@@ -61,6 +61,20 @@ export interface PreviewData {
   players?: PreviewPlayer[];
   // Phase 2: existing settlement info
   existing_settlement?: ExistingSettlement;
+  // Phase 3: ChipPix Manager Trade Record data (from Suprema)
+  chippix_trades?: Record<string, ChipPixTradeOperator>;
+}
+
+export interface ChipPixTradeOperator {
+  manager: string;
+  managerId: string;
+  managerName: string;
+  totalIN: number;
+  totalOUT: number;
+  saldo: number;
+  txnCount: number;
+  playerCount: number;
+  players: Record<string, { name: string; in: number; out: number; saldo: number; txns: number }>;
 }
 
 export interface PreviewPlayer {

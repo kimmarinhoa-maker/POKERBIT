@@ -109,6 +109,9 @@ export interface ImportPreviewResponse {
     };
     agents: string[];
   };
+
+  // ChipPix Manager Trade Record data (from Suprema)
+  chippix_trades?: Record<string, any>;
 }
 
 // ─── Service ────────────────────────────────────────────────────────
@@ -299,6 +302,15 @@ class ImportPreviewService {
       existingSettlement.mode = overlapRatio < 0.5 ? 'merge' : 'reimport';
     }
 
+    // 10) ChipPix Trade Record summary
+    const chippixTrades = parseResult.chippixTrades || {};
+    if (parseResult.meta?.hasTradeRecord) {
+      const operatorNames = Object.keys(chippixTrades);
+      const totalTxns = operatorNames.reduce((s, k) => s + (chippixTrades[k].txnCount || 0), 0);
+      const totalPlayers = operatorNames.reduce((s, k) => s + (chippixTrades[k].playerCount || 0), 0);
+      warnings.push(`Manager Trade Record: ${totalTxns} transacoes ChipPix de ${operatorNames.length} operador(es), ${totalPlayers} jogadores`);
+    }
+
     return {
       week,
       summary,
@@ -316,6 +328,7 @@ class ImportPreviewService {
       warnings,
       players: playersList,
       existing_settlement: existingSettlement,
+      chippix_trades: Object.keys(chippixTrades).length > 0 ? chippixTrades : undefined,
     };
   }
 

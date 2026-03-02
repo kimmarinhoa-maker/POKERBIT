@@ -449,6 +449,7 @@ export async function updateOrganization(
     external_id?: string;
     is_active?: boolean;
     whatsapp_group_link?: string | null;
+    chippix_manager_id?: string | null;
   },
 ) {
   return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -876,6 +877,10 @@ export async function deleteChipPixTransaction(txId: string) {
 
 export async function getChipPixLedgerSummary(weekStart: string) {
   return apiFetch(`/chippix/summary?week_start=${weekStart}`);
+}
+
+export async function getChipPixImportSummary(weekStart: string) {
+  return apiFetch(`/chippix/import-summary?week_start=${weekStart}`);
 }
 
 // ─── Conciliacao ──────────────────────────────────────────────────

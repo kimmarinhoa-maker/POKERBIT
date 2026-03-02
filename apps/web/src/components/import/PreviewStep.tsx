@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { PreviewData, getClubStyle, getClubIcon } from '@/types/import';
+import { PreviewData, getClubStyle, getClubIcon, ChipPixTradeOperator } from '@/types/import';
 import { formatBRL, formatDate } from '@/lib/api';
 
 interface PreviewStepProps {
@@ -377,6 +377,41 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
           ))}
         </div>
       </div>
+
+      {/* ─── ChipPix Manager Trade Record ─── */}
+      {preview.chippix_trades && Object.keys(preview.chippix_trades).length > 0 && (
+        <div className="card mb-4">
+          <h3 className="text-sm font-semibold text-dark-300 mb-3">ChipPix — Manager Trade Record</h3>
+          <div className="space-y-2">
+            {Object.entries(preview.chippix_trades).map(([key, op]: [string, ChipPixTradeOperator]) => (
+              <div key={key} className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-blue-400">{op.manager}</span>
+                  <span className="text-[10px] text-dark-500">
+                    {op.txnCount} transacoes &middot; {op.playerCount} jogadores
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-dark-500">Entradas</span>
+                    <p className="font-mono text-emerald-400">{formatBRL(op.totalIN)}</p>
+                  </div>
+                  <div>
+                    <span className="text-dark-500">Saidas</span>
+                    <p className="font-mono text-red-400">{formatBRL(op.totalOUT)}</p>
+                  </div>
+                  <div>
+                    <span className="text-dark-500">Saldo</span>
+                    <p className={`font-mono font-bold ${op.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {formatBRL(op.saldo)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Players table ─── */}
       {players.length > 0 && (

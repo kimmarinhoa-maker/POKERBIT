@@ -61,13 +61,14 @@ export default function ConfigEstrutura() {
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   // Subclub form
-  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string; whatsappGroupLink: string }>(
+  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string; whatsappGroupLink: string; chippixManagerId: string }>(
     {
       show: false,
       editingId: null,
       name: '',
       externalId: '',
       whatsappGroupLink: '',
+      chippixManagerId: '',
     },
   );
   const [subSaving, setSubSaving] = useState(false);
@@ -114,17 +115,17 @@ export default function ConfigEstrutura() {
   // ── Subclub handlers ────────────────────────────────────────────
 
   function openSubCreate() {
-    setSubForm({ show: true, editingId: null, name: '', externalId: '', whatsappGroupLink: '' });
+    setSubForm({ show: true, editingId: null, name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
     setSubError(null);
   }
 
   function openSubEdit(sub: Org) {
-    setSubForm({ show: true, editingId: sub.id, name: sub.name, externalId: sub.external_id || '', whatsappGroupLink: (sub as any).whatsapp_group_link || '' });
+    setSubForm({ show: true, editingId: sub.id, name: sub.name, externalId: sub.external_id || '', whatsappGroupLink: (sub as any).whatsapp_group_link || '', chippixManagerId: (sub as any).chippix_manager_id || '' });
     setSubError(null);
   }
 
   function closeSubForm() {
-    setSubForm({ show: false, editingId: null, name: '', externalId: '', whatsappGroupLink: '' });
+    setSubForm({ show: false, editingId: null, name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
     setSubError(null);
   }
 
@@ -144,6 +145,7 @@ export default function ConfigEstrutura() {
           name: subForm.name.trim(),
           external_id: subForm.externalId.trim() || undefined,
           whatsapp_group_link: subForm.whatsappGroupLink.trim() || null,
+          chippix_manager_id: subForm.chippixManagerId.trim() || null,
         });
       } else {
         res = await createOrganization({
@@ -515,17 +517,30 @@ export default function ConfigEstrutura() {
                   </div>
                 </div>
                 {subForm.editingId && (
-                  <div className="mt-3">
-                    <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>
-                    <input
-                      type="url"
-                      value={subForm.whatsappGroupLink}
-                      onChange={(e) => setSubForm((p) => ({ ...p, whatsappGroupLink: e.target.value }))}
-                      className="input w-full text-sm"
-                      placeholder="https://chat.whatsapp.com/ABC123..."
-                    />
-                    <p className="text-[10px] text-dark-600 mt-1">Cole o link de convite do grupo aqui</p>
-                  </div>
+                  <>
+                    <div className="mt-3">
+                      <label className="text-xs text-dark-400 mb-1 block">ChipPix Manager ID</label>
+                      <input
+                        type="text"
+                        value={subForm.chippixManagerId}
+                        onChange={(e) => setSubForm((p) => ({ ...p, chippixManagerId: e.target.value }))}
+                        className="input w-full text-sm font-mono"
+                        placeholder="Ex: Chippix_143"
+                      />
+                      <p className="text-[10px] text-dark-600 mt-1">Vincula transacoes ChipPix ao subclube automaticamente</p>
+                    </div>
+                    <div className="mt-3">
+                      <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>
+                      <input
+                        type="url"
+                        value={subForm.whatsappGroupLink}
+                        onChange={(e) => setSubForm((p) => ({ ...p, whatsappGroupLink: e.target.value }))}
+                        className="input w-full text-sm"
+                        placeholder="https://chat.whatsapp.com/ABC123..."
+                      />
+                      <p className="text-[10px] text-dark-600 mt-1">Cole o link de convite do grupo aqui</p>
+                    </div>
+                  </>
                 )}
                 <div className="flex justify-end gap-2 mt-3">
                   <button

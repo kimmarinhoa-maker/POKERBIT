@@ -11,7 +11,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 const XLSX = require('xlsx');
-const { adapterImportResume, parseStatisticsBreakdown, parseNum, GU_TO_BRL } = require('./adapter');
+const { adapterImportResume, parseStatisticsBreakdown, parseManagerTradeRecord, parseNum, GU_TO_BRL } = require('./adapter');
 
 // ─── Resolve clube interno com suporte a config injetada ────────────
 
@@ -237,6 +237,16 @@ function parseWorkbook(workbook, config = {}) {
     breakdown = parseStatisticsBreakdown(statsRows);
   }
 
+  // 4b) Ler aba Manager Trade Record (ChipPix cross-reference)
+  const tradeSheet = workbook.Sheets['Manager Trade Record'];
+  let chippixTrades = {};
+  let hasTradeRecord = false;
+  if (tradeSheet) {
+    const tradeRows = XLSX.utils.sheet_to_json(tradeSheet, { header: 1, defval: '' });
+    chippixTrades = parseManagerTradeRecord(tradeRows);
+    hasTradeRecord = Object.keys(chippixTrades).length > 0;
+  }
+
   // 5) Merge breakdown
   let rakeValidation = { matches: 0, diffs: 0, diffDetails: [] };
   for (const p of dedupPlayers) {
@@ -271,11 +281,13 @@ function parseWorkbook(workbook, config = {}) {
     ok,
     duplicates,
     rakeValidation,
+    chippixTrades,
     meta: {
       totalRows: resumeRows.length - hIdx - 1,
       parsed: dedupPlayers.length,
       sheets: workbook.SheetNames,
       hasStatistics: !!statsSheet,
+      hasTradeRecord,
     },
   };
 }

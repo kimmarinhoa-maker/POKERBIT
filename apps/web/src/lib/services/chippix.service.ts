@@ -244,6 +244,19 @@ export class ChipPixService {
       players = (data || []).filter((p) => p.external_player_id);
     }
 
+    // ── Fix 1: Look up active DRAFT settlement for this week ──────
+    let settlementId: string | null = null;
+    if (weekStart) {
+      const { data: stl } = await supabaseAdmin
+        .from('settlements')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('week_start', weekStart)
+        .eq('status', 'DRAFT')
+        .maybeSingle();
+      settlementId = stl?.id || null;
+    }
+
     // Check existing external_refs to avoid duplicates (scoped to this week)
     const refs = parsed.map((p) => `cp_${p.idJog}`);
     let dedupQuery = supabaseAdmin
@@ -272,12 +285,14 @@ export class ChipPixService {
           source: 'chippix',
           external_ref: `cp_${p.idJog}`,
           amount: Math.abs(saldoLiq),
+          fee: round2(p.taxa),  // Fix 3: taxa da operação
           description: `ChipPix · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
           dir: saldoLiq >= 0 ? 'IN' : 'OUT',
           method: 'chippix',
           entity_id: matchResult?.entityId || `cp_${p.idJog}`,
           entity_name: matchResult?.entityName || p.nome || p.idJog,
           week_start: weekStart || null,
+          settlement_id: settlementId,  // Fix 1: vincular ao settlement
           is_reconciled: false,
         };
       });
@@ -288,6 +303,24 @@ export class ChipPixService {
 
       if (error) throw new Error(`Erro ao salvar transações ChipPix: ${error.message}`);
       inserted = (data || []).map((r) => this.enrichRow(r));
+
+      // ── Fix 2: Create corresponding bank_transactions ──────────
+      const bankTxRows = toInsert.map((entry) => ({
+        tenant_id: entry.tenant_id,
+        source: 'chippix' as const,
+        fitid: entry.external_ref,
+        tx_date: entry.week_start,
+        amount: entry.amount,
+        memo: entry.description,
+        dir: entry.dir,
+        status: 'linked',
+        entity_id: entry.entity_id,
+        entity_name: entry.entity_name,
+        week_start: entry.week_start,
+      }));
+      if (bankTxRows.length > 0) {
+        await supabaseAdmin.from('bank_transactions').insert(bankTxRows);
+      }
     }
 
     return {
@@ -388,10 +421,10 @@ export class ChipPixService {
     // 2. Detect week_start from date range
     const semana = this.detectWeekFromRows(rows);
 
-    // 2b. Validate week against active settlement
+    // 2b. Validate week against active settlement + get settlement_id
     const { data: activeSettlement } = await supabaseAdmin
       .from('settlements')
-      .select('week_start')
+      .select('id, week_start')
       .eq('tenant_id', tenantId)
       .eq('status', 'DRAFT')
       .order('week_start', { ascending: false })
@@ -403,6 +436,8 @@ export class ChipPixService {
         `Semana incorreta. O arquivo é da semana ${semana} mas o fechamento ativo é ${activeSettlement.week_start}. Importe o extrato da semana correta.`,
       );
     }
+
+    const settlementId = activeSettlement?.id || null;
 
     // 3. Fetch players for auto-linking (external_id = Id Jogador)
     const { data: players } = await supabaseAdmin
@@ -475,8 +510,10 @@ export class ChipPixService {
           entity_id: player?.id || null,
           entity_name: player?.name || row.integrante || null,
           week_start: semana,
+          settlement_id: settlementId,
           dir,
           amount,
+          fee: round2(row.taxaOperacao),
           method: 'chippix',
           description: `ChipPix ${row.tipo} · ${row.integrante || row.idJogador}${row.finalidade ? ` · ${row.finalidade}` : ''}`,
           source: 'chippix',
@@ -486,15 +523,17 @@ export class ChipPixService {
         });
       }
 
-      // Fee entry (separate, always OUT)
+      // Fee entry (separate, always OUT) — kept for backward compat
       if (row.taxaOperacao > 0 && !existingRefs.has(`${row.idOperacao}_fee`)) {
         toInsert.push({
           tenant_id: tenantId,
           entity_id: player?.id || null,
           entity_name: player?.name || row.integrante || null,
           week_start: semana,
+          settlement_id: settlementId,
           dir: 'OUT',
           amount: round2(row.taxaOperacao),
+          fee: 0,
           method: 'chippix',
           description: 'Taxa operacional Chippix',
           source: 'chippix_fee',
@@ -512,6 +551,26 @@ export class ChipPixService {
 
       if (error) throw new Error(`Erro ao inserir ledger_entries: ${error.message}`);
       inseridos = inserted?.length || 0;
+
+      // Create corresponding bank_transactions for non-fee entries
+      const bankTxRows = toInsert
+        .filter((e) => e.source === 'chippix')
+        .map((entry) => ({
+          tenant_id: entry.tenant_id,
+          source: 'chippix' as const,
+          fitid: entry.external_ref,
+          tx_date: entry.week_start,
+          amount: entry.amount,
+          memo: entry.description,
+          dir: entry.dir,
+          status: entry.entity_id ? 'linked' : 'pending',
+          entity_id: entry.entity_id,
+          entity_name: entry.entity_name,
+          week_start: entry.week_start,
+        }));
+      if (bankTxRows.length > 0) {
+        await supabaseAdmin.from('bank_transactions').insert(bankTxRows);
+      }
     }
 
     // 7. Audit
