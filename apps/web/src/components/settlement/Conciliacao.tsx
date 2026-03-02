@@ -76,7 +76,7 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
   const [backendChipPixStats, setBackendChipPixStats] = useState<VerificadorStats | null>(null);
 
   // Reset sub-tab when week changes
-  useEffect(() => { setActiveSubTab('ledger'); }, [weekStart]);
+  useEffect(() => { setActiveSubTab('chippix'); }, [weekStart]);
 
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
