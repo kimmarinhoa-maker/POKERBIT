@@ -12,6 +12,7 @@ import {
   clearChipPixWeek,
   getChipPixImportSummary,
   listTransactionCategories,
+  invalidateCache,
 } from '@/lib/api';
 import type { TransactionCategory } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -71,6 +72,7 @@ export default function ChipPixTab({
   const [comparisonOpen, setComparisonOpen] = useState(true);
 
   const loadTxns = useCallback(async () => {
+    invalidateCache('/chippix');
     setLoading(true);
     try {
       const [txnRes, importRes, catRes] = await Promise.all([
