@@ -43,8 +43,8 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-[240px]">
                 <div className="h-4 skeleton-shimmer w-32 mb-4" style={{ animationDelay: `${i * 0.1}s` }} />
                 <div className="h-full skeleton-shimmer rounded" />
@@ -78,7 +78,7 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
           )}
 
           {/* Row 3: Hands + Cash vs Tournament + Active Players + Rake Semanal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <HandsVolumeChart handsByModality={data.handsByModality} />
             <CashVsTournament
               cash={data.cashVsTournament.cash}
