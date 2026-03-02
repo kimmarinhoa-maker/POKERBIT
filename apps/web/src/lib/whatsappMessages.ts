@@ -44,8 +44,8 @@ export function buildCobrancaMessage(opts: {
   const { agentName, weekStart, weekEnd, playersCount, rake, ganhos, resultado, saldo, pixKey } = opts;
   const range = dateRange(weekStart, weekEnd);
 
-  // saldo > 0 = agent owes club (a pagar), saldo < 0 = club owes agent (a receber)
-  const isPagar = saldo > 0;
+  // Perspectiva do agente: saldo < 0 = a pagar, saldo > 0 = a receber (mesma logica da UI Comprovantes)
+  const isPagar = saldo < 0;
   const valorLabel = isPagar ? 'Valor a pagar' : 'Valor a receber';
 
   const lines: string[] = [
