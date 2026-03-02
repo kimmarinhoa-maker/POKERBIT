@@ -257,44 +257,74 @@ function parseWorkbook(workbook, config = {}) {
     hasTradeRecord = Object.keys(chippixTrades).length > 0;
   }
 
-  // 5) Merge breakdown
+  // 5) Merge breakdown + reconcile with Resume rake
   let rakeValidation = { matches: 0, diffs: 0, diffDetails: [] };
   let unmatchedCount = 0;
   let unmatchedRake = 0;
   let breakdownRakeSum = 0;
   let resumeRakeSum = 0;
+  let reconciledGap = 0;
+
+  function round2(v) { return Math.round(v * 100) / 100; }
+
   for (const p of dedupPlayers) {
     if (p._status === 'ignored') continue;
     const bd = breakdown[p.id];
     if (bd) {
       p.rakeBreakdown = bd;
-      // Sum up distributed rake (rake sub-object) for diagnostic
-      if (bd.rake && typeof bd.rake === 'object') {
-        const rakeSubSum = Object.values(bd.rake).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
-        breakdownRakeSum += rakeSubSum;
-      }
     } else {
-      p.rakeBreakdown = { ringGame: 0, mttLocal: 0, sngLocal: 0, spinLocal: 0, tlt: 0, total: 0 };
+      // No Statistics match — create breakdown from Resume rake
+      // Put all rake into 'nlh' as best guess (can't split without data)
+      const resumeRake = p.rake || 0;
+      p.rakeBreakdown = {
+        ringGame: 0, mttLocal: 0, sngLocal: 0, spinLocal: 0, tlt: 0,
+        total: resumeRake,
+        rake: resumeRake > 0 ? { nlh: resumeRake } : {},
+        winnings: {},
+        hands: {},
+      };
       unmatchedCount++;
-      unmatchedRake += (p.rake || 0);
+      unmatchedRake += resumeRake;
     }
+
+    // Reconcile: ensure sum(rake.*) matches p.rake (Resume = authoritative)
+    const rb = p.rakeBreakdown;
+    if (rb.rake && typeof rb.rake === 'object' && p.rake > 0) {
+      const rakeKeys = Object.keys(rb.rake);
+      const rakeSum = rakeKeys.reduce((s, k) => s + (rb.rake[k] || 0), 0);
+      const playerGap = round2(p.rake - rakeSum);
+
+      if (Math.abs(playerGap) > 0.5) {
+        // Find largest modality to absorb the difference
+        let maxKey = rakeKeys[0] || 'nlh';
+        let maxVal = 0;
+        for (const k of rakeKeys) {
+          if ((rb.rake[k] || 0) > maxVal) { maxVal = rb.rake[k]; maxKey = k; }
+        }
+        rb.rake[maxKey] = round2((rb.rake[maxKey] || 0) + playerGap);
+        reconciledGap += playerGap;
+      }
+
+      breakdownRakeSum += rakeKeys.reduce((s, k) => s + (rb.rake[k] || 0), 0);
+    }
+
     resumeRakeSum += (p.rake || 0);
-    if (p.rakeBreakdown.total > 0) {
-      const diff = Math.abs(p.rake - p.rakeBreakdown.total);
+    if (rb.total > 0) {
+      const diff = Math.abs(p.rake - rb.total);
       if (diff > 0.1) {
         rakeValidation.diffs++;
         if (rakeValidation.diffDetails.length < 5) {
-          rakeValidation.diffDetails.push({ id: p.id, nick: p.nick, resume: p.rake, stats: p.rakeBreakdown.total, diff });
+          rakeValidation.diffDetails.push({ id: p.id, nick: p.nick, resume: p.rake, stats: rb.total, diff });
         }
       } else {
         rakeValidation.matches++;
       }
     }
   }
-  console.log(`[breakdown-diag] Resume rake total: ${resumeRakeSum.toFixed(2)}, Breakdown rake.* sum: ${breakdownRakeSum.toFixed(2)}, Gap: ${(resumeRakeSum - breakdownRakeSum).toFixed(2)}`);
-  console.log(`[breakdown-diag] Unmatched players (no Statistics): ${unmatchedCount}, their rake: ${unmatchedRake.toFixed(2)}`);
+  console.log(`[breakdown-diag] Resume rake total: ${resumeRakeSum.toFixed(2)}, Breakdown rake.* sum: ${breakdownRakeSum.toFixed(2)}, Gap after reconcile: ${(resumeRakeSum - breakdownRakeSum).toFixed(2)}`);
+  console.log(`[breakdown-diag] Unmatched players: ${unmatchedCount} (rake: ${unmatchedRake.toFixed(2)}), Reconciled adjustments: ${reconciledGap.toFixed(2)}`);
   if (rakeValidation.diffs > 0) {
-    console.log(`[breakdown-diag] Players with Resume vs Statistics diff: ${rakeValidation.diffs}`, JSON.stringify(rakeValidation.diffDetails.slice(0, 3)));
+    console.log(`[breakdown-diag] Resume vs Statistics local diff: ${rakeValidation.diffs} players`, JSON.stringify(rakeValidation.diffDetails.slice(0, 3)));
   }
 
   // 6) Agrupar por status
