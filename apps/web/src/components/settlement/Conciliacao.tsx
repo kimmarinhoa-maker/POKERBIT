@@ -68,7 +68,7 @@ type SubTab = 'chippix' | 'ofx' | 'ledger';
 
 export default function Conciliacao({ weekStart, clubId, clubName, chippixManagerId, settlementStatus, onDataChange, agents, players }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('ledger');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('chippix');
   const { toast } = useToast();
   const { canAccess } = useAuth();
   const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
