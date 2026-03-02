@@ -68,6 +68,21 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
     setEditing(true);
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return;
+    const orgId = currentTenant?.club_org_id;
+    if (!orgId) return;
+    setSaving(true);
+    try {
+      await uploadClubLogo(orgId, file);
+      await refreshTenantList();
+      window.location.reload();
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  }
+
   return (
     <div ref={ref} className="relative mt-3">
       <button
@@ -125,13 +140,30 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={startEdit}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-dark-400 hover:bg-dark-800 hover:text-dark-200 transition-colors"
-                >
-                  <Pencil className="w-3 h-3" />
-                  <span>Editar nome do clube</span>
-                </button>
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={startEdit}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-dark-400 hover:bg-dark-800 hover:text-dark-200 transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span>Editar nome do clube</span>
+                  </button>
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={saving}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-dark-400 hover:bg-dark-800 hover:text-dark-200 transition-colors disabled:opacity-50"
+                  >
+                    <Camera className="w-3 h-3" />
+                    <span>{saving ? 'Enviando...' : currentLogo ? 'Alterar logo' : 'Adicionar logo'}</span>
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                </div>
               )}
             </div>
           )}

@@ -21,6 +21,7 @@ interface TenantInfo {
   status: string;
   has_subclubs: boolean;
   logo_url?: string | null;
+  club_org_id?: string | null;
 }
 
 interface AuthContextValue {
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: t.status || 'active',
       has_subclubs: t.has_subclubs !== false,
       logo_url: t.logo_url || null,
+      club_org_id: t.club_org_id || null,
     }));
     setTenants(allTenants);
     const selectedId = localStorage.getItem('poker_selected_tenant');
