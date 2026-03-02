@@ -79,8 +79,12 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
+    console.error('[login] Error:', err instanceof Error ? err.message : err);
+    if (err instanceof Error) console.error('[login] Stack:', err.stack);
+    const isDev = process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'preview';
+    const message = isDev && err instanceof Error ? err.message : 'Erro interno do servidor';
     return NextResponse.json(
-      { success: false, error: safeErrorMessage(err, 'Erro interno do servidor') },
+      { success: false, error: message },
       { status: 500 },
     );
   }
