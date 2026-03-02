@@ -520,14 +520,20 @@ export default function ConfigEstrutura() {
                   <>
                     <div className="mt-3">
                       <label className="text-xs text-dark-400 mb-1 block">ChipPix Manager ID</label>
-                      <input
-                        type="text"
-                        value={subForm.chippixManagerId}
-                        onChange={(e) => setSubForm((p) => ({ ...p, chippixManagerId: e.target.value }))}
-                        className="input w-full text-sm font-mono"
-                        placeholder="Ex: Chippix_143"
-                      />
-                      <p className="text-[10px] text-dark-600 mt-1">Vincula transacoes ChipPix ao subclube automaticamente</p>
+                      <div className="flex items-stretch">
+                        <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-dark-600 bg-dark-800 text-dark-400 text-sm font-mono select-none">Chippix_</span>
+                        <input
+                          type="text"
+                          value={subForm.chippixManagerId.replace(/^[Cc]hippix_/i, '')}
+                          onChange={(e) => {
+                            const num = e.target.value.replace(/^[Cc]hippix_/i, '').trim();
+                            setSubForm((p) => ({ ...p, chippixManagerId: num ? `Chippix_${num}` : '' }));
+                          }}
+                          className="input w-full text-sm font-mono rounded-l-none"
+                          placeholder="143"
+                        />
+                      </div>
+                      <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha Suprema (coluna Manager Remark)</p>
                     </div>
                     <div className="mt-3">
                       <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>

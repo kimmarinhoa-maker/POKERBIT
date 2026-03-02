@@ -76,7 +76,10 @@ export default function SubclubPanelPage() {
           for (const sub of club.subclubes || []) {
             map[normalizeKey(sub.name)] = sub.metadata?.logo_url || null;
             waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;
-            if (sub.chippix_manager_id) cpMap[sub.id] = sub.chippix_manager_id;
+            if (sub.chippix_manager_id) {
+              cpMap[sub.id] = sub.chippix_manager_id;
+              cpMap[normalizeKey(sub.name)] = sub.chippix_manager_id; // fallback by name
+            }
           }
         }
         setLogoMap(map);
@@ -238,7 +241,7 @@ export default function SubclubPanelPage() {
             <Conciliacao
               weekStart={settlement.week_start}
               clubId={subclub.id}
-              chippixManagerId={chippixManagerMap[subclub.id] || null}
+              chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null}
               settlementStatus={settlement.status}
               onDataChange={loadData}
               agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}
