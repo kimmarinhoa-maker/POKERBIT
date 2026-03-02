@@ -19,11 +19,6 @@ CREATE INDEX IF NOT EXISTS idx_pwm_settlement_agent
 CREATE INDEX IF NOT EXISTS idx_banktx_tenant_week_status
   ON bank_transactions (tenant_id, week_start, status);
 
--- bank_transactions: matching queries use (tenant_id, matched)
-CREATE INDEX IF NOT EXISTS idx_banktx_tenant_matched
-  ON bank_transactions (tenant_id, matched)
-  WHERE matched = false;
-
 -- ─── 2. CHECK constraints on TEXT columns ────────────────────────────
 
 -- bank_transactions.status
