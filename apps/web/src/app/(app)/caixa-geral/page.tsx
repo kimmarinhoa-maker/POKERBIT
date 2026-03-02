@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { listSettlements, listLedger, formatBRL } from '@/lib/api';
+import { listSettlements, listLedger, getSettlementFull, formatBRL } from '@/lib/api';
 import { round2, fmtDateTime } from '@/lib/formatters';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
@@ -37,6 +37,7 @@ export default function CaixaGeralPage() {
   const [filterDir, setFilterDir] = useState<FilterDir>('all');
   const [groupBy, setGroupBy] = useState<GroupBy>('entity');
   const [search, setSearch] = useState('');
+  const [lucro, setLucro] = useState<{ lucroLiquido: number; margem: number; receitaBruta: number; acertoLiga: number } | null>(null);
   const { toast } = useToast();
 
   // Load settlements
@@ -63,22 +64,48 @@ export default function CaixaGeralPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
-  // Load ledger when selection changes
+  // Load ledger + settlement full when selection changes
   const selectedWeek = settlements.find((s) => s.id === selectedId);
   useEffect(() => {
     if (!selectedWeek?.week_start) return;
     (async () => {
       setLoadingEntries(true);
+      setLucro(null);
       try {
-        const res = await listLedger(selectedWeek.week_start);
-        if (res.success) setEntries(res.data || []);
+        const [ledgerRes, fullRes] = await Promise.all([
+          listLedger(selectedWeek.week_start),
+          getSettlementFull(selectedWeek.id),
+        ]);
+        if (ledgerRes.success) setEntries(ledgerRes.data || []);
+        if (fullRes.success) {
+          const dt = fullRes.data.dashboardTotals || {};
+          const subclubs = fullRes.data.subclubs || [];
+          const rakeTotal = Number(dt.rake ?? 0);
+          const ggrTotal = Number(dt.ggr ?? 0);
+          const totalTaxas = Number(dt.totalTaxas ?? 0);
+          const rbTotal = Number(dt.rbTotal ?? 0);
+          const acertoLiga = Number(dt.acertoLiga ?? 0);
+          let totalOverlay = 0, totalCompras = 0, totalSecurity = 0, totalOutros = 0;
+          for (const sc of subclubs) {
+            const adj = sc.adjustments || {};
+            totalOverlay += Math.abs(Number(adj.overlay || 0));
+            totalCompras += Math.abs(Number(adj.compras || 0));
+            totalSecurity += Math.abs(Number(adj.security || 0));
+            totalOutros += Math.abs(Number(adj.outros || 0));
+          }
+          const totalCustos = round2(totalOverlay + totalCompras + totalSecurity + totalOutros);
+          const receitaBruta = round2(rakeTotal + ggrTotal);
+          const lucroLiquido = round2(receitaBruta - totalTaxas - totalCustos - rbTotal);
+          const margem = receitaBruta > 0.01 ? round2((lucroLiquido / receitaBruta) * 100) : 0;
+          setLucro({ lucroLiquido, margem, receitaBruta, acertoLiga });
+        }
       } catch {
         toast('Erro ao carregar movimentacoes', 'error');
       } finally {
         setLoadingEntries(false);
       }
     })();
-  }, [selectedWeek?.week_start, toast]);
+  }, [selectedWeek?.week_start, selectedWeek?.id, toast]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -197,6 +224,39 @@ export default function CaixaGeralPage() {
         </div>
       ) : (
         <>
+          {/* Lucro Líquido Hero Card */}
+          {lucro && (
+            <div
+              className={`p-5 rounded-xl border-2 mb-5 ${
+                lucro.lucroLiquido >= 0
+                  ? 'border-green-500/30 bg-green-500/5'
+                  : 'border-red-500/30 bg-red-500/5'
+              }`}
+            >
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">LUCRO LÍQUIDO DA SEMANA</div>
+                  <div className={`text-3xl font-extrabold font-mono ${
+                    lucro.lucroLiquido >= 0 ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {formatBRL(lucro.lucroLiquido)}
+                  </div>
+                  <div className="text-sm text-dark-500 mt-1">
+                    Margem: <span className={lucro.margem >= 0 ? 'text-green-400' : 'text-red-400'}>{lucro.margem.toFixed(1)}%</span>
+                    <span className="text-dark-600 mx-2">&middot;</span>
+                    Receita: {formatBRL(lucro.receitaBruta)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">Acerto Liga</div>
+                  <div className={`text-lg font-bold font-mono ${lucro.acertoLiga >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {formatBRL(lucro.acertoLiga)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
             <KpiCard label="Movimentacoes" value={kpis.total} accentColor="bg-blue-500" />
