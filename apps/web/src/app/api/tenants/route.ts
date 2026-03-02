@@ -49,11 +49,15 @@ export async function POST(req: NextRequest) {
         });
 
         // 3. Create CLUB organization
-        await supabaseAdmin.from('organizations').insert({
-          tenant_id: tenant.id,
-          type: 'CLUB',
-          name: club_name.trim(),
-        });
+        const { data: clubOrg } = await supabaseAdmin
+          .from('organizations')
+          .insert({
+            tenant_id: tenant.id,
+            type: 'CLUB',
+            name: club_name.trim(),
+          })
+          .select('id')
+          .single();
 
         // 4. Seed default payment methods
         await supabaseAdmin.from('payment_methods').insert([
@@ -71,6 +75,7 @@ export async function POST(req: NextRequest) {
               slug: tenant.slug,
               role: 'OWNER',
               has_subclubs: tenant.has_subclubs ?? true,
+              club_org_id: clubOrg?.id || null,
             },
           },
           { status: 201 },

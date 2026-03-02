@@ -34,9 +34,10 @@ export async function PATCH(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { has_subclubs, pix_key, pix_key_type } = body;
+        const { name, has_subclubs, pix_key, pix_key_type } = body;
 
         const updates: Record<string, any> = {};
+        if (typeof name === 'string' && name.trim().length >= 2) updates.name = name.trim();
         if (typeof has_subclubs === 'boolean') updates.has_subclubs = has_subclubs;
         if (pix_key !== undefined) updates.pix_key = pix_key || null;
         if (pix_key_type !== undefined) updates.pix_key_type = pix_key_type || null;

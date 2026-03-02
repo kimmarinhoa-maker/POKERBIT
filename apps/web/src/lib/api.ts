@@ -479,7 +479,7 @@ export async function getOrgTree() {
   return apiFetch('/organizations/tree');
 }
 
-export async function updateOrgMetadata(orgId: string, data: { full_name?: string; phone?: string; email?: string }) {
+export async function updateOrgMetadata(orgId: string, data: { full_name?: string; phone?: string; email?: string; platform?: string }) {
   return apiFetch(`/organizations/${orgId}/metadata`, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -577,15 +577,15 @@ export async function deleteLedgerEntry(id: string) {
 
 // ─── Config (fees + adjustments) ──────────────────────────────────
 
-export async function getFeeConfig(platform?: string) {
-  const params = platform ? `?platform=${platform}` : '';
+export async function getFeeConfig(clubId?: string) {
+  const params = clubId ? `?club_id=${clubId}` : '';
   return apiFetch(`/config/fees${params}`);
 }
 
-export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, platform: string = 'suprema') {
+export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, clubId: string) {
   return apiFetch('/config/fees', {
     method: 'PUT',
-    body: JSON.stringify({ fees, platform }),
+    body: JSON.stringify({ fees, club_id: clubId }),
   });
 }
 

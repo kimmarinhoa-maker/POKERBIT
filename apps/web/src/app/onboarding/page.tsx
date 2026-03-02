@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -10,9 +10,10 @@ import {
   createTenant,
   createTenantSubclubes,
   refreshTenantList,
+  uploadClubLogo,
 } from '@/lib/api';
 import Spinner from '@/components/Spinner';
-import { Plus, Trash2, CheckCircle2, Building2, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Building2, ArrowRight, Camera } from 'lucide-react';
 
 type Step = 'club' | 'subclubes' | 'success';
 
@@ -42,9 +43,13 @@ function OnboardingContent() {
   const [step, setStep] = useState<Step>(initialStep);
   const [clubName, setClubName] = useState('');
   const [tenantId, setTenantId] = useState<string>(existingTenant?.id || '');
+  const [clubOrgId, setClubOrgId] = useState<string>('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
   const [subclubeNames, setSubclubeNames] = useState<string[]>(['', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Redirect to login if no auth
   useEffect(() => {
@@ -57,6 +62,17 @@ function OnboardingContent() {
 
   // ─── Step: Create Club (only for ?new=1 flow) ────────────────────
 
+  function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Imagem deve ter no maximo 2MB');
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
   async function handleCreateClub() {
     if (!clubName.trim()) {
       setError('Digite o nome do clube');
@@ -68,7 +84,23 @@ function OnboardingContent() {
     try {
       const res = await createTenant(clubName.trim());
       if (res.success && res.data) {
-        setTenantId((res.data as any).id);
+        const newTenantId = (res.data as any).id;
+        const orgId = (res.data as any).club_org_id;
+        setTenantId(newTenantId);
+        setClubOrgId(orgId || '');
+
+        // Set tenant in localStorage so apiFetch sends correct X-Tenant-Id
+        localStorage.setItem('poker_selected_tenant', newTenantId);
+
+        // Upload logo if selected
+        if (logoFile && orgId) {
+          try {
+            await uploadClubLogo(orgId, logoFile);
+          } catch {
+            // Non-blocking — club was created, logo upload can be retried later
+          }
+        }
+
         setStep('subclubes');
       } else {
         setError(res.error || 'Erro ao criar clube');
@@ -185,6 +217,37 @@ function OnboardingContent() {
         {/* ─── Club Step ──────────────────────────────────── */}
         {step === 'club' && (
           <div className="card space-y-5 animate-slide-up">
+            {/* Logo upload */}
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="relative w-20 h-20 rounded-2xl bg-dark-800 border-2 border-dashed border-dark-600 hover:border-poker-500/50 flex items-center justify-center transition-colors group overflow-hidden"
+              >
+                {logoPreview ? (
+                  <>
+                    <img src={logoPreview} alt="Logo" className="w-full h-full object-cover rounded-2xl" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-dark-500 group-hover:text-poker-400 transition-colors">
+                    <Camera className="w-6 h-6" />
+                    <span className="text-[10px]">Logo</span>
+                  </div>
+                )}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={handleLogoSelect}
+                className="hidden"
+              />
+              <p className="text-[10px] text-dark-600">PNG, JPG ou WebP — max 2MB</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Nome do Clube

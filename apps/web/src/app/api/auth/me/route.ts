@@ -45,6 +45,21 @@ export async function GET(req: NextRequest) {
           });
         }
 
+        // Buscar logo_url das organizacoes CLUB de cada tenant
+        const tenantIds = (tenants || []).map((t) => t.tenant_id);
+        const { data: clubOrgs } = tenantIds.length > 0
+          ? await supabaseAdmin
+              .from('organizations')
+              .select('tenant_id, logo_url')
+              .in('tenant_id', tenantIds)
+              .eq('type', 'CLUB')
+          : { data: [] };
+
+        const logoByTenant = new Map<string, string | null>();
+        for (const org of clubOrgs || []) {
+          logoByTenant.set(org.tenant_id, org.logo_url || null);
+        }
+
         return NextResponse.json({
           success: true,
           data: {
@@ -58,6 +73,7 @@ export async function GET(req: NextRequest) {
               role: t.role,
               status: (t as any).tenants.status || 'active',
               has_subclubs: (t as any).tenants.has_subclubs ?? true,
+              logo_url: logoByTenant.get(t.tenant_id) || null,
               allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
                 ? null // null = acesso total
                 : orgAccessByTenant.get(t.tenant_id) || [],
