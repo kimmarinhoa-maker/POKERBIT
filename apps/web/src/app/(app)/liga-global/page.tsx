@@ -388,6 +388,106 @@ export default function LigaGlobalPage() {
             </div>
           </div>
 
+          {/* ═══ PAGAMENTOS A LIGA ═══ */}
+          <h3 className="text-xs text-dark-400 uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 bg-poker-500 rounded-sm" />
+            Pagamentos {'\u00E0'} Liga
+          </h3>
+
+          <div className="card overflow-hidden p-0 mb-6">
+            {/* Progress bars */}
+            <div className="px-4 py-3 bg-dark-800/30 border-b border-dark-700/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-dark-400 mb-1">
+                    <span>Subclubes {'\u2192'} Clube</span>
+                    <span className="font-mono">0%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-dark-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-dark-600 transition-all duration-500" style={{ width: '0%' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-xs text-dark-400 mb-1">
+                    <span>Clube {'\u2192'} Liga</span>
+                    <span className="font-mono">0%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-dark-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-dark-600 transition-all duration-500" style={{ width: '0%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm data-table" aria-label="Pagamentos a liga">
+                <thead>
+                  <tr className="bg-dark-800/50 text-dark-400 text-xs uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left font-medium">Subclube</th>
+                    <th scope="col" className="px-3 py-3 text-right font-medium">Acerto (Deve)</th>
+                    <th scope="col" className="px-3 py-3 text-right font-medium">Pago</th>
+                    <th scope="col" className="px-3 py-3 text-right font-medium">Pendente</th>
+                    <th scope="col" className="px-3 py-3 text-center font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-800/50">
+                  {sortedSubclubs.map((sc, i) => {
+                    const acerto = Math.abs(sc.acertoLiga || 0);
+                    const pago = 0; // Future: tracking real de pagamentos
+                    const pendente = round2(acerto - pago);
+                    const pagoPct = acerto > 0 ? Math.round((pago / acerto) * 100) : 0;
+
+                    return (
+                      <tr key={`pag-${sc.name || i}`}>
+                        <td className="px-4 py-3 text-white font-medium">
+                          <span className="flex items-center gap-2">
+                            <ClubLogo logoUrl={logoMap[normalizeKey(sc.name)]} name={sc.name} size="sm" className="!w-6 !h-6 !text-[10px]" />
+                            {sc.name}
+                          </span>
+                        </td>
+                        <td className={`px-3 py-3 text-right font-mono ${(sc.acertoLiga || 0) > 0.01 ? 'text-poker-400' : (sc.acertoLiga || 0) < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                          {formatBRL(sc.acertoLiga || 0)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono text-dark-500">
+                          {formatBRL(pago)}
+                        </td>
+                        <td className={`px-3 py-3 text-right font-mono font-medium ${pendente > 0.01 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                          {formatBRL(pendente)}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={`flex items-center justify-center gap-1.5 text-xs font-medium ${pagoPct >= 100 ? 'text-emerald-400' : pagoPct > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <span className={`w-2 h-2 rounded-full ${pagoPct >= 100 ? 'bg-emerald-400' : pagoPct > 0 ? 'bg-yellow-400' : 'bg-red-400'}`} />
+                            {pagoPct >= 100 ? 'Quitado' : pagoPct > 0 ? `Parcial (${pagoPct}%)` : 'Pendente'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="sticky bottom-0 z-10">
+                  <tr className="bg-dark-900/95 backdrop-blur-sm font-semibold border-t-2 border-dark-600">
+                    <td className="px-4 py-3 text-white font-bold">TOTAL</td>
+                    <td className={`px-3 py-3 text-right font-mono font-bold ${grandTotal.acertoLiga > 0.01 ? 'text-poker-400' : grandTotal.acertoLiga < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                      {formatBRL(grandTotal.acertoLiga)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono text-dark-500 font-bold">{formatBRL(0)}</td>
+                    <td className={`px-3 py-3 text-right font-mono font-bold ${Math.abs(grandTotal.acertoLiga) > 0.01 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                      {formatBRL(Math.abs(grandTotal.acertoLiga))}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="text-xs text-dark-500 font-mono">0%</span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Info banner */}
+            <div className="px-4 py-2 bg-dark-800/20 border-t border-dark-700/30 text-[10px] text-dark-500">
+              Tracking real de pagamentos {'\u00E0'} liga sera habilitado em breve. Valores de "Pago" serao atualizados automaticamente.
+            </div>
+          </div>
+
           {/* ═══ DETALHAMENTO POR CLUBE ═══ */}
           <h3 className="text-xs text-dark-400 uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 bg-blue-500 rounded-sm" />
