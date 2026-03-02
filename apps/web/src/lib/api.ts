@@ -987,8 +987,10 @@ export interface ModalityData {
   modalityEvolution: Array<Record<string, unknown>>;
 }
 
-export async function getDashboardModalities(settlementId: string) {
-  return apiFetch<ModalityData>(`/dashboard/modalities?settlement_id=${settlementId}`);
+export async function getDashboardModalities(settlementId: string, subclubId?: string) {
+  const params = new URLSearchParams({ settlement_id: settlementId });
+  if (subclubId) params.set('subclub_id', subclubId);
+  return apiFetch<ModalityData>(`/dashboard/modalities?${params}`);
 }
 
 // ─── Comprovante (receipt URL generation) ─────────────────────────

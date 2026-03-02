@@ -11,8 +11,10 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import KpiCard from '@/components/ui/KpiCard';
-import { listSettlements, getSettlementFull, formatBRL } from '@/lib/api';
+import { listSettlements, getSettlementFull, getDashboardModalities, formatBRL } from '@/lib/api';
+import type { ModalityData } from '@/lib/api';
 import { SubclubData, PlayerMetric, AgentMetric } from '@/types/settlement';
+import ModalitySectionWrapper from '@/components/dashboard/ModalitySectionWrapper';
 
 /* ══════════════════════════════════════════════════════════════════════
    Types
@@ -72,6 +74,10 @@ export default function DashboardClube({ subclub, settlementId, subclubName }: P
   // ── Historical data (8 weeks) ──────────────────────────────────────
   const [rakeHistory, setRakeHistory] = useState<RakeWeekPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  // ── Modality analysis ───────────────────────────────────────────────
+  const [modalityData, setModalityData] = useState<ModalityData | null>(null);
+  const [modalityLoading, setModalityLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,10 +146,18 @@ export default function DashboardClube({ subclub, settlementId, subclubName }: P
     }
 
     loadHistory();
+
+    // Modality analysis — non-blocking (uses subclub.id for filtering)
+    setModalityLoading(true);
+    getDashboardModalities(settlementId, subclub.id).then((res) => {
+      if (!cancelled && res.success && res.data) setModalityData(res.data);
+      if (!cancelled) setModalityLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
-  }, [settlementId, subclubName]);
+  }, [settlementId, subclubName, subclub.id]);
 
   // ── Agent summaries ──────────────────────────────────────────────
   const agentSummaries: AgentSummary[] = useMemo(() => {
@@ -313,6 +327,9 @@ export default function DashboardClube({ subclub, settlementId, subclubName }: P
           )}
         </ChartCard>
       </div>
+
+      {/* ── Analise por Modalidade ───────────────────────────────────── */}
+      <ModalitySectionWrapper data={modalityData} loading={modalityLoading} />
     </div>
   );
 }

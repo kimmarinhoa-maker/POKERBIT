@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { formatBRL, round2, normalizeKey } from '@/lib/formatters';
-import { listSettlements, getSettlementFull, getOrgTree, getDashboardModalities } from '@/lib/api';
+import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
 import KpiCard from '@/components/ui/KpiCard';
 import DeltaBadge from '@/components/ui/DeltaBadge';
 import DraftBanner from '@/components/ui/DraftBanner';
@@ -13,8 +13,6 @@ import PendenciasCard from '@/components/dashboard/PendenciasCard';
 import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import WeekDatePicker from '@/components/WeekDatePicker';
 import Spinner from '@/components/Spinner';
-import ModalitySectionWrapper from '@/components/dashboard/ModalitySectionWrapper';
-import type { ModalityData } from '@/lib/api';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
@@ -78,9 +76,7 @@ export default function DashboardPage() {
   // Chart data (multiple weeks)
   const [chartData, setChartData] = useState<Array<{ label: string; rake: number; resultado: number; acerto: number }>>([]);
 
-  // Modality analysis (non-blocking)
-  const [modalityData, setModalityData] = useState<ModalityData | null>(null);
-  const [modalityLoading, setModalityLoading] = useState(false);
+
 
   // Logo map: subclub name -> logo_url
   const logoMapRef = useRef<Record<string, string | null>>({});
@@ -245,12 +241,6 @@ export default function DashboardPage() {
             setChartData(chartPoints);
           });
 
-          // Modality analysis — non-blocking
-          setModalityLoading(true);
-          getDashboardModalities(latest.id).then((res2) => {
-            if (res2.success && res2.data) setModalityData(res2.data);
-            setModalityLoading(false);
-          });
         } else {
           setNotFoundEmpty(true);
         }
@@ -292,13 +282,6 @@ export default function DashboardPage() {
           setCurrentWeek(newData);
           setNotFoundEmpty(false);
 
-          // Re-fetch modality data for new week
-          setModalityLoading(true);
-          getDashboardModalities(target.id).then((res2) => {
-            if (res2.success && res2.data) setModalityData(res2.data);
-            else setModalityData(null);
-            setModalityLoading(false);
-          });
         } else {
           setNotFoundEmpty(true);
         }
@@ -600,8 +583,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Modality Analysis Section */}
-          <ModalitySectionWrapper data={modalityData} loading={modalityLoading} />
         </>
       )}
     </div>
