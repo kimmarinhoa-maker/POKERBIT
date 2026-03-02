@@ -181,6 +181,24 @@ router.post('/apply', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 
   }
 });
 
+// ─── DELETE /api/chippix/clear/:weekStart — Limpar TODOS os registros da semana
+router.delete('/clear/:weekStart', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const weekStart = req.params.weekStart;
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
+      return;
+    }
+
+    const data = await chipPixService.clearWeek(tenantId, weekStart);
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
 // ─── DELETE /api/chippix/:id — Deletar transação ─────────────────
 router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {

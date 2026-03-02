@@ -785,6 +785,31 @@ export class ChipPixService {
     if (error) throw new Error(`Erro ao excluir: ${error.message}`);
     return { id: txId };
   }
+
+  // ─── Limpar TODOS os registros ChipPix de uma semana ──────────────
+  async clearWeek(tenantId: string, weekStart: string) {
+    // Count before deleting
+    const { count } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
+      .eq('is_reconciled', false);
+
+    // Delete all non-reconciled chippix entries for this week
+    const { error } = await supabaseAdmin
+      .from('ledger_entries')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
+      .eq('is_reconciled', false);
+
+    if (error) throw new Error(`Erro ao limpar ChipPix: ${error.message}`);
+
+    return { deleted: count || 0 };
+  }
 }
 
 export const chipPixService = new ChipPixService();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface ConfirmDialogProps {
@@ -13,6 +13,8 @@ export interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  /** Require the user to type this exact text to enable the confirm button */
+  requireText?: string;
 }
 
 export default function ConfirmDialog({
@@ -25,21 +27,30 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   loading = false,
+  requireText,
 }: ConfirmDialogProps) {
+  const [typedText, setTypedText] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus the cancel button when dialog opens (safer default)
+  const textMatch = !requireText || typedText.trim().toLowerCase() === requireText.trim().toLowerCase();
+
+  // Reset typed text and focus when dialog opens
   useEffect(() => {
     if (open) {
-      // Small delay so the portal is mounted
+      setTypedText('');
       const timer = setTimeout(() => {
-        cancelBtnRef.current?.focus();
+        if (requireText) {
+          inputRef.current?.focus();
+        } else {
+          cancelBtnRef.current?.focus();
+        }
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, requireText]);
 
   // Escape to close
   useEffect(() => {
@@ -134,6 +145,28 @@ export default function ConfirmDialog({
             {message}
           </p>
 
+          {/* Typed confirmation input */}
+          {requireText && (
+            <div className="mt-4">
+              <label className="text-xs text-dark-400 block mb-1.5">
+                Digite <strong className="text-red-400">{requireText}</strong> para confirmar:
+              </label>
+              <input
+                ref={inputRef}
+                type="text"
+                value={typedText}
+                onChange={(e) => setTypedText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && textMatch && !loading) onConfirm();
+                }}
+                className="w-full px-3 py-2 bg-dark-800 border border-dark-600 rounded-lg text-sm text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/50"
+                placeholder={requireText}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 mt-6">
             <button
@@ -147,8 +180,8 @@ export default function ConfirmDialog({
             <button
               ref={confirmBtnRef}
               onClick={onConfirm}
-              disabled={loading}
-              className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 ${confirmBtnClass}`}
+              disabled={loading || !textMatch}
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${confirmBtnClass}`}
             >
               {loading ? (
                 <span className="flex items-center gap-2">

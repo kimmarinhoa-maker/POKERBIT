@@ -9,10 +9,12 @@ interface ConfirmOptions {
   variant?: 'danger' | 'default';
   confirmLabel?: string;
   cancelLabel?: string;
+  requireText?: string;
 }
 
 interface DialogState extends ConfirmOptions {
   open: boolean;
+  requireText?: string;
 }
 
 /**
@@ -52,6 +54,7 @@ export function useConfirmDialog() {
         variant: options.variant || 'default',
         confirmLabel: options.confirmLabel,
         cancelLabel: options.cancelLabel,
+        requireText: options.requireText,
       });
     });
   }, []);
@@ -76,6 +79,7 @@ export function useConfirmDialog() {
       variant={state.variant}
       confirmLabel={state.confirmLabel}
       cancelLabel={state.cancelLabel}
+      requireText={state.requireText}
       onConfirm={handleConfirm}
       onCancel={handleCancel}
     />

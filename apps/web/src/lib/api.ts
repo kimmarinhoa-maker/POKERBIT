@@ -879,6 +879,10 @@ export async function deleteChipPixTransaction(txId: string) {
   return apiFetch(`/chippix/${txId}`, { method: 'DELETE' });
 }
 
+export async function clearChipPixWeek(weekStart: string) {
+  return apiFetch(`/chippix/clear/${weekStart}`, { method: 'DELETE' });
+}
+
 export async function getChipPixLedgerSummary(weekStart: string) {
   return apiFetch(`/chippix/summary?week_start=${weekStart}`);
 }

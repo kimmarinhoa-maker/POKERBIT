@@ -9,7 +9,7 @@ import {
   unlinkChipPixTransaction,
   ignoreChipPixTransaction,
   applyChipPixTransactions,
-  deleteChipPixTransaction,
+  clearChipPixWeek,
   getChipPixImportSummary,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -278,17 +278,26 @@ export default function ChipPixTab({
   async function handleClear() {
     const deletable = txns.filter((t) => t.status !== 'applied');
     if (deletable.length === 0) return;
-    const ok = await confirm({ title: 'Limpar Registros', message: `Limpar ${deletable.length} registros nao aplicados?`, variant: 'danger' });
+    const ok = await confirm({
+      title: 'Limpar Todos os Registros ChipPix',
+      message: `Isso vai remover ${deletable.length} registros nao aplicados desta semana.\nEssa acao nao pode ser desfeita.`,
+      variant: 'danger',
+      confirmLabel: 'Limpar Tudo',
+      requireText: 'confirma',
+    });
     if (!ok) return;
-    for (const tx of deletable) {
-      try {
-        await deleteChipPixTransaction(tx.id);
-      } catch {
-        /* continue */
+    try {
+      const res = await clearChipPixWeek(weekStart);
+      if (res.success) {
+        toast(`${res.data?.deleted || deletable.length} registros removidos`, 'success');
+        loadTxns();
+        onDataChange();
+      } else {
+        toast(res.error || 'Erro ao limpar registros', 'error');
       }
+    } catch {
+      toast('Erro ao limpar registros', 'error');
     }
-    toast(`${deletable.length} registros removidos`, 'success');
-    loadTxns();
   }
 
   // Totals for filtered rows
