@@ -69,7 +69,7 @@ export class ChipPixService {
     const iId = header.findIndex((h) => h.includes('id jogador'));
     const iTipo = header.findIndex((h) => h === 'tipo');
     const iEnt = header.findIndex((h) => h.includes('entrada bruta'));
-    const iSai = header.findIndex((h) => h.includes('saida bruta') || h.includes('saída bruta'));
+    const iSai = header.findIndex((h) => h.includes('saida liquida') || h.includes('saída líquida') || h.includes('saída liquida'));
     const iTaxa = header.findIndex((h) => h.includes('taxa'));
     const iNome = header.findIndex((h) => h === 'integrante');
     const iIdOp = header.findIndex((h) => h.includes('id da opera'));
