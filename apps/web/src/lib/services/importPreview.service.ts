@@ -12,7 +12,7 @@
 //  REGRA DE OURO: este serviço NÃO escreve nada no banco.
 // ══════════════════════════════════════════════════════════════════════
 
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { supabaseAdmin } from '../server/supabase';
 import { detectWeekStart, WeekDetectionResult } from '../server/detectWeekStart';
 import { round2 } from '../server/round2';

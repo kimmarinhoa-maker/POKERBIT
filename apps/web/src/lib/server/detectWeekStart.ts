@@ -2,7 +2,7 @@
 //  detectWeekStart — Detecção automática da semana do XLSX
 // ══════════════════════════════════════════════════════════════════════
 
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 
 export interface WeekDetectionResult {
   week_start: string;

@@ -5,7 +5,7 @@
 //         → Insert ledger_entries (source='chippix')
 // ══════════════════════════════════════════════════════════════════════
 
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { supabaseAdmin } from '../server/supabase';
 import { round2 } from '../server/round2';
 import type { ChipPixExtratoRow, ChipPixImportResult, NaoVinculado } from '../server/chippix';

@@ -15,7 +15,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import crypto from 'crypto';
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { supabaseAdmin } from '../server/supabase';
 import { importPreviewService } from './importPreview.service';
 import { round2 } from '../server/round2';

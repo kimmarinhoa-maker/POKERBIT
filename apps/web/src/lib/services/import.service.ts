@@ -14,7 +14,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import crypto from 'crypto';
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { supabaseAdmin } from '../server/supabase';
 import type { ImportProcessResult } from '../server/types';
 import { round2 } from '../server/round2';
