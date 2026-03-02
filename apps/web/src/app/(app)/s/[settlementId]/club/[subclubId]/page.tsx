@@ -31,6 +31,7 @@ const DRE = dynamic(() => import('@/components/settlement/DRE'), { loading: () =
 const Liga = dynamic(() => import('@/components/settlement/Liga'), { loading: () => <TabSkeleton />, ssr: false });
 const Caixa = dynamic(() => import('@/components/settlement/Caixa'), { loading: () => <TabSkeleton />, ssr: false });
 const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), { loading: () => <TabSkeleton />, ssr: false });
+const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), { loading: () => <TabSkeleton />, ssr: false });
 const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
 
 export default function SubclubPanelPage() {
@@ -234,9 +235,20 @@ export default function SubclubPanelPage() {
             <Caixa
               weekStart={settlement.week_start}
               clubId={subclub.id}
-              clubName={subclub.name}
               subclub={subclub}
               fees={fees}
+              settlementStatus={settlement.status}
+              onDataChange={loadData}
+            />
+          </TabErrorBoundary>
+        );
+      case 'conciliacao':
+        return (
+          <TabErrorBoundary tabName="Conciliacao">
+            <Conciliacao
+              weekStart={settlement.week_start}
+              clubId={subclub.id}
+              clubName={subclub.name}
               chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null}
               settlementStatus={settlement.status}
               onDataChange={loadData}

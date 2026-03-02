@@ -48,6 +48,7 @@ const sections: TabSection[] = [
     label: 'FINANCEIRO',
     items: [
       { key: 'caixa', icon: Wallet, label: 'Caixa', permKey: 'tab:extrato' },
+      { key: 'conciliacao', icon: Search, label: 'Conciliacao', permKey: 'tab:conciliacao' },
       { key: 'ajustes', icon: SlidersHorizontal, label: 'Ajustes', permKey: 'tab:ajustes' },
     ],
   },
