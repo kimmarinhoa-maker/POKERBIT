@@ -7,6 +7,7 @@ import { round2, fmtDateTime } from '@/lib/formatters';
 import { cc } from '@/lib/colorUtils';
 import { useToast } from '@/components/Toast';
 import { useSortable } from '@/lib/useSortable';
+import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 import { AgentMetric, PlayerMetric, LedgerEntry } from '@/types/settlement';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
 import { Users } from 'lucide-react';
@@ -71,6 +72,7 @@ function clrPrint(v: number): string {
 export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, settlementId, settlementStatus, onDataChange }: Props) {
   const agents = useMemo(() => subclub.agents || [], [subclub.agents]);
   const players = useMemo(() => subclub.players || [], [subclub.players]);
+  const subclubEntityIds = useMemo(() => buildSubclubEntityIds(agents, players), [agents, players]);
   const { toast } = useToast();
   const isDraft = settlementStatus === 'DRAFT';
 
@@ -117,15 +119,25 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
     try {
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
       if (!mountedRef.current) return;
-      if (ledgerRes.success) setEntries(ledgerRes.data || []);
-      if (carryRes.success) setCarryMap(carryRes.data || {});
+      if (ledgerRes.success) {
+        const all = ledgerRes.data || [];
+        setEntries(all.filter((e: LedgerEntry) => subclubEntityIds.has(e.entity_id)));
+      }
+      if (carryRes.success) {
+        const raw = carryRes.data || {};
+        const filtered: Record<string, number> = {};
+        for (const [eid, val] of Object.entries(raw)) {
+          if (subclubEntityIds.has(eid)) filtered[eid] = val as number;
+        }
+        setCarryMap(filtered);
+      }
     } catch {
       if (!mountedRef.current) return;
       toast('Erro ao carregar comprovantes', 'error');
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, clubId, toast]);
+  }, [weekStart, clubId, subclubEntityIds, toast]);
 
   useEffect(() => {
     loadEntries();
