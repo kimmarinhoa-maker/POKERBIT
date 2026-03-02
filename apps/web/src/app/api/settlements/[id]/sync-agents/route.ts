@@ -84,6 +84,41 @@ export async function POST(
           subclubNameMap.set(normName(sc.name), sc.id);
         }
 
+        // Auto-create missing SUBCLUB orgs from subclub_name in metrics
+        if (hasSubclubs) {
+          const metricSubclubNames = new Set<string>();
+          for (const m of allMetrics) {
+            if (m.subclub_name && m.subclub_name !== 'SEM V\u00cdNCULO') {
+              metricSubclubNames.add(m.subclub_name);
+            }
+          }
+
+          const missingSubclubs: string[] = [];
+          for (const name of metricSubclubNames) {
+            if (!subclubNameMap.has(normName(name))) {
+              missingSubclubs.push(name);
+            }
+          }
+
+          if (missingSubclubs.length > 0) {
+            const insertRows = missingSubclubs.map((name) => ({
+              tenant_id: ctx.tenantId,
+              parent_id: settlement.club_id,
+              type: 'SUBCLUB' as const,
+              name,
+            }));
+
+            const { data: newSubs } = await supabaseAdmin
+              .from('organizations')
+              .insert(insertRows)
+              .select('id, name');
+
+            for (const sc of newSubs || []) {
+              subclubNameMap.set(normName(sc.name), sc.id);
+            }
+          }
+        }
+
         // Buscar orgs AGENT existentes do tenant
         const { data: existingOrgs } = await supabaseAdmin
           .from('organizations')
