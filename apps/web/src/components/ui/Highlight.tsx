@@ -1,10 +1,12 @@
 'use client';
 
+import { memo } from 'react';
+
 /**
  * Highlights occurrences of `query` inside `text`.
  * Case-insensitive. Returns plain text if query is empty.
  */
-export default function Highlight({ text, query }: { text: string; query: string }) {
+export default memo(function Highlight({ text, query }: { text: string; query: string }) {
   if (!query || !text) return <>{text}</>;
 
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,4 +23,4 @@ export default function Highlight({ text, query }: { text: string; query: string
       )}
     </>
   );
-}
+});

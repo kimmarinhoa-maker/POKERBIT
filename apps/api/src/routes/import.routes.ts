@@ -19,6 +19,7 @@ import { importPreviewService } from '../services/importPreview.service';
 import { importConfirmService, ConfirmError } from '../services/importConfirm.service';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
+import { validateUuid } from '../middleware/validateUuid';
 import { logAudit } from '../utils/audit';
 import { logger } from '../utils/logger';
 
@@ -282,7 +283,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── GET /api/imports/:id — Detalhe de um import ────────────────────
-router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/:id', validateUuid('id'), requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 

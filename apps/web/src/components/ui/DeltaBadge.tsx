@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { formatBRL } from '@/lib/formatters';
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
   format?: 'brl' | 'number' | 'percent';
 }
 
-export default function DeltaBadge({ current, previous, format = 'brl' }: Props) {
+export default memo(function DeltaBadge({ current, previous, format = 'brl' }: Props) {
   if (previous === 0) return null;
   const diff = current - previous;
   const pct = ((diff / Math.abs(previous)) * 100).toFixed(0);
@@ -31,4 +32,4 @@ export default function DeltaBadge({ current, previous, format = 'brl' }: Props)
       {isPositive ? '\u25B2' : '\u25BC'} {pct}%
     </span>
   );
-}
+});

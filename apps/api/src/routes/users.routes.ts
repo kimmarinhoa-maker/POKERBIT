@@ -8,6 +8,7 @@ import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
 import { logger } from '../utils/logger';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 
@@ -95,7 +96,7 @@ router.get('/', ...adminOnly, async (req: Request, res: Response) => {
 });
 
 // ─── PATCH /api/users/:id/role — Alterar role de um membro ─────────
-router.patch('/:id/role', ...adminOnly, async (req: Request, res: Response) => {
+router.patch('/:id/role', validateUuid('id'), ...adminOnly, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -149,7 +150,7 @@ router.patch('/:id/role', ...adminOnly, async (req: Request, res: Response) => {
 });
 
 // ─── DELETE /api/users/:id — Remover membro do tenant ───────────────
-router.delete('/:id', ...adminOnly, async (req: Request, res: Response) => {
+router.delete('/:id', validateUuid('id'), ...adminOnly, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -299,7 +300,7 @@ router.post('/invite', ...adminOnly, async (req: Request, res: Response) => {
 });
 
 // ─── GET /api/users/:id/org-access — Listar subclubes permitidos ─────
-router.get('/:id/org-access', ...adminOnly, async (req: Request, res: Response) => {
+router.get('/:id/org-access', validateUuid('id'), ...adminOnly, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;
@@ -344,7 +345,7 @@ router.get('/:id/org-access', ...adminOnly, async (req: Request, res: Response) 
 });
 
 // ─── PUT /api/users/:id/org-access — Setar subclubes permitidos ─────
-router.put('/:id/org-access', ...adminOnly, async (req: Request, res: Response) => {
+router.put('/:id/org-access', validateUuid('id'), ...adminOnly, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { id } = req.params;

@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+
 interface KpiCardProps {
   label: string;
   value: string | number;
@@ -13,7 +15,7 @@ interface KpiCardProps {
   hideIfZero?: boolean;
 }
 
-export default function KpiCard({
+export default memo(function KpiCard({
   label,
   value,
   accentColor,
@@ -46,4 +48,4 @@ export default function KpiCard({
       </div>
     </div>
   );
-}
+});

@@ -11,6 +11,7 @@ import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
 import { logger } from '../utils/logger';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 
@@ -193,7 +194,7 @@ router.post('/prefix-rules', requireAuth, requireTenant, requireRole('OWNER', 'A
 });
 
 // ─── POST /api/organizations/:id/logo — Upload logo ─────────────
-router.post('/:id/logo', requireAuth, requireTenant, requirePermission('page:clubs'), logoUpload.single('logo'), async (req: Request, res: Response) => {
+router.post('/:id/logo', validateUuid('id'), requireAuth, requireTenant, requirePermission('page:clubs'), logoUpload.single('logo'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -260,7 +261,7 @@ router.post('/:id/logo', requireAuth, requireTenant, requirePermission('page:clu
 });
 
 // ─── DELETE /api/organizations/:id/logo — Remover logo ──────────
-router.delete('/:id/logo', requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
+router.delete('/:id/logo', validateUuid('id'), requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -439,7 +440,7 @@ const updateOrgSchema = z.object({
   whatsapp_group_link: z.string().max(255).nullable().optional(),
 });
 
-router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.put('/:id', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const parsed = updateOrgSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -493,7 +494,7 @@ router.put('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), as
 });
 
 // ─── DELETE /api/organizations/:id — Deletar subclube ───────────────
-router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.delete('/:id', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -567,7 +568,7 @@ router.get('/agent-rates', requireAuth, requireTenant, async (req: Request, res:
 });
 
 // ─── PUT /api/organizations/:id/rate — Atualizar rate de agente ────
-router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.put('/:id/rate', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const agentId = req.params.id;
@@ -653,7 +654,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 });
 
 // ─── PATCH /api/organizations/:id/metadata — Dados de contato + platform ─
-router.patch('/:id/metadata', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
+router.patch('/:id/metadata', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
@@ -693,7 +694,7 @@ router.patch('/:id/metadata', requireAuth, requireTenant, requireRole('OWNER', '
 });
 
 // ─── PATCH /api/organizations/:id/direct — Toggle agencia direta ───
-router.patch('/:id/direct', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
+router.patch('/:id/direct', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;

@@ -10,6 +10,7 @@ import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
 import { logger } from '../utils/logger';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 
@@ -139,7 +140,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── GET /api/players/:id/history — Histórico do player ────────────
-router.get('/:id/history', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/:id/history', validateUuid('id'), requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 
@@ -195,7 +196,7 @@ router.get('/rates/current', requireAuth, requireTenant, async (req: Request, re
 });
 
 // ─── PATCH /api/players/:id — Atualizar dados do player ─────────────
-router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
+router.patch('/:id', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const playerId = req.params.id;
@@ -248,7 +249,7 @@ router.patch('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', '
 });
 
 // ─── PUT /api/players/:id/rate — Atualizar rate do player ──────────
-router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
+router.put('/:id/rate', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('page:players'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 

@@ -16,6 +16,7 @@ import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
 import { logger } from '../utils/logger';
 import { round2 } from '../utils/round2';
 import { calcPlayerResultado } from '../utils/calcPlayer';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── GET /api/settlements/:id — Detalhe básico (compatibilidade) ────
-router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/:id', validateUuid('id'), requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const detail = await settlementService.getSettlementDetail(tenantId, req.params.id);
@@ -75,7 +76,7 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
 // Coração da paridade funcional: retorna tudo agrupado por subclube
 // com fees, adjustments, acertoLiga e dashboardTotals
 // Cache: finalized settlements are cached for 5 min
-router.get('/:id/full', requireAuth, requireTenant, requirePermission('page:overview'), async (req: Request, res: Response) => {
+router.get('/:id/full', validateUuid('id'), requireAuth, requireTenant, requirePermission('page:overview'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const settlementId = req.params.id;
@@ -112,6 +113,7 @@ router.get('/:id/full', requireAuth, requireTenant, requirePermission('page:over
 // ─── PATCH /api/settlements/:id/notes — Atualizar notas ─────────────
 router.patch(
   '/:id/notes',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
@@ -158,6 +160,7 @@ router.patch(
 // ─── POST /api/settlements/:id/finalize — DRAFT → FINAL ───────────
 router.post(
   '/:id/finalize',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
@@ -188,6 +191,7 @@ router.post(
 // Altera o tipo de pagamento (fiado/avista) de um agente no settlement
 router.patch(
   '/:id/agents/:agentId/payment-type',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
@@ -254,6 +258,7 @@ router.patch(
 // Auto-cria organizacoes AGENT a partir dos agentes do settlement
 router.post(
   '/:id/sync-agents',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
@@ -666,6 +671,7 @@ router.post(
 // Atualiza rb_rate diretamente no agent_week_metrics (sem exigir org)
 router.patch(
   '/:id/agents/:agentId/rb-rate',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
@@ -826,6 +832,7 @@ router.patch(
 // Always applies current rates from agent_rb_rates/player_rb_rates (Cadastro is source of truth)
 router.post(
   '/:id/sync-rates',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
@@ -1001,6 +1008,7 @@ router.post(
 // ─── DELETE /api/settlements/:id — Apagar settlement DRAFT ─────────
 router.delete(
   '/:id',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
@@ -1137,6 +1145,7 @@ router.delete(
 // ─── POST /api/settlements/:id/void — FINAL → VOID ────────────────
 router.post(
   '/:id/void',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN'),
