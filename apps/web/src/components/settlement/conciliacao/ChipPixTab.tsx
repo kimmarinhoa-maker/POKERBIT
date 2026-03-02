@@ -33,6 +33,7 @@ export interface ChipPixTabProps {
   agents: AgentOption[];
   players: PlayerOption[];
   verificadoOk?: boolean;
+  subclubEntityIds?: Set<string>;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ export default function ChipPixTab({
   agents,
   players,
   verificadoOk = false,
+  subclubEntityIds,
 }: ChipPixTabProps) {
   const [txns, setTxns] = useState<BankTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,8 @@ export default function ChipPixTab({
         toast('Erro ao carregar transacoes ChipPix', 'error');
         return;
       }
-      setTxns(txnRes.data || []);
+      const all: BankTx[] = txnRes.data || [];
+      setTxns(subclubEntityIds ? all.filter((t) => t.entity_id && subclubEntityIds.has(t.entity_id)) : all);
       if (importRes.success && importRes.data?.has_data) {
         setImportSummary(importRes.data.operators);
       }
@@ -86,7 +89,7 @@ export default function ChipPixTab({
     } finally {
       setLoading(false);
     }
-  }, [weekStart, toast]);
+  }, [weekStart, toast, subclubEntityIds]);
 
   useEffect(() => {
     loadTxns();

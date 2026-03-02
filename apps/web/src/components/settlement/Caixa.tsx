@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 import type { SubclubData, AgentMetric, PlayerMetric } from '@/types/settlement';
 import PosicaoTab from './caixa/PosicaoTab';
 import FluxoTab from './caixa/FluxoTab';
@@ -44,6 +45,10 @@ export default function Caixa({
 }: Props) {
   const { hasPermission } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<CaixaSubTab>('posicao');
+  const subclubEntityIds = useMemo(
+    () => buildSubclubEntityIds(subclub.agents || [], subclub.players || []),
+    [subclub.agents, subclub.players],
+  );
 
   // Reset sub-tab when week changes
   useEffect(() => { setActiveSubTab('posicao'); }, [weekStart]);
@@ -94,6 +99,7 @@ export default function Caixa({
           weekStart={weekStart}
           settlementStatus={settlementStatus}
           onDataChange={onDataChange}
+          subclubEntityIds={subclubEntityIds}
         />
       )}
       {activeSubTab === 'conciliacao' && showConciliacao && (
@@ -106,6 +112,7 @@ export default function Caixa({
           onDataChange={onDataChange}
           agents={agents}
           players={players}
+          subclubEntityIds={subclubEntityIds}
         />
       )}
     </div>

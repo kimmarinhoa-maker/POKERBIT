@@ -60,13 +60,14 @@ interface Props {
   onDataChange: () => void;
   agents: AgentOption[];
   players: PlayerOption[];
+  subclubEntityIds?: Set<string>;
 }
 
 type SubTab = 'chippix' | 'ofx' | 'ledger';
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Conciliacao({ weekStart, clubId, clubName, chippixManagerId, settlementStatus, onDataChange, agents, players }: Props) {
+export default function Conciliacao({ weekStart, clubId, clubName, chippixManagerId, settlementStatus, onDataChange, agents, players, subclubEntityIds }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('chippix');
   const { toast } = useToast();
@@ -90,14 +91,17 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
     try {
       const res = await listLedger(weekStart);
       if (!mountedRef.current) return;
-      if (res.success) setEntries(res.data || []);
+      if (res.success) {
+        const all: LedgerEntry[] = res.data || [];
+        setEntries(subclubEntityIds ? all.filter((e) => subclubEntityIds.has(e.entity_id)) : all);
+      }
     } catch {
       if (!mountedRef.current) return;
       toast('Erro ao carregar movimentacoes do ledger', 'error');
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, toast]);
+  }, [weekStart, toast, subclubEntityIds]);
 
   // Fetch backend-computed ChipPix summary (independent computation path for Verificador)
   const loadBackendSummary = useCallback(async () => {
@@ -239,6 +243,7 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
           agents={agents}
           players={players}
           verificadoOk={verificadoOk}
+          subclubEntityIds={subclubEntityIds}
         />
         </>
       )}
@@ -250,6 +255,7 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
           onDataChange={onDataChange}
           agents={agents}
           players={players}
+          subclubEntityIds={subclubEntityIds}
         />
       )}
       {activeSubTab === 'ledger' && (

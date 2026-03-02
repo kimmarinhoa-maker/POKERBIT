@@ -20,6 +20,7 @@ interface Props {
   weekStart: string;
   settlementStatus: string;
   onDataChange: () => void;
+  subclubEntityIds?: Set<string>;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ function MethodBadge({ method }: { method: string }) {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function FluxoTab({ weekStart, settlementStatus, onDataChange }: Props) {
+export default function FluxoTab({ weekStart, settlementStatus, onDataChange, subclubEntityIds }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const { toast } = useToast();
   const { canAccess } = useAuth();
@@ -71,14 +72,17 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange }: 
     try {
       const res = await listLedger(weekStart);
       if (!mountedRef.current) return;
-      if (res.success) setEntries(res.data || []);
+      if (res.success) {
+        const all: LedgerEntry[] = res.data || [];
+        setEntries(subclubEntityIds ? all.filter((e) => subclubEntityIds.has(e.entity_id)) : all);
+      }
     } catch {
       if (!mountedRef.current) return;
       toast('Erro ao carregar fluxo', 'error');
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [weekStart, toast]);
+  }, [weekStart, toast, subclubEntityIds]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 

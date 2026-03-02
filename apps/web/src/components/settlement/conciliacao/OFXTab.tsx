@@ -31,6 +31,7 @@ export interface OFXTabProps {
   onDataChange: () => void;
   agents: AgentOption[];
   players: PlayerOption[];
+  subclubEntityIds?: Set<string>;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ export default function OFXTab({
   onDataChange,
   agents,
   players,
+  subclubEntityIds,
 }: OFXTabProps) {
   const [txns, setTxns] = useState<BankTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,13 +71,17 @@ export default function OFXTab({
         toast('Erro ao carregar transacoes OFX', 'error');
         return;
       }
-      setTxns(res.data || []);
+      const all: BankTx[] = res.data || [];
+      // Filter by subclub entities: show linked/applied that match, plus all pending (not yet assigned)
+      setTxns(subclubEntityIds
+        ? all.filter((t) => !t.entity_id || subclubEntityIds.has(t.entity_id))
+        : all);
     } catch {
       toast('Erro ao carregar transacoes OFX', 'error');
     } finally {
       setLoading(false);
     }
-  }, [weekStart, toast]);
+  }, [weekStart, toast, subclubEntityIds]);
 
   useEffect(() => {
     loadTxns();
