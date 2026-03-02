@@ -1033,6 +1033,11 @@ export interface ModalityData {
     mainModality: string;
     hands: number;
   }>;
+  topAgentsByRake: Array<{
+    name: string;
+    rake: number;
+    players: number;
+  }>;
   cashVsTournament: {
     cash: { rake: number; players: number; hands: number; pct: number };
     tournament: { rake: number; players: number; hands: number; pct: number };

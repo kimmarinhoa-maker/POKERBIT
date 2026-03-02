@@ -32,6 +32,11 @@ interface ModalityResponse {
     mainModality: string;
     hands: number;
   }>;
+  topAgentsByRake: Array<{
+    name: string;
+    rake: number;
+    players: number;
+  }>;
   cashVsTournament: {
     cash: { rake: number; players: number; hands: number; pct: number };
     tournament: { rake: number; players: number; hands: number; pct: number };
@@ -268,6 +273,20 @@ export async function GET(req: NextRequest) {
           };
         });
 
+      // 3b. Top 10 agents by rake (aggregate from parsedRows)
+      const agentMap = new Map<string, { rake: number; players: number }>();
+      for (const p of parsedRows) {
+        const key = p.agentName || 'SEM AGENTE';
+        const cur = agentMap.get(key) || { rake: 0, players: 0 };
+        cur.rake += p.rakeTotal;
+        cur.players += 1;
+        agentMap.set(key, cur);
+      }
+      const topAgentsByRake = Array.from(agentMap.entries())
+        .map(([name, d]) => ({ name, rake: d.rake, players: d.players }))
+        .sort((a, b) => b.rake - a.rake)
+        .slice(0, 10);
+
       // 4. Cash vs Tournament
       const cashRake = sumModalities(rakeByModality, CASH_MODALITIES);
       const tournamentRake = sumModalities(rakeByModality, TOURNAMENT_MODALITIES);
@@ -460,6 +479,7 @@ export async function GET(req: NextRequest) {
         winningsByModality,
         handsByModality,
         topPlayersByRake,
+        topAgentsByRake,
         cashVsTournament,
         activePlayers,
         topGainersLosers,

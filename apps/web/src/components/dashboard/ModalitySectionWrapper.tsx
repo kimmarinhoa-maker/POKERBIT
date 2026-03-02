@@ -6,12 +6,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import RakeDonutChart from './RakeDonutChart';
 import TopPlayersChart from './TopPlayersChart';
+import TopAgentsChart from './TopAgentsChart';
 import TopGainersLosers from './TopGainersLosers';
 import HandsVolumeChart from './HandsVolumeChart';
 import CashVsTournament from './CashVsTournament';
 import ActivePlayersCard from './ActivePlayersCard';
 import RakeWeeklyComparison from './RakeWeeklyComparison';
-import InactivePlayersAlert from './InactivePlayersAlert';
 
 interface Props {
   data: ModalityData | null;
@@ -66,10 +66,12 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
       {/* Content */}
       {!loading && data && (
         <div className="space-y-4 animate-tab-fade">
-          {/* Row 1: Donut + Top Players */}
+          {/* Row 1: Top 10 Players + Top 10 Agents */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <RakeDonutChart rakeByModality={data.rakeByModality} />
             <TopPlayersChart players={data.topPlayersByRake} />
+            {data.topAgentsByRake && data.topAgentsByRake.length > 0 && (
+              <TopAgentsChart agents={data.topAgentsByRake} />
+            )}
           </div>
 
           {/* Row 2: Top Gainers & Losers (full width card, 2 columns inside) */}
@@ -77,8 +79,9 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             <TopGainersLosers players={data.topGainersLosers} />
           )}
 
-          {/* Row 3: Hands + Cash vs Tournament + Active Players + Rake Semanal */}
+          {/* Row 3: Donut + Cash vs Tournament + Active Players + Rake Semanal */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <RakeDonutChart rakeByModality={data.rakeByModality} />
             <HandsVolumeChart handsByModality={data.handsByModality} />
             <CashVsTournament
               cash={data.cashVsTournament.cash}
@@ -93,11 +96,6 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
               <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
             )}
           </div>
-
-          {/* Row 4: Inactive Players Alert */}
-          {data.inactivePlayers && (
-            <InactivePlayersAlert players={data.inactivePlayers} />
-          )}
         </div>
       )}
     </div>
