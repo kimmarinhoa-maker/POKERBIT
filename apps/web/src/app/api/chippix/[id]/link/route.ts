@@ -13,7 +13,7 @@ export async function PATCH(
       try {
         const { id } = await params;
         const body = await req.json();
-        const { entity_id, entity_name } = body || {};
+        const { entity_id, entity_name, category_id } = body || {};
 
         if (!entity_id || !entity_name) {
           return NextResponse.json(
@@ -22,7 +22,7 @@ export async function PATCH(
           );
         }
 
-        const data = await chipPixService.linkTransaction(ctx.tenantId, id, entity_id, entity_name);
+        const data = await chipPixService.linkTransaction(ctx.tenantId, id, entity_id, entity_name, category_id);
         return NextResponse.json({ success: true, data });
       } catch (err: unknown) {
         return NextResponse.json(

@@ -754,10 +754,13 @@ export class ChipPixService {
   }
 
   // ─── Vincular entidade ─────────────────────────────────────────────
-  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string) {
+  async linkTransaction(tenantId: string, txId: string, entityId: string, entityName: string, categoryId?: string) {
+    const updatePayload: Record<string, any> = { entity_id: entityId, entity_name: entityName };
+    if (categoryId !== undefined) updatePayload.category_id = categoryId || null;
+
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
-      .update({ entity_id: entityId, entity_name: entityName })
+      .update(updatePayload)
       .eq('id', txId)
       .eq('tenant_id', tenantId)
       .select()

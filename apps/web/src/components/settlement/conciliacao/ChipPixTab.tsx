@@ -239,13 +239,18 @@ export default function ChipPixTab({
   }
 
   async function handleLink(txId: string) {
-    if (!linkForm.entity_id || !linkForm.entity_name) return;
+    if (!linkForm.entity_id || !linkForm.entity_name) {
+      toast('Selecione um agente ou jogador para vincular', 'error');
+      return;
+    }
     try {
       const res = await linkChipPixTransaction(txId, linkForm.entity_id, linkForm.entity_name, linkForm.category_id || undefined);
       if (res.success) {
         setLinkingId(null);
         setLinkForm({ entity_id: '', entity_name: '', category_id: '' });
         await loadTxns();
+      } else {
+        toast(res.error || 'Erro ao vincular', 'error');
       }
     } catch {
       toast('Erro ao vincular', 'error');
