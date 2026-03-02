@@ -123,7 +123,7 @@ export function invalidateCache(pathPrefix?: string) {
 
 // ─── Fetch wrapper ─────────────────────────────────────────────────
 
-async function apiFetch<T = any>(
+export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
   useDirectUrl = false,
