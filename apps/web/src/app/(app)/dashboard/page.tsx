@@ -442,6 +442,49 @@ export default function DashboardPage() {
       {/* ── DASHBOARD CONTENT ── */}
       {!loading && d && !notFoundEmpty && (
         <>
+          {/* Lucro Líquido Hero Card */}
+          {(() => {
+            const rakeTotal = f?.rakeTotal ?? 0;
+            const totalTaxas = f?.despesas.taxas ?? 0;
+            const totalCustos = round2(Math.abs(f?.despesas.overlay ?? 0) + Math.abs(f?.despesas.compras ?? 0) + Math.abs(f?.despesas.security ?? 0) + Math.abs(f?.despesas.outros ?? 0));
+            const totalRakeback = f?.despesas.rakeback ?? 0;
+            const ggrTotal = f?.ggrTotal ?? 0;
+            const receitaBruta = round2(rakeTotal + ggrTotal);
+            const lucroLiquido = round2(receitaBruta - totalTaxas - totalCustos - totalRakeback);
+            const margem = receitaBruta > 0.01 ? round2((lucroLiquido / receitaBruta) * 100) : 0;
+            return (
+              <div
+                className={`col-span-full p-5 rounded-xl border-2 mb-5 ${
+                  lucroLiquido >= 0
+                    ? 'border-green-500/30 bg-green-500/5'
+                    : 'border-red-500/30 bg-red-500/5'
+                }`}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">LUCRO LÍQUIDO DA SEMANA</div>
+                    <div className={`text-3xl font-extrabold font-mono ${
+                      lucroLiquido >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {formatBRL(lucroLiquido)}
+                    </div>
+                    <div className="text-sm text-dark-500 mt-1">
+                      Margem: <span className={margem >= 0 ? 'text-green-400' : 'text-red-400'}>{margem.toFixed(1)}%</span>
+                      <span className="text-dark-600 mx-2">·</span>
+                      Receita: {formatBRL(receitaBruta)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">Acerto Liga</div>
+                    <div className={`text-lg font-bold font-mono ${(f?.acertoLiga ?? 0) >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {formatBRL(f?.acertoLiga ?? 0)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* KPI Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-7">
             <KpiCard

@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import ClubLogo from '@/components/ClubLogo';
 import KpiCard from '@/components/ui/KpiCard';
 import { SubclubData } from '@/types/settlement';
+import { calcDRE } from './DRE';
 
 interface Props {
   subclubs: SubclubData[];
@@ -29,6 +30,18 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {}, weekS
     }),
     [subclubs],
   );
+
+  // ─── DRE Consolidado ──────────────────────────────────────────────
+  const dreConsolidado = useMemo(() => {
+    const perClub = subclubs.map((sc) => calcDRE(sc));
+    const receitaBruta = round2(perClub.reduce((s, d) => s + d.receitaBruta, 0));
+    const totalTaxas = round2(perClub.reduce((s, d) => s + d.totalTaxas, 0));
+    const totalCustos = round2(perClub.reduce((s, d) => s + d.totalCustos, 0));
+    const totalRakeback = round2(perClub.reduce((s, d) => s + d.totalRakeback, 0));
+    const lucroLiquido = round2(receitaBruta - totalTaxas - totalCustos - totalRakeback);
+    const margem = receitaBruta > 0.01 ? round2((lucroLiquido / receitaBruta) * 100) : 0;
+    return { receitaBruta, totalTaxas, totalCustos, totalRakeback, lucroLiquido, margem };
+  }, [subclubs]);
 
   return (
     <div>
@@ -230,6 +243,59 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {}, weekS
           </p>
         </div>
       </div>
+      {/* ── DRE Consolidado ─────────────────────────────────────── */}
+      <div
+        className={`mt-4 rounded-xl p-5 border-2 ${
+          dreConsolidado.lucroLiquido >= 0
+            ? 'border-green-500/40 bg-green-500/5'
+            : 'border-red-500/40 bg-red-500/5'
+        }`}
+      >
+        <div className="mb-4">
+          <h3 className="text-[10px] text-dark-500 uppercase tracking-wider font-bold">DRE Consolidado — Lucro do Operador</h3>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-dark-400">Receita Bruta Total</span>
+            <span className="font-mono text-blue-400 font-semibold">{formatBRL(dreConsolidado.receitaBruta)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-dark-400">(-) Total Taxas</span>
+            <span className="font-mono text-red-400">{formatBRL(-dreConsolidado.totalTaxas)}</span>
+          </div>
+          {dreConsolidado.totalCustos > 0.01 && (
+            <div className="flex justify-between items-center">
+              <span className="text-dark-400">(-) Total Custos</span>
+              <span className="font-mono text-orange-400">{formatBRL(-dreConsolidado.totalCustos)}</span>
+            </div>
+          )}
+          {dreConsolidado.totalRakeback > 0.01 && (
+            <div className="flex justify-between items-center">
+              <span className="text-dark-400">(-) Total Rakeback</span>
+              <span className="font-mono text-amber-400">{formatBRL(-dreConsolidado.totalRakeback)}</span>
+            </div>
+          )}
+
+          <div className="border-t-2 border-dark-600/60 pt-3 mt-3 flex items-center justify-between">
+            <div>
+              <span className="text-base font-bold text-white">LUCRO LÍQUIDO CONSOLIDADO</span>
+              <span className={`ml-3 text-xs ${dreConsolidado.margem >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                Margem: {dreConsolidado.margem.toFixed(1)}%
+              </span>
+            </div>
+            <span
+              className={`font-mono text-2xl font-extrabold ${
+                dreConsolidado.lucroLiquido >= 0 ? 'text-green-400' : 'text-red-400'
+              } explainable inline-block`}
+              title={`Lucro = ${formatBRL(dreConsolidado.receitaBruta)} - ${formatBRL(dreConsolidado.totalTaxas)} - ${formatBRL(dreConsolidado.totalCustos)} - ${formatBRL(dreConsolidado.totalRakeback)}`}
+            >
+              {formatBRL(dreConsolidado.lucroLiquido)}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* ── Consolidado WhatsApp Modal ─────────────────────────── */}
       {showLigaMsg && (() => {
         const totalPlayers = subclubs.reduce((s, sc) => s + sc.totals.players, 0);

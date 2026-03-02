@@ -2,12 +2,14 @@
 
 import { useRef, useState, useMemo } from 'react';
 import { formatBRL, sendWhatsApp } from '@/lib/api';
+import { round2 } from '@/lib/formatters';
 import { exportCsv } from '@/lib/exportCsv';
 import { useToast } from '@/components/Toast';
 import { SubclubData, PlayerMetric } from '@/types/settlement';
 import { buildClubMessage } from '@/lib/whatsappMessages';
 import ClubLogo from '@/components/ClubLogo';
 import KpiCard from '@/components/ui/KpiCard';
+import { calcDRE } from './DRE';
 
 interface Props {
   subclub: SubclubData;
@@ -26,6 +28,9 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
   const [showPreview, setShowPreview] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const { toast } = useToast();
+
+  // ─── DRE calculation (lucro líquido) ──────────────────────────────
+  const dre = useMemo(() => calcDRE(subclub), [subclub]);
 
   // ─── Agent grouping (for statement + CSV) ───────────────────────
   const agentGroups = useMemo(() => {
@@ -513,6 +518,33 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
             ring="ring-1 ring-amber-700/30"
             tooltip={`resultado = ganhos + rake + ggr = ${formatBRL(totals.ganhos)} + ${formatBRL(totals.rake)} + ${formatBRL(totals.ggr)}`}
           />
+        </div>
+
+        {/* ── Lucro do Clube (destaque) ────────────────────────────── */}
+        <div
+          className={`rounded-xl p-5 mb-5 border-2 ${
+            dre.lucroLiquido >= 0
+              ? 'border-green-500/40 bg-green-500/5'
+              : 'border-red-500/40 bg-red-500/5'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-dark-500 uppercase tracking-wider font-bold mb-1">LUCRO DO CLUBE (Operador)</div>
+              <div className="text-xs text-dark-500">Rake − Taxas − Custos − Rakeback</div>
+            </div>
+            <div className="text-right">
+              <div
+                className={`font-mono text-2xl font-extrabold ${dre.lucroLiquido >= 0 ? 'text-green-400' : 'text-red-400'} explainable inline-block`}
+                title={`Lucro = Receita (${formatBRL(dre.receitaBruta)}) - Taxas (${formatBRL(dre.totalTaxas)}) - Custos (${formatBRL(dre.totalCustos)}) - RB (${formatBRL(dre.totalRakeback)})`}
+              >
+                {formatBRL(dre.lucroLiquido)}
+              </div>
+              <div className={`text-xs mt-0.5 ${dre.margem >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                Margem: {dre.margem.toFixed(1)}%
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Taxas + Lancamentos (side by side) ─────────────────── */}
