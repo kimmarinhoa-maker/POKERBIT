@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       const weekStart = url.searchParams.get('week_start') || undefined;
       const status = url.searchParams.get('status') || undefined;
       const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 100));
+      const limit = Math.min(5000, Math.max(1, Number(url.searchParams.get('limit')) || 5000));
 
       if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
         return NextResponse.json(

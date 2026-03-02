@@ -368,7 +368,7 @@ export class ChipPixService {
         .from('ledger_entries')
         .select('*')
         .eq('tenant_id', tenantId)
-        .in('source', ['chippix', 'chippix_ignored'])
+        .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
         .order('amount', { ascending: false });
 
       if (weekStart) query = query.eq('week_start', weekStart);
@@ -387,7 +387,7 @@ export class ChipPixService {
       .from('ledger_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .in('source', ['chippix', 'chippix_ignored']);
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee']);
 
     if (weekStart) countQuery = countQuery.eq('week_start', weekStart);
 
@@ -398,7 +398,7 @@ export class ChipPixService {
       .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
-      .in('source', ['chippix', 'chippix_ignored'])
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
       .order('amount', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -843,6 +843,29 @@ export class ChipPixService {
 
     if (error) throw new Error(`Erro ao excluir: ${error.message}`);
     return { id: txId };
+  }
+
+  // ─── Limpar TODOS os registros ChipPix de uma semana ──────────────
+  async clearWeek(tenantId: string, weekStart: string) {
+    const { count } = await supabaseAdmin
+      .from('ledger_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
+      .eq('is_reconciled', false);
+
+    const { error } = await supabaseAdmin
+      .from('ledger_entries')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
+      .eq('is_reconciled', false);
+
+    if (error) throw new Error(`Erro ao limpar ChipPix: ${error.message}`);
+
+    return { deleted: count || 0 };
   }
 }
 
