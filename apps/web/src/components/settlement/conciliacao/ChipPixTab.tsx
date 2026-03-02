@@ -62,6 +62,7 @@ export default function ChipPixTab({
 
   // Import summary (Manager Trade Record from Suprema)
   const [importSummary, setImportSummary] = useState<Record<string, any> | null>(null);
+  const [managerToClub, setManagerToClub] = useState<Record<string, { org_id: string; org_name: string }>>({});
   const [comparisonOpen, setComparisonOpen] = useState(true);
 
   const loadTxns = useCallback(async () => {
@@ -76,8 +77,9 @@ export default function ChipPixTab({
         return;
       }
       setTxns(txnRes.data || []);
-      if (importRes.success && importRes.data?.has_data) {
-        setImportSummary(importRes.data.operators);
+      if (importRes.success && importRes.data) {
+        if (importRes.data.has_data) setImportSummary(importRes.data.operators);
+        if (importRes.data.manager_to_club) setManagerToClub(importRes.data.manager_to_club);
       }
     } catch {
       toast('Erro ao carregar transacoes ChipPix', 'error');
@@ -407,32 +409,42 @@ export default function ChipPixTab({
       </div>
 
       {/* ── Comparison View (ChipPix Extrato vs Suprema Trade) ──── */}
-      {importSummary && Object.keys(importSummary).length > 0 && (
-        <div className="card mb-5 overflow-hidden">
-          <button
-            onClick={() => setComparisonOpen((o) => !o)}
-            className="w-full flex items-center justify-between py-1 text-left"
-          >
-            <h3 className="text-sm font-semibold text-dark-300">
-              Cruzamento: Extrato ChipPix vs Suprema
-            </h3>
-            <span className="text-dark-500 text-xs">{comparisonOpen ? '\u25B2 Recolher' : '\u25BC Expandir'}</span>
-          </button>
+      {importSummary && Object.keys(importSummary).length > 0 && (() => {
+        // Find which operator belongs to the current subclub
+        const myManagerKey = Object.keys(managerToClub).find(
+          (k) => managerToClub[k].org_id === clubId,
+        );
+        const myOp = myManagerKey ? importSummary[myManagerKey] : null;
+        // Also check if there's extrato data (uploaded ChipPix)
+        const hasExtrato = txns.length > 0;
 
-          {comparisonOpen && (
-            <div className="mt-3 space-y-3">
-              {Object.entries(importSummary).map(([key, op]: [string, any]) => {
-                const diffIN = Math.abs(kpis.totalEntrada - op.totalIN);
-                const diffOUT = Math.abs(kpis.totalSaida - op.totalOUT);
-                const okIN = diffIN < 1;
-                const okOUT = diffOUT < 1;
+        return (
+          <div className="card mb-5 overflow-hidden">
+            <button
+              onClick={() => setComparisonOpen((o) => !o)}
+              className="w-full flex items-center justify-between py-1 text-left"
+            >
+              <h3 className="text-sm font-semibold text-dark-300">
+                Cruzamento: Extrato ChipPix vs Suprema
+              </h3>
+              <span className="text-dark-500 text-xs">{comparisonOpen ? '\u25B2 Recolher' : '\u25BC Expandir'}</span>
+            </button>
 
-                return (
-                  <div key={key} className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-4">
+            {comparisonOpen && (
+              <div className="mt-3 space-y-3">
+                {!myManagerKey && (
+                  <div className="text-[11px] text-amber-400 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
+                    Este subclube nao tem <strong>ChipPix Manager ID</strong> configurado.
+                    Configure em <strong>Config &gt; Estrutura</strong> para cruzar dados automaticamente.
+                  </div>
+                )}
+
+                {myOp && (
+                  <div className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-bold text-blue-400">{op.manager}</span>
+                      <span className="text-sm font-bold text-blue-400">{myOp.manager}</span>
                       <span className="text-[10px] text-dark-500">
-                        {op.txnCount} txns &middot; {op.playerCount} jogadores
+                        {myOp.txnCount} txns &middot; {myOp.playerCount} jogadores
                       </span>
                     </div>
 
@@ -440,66 +452,97 @@ export default function ChipPixTab({
                       <thead>
                         <tr className="text-dark-500">
                           <th className="text-left py-1 pr-3"></th>
-                          <th className="text-right py-1 px-3">Extrato ChipPix</th>
+                          {hasExtrato && <th className="text-right py-1 px-3">Extrato ChipPix</th>}
                           <th className="text-right py-1 px-3">Suprema Trade</th>
-                          <th className="text-right py-1 pl-3">Diferenca</th>
+                          {hasExtrato && <th className="text-right py-1 pl-3">Diferenca</th>}
                         </tr>
                       </thead>
                       <tbody className="text-dark-300">
                         <tr className="border-t border-dark-700/30">
                           <td className="py-1.5 pr-3 text-dark-400">Entradas (bruto)</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(kpis.totalEntrada)}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(op.totalIN)}</td>
-                          <td className={`py-1.5 pl-3 text-right font-mono font-bold ${okIN ? 'text-green-400' : 'text-red-400'}`}>
-                            {okIN ? '\u2713 OK' : formatBRL(diffIN)}
-                          </td>
+                          {hasExtrato && (
+                            <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(kpis.totalEntrada)}</td>
+                          )}
+                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">{formatBRL(myOp.totalIN)}</td>
+                          {hasExtrato && (() => {
+                            const diff = Math.abs(kpis.totalEntrada - myOp.totalIN);
+                            const ok = diff < 1;
+                            return (
+                              <td className={`py-1.5 pl-3 text-right font-mono font-bold ${ok ? 'text-green-400' : 'text-red-400'}`}>
+                                {ok ? '\u2713 OK' : formatBRL(diff)}
+                              </td>
+                            );
+                          })()}
                         </tr>
                         <tr className="border-t border-dark-700/30">
                           <td className="py-1.5 pr-3 text-dark-400">Saidas (bruto)</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(kpis.totalSaida)}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(op.totalOUT)}</td>
-                          <td className={`py-1.5 pl-3 text-right font-mono font-bold ${okOUT ? 'text-green-400' : 'text-red-400'}`}>
-                            {okOUT ? '\u2713 OK' : formatBRL(diffOUT)}
-                          </td>
+                          {hasExtrato && (
+                            <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(kpis.totalSaida)}</td>
+                          )}
+                          <td className="py-1.5 px-3 text-right font-mono text-red-400">{formatBRL(myOp.totalOUT)}</td>
+                          {hasExtrato && (() => {
+                            const diff = Math.abs(kpis.totalSaida - myOp.totalOUT);
+                            const ok = diff < 1;
+                            return (
+                              <td className={`py-1.5 pl-3 text-right font-mono font-bold ${ok ? 'text-green-400' : 'text-red-400'}`}>
+                                {ok ? '\u2713 OK' : formatBRL(diff)}
+                              </td>
+                            );
+                          })()}
                         </tr>
-                        <tr className="border-t border-dark-700/30">
-                          <td className="py-1.5 pr-3 text-dark-400">Taxas transacao</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-amber-400">{formatBRL(kpis.totalTaxas)}</td>
-                          <td className="py-1.5 px-3 text-right font-mono text-dark-500">-</td>
-                          <td className="py-1.5 pl-3 text-right font-mono text-dark-500">-</td>
-                        </tr>
+                        {hasExtrato && (
+                          <tr className="border-t border-dark-700/30">
+                            <td className="py-1.5 pr-3 text-dark-400">Taxas transacao</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-amber-400">{formatBRL(kpis.totalTaxas)}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-dark-500">-</td>
+                            <td className="py-1.5 pl-3 text-right font-mono text-dark-500">-</td>
+                          </tr>
+                        )}
                         <tr className="border-t border-dark-700/50 bg-dark-800/30 font-semibold">
-                          <td className="py-1.5 pr-3 text-white">Liquido</td>
-                          <td className={`py-1.5 px-3 text-right font-mono ${kpis.impacto >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatBRL(kpis.impacto - kpis.totalTaxas)}
+                          <td className="py-1.5 pr-3 text-white">Saldo</td>
+                          {hasExtrato && (
+                            <td className={`py-1.5 px-3 text-right font-mono ${kpis.impacto >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {formatBRL(kpis.impacto - kpis.totalTaxas)}
+                            </td>
+                          )}
+                          <td className={`py-1.5 px-3 text-right font-mono ${myOp.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {formatBRL(myOp.saldo)}
                           </td>
-                          <td className={`py-1.5 px-3 text-right font-mono ${op.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatBRL(op.saldo)}
-                          </td>
-                          <td className="py-1.5 pl-3 text-right font-mono text-dark-400">
-                            {formatBRL(Math.abs((kpis.impacto - kpis.totalTaxas) - op.saldo))}
-                          </td>
+                          {hasExtrato && (
+                            <td className="py-1.5 pl-3 text-right font-mono text-dark-400">
+                              {formatBRL(Math.abs((kpis.impacto - kpis.totalTaxas) - myOp.saldo))}
+                            </td>
+                          )}
                         </tr>
                       </tbody>
                     </table>
 
-                    {okIN && okOUT && (
-                      <div className="mt-2 text-[10px] text-green-400">
-                        Valores brutos cruzam com a planilha Suprema
-                      </div>
-                    )}
-                    {(!okIN || !okOUT) && (
-                      <div className="mt-2 text-[10px] text-amber-400">
-                        Diferenca detectada entre Extrato e Suprema (pode ser taxas)
+                    {hasExtrato && (() => {
+                      const okIN = Math.abs(kpis.totalEntrada - myOp.totalIN) < 1;
+                      const okOUT = Math.abs(kpis.totalSaida - myOp.totalOUT) < 1;
+                      return okIN && okOUT ? (
+                        <div className="mt-2 text-[10px] text-green-400">
+                          Valores brutos cruzam com a planilha Suprema
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-[10px] text-amber-400">
+                          Diferenca detectada entre Extrato e Suprema (pode ser taxas)
+                        </div>
+                      );
+                    })()}
+
+                    {!hasExtrato && (
+                      <div className="mt-2 text-[10px] text-dark-500">
+                        Importe o extrato ChipPix para cruzar com os dados da Suprema
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Search + Filters ─────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">

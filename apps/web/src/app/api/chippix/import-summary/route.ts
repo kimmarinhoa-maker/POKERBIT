@@ -44,6 +44,21 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      // Fetch org → chippix_manager_id mapping for subclubs
+      const { data: orgs } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name, chippix_manager_id')
+        .eq('tenant_id', ctx.tenantId)
+        .eq('type', 'SUBCLUB')
+        .not('chippix_manager_id', 'is', null);
+
+      const managerToClub: Record<string, { org_id: string; org_name: string }> = {};
+      for (const org of orgs || []) {
+        if (org.chippix_manager_id) {
+          managerToClub[org.chippix_manager_id] = { org_id: org.id, org_name: org.name };
+        }
+      }
+
       if (!data || !data.chippix_import_data) {
         return NextResponse.json({
           success: true,
@@ -51,6 +66,7 @@ export async function GET(req: NextRequest) {
             settlement_id: data?.id || null,
             week_start: data?.week_start || weekStart,
             operators: {},
+            manager_to_club: managerToClub,
             has_data: false,
           },
         });
@@ -78,6 +94,7 @@ export async function GET(req: NextRequest) {
           settlement_id: data.id,
           week_start: data.week_start,
           operators: summary,
+          manager_to_club: managerToClub,
           has_data: true,
         },
       });
