@@ -228,6 +228,33 @@ class ImportPreviewService {
       };
     }
 
+    // 5.5) Se tenant nao usa subclubes, forcar todos para 'ok' (sem resolucao de subclube)
+    const { data: tenantRow } = await supabaseAdmin
+      .from('tenants')
+      .select('has_subclubs')
+      .eq('id', tenantId)
+      .single();
+    const tenantHasSubclubs = tenantRow?.has_subclubs !== false;
+
+    if (!tenantHasSubclubs) {
+      // Get CLUB org name as fallback clube name
+      const clubOrgName = existingSubclubs.length > 0 ? existingSubclubs[0].name : 'CLUB';
+      const { data: clubOrg } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('tenant_id', tenantId)
+        .eq('type', 'CLUB')
+        .maybeSingle();
+      const clubName = clubOrg?.name || clubOrgName;
+
+      for (const p of (parseResult.all || [])) {
+        if (p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
+          p._status = 'ok';
+          p.clube = clubName;
+        }
+      }
+    }
+
     // 6) Analisar resultados
     const allPlayers: any[] = parseResult.all || [];
     const warnings: string[] = [];

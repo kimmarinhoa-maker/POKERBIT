@@ -32,6 +32,7 @@ interface UploadStepProps {
   setWeekStartOverride: (v: string) => void;
   showWeekOverride: boolean;
   setShowWeekOverride: (v: boolean) => void;
+  hasSubclubs: boolean;
   loading: boolean;
   error: string;
   onPreview: () => void;
@@ -65,6 +66,7 @@ export default function UploadStep({
   setWeekStartOverride,
   showWeekOverride,
   setShowWeekOverride,
+  hasSubclubs,
   loading,
   error,
   onPreview,
@@ -150,8 +152,8 @@ export default function UploadStep({
         )}
       </div>
 
-      {/* PPPoker: subclube destino */}
-      {derivedPlatform === 'pppoker' && (
+      {/* PPPoker: subclube destino (only when tenant uses subclubes) */}
+      {derivedPlatform === 'pppoker' && hasSubclubs && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-dark-300 mb-1.5">Subclube destino</label>
           <select
@@ -267,7 +269,7 @@ export default function UploadStep({
 
       <button
         onClick={onPreview}
-        disabled={!file || loading || (derivedPlatform === 'pppoker' && !pppokerSubclube)}
+        disabled={!file || loading || (derivedPlatform === 'pppoker' && hasSubclubs && !pppokerSubclube)}
         className="btn-primary w-full py-3 text-lg mt-6"
         aria-label="Pre-analisar arquivo"
       >

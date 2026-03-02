@@ -65,6 +65,6 @@ export async function PATCH(req: NextRequest) {
         );
       }
     },
-    { roles: ['OWNER'] },
+    { roles: ['OWNER', 'ADMIN'] },
   );
 }

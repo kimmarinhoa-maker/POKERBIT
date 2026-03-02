@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 
@@ -16,6 +17,7 @@ import SuccessStep, { ConfirmResult } from '@/components/import/SuccessStep';
 
 export default function ImportWizardPage() {
   usePageTitle('Importar');
+  const { hasSubclubs } = useAuth();
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -278,6 +280,7 @@ export default function ImportWizardPage() {
           setWeekStartOverride={setWeekStartOverride}
           showWeekOverride={showWeekOverride}
           setShowWeekOverride={setShowWeekOverride}
+          hasSubclubs={hasSubclubs}
           loading={loading}
           error={error}
           onPreview={handlePreview}

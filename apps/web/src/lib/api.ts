@@ -298,6 +298,10 @@ export async function createTenantSubclubes(tenantId: string, names: string[]) {
   });
 }
 
+export async function deleteTenant(tenantId: string) {
+  return apiFetch(`/tenants/${tenantId}`, { method: 'DELETE' });
+}
+
 export async function refreshTenantList() {
   const res = await apiFetch('/auth/me');
   if (res.success && res.data) {
@@ -587,6 +591,10 @@ export async function updateFeeConfig(fees: Array<{ name: string; rate: number; 
     method: 'PUT',
     body: JSON.stringify({ fees, club_id: clubId }),
   });
+}
+
+export async function deleteFee(feeId: string) {
+  return apiFetch(`/config/fees/${feeId}`, { method: 'DELETE' });
 }
 
 export async function getClubAdjustments(weekStart: string, subclubId?: string) {
