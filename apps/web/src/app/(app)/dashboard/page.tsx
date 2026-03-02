@@ -221,7 +221,7 @@ export default function DashboardPage() {
 
           // Build chart data from recent settlements (up to 8) — parallel fetch
           const recentSettlements = res.data.slice(0, 8).reverse();
-          Promise.all(recentSettlements.map((s) => getSettlementFull(s.id))).then((results) => {
+          Promise.all(recentSettlements.map((s: any) => getSettlementFull(s.id))).then((results) => {
             const chartPoints: typeof chartData = [];
             results.forEach((full, i) => {
               if (full.success && full.data?.dashboardTotals) {
