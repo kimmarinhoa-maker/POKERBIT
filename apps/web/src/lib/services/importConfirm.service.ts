@@ -50,11 +50,12 @@ interface ConfirmOptions {
   fileBuffer: Buffer;
   uploadedBy: string;
   platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
+  pppokerSubclube?: string; // Subclube destino para PPPoker
 }
 
 class ImportConfirmService {
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
-    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema' } = opts;
+    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube } = opts;
     const warnings: string[] = [];
 
     // ── 0) Platform guard ─────────────────────────────────────────
@@ -66,6 +67,7 @@ class ImportConfirmService {
 
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const config = await importPreviewService.loadTenantConfig(tenantId);
+    if (pppokerSubclube) config.pppokerSubclube = pppokerSubclube;
     const parseWorkbook = platform === 'pppoker' ? parsePPPoker : parseSuprema;
     const parseResult = parseWorkbook(workbook, config);
 

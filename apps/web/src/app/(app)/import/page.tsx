@@ -23,6 +23,8 @@ export default function ImportWizardPage() {
   const [weekStartOverride, setWeekStartOverride] = useState('');
   const [showWeekOverride, setShowWeekOverride] = useState(false);
   const [platform, setPlatform] = useState<Platform>('suprema');
+  const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
+  const [pppokerSubclube, setPppokerSubclube] = useState('');
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -47,10 +49,16 @@ export default function ImportWizardPage() {
   const { toast } = useToast();
 
   const loadClubs = useCallback(async () => {
-    const res = await listOrganizations('CLUB');
-    if (res.success) {
-      setClubs(res.data || []);
-      if (res.data?.length > 0) setClubId(res.data[0].id);
+    const [clubRes, subclubRes] = await Promise.all([
+      listOrganizations('CLUB'),
+      listOrganizations('SUBCLUB'),
+    ]);
+    if (clubRes.success) {
+      setClubs(clubRes.data || []);
+      if (clubRes.data?.length > 0) setClubId(clubRes.data[0].id);
+    }
+    if (subclubRes.success) {
+      setSubclubs(subclubRes.data || []);
     }
   }, []);
 
@@ -69,7 +77,7 @@ export default function ImportWizardPage() {
     setPreview(null);
 
     try {
-      const res = await importPreview(file, weekStartOverride || undefined, platform);
+      const res = await importPreview(file, weekStartOverride || undefined, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');
@@ -191,7 +199,7 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart, platform);
+      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
       if (res.success && res.data) {
         setConfirmResult(res.data);
       } else {
@@ -221,6 +229,7 @@ export default function ImportWizardPage() {
     setBulkAgentName('');
     setBulkNewAgentName('');
     setPlatform('suprema');
+    setPppokerSubclube('');
   }
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -241,6 +250,9 @@ export default function ImportWizardPage() {
           clubs={clubs}
           clubId={clubId}
           setClubId={setClubId}
+          subclubs={subclubs}
+          pppokerSubclube={pppokerSubclube}
+          setPppokerSubclube={setPppokerSubclube}
           weekStartOverride={weekStartOverride}
           setWeekStartOverride={setWeekStartOverride}
           showWeekOverride={showWeekOverride}

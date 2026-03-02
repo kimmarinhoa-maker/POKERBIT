@@ -298,11 +298,12 @@ export async function uploadXLSX(file: File, clubId: string, weekStart: string) 
 }
 
 // Import Wizard — Preview (não toca no banco)
-export async function importPreview(file: File, weekStartOverride?: string, platform?: string) {
+export async function importPreview(file: File, weekStartOverride?: string, platform?: string, pppokerSubclube?: string) {
   const form = new FormData();
   form.append('file', file);
   if (weekStartOverride) form.append('week_start', weekStartOverride);
   if (platform) form.append('platform', platform);
+  if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
 
   return apiFetch(
     '/imports/preview',
@@ -315,12 +316,13 @@ export async function importPreview(file: File, weekStartOverride?: string, plat
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
-export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string) {
+export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string, pppokerSubclube?: string) {
   const form = new FormData();
   form.append('file', file);
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
   if (platform) form.append('platform', platform);
+  if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
 
   return apiFetch(
     '/imports/confirm',

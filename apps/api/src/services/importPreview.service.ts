@@ -125,8 +125,9 @@ class ImportPreviewService {
     fileName: string;
     weekStartOverride?: string; // Se o usuário forçar uma semana
     platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
+    pppokerSubclube?: string; // Subclube destino para PPPoker
   }): Promise<ImportPreviewResponse> {
-    const { tenantId, fileBuffer, fileName, weekStartOverride, platform = 'suprema' } = params;
+    const { tenantId, fileBuffer, fileName, weekStartOverride, platform = 'suprema', pppokerSubclube } = params;
 
     // 1) Ler o XLSX
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -201,6 +202,7 @@ class ImportPreviewService {
     const existingSubclubs = await this.loadSubclubs(tenantId);
 
     // 5) Parse do XLSX (em memória, nada no banco) — dispatch by platform
+    if (pppokerSubclube) config.pppokerSubclube = pppokerSubclube;
     const parseWorkbook = platform === 'pppoker' ? parsePPPoker : parseSuprema;
     const parseResult = parseWorkbook(workbook, config);
 

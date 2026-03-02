@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
 
         const weekStartOverride = fields.week_start || undefined;
         const platform = fields.platform || 'suprema';
+        const pppokerSubclube = fields.pppoker_subclube || undefined;
 
         const preview = await importPreviewService.preview({
           tenantId: ctx.tenantId,
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
           fileName: file.originalname,
           weekStartOverride,
           platform,
+          pppokerSubclube,
         });
 
         // Also return tenant subclubs for binding dropdowns

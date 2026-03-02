@@ -19,6 +19,9 @@ interface UploadStepProps {
   clubs: Array<{ id: string; name: string }>;
   clubId: string;
   setClubId: (id: string) => void;
+  subclubs: Array<{ id: string; name: string }>;
+  pppokerSubclube: string;
+  setPppokerSubclube: (v: string) => void;
   weekStartOverride: string;
   setWeekStartOverride: (v: string) => void;
   showWeekOverride: boolean;
@@ -49,6 +52,9 @@ export default function UploadStep({
   clubs,
   clubId,
   setClubId,
+  subclubs,
+  pppokerSubclube,
+  setPppokerSubclube,
   weekStartOverride,
   setWeekStartOverride,
   showWeekOverride,
@@ -111,6 +117,26 @@ export default function UploadStep({
           ))}
         </div>
       </div>
+
+      {/* PPPoker: subclube destino */}
+      {platform === 'pppoker' && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-dark-300 mb-1.5">Subclube destino</label>
+          <select
+            value={pppokerSubclube}
+            onChange={(e) => setPppokerSubclube(e.target.value)}
+            className="input w-full"
+          >
+            <option value="">Selecionar subclube...</option>
+            {subclubs.map((sc) => (
+              <option key={sc.id} value={sc.name}>
+                {sc.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-dark-500 mt-1">No PPPoker todos os jogadores pertencem a um unico subclube</p>
+        </div>
+      )}
 
       <div
         onDrop={handleDrop}
@@ -222,7 +248,7 @@ export default function UploadStep({
 
       <button
         onClick={onPreview}
-        disabled={!file || loading}
+        disabled={!file || loading || (platform === 'pppoker' && !pppokerSubclube)}
         className="btn-primary w-full py-3 text-lg mt-6"
         aria-label="Pre-analisar arquivo"
       >
