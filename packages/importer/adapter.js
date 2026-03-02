@@ -483,6 +483,11 @@ function parseStatisticsBreakdown(statsRows) {
       if (entry.spinLocal > 0) {
         entry.rake.spin = entry.spinLocal;
       }
+
+      // ── TLT (Time Limited Tournament): add to mtt_nlh ──
+      if (entry.tlt > 0) {
+        entry.rake.mtt_nlh = (entry.rake.mtt_nlh || 0) + entry.tlt;
+      }
     }
 
     map[pid] = entry;
