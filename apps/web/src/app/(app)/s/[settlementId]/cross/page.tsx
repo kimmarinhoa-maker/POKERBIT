@@ -8,6 +8,8 @@ import { useToast } from '@/components/Toast';
 import { AgentMetric } from '@/types/settlement';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { AlertCircle, Search } from 'lucide-react';
@@ -186,11 +188,9 @@ export default function CrossClubPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20 min-h-[60vh]">
-        <div className="text-center">
-          <Spinner size="xl" className="mx-auto mb-4" />
-          <p className="text-dark-400 text-sm">Carregando dados cross-club...</p>
-        </div>
+      <div className="p-4 lg:p-8 animate-tab-fade">
+        <KpiSkeleton count={4} />
+        <TableSkeleton columns={6} rows={8} />
       </div>
     );
   }

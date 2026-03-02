@@ -11,6 +11,8 @@ import LockWeekModal from '@/components/settlement/LockWeekModal';
 import KpiCard from '@/components/ui/KpiCard';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 import ClubLogo from '@/components/ClubLogo';
 import EmptyState from '@/components/ui/EmptyState';
 import { AlertCircle } from 'lucide-react';
@@ -95,11 +97,18 @@ export default function SettlementOverviewPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20 min-h-[60vh]">
-        <div className="text-center">
-          <Spinner size="xl" className="mx-auto mb-4" />
-          <p className="text-dark-400 text-sm">Carregando settlement...</p>
+      <div className="p-4 lg:p-8 animate-tab-fade">
+        <KpiSkeleton count={5} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-36">
+              <div className="h-5 skeleton-shimmer w-28 mb-3" style={{ animationDelay: `${i * 0.1}s` }} />
+              <div className="h-4 skeleton-shimmer w-36 mb-2" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
+              <div className="h-4 skeleton-shimmer w-24" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
+            </div>
+          ))}
         </div>
+        <TableSkeleton columns={4} rows={5} />
       </div>
     );
   }

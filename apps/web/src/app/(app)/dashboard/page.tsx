@@ -13,6 +13,7 @@ import PendenciasCard from '@/components/dashboard/PendenciasCard';
 import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import WeekDatePicker from '@/components/WeekDatePicker';
 import Spinner from '@/components/Spinner';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
 import type { ClubeData } from '@/types/dashboard';
@@ -218,24 +219,25 @@ export default function DashboardPage() {
             });
           }
 
-          // Build chart data from recent settlements (up to 8)
-          const chartPoints: typeof chartData = [];
+          // Build chart data from recent settlements (up to 8) — parallel fetch
           const recentSettlements = res.data.slice(0, 8).reverse();
-          for (const s of recentSettlements) {
-            const full = await getSettlementFull(s.id);
-            if (full.success && full.data?.dashboardTotals) {
-              const dt = full.data.dashboardTotals;
-              const ws2 = s.week_start;
-              const [, m2, d2] = ws2.split('-');
-              chartPoints.push({
-                label: `${d2}/${m2}`,
-                rake: Number(dt.rake ?? 0),
-                resultado: Number(dt.resultado ?? 0),
-                acerto: Number(dt.acertoLiga ?? 0),
-              });
-            }
-          }
-          setChartData(chartPoints);
+          Promise.all(recentSettlements.map((s) => getSettlementFull(s.id))).then((results) => {
+            const chartPoints: typeof chartData = [];
+            results.forEach((full, i) => {
+              if (full.success && full.data?.dashboardTotals) {
+                const dt = full.data.dashboardTotals;
+                const ws2 = recentSettlements[i].week_start;
+                const [, m2, d2] = ws2.split('-');
+                chartPoints.push({
+                  label: `${d2}/${m2}`,
+                  rake: Number(dt.rake ?? 0),
+                  resultado: Number(dt.resultado ?? 0),
+                  acerto: Number(dt.acertoLiga ?? 0),
+                });
+              }
+            });
+            setChartData(chartPoints);
+          });
         } else {
           setNotFoundEmpty(true);
         }
@@ -408,8 +410,21 @@ export default function DashboardPage() {
 
       {/* ── LOADING ── */}
       {loading && (
-        <div className="flex justify-center py-32">
-          <Spinner size="md" />
+        <div className="animate-tab-fade">
+          <KpiSkeleton count={5} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6">
+                <div className="h-5 skeleton-shimmer w-24 mb-4" style={{ animationDelay: `${i * 0.1}s` }} />
+                <div className="h-4 skeleton-shimmer w-32 mb-2" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
+                <div className="h-4 skeleton-shimmer w-40" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
+              </div>
+            ))}
+          </div>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-48">
+            <div className="h-4 skeleton-shimmer w-32 mb-4" />
+            <div className="h-full skeleton-shimmer rounded" />
+          </div>
         </div>
       )}
 

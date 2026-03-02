@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { getOrgTree } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
+import KpiSkeleton from '@/components/ui/KpiSkeleton';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { Building2 } from 'lucide-react';
@@ -59,8 +61,13 @@ export default function ClubsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner />
+      <div className="p-4 lg:p-8 max-w-5xl animate-tab-fade">
+        <div className="mb-6">
+          <div className="h-7 skeleton-shimmer w-48 mb-2" />
+          <div className="h-4 skeleton-shimmer w-36" />
+        </div>
+        <KpiSkeleton count={3} />
+        <TableSkeleton columns={4} rows={5} />
       </div>
     );
   }
