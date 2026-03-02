@@ -35,7 +35,8 @@ const commands: CommandItem[] = [
   { label: 'Visao Geral', href: '/s', icon: Eye, section: 'Fechamentos', keywords: 'overview resumo settlement' },
   { label: 'Liga Global', href: '/liga-global', icon: Trophy, section: 'Fechamentos', keywords: 'consolidado total' },
   { label: 'Agentes / Jogadores', href: '/players', icon: Users, section: 'Cadastro', keywords: 'player agent cadastro' },
-  { label: 'Configuracao', href: '/config', icon: Settings, section: 'Config', keywords: 'settings setup equipe membros permissoes' },
+  { label: 'Configuracao', href: '/config', icon: Settings, section: 'Config', keywords: 'settings setup estrutura pagamentos taxas' },
+  { label: 'Equipe', href: '/config/equipe', icon: Users, section: 'Config', keywords: 'membros permissoes funcao roles' },
 ];
 
 const RECENT_KEY = 'cmd-palette-recent';

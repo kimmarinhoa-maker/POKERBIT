@@ -67,6 +67,7 @@ const navSections: NavSection[] = [
     adminOnly: true,
     items: [
       { href: '/config', label: 'Configuracao', icon: Settings },
+      { href: '/config/equipe', label: 'Equipe', icon: Users },
     ],
   },
 ];
@@ -78,7 +79,8 @@ function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   if (href === '/s') return pathname.startsWith('/s');
   if (href === '/import') return pathname === '/import';
-  if (href === '/config') return pathname === '/config';
+  if (href === '/config') return pathname === '/config' || (pathname.startsWith('/config/') && pathname !== '/config/equipe');
+  if (href === '/config/equipe') return pathname === '/config/equipe';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
