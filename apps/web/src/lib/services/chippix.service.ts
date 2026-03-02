@@ -16,11 +16,12 @@ interface ParsedPlayer {
   idJog: string; // Player ID from spreadsheet
   nome: string; // Member name
   entrada: number; // Gross input (sum)
-  saida: number; // Gross output (sum)
+  saida: number; // Net output (sum)
   taxa: number; // Fees (sum)
   txns: number; // Transaction count
   datas: string[]; // Unique dates
   saldo: number; // entrada - saida
+  finalidade?: string; // Finalidade (Saque, Serviço, etc.) — only for _noid_ entries
 }
 
 // Ledger-compatible row returned to frontend (with virtual fields for compat)
@@ -73,6 +74,7 @@ export class ChipPixService {
     const iTaxa = header.findIndex((h) => h.includes('taxa'));
     const iNome = header.findIndex((h) => h === 'integrante');
     const iIdOp = header.findIndex((h) => h.includes('id da opera'));
+    const iFin = header.findIndex((h) => h === 'finalidade');
 
     if (iId < 0) {
       throw new Error('Coluna "Id Jogador" não encontrada. Verifique o arquivo.');
@@ -102,6 +104,7 @@ export class ChipPixService {
       const saida = iSai >= 0 ? parseNum(row[iSai]) : 0;
       const taxa = iTaxa >= 0 ? parseNum(row[iTaxa]) : 0;
       const nome = iNome >= 0 ? String(row[iNome] || '').trim() : '';
+      const finalidade = iFin >= 0 ? String(row[iFin] || '').trim() : '';
 
       // Date from first column (column 0)
       let dateStr = '';
@@ -127,6 +130,7 @@ export class ChipPixService {
           txns: 0,
           datas: [],
           saldo: 0,
+          finalidade: idJog.startsWith('_noid_') ? finalidade : undefined,
         };
       }
 
@@ -286,13 +290,25 @@ export class ChipPixService {
 
         const saldoLiq = p.entrada - p.saida;
 
+        // Auto-categorize _noid_ entries by finalidade
+        const isServico = p.finalidade?.toLowerCase() === 'serviço' || p.finalidade?.toLowerCase() === 'servico';
+        const isSaque = p.finalidade?.toLowerCase() === 'saque';
+        let source = 'chippix';
+        let descPrefix = 'ChipPix';
+        if (isServico) {
+          source = 'chippix_ignored'; // auto-ignore mensalidade
+          descPrefix = 'ChipPix Mensalidade';
+        } else if (isSaque) {
+          descPrefix = 'ChipPix Saque GP';
+        }
+
         return {
           tenant_id: tenantId,
-          source: 'chippix',
+          source,
           external_ref: `cp_${p.idJog}`,
           amount: Math.abs(saldoLiq),
           fee: round2(p.taxa),  // Fix 3: taxa da operação
-          description: `ChipPix · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
+          description: `${descPrefix} · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
           dir: saldoLiq >= 0 ? 'IN' : 'OUT',
           method: 'chippix',
           entity_id: matchResult?.entityId || (p.idJog.startsWith('_noid_') ? null : `cp_${p.idJog}`),
