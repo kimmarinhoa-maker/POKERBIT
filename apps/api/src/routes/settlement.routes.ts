@@ -9,7 +9,7 @@ import { requirePermission } from '../middleware/permission';
 import { settlementService } from '../services/settlement.service';
 import { supabaseAdmin } from '../config/supabase';
 import { normName } from '../utils/normName';
-import { safeErrorMessage, AppError } from '../utils/apiError';
+import { safeErrorMessage, AppError, errorStatus } from '../utils/apiError';
 import { batchExecute } from '../utils/batch';
 import { logAudit } from '../utils/audit';
 import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
@@ -169,9 +169,7 @@ router.post(
       cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
-      const status = err instanceof AppError ? err.statusCode : 500;
-      const msg = safeErrorMessage(err);
-      res.status(status).json({ success: false, error: msg });
+      res.status(errorStatus(err)).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -1143,9 +1141,7 @@ router.post(
       cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
-      const status = err instanceof AppError ? err.statusCode : 500;
-      const msg = safeErrorMessage(err);
-      res.status(status).json({ success: false, error: msg });
+      res.status(errorStatus(err)).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );

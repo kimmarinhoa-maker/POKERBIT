@@ -8,7 +8,7 @@ import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { requirePermission } from '../middleware/permission';
 import { ledgerService } from '../services/ledger.service';
 import { supabaseAdmin } from '../config/supabase';
-import { safeErrorMessage, AppError } from '../utils/apiError';
+import { safeErrorMessage, AppError, errorStatus } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
 import { validateUuid } from '../middleware/validateUuid';
 
@@ -49,7 +49,7 @@ router.post(
       logAudit(req, 'CREATE', 'ledger_entry', data?.id || '', undefined, parsed.data);
       res.status(201).json({ success: true, data });
     } catch (err: unknown) {
-      res.status(500).json({ success: false, error: safeErrorMessage(err) });
+      res.status(errorStatus(err)).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
@@ -129,8 +129,7 @@ router.delete(
       logAudit(req, 'DELETE', 'ledger_entry', req.params.id);
       res.json({ success: true, data });
     } catch (err: unknown) {
-      const status = err instanceof AppError ? err.statusCode : 500;
-      res.status(status).json({ success: false, error: safeErrorMessage(err) });
+      res.status(errorStatus(err)).json({ success: false, error: safeErrorMessage(err) });
     }
   },
 );
