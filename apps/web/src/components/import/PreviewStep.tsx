@@ -140,7 +140,6 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
     if (!existing?.agents) return { added: [] as string[], removed: [] as string[] };
     const existingSet = new Set(existing.agents.map((a) => a.toUpperCase()));
     const newAgents = new Set(preview.available_agents.map((a) => a.agent_name.toUpperCase()));
-    // Also include unknown_agencies if the API still returns them (backwards compat)
     for (const ua of preview.blockers.unknown_agencies || []) {
       newAgents.add(ua.agent_name.toUpperCase());
     }
@@ -151,7 +150,6 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
   const isIdenticalImport =
     existing && !isMerge ? !hasDifferences && agentDiff.added.length === 0 && agentDiff.removed.length === 0 : false;
-  // Merge mode doesn't need confirmation — data from other clubs is preserved
   const needsReimportConfirm = !!existing && !isMerge && !reimportConfirmed;
 
   // Auto-resolved players (linked from previous imports)
@@ -171,29 +169,28 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-6">Pre-analise</h2>
+      <h2 className="text-xl font-bold text-white mb-5">Pre-analise da Planilha</h2>
 
       {/* ─── Merge banner (different club for same week) ─── */}
       {existing && isMerge && (
-        <div className="border-2 rounded-xl p-4 mb-4 bg-blue-900/15 border-blue-600/50">
+        <div className="bg-dark-900 border border-blue-600/40 rounded-xl p-4 mb-4">
           <div className="flex items-start gap-3">
-            <span className="text-2xl mt-0.5">{'\u2795'}</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+              <span className="text-blue-400 text-sm font-bold">+</span>
+            </div>
             <div className="flex-1">
-              <h3 className="font-bold text-blue-300">Importacao adicional para esta semana</h3>
-              <p className="text-dark-400 text-sm mt-1">
+              <h3 className="font-bold text-blue-300 text-sm">Importacao adicional para esta semana</h3>
+              <p className="text-dark-400 text-xs mt-1">
                 Ja existe um fechamento para esta semana (v{existing.version}, {existing.summary.total_players}{' '}
                 jogadores, {existing.summary.total_agents} agentes). Os dados desta planilha serao{' '}
                 <span className="text-blue-400 font-medium">adicionados sem alterar</span> os dados ja importados.
               </p>
               {agentDiff.added.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-blue-400 text-xs font-medium mb-1">Novos agentes nesta planilha:</p>
+                  <p className="text-blue-400 text-[10px] font-bold uppercase tracking-wider mb-1">Novos agentes</p>
                   <div className="flex flex-wrap gap-1">
                     {agentDiff.added.map((a) => (
-                      <span
-                        key={a}
-                        className="px-2 py-0.5 bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded text-[10px] font-bold"
-                      >
+                      <span key={a} className="px-2 py-0.5 bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded text-[10px] font-bold">
                         + {a}
                       </span>
                     ))}
@@ -207,23 +204,23 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
       {/* ─── Reimport banner (same club re-import, collapsible details) ─── */}
       {existing && !isMerge && (
-        <div
-          className={`border-2 rounded-xl p-4 mb-4 ${
-            isIdenticalImport ? 'bg-green-900/10 border-green-700/40' : 'bg-yellow-900/20 border-yellow-600/60'
-          }`}
-        >
+        <div className={`bg-dark-900 border rounded-xl p-4 mb-4 ${isIdenticalImport ? 'border-green-700/40' : 'border-yellow-600/50'}`}>
           <div className="flex items-start gap-3">
-            <span className="text-2xl mt-0.5">{isIdenticalImport ? '\u2705' : '\u26A0\uFE0F'}</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIdenticalImport ? 'bg-green-500/15' : 'bg-yellow-500/15'}`}>
+              <span className={`text-sm font-bold ${isIdenticalImport ? 'text-green-400' : 'text-yellow-400'}`}>
+                {isIdenticalImport ? '\u2713' : '!'}
+              </span>
+            </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h3 className={`font-bold ${isIdenticalImport ? 'text-green-400' : 'text-yellow-300'}`}>
+                <h3 className={`font-bold text-sm ${isIdenticalImport ? 'text-green-400' : 'text-yellow-300'}`}>
                   {isIdenticalImport ? 'Planilha identica a versao atual' : 'Esta planilha ja foi importada'}
                 </h3>
                 <button onClick={() => setDiffOpen((o) => !o)} className="text-dark-500 text-xs hover:text-dark-300">
                   {diffOpen ? '\u25B2 Recolher' : '\u25BC Detalhes'}
                 </button>
               </div>
-              <p className="text-dark-400 text-sm mt-1">
+              <p className="text-dark-400 text-xs mt-1">
                 Fechamento existente: v{existing.version}, status:{' '}
                 <span className={`font-medium ${isIdenticalImport ? 'text-green-400' : 'text-yellow-400'}`}>
                   {existing.status}
@@ -235,15 +232,14 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
               {diffOpen && (
                 <div className="mt-3">
-                  {/* Comparison table — all rows, diffs highlighted */}
                   <div className="overflow-x-auto mb-3">
-                    <table className="w-full text-sm data-table">
+                    <table className="w-full text-xs data-table">
                       <thead>
-                        <tr className="text-dark-400 text-left border-b border-dark-600/50">
-                          <th className="pb-2 pr-4">Campo</th>
-                          <th className="pb-2 pr-4 text-right">Atual (v{existing.version})</th>
-                          <th className="pb-2 pr-4 text-right">Nova planilha</th>
-                          <th className="pb-2 text-right">Status</th>
+                        <tr className="text-dark-400 text-left">
+                          <th className="px-3 py-2">Campo</th>
+                          <th className="px-3 py-2 text-right">Atual (v{existing.version})</th>
+                          <th className="px-3 py-2 text-right">Nova planilha</th>
+                          <th className="px-3 py-2 text-right">Status</th>
                         </tr>
                       </thead>
                       <tbody className="text-dark-300">
@@ -252,16 +248,11 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                           const fmt = row.isBRL ? formatBRL : (v: number) => String(v);
                           const isEqual = diff === 0;
                           return (
-                            <tr
-                              key={row.label}
-                              className={`border-t border-dark-700/30 ${!isEqual ? 'bg-yellow-900/10' : ''}`}
-                            >
-                              <td className="py-1.5 pr-4 text-dark-400">{row.label}</td>
-                              <td className="py-1.5 pr-4 text-right font-mono">{fmt(row.prev)}</td>
-                              <td className="py-1.5 pr-4 text-right font-mono text-white">{fmt(row.next)}</td>
-                              <td
-                                className={`py-1.5 text-right font-mono ${isEqual ? 'text-green-400' : diff > 0 ? 'text-yellow-400' : 'text-red-400'}`}
-                              >
+                            <tr key={row.label} className={!isEqual ? 'bg-yellow-900/10' : ''}>
+                              <td className="px-3 py-1.5 text-dark-400">{row.label}</td>
+                              <td className="px-3 py-1.5 text-right font-mono">{fmt(row.prev)}</td>
+                              <td className="px-3 py-1.5 text-right font-mono text-white">{fmt(row.next)}</td>
+                              <td className={`px-3 py-1.5 text-right font-mono ${isEqual ? 'text-green-400' : diff > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
                                 {isEqual ? '\u2713 igual' : (diff > 0 ? '\u2191 +' : '\u2193 ') + fmt(Math.abs(diff))}
                               </td>
                             </tr>
@@ -271,16 +262,12 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                     </table>
                   </div>
 
-                  {/* Agent diff */}
                   {agentDiff.added.length > 0 && (
                     <div className="mb-2">
-                      <p className="text-green-400 text-xs font-medium mb-1">Agentes novos na planilha:</p>
+                      <p className="text-green-400 text-[10px] font-bold uppercase tracking-wider mb-1">Agentes novos</p>
                       <div className="flex flex-wrap gap-1">
                         {agentDiff.added.map((a) => (
-                          <span
-                            key={a}
-                            className="px-2 py-0.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded text-[10px] font-bold"
-                          >
+                          <span key={a} className="px-2 py-0.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded text-[10px] font-bold">
                             + {a}
                           </span>
                         ))}
@@ -289,15 +276,10 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                   )}
                   {agentDiff.removed.length > 0 && (
                     <div className="mb-2">
-                      <p className="text-red-400 text-xs font-medium mb-1">
-                        Agentes no fechamento atual que nao estao na planilha:
-                      </p>
+                      <p className="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-1">Agentes removidos</p>
                       <div className="flex flex-wrap gap-1">
                         {agentDiff.removed.map((a) => (
-                          <span
-                            key={a}
-                            className="px-2 py-0.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded text-[10px] font-bold"
-                          >
+                          <span key={a} className="px-2 py-0.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded text-[10px] font-bold">
                             - {a}
                           </span>
                         ))}
@@ -305,7 +287,6 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                     </div>
                   )}
 
-                  {/* Confirm checkbox */}
                   {!reimportConfirmed && (
                     <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
                       <input
@@ -314,11 +295,11 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                         onChange={(e) => setReimportConfirmed(e.target.checked)}
                         className="w-4 h-4 rounded border-dark-600 text-yellow-500 focus:ring-yellow-500/30"
                       />
-                      <span className="text-dark-300 text-sm">Estou ciente e quero reimportar esta semana</span>
+                      <span className="text-dark-300 text-xs">Estou ciente e quero reimportar esta semana</span>
                     </label>
                   )}
                   {reimportConfirmed && (
-                    <p className="text-green-400 text-xs mt-3">{'\u2713'} Reimportacao confirmada — pode prosseguir.</p>
+                    <p className="text-green-400 text-xs mt-3">{'\u2713'} Reimportacao confirmada.</p>
                   )}
                 </div>
               )}
@@ -328,115 +309,132 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
       )}
 
       {/* ─── Week detection ─── */}
-      <div className="card mb-4">
+      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-dark-400 text-xs uppercase tracking-wide">Semana Detectada</p>
-            <p className="text-white text-lg font-semibold mt-1">
-              {formatDate(preview.week.week_start)} {'\u2192'} {formatDate(preview.week.week_end)}
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Semana Detectada</p>
+            <p className="text-white text-lg font-semibold">
+              {formatDate(preview.week.week_start)} &rarr; {formatDate(preview.week.week_end)}
             </p>
           </div>
-          <div
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              preview.week.confidence === 'high'
-                ? 'bg-green-500/20 text-green-400'
-                : preview.week.confidence === 'medium'
-                  ? 'bg-yellow-500/20 text-yellow-400'
-                  : 'bg-orange-500/20 text-orange-400'
-            }`}
-          >
-            {preview.week.detected_from === 'xlsx'
-              ? '\u{1F4CA} Do XLSX'
-              : preview.week.detected_from === 'filename'
-                ? '\u{1F4C1} Do filename'
-                : '\u2699\uFE0F Fallback'}
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+            preview.week.confidence === 'high'
+              ? 'bg-green-500/15 text-green-400 border-green-500/30'
+              : preview.week.confidence === 'medium'
+                ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+                : 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+          }`}>
+            {preview.week.detected_from === 'xlsx' ? 'XLSX' : preview.week.detected_from === 'filename' ? 'Filename' : 'Fallback'}
             {preview.week.confidence === 'high' ? ' \u2713' : ''}
-          </div>
+          </span>
         </div>
       </div>
 
       {/* ─── Summary KPIs ─── */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F465}'} Jogadores</p>
-          <p className="text-2xl font-bold text-white">{preview.summary.total_players}</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Jogadores</p>
+            <p className="text-xl font-bold font-mono text-blue-400">{preview.summary.total_players}</p>
+          </div>
         </div>
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F4BC}'} Agentes</p>
-          <p className="text-2xl font-bold text-white">{preview.summary.total_agents}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="h-0.5 bg-purple-500" />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Agentes</p>
+            <p className="text-xl font-bold font-mono text-purple-400">{preview.summary.total_agents}</p>
+          </div>
         </div>
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F3E2}'} Subclubes</p>
-          <p className="text-2xl font-bold text-white">{preview.summary.total_subclubs}</p>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="h-0.5 bg-amber-500" />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Subclubes</p>
+            <p className="text-xl font-bold font-mono text-amber-400">{preview.summary.total_subclubs}</p>
+          </div>
+        </div>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className={`h-0.5 ${preview.summary.total_winnings_brl >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Ganhos</p>
+            <p className={`text-lg font-bold font-mono ${preview.summary.total_winnings_brl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatBRL(preview.summary.total_winnings_brl)}
+            </p>
+          </div>
+        </div>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="h-0.5 bg-blue-500" />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Rake Total</p>
+            <p className="text-lg font-bold font-mono text-blue-400">{formatBRL(preview.summary.total_rake_brl)}</p>
+          </div>
+        </div>
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="h-0.5 bg-purple-500" />
+          <div className="p-3">
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">GGR Total</p>
+            <p className="text-lg font-bold font-mono text-purple-400">{formatBRL(preview.summary.total_ggr_brl)}</p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F4B0}'} Ganhos</p>
-          <p
-            className={`text-lg font-bold ${preview.summary.total_winnings_brl >= 0 ? 'text-green-400' : 'text-red-400'}`}
-          >
-            {formatBRL(preview.summary.total_winnings_brl)}
-          </p>
-        </div>
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F4B3}'} Rake Total</p>
-          <p className="text-lg font-bold text-blue-400">{formatBRL(preview.summary.total_rake_brl)}</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-dark-400 text-xs mb-1">{'\u{1F4C8}'} GGR Total</p>
-          <p className="text-lg font-bold text-purple-400">{formatBRL(preview.summary.total_ggr_brl)}</p>
-        </div>
-      </div>
-
-      {/* ─── Subclub distribution (hidden when single-club mode) ─── */}
+      {/* ─── Subclub distribution ─── */}
       {preview.subclubs_found.length > 1 && (
-        <div className="card mb-4">
-          <h3 className="text-sm font-semibold text-dark-300 mb-3">Distribuicao por Subclube</h3>
-          <div className="space-y-2">
-            {preview.subclubs_found.map((sc) => (
-              <div key={sc.subclub_name} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getClubStyle(sc.subclub_name)}`}>
-                    {getClubIcon(sc.subclub_name)} {sc.subclub_name}
-                  </span>
-                  <span className="text-dark-400 text-xs">
-                    {sc.players_count} jogadores &middot; {sc.agents_count} agentes
-                  </span>
+        <div className="mb-5">
+          <h3 className="text-sm font-bold text-white mb-3">Distribuicao por Subclube</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {preview.subclubs_found.map((sc) => {
+              const pct = preview.summary.total_rake_brl > 0 ? (sc.rake_brl / preview.summary.total_rake_brl) * 100 : 0;
+              return (
+                <div key={sc.subclub_name} className="bg-dark-900 border border-dark-700 rounded-xl p-4 hover:border-dark-600 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getClubStyle(sc.subclub_name)}`}>
+                        {getClubIcon(sc.subclub_name)} {sc.subclub_name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold font-mono text-white">{formatBRL(sc.rake_brl)}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-[10px] text-dark-400 mb-2">
+                    <span><strong className="text-dark-300">{sc.players_count}</strong> jogadores</span>
+                    <span><strong className="text-dark-300">{sc.agents_count}</strong> agentes</span>
+                    <span><strong className="text-dark-300">{pct.toFixed(0)}%</strong> do rake</span>
+                  </div>
+                  <div className="w-full bg-dark-800 rounded-full h-1.5">
+                    <div className="h-1.5 rounded-full bg-poker-500 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+                  </div>
                 </div>
-                <span className="text-dark-300 text-sm font-mono">{formatBRL(sc.rake_brl)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* ─── ChipPix Manager Trade Record ─── */}
       {preview.chippix_trades && Object.keys(preview.chippix_trades).length > 0 && (
-        <div className="card mb-4">
-          <h3 className="text-sm font-semibold text-dark-300 mb-3">ChipPix — Manager Trade Record</h3>
-          <div className="space-y-2">
+        <div className="mb-5">
+          <h3 className="text-sm font-bold text-white mb-3">ChipPix — Manager Trade Record</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.entries(preview.chippix_trades).map(([key, op]: [string, ChipPixTradeOperator]) => (
-              <div key={key} className="bg-dark-800/40 border border-dark-700/50 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-1">
+              <div key={key} className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-bold text-blue-400">{op.manager}</span>
                   <span className="text-[10px] text-dark-500">
-                    {op.txnCount} transacoes &middot; {op.playerCount} jogadores
+                    {op.txnCount} txns &middot; {op.playerCount} jogadores
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <span className="text-dark-500">Entradas</span>
-                    <p className="font-mono text-emerald-400">{formatBRL(op.totalIN)}</p>
+                    <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Entradas</p>
+                    <p className="font-mono text-sm text-emerald-400">{formatBRL(op.totalIN)}</p>
                   </div>
                   <div>
-                    <span className="text-dark-500">Saidas</span>
-                    <p className="font-mono text-red-400">{formatBRL(op.totalOUT)}</p>
+                    <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Saidas</p>
+                    <p className="font-mono text-sm text-red-400">{formatBRL(op.totalOUT)}</p>
                   </div>
                   <div>
-                    <span className="text-dark-500">Saldo</span>
-                    <p className={`font-mono font-bold ${op.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Saldo</p>
+                    <p className={`font-mono text-sm font-bold ${op.saldo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {formatBRL(op.saldo)}
                     </p>
                   </div>
@@ -447,74 +445,144 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
         </div>
       )}
 
+      {/* ─── Readiness ─── */}
+      {preview.readiness.ready ? (
+        <div className="bg-dark-900 border border-green-700/40 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+              <span className="text-green-400 text-xs font-bold">{'\u2713'}</span>
+            </div>
+            <p className="text-green-400 font-medium text-sm">Tudo pronto! Sem pendencias.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-dark-900 border border-yellow-600/40 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <span className="text-yellow-400 text-xs font-bold">!</span>
+            </div>
+            <div>
+              <p className="text-yellow-300 font-medium text-sm">
+                {preview.readiness.blockers_count} pendencia{preview.readiness.blockers_count !== 1 ? 's' : ''} para resolver
+              </p>
+              {preview.blockers.players_without_agency.length > 0 && (
+                <p className="text-dark-400 text-xs mt-0.5">
+                  {preview.blockers.players_without_agency.length} jogador(es) sem agencia
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Auto-resolved players banner ─── */}
+      {autoResolvedCount > 0 && onEditLinks && (
+        <div className="bg-dark-900 border border-blue-700/40 rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <span className="text-blue-400 text-xs font-bold">{'\u2194'}</span>
+              </div>
+              <div>
+                <p className="text-blue-300 font-medium text-sm">
+                  {autoResolvedCount} jogador{autoResolvedCount !== 1 ? 'es' : ''} auto-vinculado{autoResolvedCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-dark-400 text-xs mt-0.5">Links de importacoes anteriores.</p>
+              </div>
+            </div>
+            <button
+              onClick={onEditLinks}
+              className="px-3 py-1.5 text-blue-400 hover:text-blue-300 text-xs font-bold border border-blue-700/40 rounded-lg hover:bg-blue-900/30 transition-colors shrink-0"
+            >
+              Revisar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SEM VÍNCULO banner ─── */}
+      {semVinculoCount > 0 && (
+        <div className="bg-dark-900 border border-amber-600/40 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <span className="text-amber-400 text-xs font-bold">!</span>
+            </div>
+            <div>
+              <p className="text-amber-300 font-medium text-sm">
+                {semVinculoCount} agente{semVinculoCount !== 1 ? 's' : ''} sem sigla
+              </p>
+              <p className="text-dark-400 text-xs mt-0.5">
+                {canEditLinks
+                  ? 'Clique no subclube na tabela de jogadores para vincular.'
+                  : <>Importados como &quot;SEM V{'I'}NCULO&quot;. Vincule em Cadastro {'>'} Agentes apos a importacao.</>}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Players table ─── */}
       {players.length > 0 && (
-        <div className="card mb-4 overflow-hidden">
+        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden mb-4">
           <button
-            onClick={() => {
-              setPlayersOpen((o) => !o);
-              setPage(0);
-            }}
-            className="w-full flex items-center justify-between py-1 text-left"
+            onClick={() => { setPlayersOpen((o) => !o); setPage(0); }}
+            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-dark-800/30 transition-colors"
           >
-            <h3 className="text-sm font-semibold text-dark-300">
-              {'\u{1F465}'} Jogadores ({players.length})
+            <h3 className="text-sm font-bold text-white">
+              Jogadores <span className="text-dark-500 font-normal ml-1">({players.length})</span>
             </h3>
             <span className="text-dark-500 text-xs">{playersOpen ? '\u25B2 Recolher' : '\u25BC Expandir'}</span>
           </button>
 
           {playersOpen && (
-            <div className="mt-3">
+            <div className="px-4 pb-4">
               <input
                 type="text"
                 placeholder="Buscar por nick ou ID..."
                 value={playerSearch}
-                onChange={(e) => {
-                  setPlayerSearch(e.target.value);
-                  setPage(0);
-                }}
-                className="input w-full text-sm mb-3"
+                onChange={(e) => { setPlayerSearch(e.target.value); setPage(0); }}
+                className="input w-full text-xs mb-3"
               />
 
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs data-table">
                   <thead>
-                    <tr className="text-dark-400 text-left bg-dark-800/50">
-                      <th className="p-2">Nick</th>
-                      <th className="p-2">ID</th>
-                      <th className="p-2">Agente</th>
-                      <th className="p-2">Subclube</th>
-                      <th className="p-2 text-right cursor-pointer select-none" onClick={() => toggleSort('ganhos')}>
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('nick')}>
+                        Nick {sortIcon('nick')}
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">ID</th>
+                      <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Agente</th>
+                      <th className="px-3 py-2 text-left font-medium text-[10px] text-dark-400 uppercase tracking-wider">Subclube</th>
+                      <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('ganhos')}>
                         Ganhos {sortIcon('ganhos')}
                       </th>
-                      <th className="p-2 text-right cursor-pointer select-none" onClick={() => toggleSort('rake')}>
+                      <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('rake')}>
                         Rake {sortIcon('rake')}
                       </th>
-                      <th className="p-2 text-right cursor-pointer select-none" onClick={() => toggleSort('ggr')}>
+                      <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('ggr')}>
                         GGR {sortIcon('ggr')}
                       </th>
-                      <th className="p-2 text-center">Status</th>
+                      <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-dark-700/50">
+                  <tbody>
                     {pagedPlayers.map((p) => {
                       const st = STATUS_STYLES[p._status] || STATUS_STYLES.ok;
                       return (
-                        <tr key={p.id} className="hover:bg-dark-800/30">
-                          <td className="p-2 text-white font-medium">{p.nick}</td>
-                          <td className="p-2 text-dark-400 font-mono">{p.id}</td>
-                          <td className="p-2 text-dark-300">{p.aname || '-'}</td>
-                          <td className="p-2">
+                        <tr key={p.id} className="hover:bg-white/[.02]">
+                          <td className="px-3 py-2 text-white font-medium">{p.nick}</td>
+                          <td className="px-3 py-2 text-dark-400 font-mono text-[10px]">{p.id}</td>
+                          <td className="px-3 py-2 text-dark-300">{p.aname || '-'}</td>
+                          <td className="px-3 py-2">
                             {canEditLinks && p.aname ? (
                               editingAgent === p.aname ? (
                                 <div className="flex items-center gap-1">
                                   <select
-                                    className="bg-dark-800 border border-dark-600 rounded text-[10px] text-white px-1 py-0.5 max-w-[120px]"
+                                    className="bg-dark-800 border border-dark-600 rounded text-[10px] text-white px-1.5 py-0.5 max-w-[120px]"
                                     defaultValue=""
                                     disabled={linkingSaving}
-                                    onChange={(e) => {
-                                      if (e.target.value && p.aname) handleInlineLink(p.aname, e.target.value);
-                                    }}
+                                    onChange={(e) => { if (e.target.value && p.aname) handleInlineLink(p.aname, e.target.value); }}
                                   >
                                     <option value="" disabled>Selecione...</option>
                                     {availableSubclubs!.map((sc) => (
@@ -522,47 +590,36 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                                     ))}
                                   </select>
                                   {linkingSaving ? (
-                                    <span className="text-[10px] text-dark-400 animate-pulse">Salvando...</span>
+                                    <span className="text-[10px] text-dark-400 animate-pulse">...</span>
                                   ) : (
-                                    <button
-                                      onClick={() => setEditingAgent(null)}
-                                      className="text-dark-500 hover:text-dark-300 text-xs leading-none"
-                                      title="Cancelar"
-                                    >
-                                      {'\u2715'}
-                                    </button>
+                                    <button onClick={() => setEditingAgent(null)} className="text-dark-500 hover:text-dark-300 text-xs">{'\u2715'}</button>
                                   )}
                                 </div>
                               ) : (
                                 <button
                                   onClick={() => setEditingAgent(p.aname)}
                                   className="group flex items-center gap-1 cursor-pointer"
-                                  title="Clique para vincular a um subclube"
+                                  title="Vincular a subclube"
                                 >
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${p.clube ? getClubStyle(p.clube) : 'bg-dark-700/50 text-dark-400 border-dark-600'} group-hover:ring-1 group-hover:ring-amber-500/50 transition-all`}>
                                     {p.clube || 'SEM VINCULO'}
                                   </span>
-                                  <span className="text-dark-500 group-hover:text-amber-400 text-[10px] transition-colors">{'\u270E'}</span>
                                 </button>
                               )
                             ) : p.clube ? (
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getClubStyle(p.clube)}`}
-                              >
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getClubStyle(p.clube)}`}>
                                 {p.clube}
                               </span>
                             ) : (
-                              '-'
+                              <span className="text-dark-500">-</span>
                             )}
                           </td>
-                          <td
-                            className={`p-2 text-right font-mono ${p.ganhos >= 0 ? 'text-green-400' : 'text-red-400'}`}
-                          >
+                          <td className={`px-3 py-2 text-right font-mono ${p.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {formatBRL(p.ganhos)}
                           </td>
-                          <td className="p-2 text-right font-mono text-blue-400">{formatBRL(p.rake)}</td>
-                          <td className="p-2 text-right font-mono text-purple-400">{formatBRL(p.ggr)}</td>
-                          <td className="p-2 text-center">
+                          <td className="px-3 py-2 text-right font-mono text-blue-400">{formatBRL(p.rake)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-purple-400">{formatBRL(p.ggr)}</td>
+                          <td className="px-3 py-2 text-center">
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${st.cls}`}>
                               {st.label}
                             </span>
@@ -571,19 +628,17 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                       );
                     })}
                   </tbody>
-                  <tfoot>
-                    <tr className="bg-dark-800/50 font-semibold text-dark-200">
-                      <td className="p-2" colSpan={4}>
-                        Total ({filteredPlayers.length} jogadores)
+                  <tfoot className="bg-dark-800/60 border-t border-dark-700">
+                    <tr className="font-semibold">
+                      <td className="px-3 py-2 text-white" colSpan={4}>
+                        Total <span className="text-dark-500 font-normal">({filteredPlayers.length})</span>
                       </td>
-                      <td
-                        className={`p-2 text-right font-mono ${playerTotals.ganhos >= 0 ? 'text-green-400' : 'text-red-400'}`}
-                      >
+                      <td className={`px-3 py-2 text-right font-mono ${playerTotals.ganhos >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {formatBRL(playerTotals.ganhos)}
                       </td>
-                      <td className="p-2 text-right font-mono text-blue-400">{formatBRL(playerTotals.rake)}</td>
-                      <td className="p-2 text-right font-mono text-purple-400">{formatBRL(playerTotals.ggr)}</td>
-                      <td className="p-2" />
+                      <td className="px-3 py-2 text-right font-mono text-blue-400">{formatBRL(playerTotals.rake)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-purple-400">{formatBRL(playerTotals.ggr)}</td>
+                      <td className="px-3 py-2" />
                     </tr>
                   </tfoot>
                 </table>
@@ -591,21 +646,19 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-3 text-xs text-dark-400">
-                  <span>
-                    Pagina {page + 1} de {totalPages}
-                  </span>
+                  <span>Pagina {page + 1} de {totalPages}</span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
                       disabled={page === 0}
-                      className="px-2 py-1 rounded bg-dark-800 hover:bg-dark-700 disabled:opacity-40"
+                      className="px-3 py-1 rounded-lg bg-dark-800 border border-dark-700 hover:border-dark-600 disabled:opacity-40 transition-colors"
                     >
                       {'\u2190'} Anterior
                     </button>
                     <button
                       onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                       disabled={page >= totalPages - 1}
-                      className="px-2 py-1 rounded bg-dark-800 hover:bg-dark-700 disabled:opacity-40"
+                      className="px-3 py-1 rounded-lg bg-dark-800 border border-dark-700 hover:border-dark-600 disabled:opacity-40 transition-colors"
                     >
                       Proxima {'\u2192'}
                     </button>
@@ -619,28 +672,27 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
       {/* ─── Duplicates ─── */}
       {preview.duplicate_players && preview.duplicate_players.length > 0 && (
-        <div className="bg-blue-900/20 border border-blue-700/40 rounded-lg p-4 mb-4">
-          <p className="text-blue-300 font-medium mb-2">
-            {'\u{1F500}'} {preview.duplicate_players.length} ID{preview.duplicate_players.length !== 1 ? 's' : ''}{' '}
-            duplicado{preview.duplicate_players.length !== 1 ? 's' : ''} {'\u2014'} valores somados automaticamente
+        <div className="bg-dark-900 border border-blue-700/40 rounded-xl p-4 mb-4">
+          <p className="text-blue-300 font-medium text-sm mb-2">
+            {preview.duplicate_players.length} ID{preview.duplicate_players.length !== 1 ? 's' : ''} duplicado{preview.duplicate_players.length !== 1 ? 's' : ''} — valores somados
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs data-table">
               <thead>
-                <tr className="text-dark-400 text-left">
-                  <th className="pb-1.5 pr-3">ID</th>
-                  <th className="pb-1.5 pr-3">Nick</th>
-                  <th className="pb-1.5 pr-3 text-center">Ocorrencias</th>
-                  <th className="pb-1.5 text-right">Rake Somado</th>
+                <tr>
+                  <th className="px-3 py-2 text-left text-[10px] text-dark-400 uppercase tracking-wider">ID</th>
+                  <th className="px-3 py-2 text-left text-[10px] text-dark-400 uppercase tracking-wider">Nick</th>
+                  <th className="px-3 py-2 text-center text-[10px] text-dark-400 uppercase tracking-wider">Ocorrencias</th>
+                  <th className="px-3 py-2 text-right text-[10px] text-dark-400 uppercase tracking-wider">Rake Somado</th>
                 </tr>
               </thead>
-              <tbody className="text-dark-300">
+              <tbody>
                 {preview.duplicate_players.map((d) => (
-                  <tr key={d.id} className="border-t border-blue-800/30">
-                    <td className="py-1 pr-3 font-mono text-blue-400">{d.id}</td>
-                    <td className="py-1 pr-3">{d.nick}</td>
-                    <td className="py-1 pr-3 text-center">{d.count}x</td>
-                    <td className="py-1 text-right font-mono">{formatBRL(d.merged_rake)}</td>
+                  <tr key={d.id}>
+                    <td className="px-3 py-1.5 font-mono text-blue-400">{d.id}</td>
+                    <td className="px-3 py-1.5 text-dark-300">{d.nick}</td>
+                    <td className="px-3 py-1.5 text-center text-dark-400">{d.count}x</td>
+                    <td className="px-3 py-1.5 text-right font-mono text-white">{formatBRL(d.merged_rake)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -649,88 +701,34 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
         </div>
       )}
 
-      {/* ─── Readiness ─── */}
-      {preview.readiness.ready ? (
-        <div className="bg-green-900/20 border border-green-700/40 rounded-lg p-4 mb-4">
-          <p className="text-green-400 font-medium">{'\u2705'} Tudo pronto! Sem pendencias.</p>
-        </div>
-      ) : (
-        <div className="bg-yellow-900/20 border border-yellow-600/40 rounded-lg p-4 mb-4">
-          <p className="text-yellow-300 font-medium">
-            {'\u26A0\uFE0F'} {preview.readiness.blockers_count} pendencia
-            {preview.readiness.blockers_count !== 1 ? 's' : ''} para resolver
-          </p>
-          <p className="text-dark-400 text-sm mt-1">
-            {preview.blockers.players_without_agency.length > 0 &&
-              `${preview.blockers.players_without_agency.length} jogador(es) sem agencia`}
-          </p>
-        </div>
-      )}
-
-      {/* ─── Auto-resolved players banner ─── */}
-      {autoResolvedCount > 0 && onEditLinks && (
-        <div className="bg-blue-900/15 border border-blue-700/40 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-300 font-medium">
-                {'\u{1F517}'} {autoResolvedCount} jogador{autoResolvedCount !== 1 ? 'es' : ''} auto-vinculado
-                {autoResolvedCount !== 1 ? 's' : ''}
-              </p>
-              <p className="text-dark-400 text-sm mt-0.5">
-                Links salvos de importacoes anteriores. Voce pode revisar ou alterar.
-              </p>
-            </div>
-            <button
-              onClick={onEditLinks}
-              className="px-3 py-1.5 text-blue-400 hover:text-blue-300 text-sm font-medium border border-blue-700/40 rounded-lg hover:bg-blue-900/30 transition-colors shrink-0"
-            >
-              Revisar Vinculos
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── SEM VÍNCULO banner ─── */}
-      {semVinculoCount > 0 && (
-        <div className="bg-amber-900/15 border border-amber-600/40 rounded-lg p-4 mb-4">
-          <p className="text-amber-300 font-medium">
-            {semVinculoCount} agente{semVinculoCount !== 1 ? 's' : ''} sem sigla
-          </p>
-          <p className="text-dark-400 text-sm mt-0.5">
-            {canEditLinks
-              ? 'Clique no subclube na tabela de jogadores acima para vincular.'
-              : <>Importados como &quot;SEM V{'I'}NCULO&quot;. Vincule manualmente em Cadastro {'>'} Agentes apos a importacao.</>}
-          </p>
-        </div>
-      )}
-
       {/* ─── Warnings ─── */}
       {preview.warnings.length > 0 && (
-        <div className="text-sm text-dark-400 space-y-1 mb-4">
+        <div className="text-xs text-dark-400 space-y-1 mb-4">
           {preview.warnings.map((w, i) => (
-            <p key={i}>
-              {'\u26A0\uFE0F'} {w}
+            <p key={i} className="flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+              {w}
             </p>
           ))}
         </div>
       )}
 
       {/* ─── Navigation ─── */}
-      <div className="flex gap-3">
-        <button onClick={onBack} className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors">
+      <div className="flex gap-3 pt-2">
+        <button onClick={onBack} className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors text-sm">
           {'\u2190'} Voltar
         </button>
         <button
           onClick={onNext}
           disabled={needsReimportConfirm}
-          className={`btn-primary flex-1 py-2.5 ${needsReimportConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={needsReimportConfirm ? 'Marque o checkbox acima para confirmar a reimportacao' : undefined}
+          className={`btn-primary flex-1 py-2.5 text-sm font-bold ${needsReimportConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={needsReimportConfirm ? 'Marque o checkbox acima para confirmar' : undefined}
         >
           {preview.readiness.ready
             ? needsReimportConfirm
-              ? '\u{1F512} Confirme a reimportacao acima'
-              : '\u2705 Confirmar Importacao'
-            : '\u26A0\uFE0F Resolver Pendencias'}
+              ? 'Confirme a reimportacao acima'
+              : 'Confirmar Importacao'
+            : 'Resolver Pendencias'}
         </button>
       </div>
     </div>
