@@ -37,7 +37,7 @@ function entryGrossValues(e: LedgerEntry): { entrada: number; saida: number } {
   if (e.source === 'chippix_ignored') return { entrada: 0, saida: 0 };
 
   // Try parsing gross from description (uploadChipPix aggregated entries)
-  const gross = parseGross(e.description);
+  const gross = parseGross(e.description ?? null);
   if (gross.entrada > 0 || gross.saida > 0) {
     return { entrada: gross.entrada, saida: gross.saida };
   }
@@ -144,7 +144,7 @@ export default function Conciliacao({ weekStart, clubId, settlementStatus, onDat
         continue;
       }
       if (e.entity_id) playerIds.add(e.entity_id);
-      const gross = parseGross(e.description);
+      const gross = parseGross(e.description ?? null);
       if (gross.entrada > 0 || gross.saida > 0) {
         entradas += gross.entrada;
         saidas += gross.saida;
