@@ -15,6 +15,22 @@ import { logger } from '../utils/logger';
 export class LedgerService {
   // ─── Criar movimentação ──────────────────────────────────────────
   async createEntry(tenantId: string, dto: CreateLedgerEntryDTO, userId: string) {
+    // Guard: block mutations on finalized/voided settlements
+    const { data: settlement } = await supabaseAdmin
+      .from('settlements')
+      .select('status')
+      .eq('tenant_id', tenantId)
+      .eq('week_start', dto.week_start)
+      .in('status', ['FINAL', 'VOID'])
+      .maybeSingle();
+
+    if (settlement) {
+      throw new AppError(
+        `Não é possível criar movimentação em semana ${settlement.status === 'FINAL' ? 'finalizada' : 'anulada'}`,
+        409,
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from('ledger_entries')
       .insert({
