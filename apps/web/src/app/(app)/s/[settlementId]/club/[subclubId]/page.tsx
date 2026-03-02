@@ -9,6 +9,7 @@ import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
 import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
+import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 import CardSkeleton from '@/components/ui/CardSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
 import TabErrorBoundary from '@/components/ui/TabErrorBoundary';
@@ -255,6 +256,7 @@ export default function SubclubPanelPage() {
               onDataChange={loadData}
               agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}
               players={(subclub.players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null }))}
+              subclubEntityIds={buildSubclubEntityIds(subclub.agents || [], subclub.players || [])}
             />
           </TabErrorBoundary>
         );

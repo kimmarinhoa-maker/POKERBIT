@@ -314,6 +314,19 @@ export default function ChipPixTab({
     { key: 'ignored', label: 'Ignorados', count: kpis.ignored },
   ];
 
+  // Guard: subclub without chippixManagerId should not see ChipPix data
+  if (!chippixManagerId) {
+    return (
+      <div className="card text-center py-12">
+        <Upload className="w-8 h-8 text-dark-600 mx-auto mb-3" />
+        <p className="text-dark-400 mb-2">ChipPix nao configurado para este subclube</p>
+        <p className="text-dark-500 text-xs">
+          Configure o <strong className="text-amber-400">ChipPix Manager ID</strong> em <strong>Config &gt; Estrutura</strong> para habilitar.
+        </p>
+      </div>
+    );
+  }
+
   if (loading) {
     return <SettlementSkeleton kpis={5} />;
   }
