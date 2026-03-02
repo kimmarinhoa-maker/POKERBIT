@@ -1,6 +1,6 @@
 'use client';
 
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { formatBRL } from '@/lib/formatters';
 
 interface DataPoint {
@@ -15,6 +15,7 @@ interface Props {
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const total = payload.reduce((s: number, e: any) => s + (e.value || 0), 0);
   return (
     <div className="bg-dark-800 border border-dark-700 rounded-lg p-3 shadow-lg text-xs">
       <p className="text-dark-400 mb-1.5 font-medium">{label}</p>
@@ -24,6 +25,9 @@ function CustomTooltip({ active, payload, label }: any) {
           {entry.name}: {formatBRL(entry.value)}
         </p>
       ))}
+      <p className="text-dark-300 font-bold mt-1 pt-1 border-t border-dark-700">
+        Total: {formatBRL(total)}
+      </p>
     </div>
   );
 }
@@ -35,7 +39,7 @@ export default function RakeWeeklyComparison({ data }: Props) {
     <div className="card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">
-          Cash vs Torneios — Evolucao Semanal
+          Rake Semanal
         </h3>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-[10px] text-dark-400">
@@ -46,51 +50,27 @@ export default function RakeWeeklyComparison({ data }: Props) {
           </span>
         </div>
       </div>
-      <div className="h-[220px]">
+      <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-            <defs>
-              <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorTournament" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+          <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: '#6b7280', fontSize: 11 }}
+              tick={{ fill: '#6b7280', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: '#6b7280', fontSize: 11 }}
+              tick={{ fill: '#6b7280', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
-              width={40}
+              width={35}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="cash"
-              name="Cash"
-              stroke="#10B981"
-              fill="url(#colorCash)"
-              strokeWidth={2}
-            />
-            <Area
-              type="monotone"
-              dataKey="tournament"
-              name="Torneios"
-              stroke="#3B82F6"
-              fill="url(#colorTournament)"
-              strokeWidth={2}
-            />
-          </AreaChart>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#374151', opacity: 0.3 }} />
+            <Bar dataKey="cash" name="Cash" stackId="rake" fill="#10B981" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="tournament" name="Torneios" stackId="rake" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </div>

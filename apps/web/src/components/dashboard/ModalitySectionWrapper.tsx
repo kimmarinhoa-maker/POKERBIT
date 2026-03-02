@@ -43,17 +43,13 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-            {[...Array(3)].map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-[240px]">
                 <div className="h-4 skeleton-shimmer w-32 mb-4" style={{ animationDelay: `${i * 0.1}s` }} />
                 <div className="h-full skeleton-shimmer rounded" />
               </div>
             ))}
-          </div>
-          <div className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-[260px] mb-4">
-            <div className="h-4 skeleton-shimmer w-48 mb-4" />
-            <div className="h-full skeleton-shimmer rounded" />
           </div>
         </div>
       )}
@@ -81,8 +77,8 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             <TopGainersLosers players={data.topGainersLosers} />
           )}
 
-          {/* Row 3: Hands + Cash vs Tournament + Active Players */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Row 3: Hands + Cash vs Tournament + Active Players + Rake Semanal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <HandsVolumeChart handsByModality={data.handsByModality} />
             <CashVsTournament
               cash={data.cashVsTournament.cash}
@@ -93,14 +89,12 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
               lastWeek={data.activePlayers.lastWeek}
               newPlayers={data.activePlayers.new}
             />
+            {data.rakeWeeklyComparison && data.rakeWeeklyComparison.length >= 2 && (
+              <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
+            )}
           </div>
 
-          {/* Row 4: Cash vs Tournament weekly evolution (AreaChart) */}
-          {data.rakeWeeklyComparison && (
-            <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
-          )}
-
-          {/* Row 5: Inactive Players Alert */}
+          {/* Row 4: Inactive Players Alert */}
           {data.inactivePlayers && (
             <InactivePlayersAlert players={data.inactivePlayers} />
           )}

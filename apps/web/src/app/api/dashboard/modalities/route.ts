@@ -397,7 +397,15 @@ export async function GET(req: NextRequest) {
       // 8. Inactive Players — players from previous weeks not present this week
       let inactivePlayers: ModalityResponse['inactivePlayers'] = [];
       try {
-        const currentNicks = new Set(validRows.map((r) => r.nickname));
+        // Get ALL nicknames from current settlement (not just those with rake_breakdown)
+        let allNicksQuery = supabaseAdmin
+          .from('player_week_metrics')
+          .select('nickname')
+          .eq('settlement_id', settlementId)
+          .eq('tenant_id', ctx.tenantId);
+        if (subclubId) allNicksQuery = allNicksQuery.eq('subclub_id', subclubId);
+        const { data: allNicksRows } = await allNicksQuery;
+        const currentNicks = new Set((allNicksRows || []).map((r) => r.nickname));
 
         // Fetch last 4 previous settlements (excluding current)
         const { data: prevSettlementsAll } = await supabaseAdmin

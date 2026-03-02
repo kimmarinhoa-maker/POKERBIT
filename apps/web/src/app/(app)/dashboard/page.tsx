@@ -11,8 +11,6 @@ import KpiCard from '@/components/ui/KpiCard';
 import DeltaBadge from '@/components/ui/DeltaBadge';
 import DraftBanner from '@/components/ui/DraftBanner';
 import ClubCard from '@/components/dashboard/ClubCard';
-import PendenciasCard from '@/components/dashboard/PendenciasCard';
-import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import WeekDatePicker from '@/components/WeekDatePicker';
 import Spinner from '@/components/Spinner';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
@@ -78,9 +76,6 @@ export default function DashboardPage() {
   // Modality analysis data (non-blocking)
   const [modalityData, setModalityData] = useState<ModalityData | null>(null);
   const [modalityLoading, setModalityLoading] = useState(false);
-
-  // Chart data (multiple weeks)
-  const [chartData, setChartData] = useState<Array<{ label: string; rake: number; resultado: number; acerto: number }>>([]);
 
 
 
@@ -220,7 +215,7 @@ export default function DashboardPage() {
           dtEnd.setDate(dtEnd.getDate() + 6);
           setEndDate(dtEnd.toISOString().slice(0, 10));
 
-          // Load previous week (for delta badges) + chart data + modalities — non-blocking
+          // Load previous week (for delta badges) — non-blocking
           if (res.data.length >= 2) {
             loadWeekData(res.data[1]).then((prev) => {
               if (prev) setPrevWeek(prev);
@@ -232,26 +227,6 @@ export default function DashboardPage() {
           getDashboardModalities(latest.id).then((modRes) => {
             if (modRes.success && modRes.data) setModalityData(modRes.data);
           }).finally(() => setModalityLoading(false));
-
-          // Build chart data from recent settlements (up to 8) — parallel fetch
-          const recentSettlements = res.data.slice(0, 8).reverse();
-          Promise.all(recentSettlements.map((s: any) => getSettlementFull(s.id))).then((results) => {
-            const chartPoints: typeof chartData = [];
-            results.forEach((full, i) => {
-              if (full.success && full.data?.dashboardTotals) {
-                const dt = full.data.dashboardTotals;
-                const ws2 = recentSettlements[i].week_start;
-                const [, m2, d2] = ws2.split('-');
-                chartPoints.push({
-                  label: `${d2}/${m2}`,
-                  rake: Number(dt.rake ?? 0),
-                  resultado: Number(dt.resultado ?? 0),
-                  acerto: Number(dt.acertoLiga ?? 0),
-                });
-              }
-            });
-            setChartData(chartPoints);
-          });
 
         } else {
           setNotFoundEmpty(true);
@@ -542,26 +517,7 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Chart + Pendencias row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div className="lg:col-span-2">
-              <WeeklyChart data={chartData} />
-            </div>
-            <PendenciasCard
-              items={[
-                {
-                  label: 'Jogadores sem agencia',
-                  count: 0, // TODO: integrate with real data from unlinked players
-                  href: '/import/vincular',
-                },
-                {
-                  label: 'Fechamentos em rascunho',
-                  count: status === 'DRAFT' ? 1 : 0,
-                  href: `/s/${d.settlement?.id}`,
-                },
-              ]}
-            />
-          </div>
+          {/* (chart row removed — rake comparison now lives in modality section) */}
 
           {/* Filter indicator */}
           {hasSubclubs && disabledClubs.size > 0 && (
