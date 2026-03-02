@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
@@ -225,12 +225,26 @@ export default function SubclubPanelPage() {
   const subclub: SubclubData = foundSubclub;
 
   // Calculate week_end
-  const weekEnd = (() => {
+  const weekEnd = useMemo(() => {
     if (!settlement.week_start) return undefined;
     const d = new Date(settlement.week_start + 'T00:00:00');
     d.setDate(d.getDate() + 6);
     return d.toISOString().split('T')[0];
-  })();
+  }, [settlement.week_start]);
+
+  // ─── Memoized derived data (avoid recreating on each render) ──────
+  const conciliacaoAgents = useMemo(
+    () => (subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name })),
+    [subclub.agents],
+  );
+  const conciliacaoPlayers = useMemo(
+    () => (subclub.players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null })),
+    [subclub.players],
+  );
+  const subclubEntityIds = useMemo(
+    () => buildSubclubEntityIds(subclub.agents || [], subclub.players || []),
+    [subclub.agents, subclub.players],
+  );
 
   // ─── Render content based on tab ──────────────────────────────────
   function renderContent() {
@@ -294,9 +308,9 @@ export default function SubclubPanelPage() {
               chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null}
               settlementStatus={settlement.status}
               onDataChange={loadData}
-              agents={(subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name }))}
-              players={(subclub.players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null }))}
-              subclubEntityIds={buildSubclubEntityIds(subclub.agents || [], subclub.players || [])}
+              agents={conciliacaoAgents}
+              players={conciliacaoPlayers}
+              subclubEntityIds={subclubEntityIds}
             />
           </TabErrorBoundary>
         );

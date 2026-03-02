@@ -14,7 +14,6 @@ import { batchExecute } from '../utils/batch';
 import { logAudit } from '../utils/audit';
 import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
 import { logger } from '../utils/logger';
-import { round2 } from '../utils/round2';
 import { calcPlayerResultado } from '../utils/calcPlayer';
 import { validateUuid } from '../middleware/validateUuid';
 
