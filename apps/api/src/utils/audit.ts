@@ -31,6 +31,7 @@ export function logAudit(
       new_data: newData || null,
       ip_address: req.ip || req.headers['x-forwarded-for'] || null,
       user_agent: req.headers['user-agent'] || null,
+      request_id: req.headers['x-request-id'] || null,
     })
     .then(
       () => {},

@@ -15,6 +15,7 @@ import { logAudit } from '../utils/audit';
 import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
 import { logger } from '../utils/logger';
 import { round2 } from '../utils/round2';
+import { calcPlayerResultado } from '../utils/calcPlayer';
 
 const router = Router();
 
@@ -24,13 +25,6 @@ const notesSchema = z.object({ notes: z.string().nullable() });
 const rbRateSchema = z.object({
   rb_rate: z.number().min(0).max(100),
 });
-
-/** Calcula rb_value_brl e resultado_brl de um jogador a partir de winnings, rake e rbRate */
-function calcPlayerResultado(winnings: number, rake: number, rbRate: number) {
-  const rbValue = round2((rake * rbRate) / 100);
-  const resultado = round2(winnings + rbValue);
-  return { rbValue, resultado };
-}
 
 // ─── GET /api/settlements — Listar semanas ─────────────────────────
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {

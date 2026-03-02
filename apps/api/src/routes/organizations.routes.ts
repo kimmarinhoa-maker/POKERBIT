@@ -35,7 +35,7 @@ router.get('/', requireAuth, requireTenant, requirePermission('page:clubs'), asy
 
     let query = supabaseAdmin
       .from('organizations')
-      .select('*')
+      .select('id, name, type, parent_id, external_id, is_active, logo_url, metadata, sigla, whatsapp_group_link')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('type', { ascending: true })
@@ -67,7 +67,7 @@ router.get('/tree', requireAuth, requireTenant, requirePermission('page:clubs'),
 
     const { data: orgs, error } = await supabaseAdmin
       .from('organizations')
-      .select('*')
+      .select('id, name, type, parent_id, external_id, is_active, logo_url, metadata, sigla, whatsapp_group_link')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('type', { ascending: true })
