@@ -377,74 +377,57 @@ router.post(
         }
       }
 
-      // ── Fase 2: Batch insert novas orgs AGENT ────────────────────────
+      // ── Fase 2: Upsert novas orgs AGENT (dedup por tenant+name+type) ─
       if (toCreate.length > 0) {
-        const insertRows = toCreate.map(({ agentName, correctParentId }) => ({
-          tenant_id: tenantId,
-          parent_id: correctParentId,
-          type: 'AGENT' as const,
-          name: agentName,
-        }));
+        // Deduplicate by name within this batch (keep first occurrence)
+        const seen = new Set<string>();
+        const dedupedCreate = toCreate.filter(({ agentName }) => {
+          const key = normName(agentName);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
 
-        const { data: newOrgs, error: batchErr } = await supabaseAdmin
-          .from('organizations')
-          .insert(insertRows)
-          .select('id, name');
-
-        if (batchErr) {
-          // Batch insert falhou (possivelmente duplicatas por race condition)
-          // Fallback: buscar todos AGENT orgs novamente e resolver
-          const { data: refreshedOrgs } = await supabaseAdmin
+        // Insert one-by-one with existence check to avoid duplicates
+        for (const { agentName, correctParentId } of dedupedCreate) {
+          // Check if already exists
+          const { data: existing } = await supabaseAdmin
             .from('organizations')
-            .select('id, name')
+            .select('id')
             .eq('tenant_id', tenantId)
             .eq('type', 'AGENT')
-            .eq('is_active', true);
+            .ilike('name', agentName)
+            .maybeSingle();
 
-          const refreshedMap = new Map<string, string>();
-          for (const org of refreshedOrgs || []) {
-            refreshedMap.set(normName(org.name), org.id);
+          if (existing) {
+            resolvedOrgMap.set(agentName, existing.id);
+            continue;
           }
 
-          // Tentar inserir individualmente apenas os que ainda nao existem
-          for (const { agentName, correctParentId } of toCreate) {
-            let orgId = refreshedMap.get(normName(agentName));
-            if (orgId) {
-              resolvedOrgMap.set(agentName, orgId);
-              continue;
-            }
-            // Insert individual como fallback
-            const { data: newOrg, error: cErr } = await supabaseAdmin
+          const { data: newOrg, error: cErr } = await supabaseAdmin
+            .from('organizations')
+            .insert({ tenant_id: tenantId, parent_id: correctParentId, type: 'AGENT', name: agentName })
+            .select('id')
+            .single();
+
+          if (cErr) {
+            // Race condition — another insert happened between check and insert
+            const { data: found } = await supabaseAdmin
               .from('organizations')
-              .insert({ tenant_id: tenantId, parent_id: correctParentId, type: 'AGENT', name: agentName })
               .select('id')
-              .single();
-
-            if (cErr) {
-              const { data: found } = await supabaseAdmin
-                .from('organizations')
-                .select('id')
-                .eq('tenant_id', tenantId)
-                .eq('name', agentName)
-                .eq('type', 'AGENT')
-                .maybeSingle();
-              orgId = found?.id;
-              if (!orgId) {
-                logger.warn('sync-agents', `Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
-              } else {
-                resolvedOrgMap.set(agentName, orgId);
-              }
+              .eq('tenant_id', tenantId)
+              .ilike('name', agentName)
+              .eq('type', 'AGENT')
+              .maybeSingle();
+            if (found) {
+              resolvedOrgMap.set(agentName, found.id);
             } else {
-              resolvedOrgMap.set(agentName, newOrg.id);
-              created++;
+              logger.warn('sync-agents', `Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
             }
+          } else {
+            resolvedOrgMap.set(agentName, newOrg.id);
+            created++;
           }
-        } else {
-          // Batch insert OK — mapear resultados
-          for (const org of newOrgs || []) {
-            resolvedOrgMap.set(org.name, org.id);
-          }
-          created = newOrgs?.length || 0;
         }
       }
 

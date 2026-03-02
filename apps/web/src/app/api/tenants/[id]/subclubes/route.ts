@@ -81,21 +81,43 @@ export async function POST(
           );
         }
 
-        // Bulk insert subclubes
-        const rows = validItems.map((item) => ({
-          tenant_id: tenantId,
-          parent_id: club.id,
-          type: 'SUBCLUB' as const,
-          name: item.name,
-          ...(item.external_id ? { external_id: item.external_id } : {}),
-        }));
-
-        const { data, error } = await supabaseAdmin
+        // Filter out subclubes that already exist (avoid duplicates)
+        const { data: existingSubs } = await supabaseAdmin
           .from('organizations')
-          .insert(rows)
-          .select('id, name, type, external_id');
+          .select('id, name, external_id')
+          .eq('tenant_id', tenantId)
+          .eq('type', 'SUBCLUB');
 
-        if (error) throw error;
+        const existingNames = new Set(
+          (existingSubs || []).map((s) => s.name.trim().toLowerCase()),
+        );
+
+        const newItems = validItems.filter(
+          (item) => !existingNames.has(item.name.trim().toLowerCase()),
+        );
+
+        // Return existing + newly created
+        let allResults = (existingSubs || []).map((s) => ({ ...s, type: 'SUBCLUB' }));
+
+        if (newItems.length > 0) {
+          const rows = newItems.map((item) => ({
+            tenant_id: tenantId,
+            parent_id: club.id,
+            type: 'SUBCLUB' as const,
+            name: item.name,
+            ...(item.external_id ? { external_id: item.external_id } : {}),
+          }));
+
+          const { data, error } = await supabaseAdmin
+            .from('organizations')
+            .insert(rows)
+            .select('id, name, type, external_id');
+
+          if (error) throw error;
+          allResults = [...allResults, ...(data || [])];
+        }
+
+        const data = allResults;
 
         return NextResponse.json(
           { success: true, data },
