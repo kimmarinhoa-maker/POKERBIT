@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
 
     const { data: tenant, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .insert({ name: club_name.trim(), slug })
-      .select('id, name, slug, has_subclubs')
+      .insert({ name: club_name.trim(), slug, status: 'pending' })
+      .select('id, name, slug, has_subclubs, status')
       .single();
 
     if (tenantError) throw tenantError;
@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
               name: tenant.name,
               slug: tenant.slug,
               role: 'OWNER',
+              status: tenant.status || 'pending',
               has_subclubs: tenant.has_subclubs ?? true,
               allowed_subclubs: null,
             },

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Buscar tenants do usuário
     const { data: tenants } = await supabaseAdmin
       .from('user_tenants')
-      .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs)')
+      .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs, status)')
       .eq('user_id', data.user.id)
       .eq('is_active', true);
 
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
           name: (t as any).tenants.name,
           slug: (t as any).tenants.slug,
           role: t.role,
+          status: (t as any).tenants.status || 'active',
           has_subclubs: (t as any).tenants.has_subclubs ?? true,
           allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
             ? null

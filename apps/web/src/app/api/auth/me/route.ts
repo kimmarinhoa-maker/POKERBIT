@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         // Buscar tenants
         const { data: tenants } = await supabaseAdmin
           .from('user_tenants')
-          .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs)')
+          .select('tenant_id, role, tenants!inner(id, name, slug, has_subclubs, status)')
           .eq('user_id', ctx.userId)
           .eq('is_active', true);
 
@@ -56,11 +56,13 @@ export async function GET(req: NextRequest) {
               name: (t as any).tenants.name,
               slug: (t as any).tenants.slug,
               role: t.role,
+              status: (t as any).tenants.status || 'active',
               has_subclubs: (t as any).tenants.has_subclubs ?? true,
               allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
                 ? null // null = acesso total
                 : orgAccessByTenant.get(t.tenant_id) || [],
             })),
+            is_platform_admin: profile?.is_platform_admin === true,
           },
         });
       } catch (err: unknown) {

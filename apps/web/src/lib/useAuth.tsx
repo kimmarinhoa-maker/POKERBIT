@@ -18,6 +18,7 @@ interface TenantInfo {
   name: string;
   slug: string;
   role: string;
+  status: string;
   has_subclubs: boolean;
 }
 
@@ -163,11 +164,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: t.name,
       slug: t.slug || '',
       role: t.role,
+      status: t.status || 'active',
       has_subclubs: t.has_subclubs !== false,
     }));
     setTenants(allTenants);
     const selectedId = localStorage.getItem('poker_selected_tenant');
     const tenant = allTenants.find(t => t.id === selectedId) || auth.tenants?.[0];
+
+    // Block access if tenant is not active (pending approval)
+    const tenantStatus = tenant?.status || 'active';
+    if (tenantStatus !== 'active') {
+      router.push('/pending');
+      return;
+    }
+
     setRole(tenant?.role || 'FINANCEIRO');
     setTenantId(tenant?.id || null);
     setTenantName(tenant?.name || null);
