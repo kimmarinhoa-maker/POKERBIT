@@ -22,7 +22,9 @@ import { round2 } from '../utils/round2';
 
 // Importa pacotes core (CommonJS)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { parseWorkbook, validateReadiness } = require('../../../../packages/importer/coreSuprema');
+const { parseWorkbook: parseSuprema } = require('../../../../packages/importer/coreSuprema');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { parseWorkbook: parsePPPoker } = require('../../../../packages/importer/corePPPoker');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { calculateWeek } = require('../../../../packages/engine/calculateWeek');
 
@@ -56,14 +58,15 @@ class ImportConfirmService {
     const warnings: string[] = [];
 
     // ── 0) Platform guard ─────────────────────────────────────────
-    if (platform !== 'suprema') {
-      throw new ConfirmError(400, `Plataforma "${platform}" ainda nao suportada. Use Suprema Poker.`);
+    if (platform !== 'suprema' && platform !== 'pppoker') {
+      throw new ConfirmError(400, `Plataforma "${platform}" ainda nao suportada.`);
     }
 
     // ── 1) Re-parse + Validate (guardrail) ────────────────────────
 
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const config = await importPreviewService.loadTenantConfig(tenantId);
+    const parseWorkbook = platform === 'pppoker' ? parsePPPoker : parseSuprema;
     const parseResult = parseWorkbook(workbook, config);
 
     if (parseResult.error) {
@@ -151,12 +154,13 @@ class ImportConfirmService {
 
       // ── 7) Create or reuse settlement (merge mode) ────────────────
 
-      // Check for existing DRAFT settlement for this week
+      // Check for existing DRAFT settlement for this week (scoped by platform)
       const { data: existingSettlements } = await supabaseAdmin
         .from('settlements')
         .select('id, version, status')
         .eq('tenant_id', tenantId)
         .eq('week_start', weekStart)
+        .eq('platform', platform)
         .eq('status', 'DRAFT')
         .order('version', { ascending: false })
         .limit(1);
@@ -208,7 +212,7 @@ class ImportConfirmService {
         );
       } else {
         // NEW settlement
-        version = await this.getNextVersion(tenantId, weekStart);
+        version = await this.getNextVersion(tenantId, weekStart, platform);
 
         // Se ha versao anterior nao-DRAFT (FINAL/VOID), incrementa versao
         const { data: settlement, error: settlError } = await supabaseAdmin
@@ -221,6 +225,7 @@ class ImportConfirmService {
             status: 'DRAFT',
             import_id: importId,
             inputs_hash: fileHash,
+            platform,
           })
           .select('id')
           .single();
@@ -296,12 +301,13 @@ class ImportConfirmService {
     await supabaseAdmin.from('settlements').delete().eq('import_id', importId).eq('tenant_id', tenantId).eq('status', 'DRAFT');
   }
 
-  private async getNextVersion(tenantId: string, weekStart: string): Promise<number> {
+  private async getNextVersion(tenantId: string, weekStart: string, platform: string = 'suprema'): Promise<number> {
     const { data } = await supabaseAdmin
       .from('settlements')
       .select('version')
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart)
+      .eq('platform', platform)
       .order('version', { ascending: false })
       .limit(1);
 

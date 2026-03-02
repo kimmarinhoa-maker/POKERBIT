@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
-import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
+import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates, listSettlements } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
@@ -57,6 +57,7 @@ export default function SubclubPanelPage() {
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
+  const [platformGroups, setPlatformGroups] = useState<Array<{ platform: string; label: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -90,6 +91,45 @@ export default function SubclubPanelPage() {
       }
       if (res.success && res.data) {
         setData(res.data);
+
+        // Build platform groups for dropdown (current + siblings)
+        const currentPlatform = res.data.settlement?.platform || 'suprema';
+        const groups: typeof platformGroups = [{
+          platform: currentPlatform,
+          label: currentPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+          settlementId,
+          subclubs: (res.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
+        }];
+
+        // Load sibling settlements from same week
+        const weekStart = res.data.settlement?.week_start;
+        if (weekStart) {
+          try {
+            const siblingsRes = await listSettlements(undefined, weekStart, weekStart);
+            if (siblingsRes.success && siblingsRes.data) {
+              const siblings = (siblingsRes.data || []).filter(
+                (s: any) => s.id !== settlementId && s.status !== 'VOID'
+              );
+              for (const sib of siblings) {
+                try {
+                  const sibRes = await getSettlementFull(sib.id);
+                  if (sibRes.success && sibRes.data) {
+                    const sibPlatform = sibRes.data.settlement?.platform || 'suprema';
+                    groups.push({
+                      platform: sibPlatform,
+                      label: sibPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+                      settlementId: sib.id,
+                      subclubs: (sibRes.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
+                    });
+                  }
+                } catch { /* skip */ }
+              }
+            }
+          } catch { /* optional */ }
+        }
+
+        groups.sort((a, b) => a.platform.localeCompare(b.platform));
+        setPlatformGroups(groups);
       } else {
         setError(res.error || 'Erro ao carregar settlement');
       }
@@ -354,16 +394,38 @@ export default function SubclubPanelPage() {
             <select
               value={subclub.name}
               onChange={(e) => {
-                router.push(`/s/${settlementId}/club/${encodeURIComponent(e.target.value)}?tab=${activeTab}`);
+                const target = e.target.value;
+                // Find which platform group contains this subclub
+                for (const g of platformGroups) {
+                  const found = g.subclubs.find(sc => sc.name === target);
+                  if (found) {
+                    router.push(`/s/${g.settlementId}/club/${encodeURIComponent(target)}?tab=${activeTab}`);
+                    return;
+                  }
+                }
+                // Fallback: same settlement
+                router.push(`/s/${settlementId}/club/${encodeURIComponent(target)}?tab=${activeTab}`);
               }}
               className="appearance-none bg-dark-800 border border-dark-700 rounded-lg pl-3 pr-7 py-1.5 text-sm text-white font-medium hover:border-dark-600 focus:border-poker-500 focus:outline-none cursor-pointer max-w-[160px] lg:max-w-none transition-colors"
               aria-label="Trocar subclube"
             >
-              {subclubs.map((sc: SubclubData) => (
-                <option key={sc.id || sc.name} value={sc.name}>
-                  {sc.name}
-                </option>
-              ))}
+              {platformGroups.length > 1 ? (
+                platformGroups.map((g) => (
+                  <optgroup key={g.platform} label={g.label}>
+                    {g.subclubs.map((sc) => (
+                      <option key={`${g.platform}-${sc.name}`} value={sc.name}>
+                        {sc.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              ) : (
+                subclubs.map((sc: SubclubData) => (
+                  <option key={sc.id || sc.name} value={sc.name}>
+                    {sc.name}
+                  </option>
+                ))
+              )}
             </select>
             <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 text-xs">&#9662;</span>
           </div>

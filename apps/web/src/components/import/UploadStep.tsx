@@ -7,7 +7,7 @@ export type Platform = 'suprema' | 'pppoker' | 'clubgg';
 
 const PLATFORMS: { value: Platform; label: string; hint: string; enabled: boolean }[] = [
   { value: 'suprema', label: 'Suprema Poker', hint: 'Arquivo .xlsx com aba "Grand Union Member Resume"', enabled: true },
-  { value: 'pppoker', label: 'PPPoker', hint: 'Em breve', enabled: false },
+  { value: 'pppoker', label: 'PPPoker', hint: 'Arquivo .xlsx com aba "Geral" (relatório semanal)', enabled: true },
   { value: 'clubgg', label: 'ClubGG', hint: 'Em breve', enabled: false },
 ];
 

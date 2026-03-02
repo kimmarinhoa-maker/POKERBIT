@@ -65,7 +65,7 @@ export function detectWeekStart(
 function detectFromXlsx(workbook: XLSX.WorkBook): WeekDetectionResult | null {
   // Tentar ler a aba "Grand Union Member Resume"
   // Algumas planilhas Suprema têm o período no header (linhas 1-5)
-  const sheetNames = ['Grand Union Member Resume', 'Grand Union Member Statistics'];
+  const sheetNames = ['Grand Union Member Resume', 'Grand Union Member Statistics', 'Geral'];
 
   for (const name of sheetNames) {
     const sheet = workbook.Sheets[name];

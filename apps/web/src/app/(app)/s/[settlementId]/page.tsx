@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, formatBRL, getOrgTree } from '@/lib/api';
+import { getSettlementFull, voidSettlement, formatBRL, getOrgTree, listSettlements } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
@@ -37,6 +37,7 @@ export default function SettlementOverviewPage() {
   const [voidError, setVoidError] = useState<string | null>(null);
   const VOID_CONFIRM_WORD = 'ANULAR';
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
+  const [siblingData, setSiblingData] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -54,6 +55,30 @@ export default function SettlementOverviewPage() {
       }
       if (res.success && res.data) {
         setData(res.data);
+
+        // Load sibling settlements from same week (different platforms)
+        const weekStart = res.data.settlement?.week_start;
+        if (weekStart) {
+          try {
+            const siblingsRes = await listSettlements(undefined, weekStart, weekStart);
+            if (siblingsRes.success && siblingsRes.data) {
+              const siblings = (siblingsRes.data || []).filter(
+                (s: any) => s.id !== settlementId && s.status !== 'VOID'
+              );
+              // Load full data for each sibling
+              const siblingFullData: any[] = [];
+              for (const sib of siblings) {
+                try {
+                  const sibRes = await getSettlementFull(sib.id);
+                  if (sibRes.success && sibRes.data) {
+                    siblingFullData.push(sibRes.data);
+                  }
+                } catch { /* skip failed siblings */ }
+              }
+              setSiblingData(siblingFullData);
+            }
+          } catch { /* sibling loading is optional */ }
+        }
       } else {
         setError(res.error || 'Erro ao carregar settlement');
       }
@@ -125,7 +150,48 @@ export default function SettlementOverviewPage() {
   }
 
   const { settlement, subclubs, dashboardTotals } = data;
-  const t = dashboardTotals;
+
+  // Build platform groups (current + siblings)
+  const platformGroups: Array<{ platform: string; label: string; settlementId: string; subclubs: any[]; totals: any }> = [];
+
+  const currentPlatform = settlement.platform || 'suprema';
+  platformGroups.push({
+    platform: currentPlatform,
+    label: currentPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+    settlementId,
+    subclubs,
+    totals: dashboardTotals,
+  });
+
+  for (const sib of siblingData) {
+    const sibPlatform = sib.settlement?.platform || 'suprema';
+    platformGroups.push({
+      platform: sibPlatform,
+      label: sibPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+      settlementId: sib.settlement.id,
+      subclubs: sib.subclubs || [],
+      totals: sib.dashboardTotals || { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
+    });
+  }
+
+  // Sort: suprema first, pppoker second
+  platformGroups.sort((a, b) => a.platform.localeCompare(b.platform));
+
+  const hasMultiplePlatforms = platformGroups.length > 1;
+
+  // Aggregate KPIs across all platforms
+  const t = hasMultiplePlatforms
+    ? platformGroups.reduce(
+        (acc, g) => ({
+          players: acc.players + (g.totals.players || 0),
+          agents: acc.agents + (g.totals.agents || 0),
+          rake: acc.rake + (g.totals.rake || 0),
+          ggr: acc.ggr + (g.totals.ggr || 0),
+          resultado: acc.resultado + (g.totals.resultado || 0),
+        }),
+        { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
+      )
+    : dashboardTotals;
 
   const weekEnd = (() => {
     if (!settlement.week_start) return '';
@@ -206,67 +272,71 @@ export default function SettlementOverviewPage() {
               />
             </div>
 
-            {/* Subclub cards */}
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              Subclubes
-              <span className="text-sm font-normal text-dark-400">({subclubs.length})</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {subclubs.map((sc: any) => (
-                <Link
-                  key={sc.id || sc.name}
-                  href={`/s/${settlementId}/club/${sc.name}`}
-                  className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
-                >
-                  <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+            {/* Subclub cards grouped by platform */}
+            {platformGroups.map(({ platform: plat, label, settlementId: platSettId, subclubs: platSubclubs }) => (
+              <div key={plat} className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  {hasMultiplePlatforms ? label : 'Subclubes'}
+                  <span className="text-sm font-normal text-dark-400">({platSubclubs.length})</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {platSubclubs.map((sc: any) => (
+                    <Link
+                      key={`${plat}-${sc.id || sc.name}`}
+                      href={`/s/${platSettId}/club/${sc.name}`}
+                      className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
+                    >
+                      <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <ClubLogo
-                          logoUrl={logoMap[normalizeKey(sc.name)]}
-                          name={sc.name}
-                          size="md"
-                          className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
-                        />
-                        <div>
-                          <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
-                            {sc.name}
-                          </h4>
-                          <p className="text-xs text-dark-400">
-                            {sc.totals.players} jogadores · {sc.totals.agents} agentes
-                          </p>
+                      <div className="p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <ClubLogo
+                              logoUrl={logoMap[normalizeKey(sc.name)]}
+                              name={sc.name}
+                              size="md"
+                              className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
+                            />
+                            <div>
+                              <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
+                                {sc.name}
+                              </h4>
+                              <p className="text-xs text-dark-400">
+                                {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
+                          <div>
+                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
+                            <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
+                            <p
+                              className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                            >
+                              {formatBRL(sc.totals.resultado)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
+                            <p
+                              className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                            >
+                              {formatBRL(sc.acertoLiga)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
-                      <div>
-                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
-                        <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
-                        <p
-                          className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                        >
-                          {formatBRL(sc.totals.resultado)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
-                        <p
-                          className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                        >
-                          {formatBRL(sc.acertoLiga)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </>
         )}
       </div>
