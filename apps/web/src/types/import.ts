@@ -85,7 +85,7 @@ export interface PreviewPlayer {
   ganhos: number;
   rake: number;
   ggr: number;
-  _status: 'ok' | 'auto_resolved' | 'unknown_subclub' | 'missing_agency';
+  _status: 'ok' | 'auto_resolved' | 'unknown_subclub' | 'missing_agency' | 'sem_vinculo';
 }
 
 export interface ExistingSettlement {

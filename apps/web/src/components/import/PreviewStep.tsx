@@ -14,6 +14,7 @@ interface PreviewStepProps {
 const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
   ok: { label: 'OK', cls: 'bg-green-500/20 text-green-400 border-green-500/40' },
   auto_resolved: { label: 'Auto', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
+  sem_vinculo: { label: 'Sem Vinculo', cls: 'bg-amber-500/20 text-amber-400 border-amber-500/40' },
   unknown_subclub: { label: 'Sem Clube', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
   missing_agency: { label: 'Sem Agencia', cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
 };
@@ -118,7 +119,8 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
     if (!existing?.agents) return { added: [] as string[], removed: [] as string[] };
     const existingSet = new Set(existing.agents.map((a) => a.toUpperCase()));
     const newAgents = new Set(preview.available_agents.map((a) => a.agent_name.toUpperCase()));
-    for (const ua of preview.blockers.unknown_agencies) {
+    // Also include unknown_agencies if the API still returns them (backwards compat)
+    for (const ua of preview.blockers.unknown_agencies || []) {
       newAgents.add(ua.agent_name.toUpperCase());
     }
     const added = [...newAgents].filter((a) => !existingSet.has(a));
@@ -136,6 +138,15 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
     () => (preview.players || []).filter((p) => p._status === 'auto_resolved').length,
     [preview.players],
   );
+
+  // Agents sem sigla (SEM VÍNCULO — warning, not blocker)
+  const semVinculoCount = useMemo(() => {
+    const agents = new Set<string>();
+    for (const p of preview.players || []) {
+      if (p._status === 'sem_vinculo') agents.add((p.aname || '').toUpperCase());
+    }
+    return agents.size;
+  }, [preview.players]);
 
   return (
     <div>
@@ -587,11 +598,6 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
             {preview.readiness.blockers_count !== 1 ? 's' : ''} para resolver
           </p>
           <p className="text-dark-400 text-sm mt-1">
-            {preview.blockers.unknown_agencies.length > 0 &&
-              `${preview.blockers.unknown_agencies.length} agencia(s) sem subclube`}
-            {preview.blockers.unknown_agencies.length > 0 &&
-              preview.blockers.players_without_agency.length > 0 &&
-              ' \u00B7 '}
             {preview.blockers.players_without_agency.length > 0 &&
               `${preview.blockers.players_without_agency.length} jogador(es) sem agencia`}
           </p>
@@ -618,6 +624,18 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
               Revisar Vinculos
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ─── SEM VÍNCULO banner ─── */}
+      {semVinculoCount > 0 && (
+        <div className="bg-amber-900/15 border border-amber-600/40 rounded-lg p-4 mb-4">
+          <p className="text-amber-300 font-medium">
+            {semVinculoCount} agente{semVinculoCount !== 1 ? 's' : ''} sem sigla
+          </p>
+          <p className="text-dark-400 text-sm mt-0.5">
+            Importados como &quot;SEM V{'I'}NCULO&quot;. Vincule manualmente em Cadastro {'>'} Agentes apos a importacao.
+          </p>
         </div>
       )}
 

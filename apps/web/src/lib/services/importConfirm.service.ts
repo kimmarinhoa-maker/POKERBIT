@@ -70,17 +70,15 @@ class ImportConfirmService {
       throw new ConfirmError(400, `Erro no parse: ${parseResult.error}`);
     }
 
-    // Verificar blockers
+    // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
-    const hasUnknown = allPlayers.some((p: any) => p._status === 'unknown_subclub');
     const hasMissing = allPlayers.some((p: any) => p._status === 'missing_agency');
 
-    if (hasUnknown || hasMissing) {
-      const unknownCount = allPlayers.filter((p: any) => p._status === 'unknown_subclub').length;
+    if (hasMissing) {
       const missingCount = allPlayers.filter((p: any) => p._status === 'missing_agency').length;
       throw new ConfirmError(
         409,
-        `Ainda há pendências: ${unknownCount} agência(s) sem clube, ${missingCount} jogador(es) sem agência. Resolva antes de confirmar.`,
+        `Ainda há pendências: ${missingCount} jogador(es) sem agência. Resolva antes de confirmar.`,
       );
     }
 

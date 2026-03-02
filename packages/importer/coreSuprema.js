@@ -176,7 +176,11 @@ function parseWorkbook(workbook, config = {}) {
 
     } else {
       p.clube = resolveSubclube(aname, rawAid, { agentOverrides, manualLinks, prefixRules });
-      if (p.clube === '?') p._status = 'unknown_subclub';
+      if (p.clube === '?') {
+        // Agente sem sigla — importa como SEM VÍNCULO (não bloqueia)
+        p.clube = 'SEM V\u00cdNCULO';
+        p._status = 'sem_vinculo';
+      }
     }
 
     players.push(p);

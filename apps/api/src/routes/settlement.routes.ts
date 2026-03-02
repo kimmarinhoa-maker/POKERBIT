@@ -352,6 +352,10 @@ router.post(
 
       for (const agentName of uniqueNames) {
         const subclubName = agentSubclubMap.get(agentName);
+
+        // Skip agents with SEM VÍNCULO — they must be linked manually
+        if (subclubName === 'SEM V\u00cdNCULO') continue;
+
         const correctParentId = (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
 
         // Try exact match (name + parent) first, then fallback to name-only

@@ -232,10 +232,19 @@ class ImportPreviewService {
       warnings.push(...readiness.blockers.map((b: string) => `Engine: ${b}`));
     }
 
-    // 7) Identificar blockers
+    // 7) Identificar blockers (unknown_subclub no longer exists — sem_vinculo is a warning, not blocker)
     const unknownAgencies = this.findUnknownAgencies(allPlayers);
     const playersWithoutAgency = this.findPlayersWithoutAgency(allPlayers);
-    const blockersCount = unknownAgencies.length + playersWithoutAgency.length;
+    const blockersCount = playersWithoutAgency.length; // only players without agency are blockers
+
+    // 7.1) Agentes sem sigla = warning (não bloqueante)
+    const semVinculoAgents = this.findSemVinculoAgents(allPlayers);
+    if (semVinculoAgents.length > 0) {
+      const totalPlayers = semVinculoAgents.reduce((s, a) => s + a.players_count, 0);
+      warnings.push(
+        `${semVinculoAgents.length} agente(s) sem sigla (${totalPlayers} jogadores) — vincule manualmente em Cadastro > Agentes`,
+      );
+    }
 
     // 7.5) Duplicados (não bloqueante)
     const duplicatePlayers: ImportPreviewResponse['duplicate_players'] = (parseResult.duplicates || []).map(
@@ -356,6 +365,23 @@ class ImportPreviewService {
   }
 
   /**
+   * Agentes com status 'sem_vinculo' (sem sigla — importados como SEM VÍNCULO)
+   */
+  private findSemVinculoAgents(players: any[]): Array<{ agent_name: string; players_count: number }> {
+    const byAgent = new Map<string, number>();
+    for (const p of players) {
+      if (p._status === 'sem_vinculo') {
+        const key = (p.aname || '').toUpperCase().trim();
+        byAgent.set(key, (byAgent.get(key) || 0) + 1);
+      }
+    }
+    return Array.from(byAgent.entries()).map(([agent_name, players_count]) => ({
+      agent_name,
+      players_count,
+    }));
+  }
+
+  /**
    * Jogadores com status 'missing_agency' (agent_name = None)
    */
   private findPlayersWithoutAgency(players: any[]): ImportPreviewResponse['blockers']['players_without_agency'] {
@@ -403,7 +429,7 @@ class ImportPreviewService {
     const agentMap = new Map<string, { agent_id: string; subclub_name: string }>();
 
     for (const p of players) {
-      if (p._status !== 'ok' && p._status !== 'auto_resolved') continue;
+      if (p._status !== 'ok' && p._status !== 'auto_resolved' && p._status !== 'sem_vinculo') continue;
       const aname = (p.aname || '').trim();
       if (!aname || /^(none|null|undefined)$/i.test(aname)) continue;
 

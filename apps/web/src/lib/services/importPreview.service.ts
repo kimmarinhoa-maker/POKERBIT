@@ -235,10 +235,21 @@ class ImportPreviewService {
       warnings.push(...readiness.blockers.map((b: string) => `Engine: ${b}`));
     }
 
-    // 7) Identificar blockers
+    // 7) Identificar blockers (sem_vinculo is a warning, not blocker)
     const unknownAgencies = this.findUnknownAgencies(allPlayers);
     const playersWithoutAgency = this.findPlayersWithoutAgency(allPlayers);
-    const blockersCount = unknownAgencies.length + playersWithoutAgency.length;
+    const blockersCount = playersWithoutAgency.length; // only players without agency are blockers
+
+    // 7.1) Agentes sem sigla = warning
+    const semVinculoAgents = new Set<string>();
+    for (const p of allPlayers) {
+      if (p._status === 'sem_vinculo') semVinculoAgents.add((p.aname || '').toUpperCase());
+    }
+    if (semVinculoAgents.size > 0) {
+      warnings.push(
+        `${semVinculoAgents.size} agente(s) sem sigla — vincule manualmente em Cadastro > Agentes`,
+      );
+    }
 
     // 7.5) Duplicados (não bloqueante)
     const duplicatePlayers: ImportPreviewResponse['duplicate_players'] = (parseResult.duplicates || []).map(
@@ -416,7 +427,7 @@ class ImportPreviewService {
     const agentMap = new Map<string, { agent_id: string; subclub_name: string }>();
 
     for (const p of players) {
-      if (p._status !== 'ok' && p._status !== 'auto_resolved') continue;
+      if (p._status !== 'ok' && p._status !== 'auto_resolved' && p._status !== 'sem_vinculo') continue;
       const aname = (p.aname || '').trim();
       if (!aname || /^(none|null|undefined)$/i.test(aname)) continue;
 
