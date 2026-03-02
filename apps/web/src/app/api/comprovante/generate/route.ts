@@ -6,12 +6,11 @@ import { supabaseAdmin } from '@/lib/server/supabase';
 const EXPIRY_DAYS = 30;
 
 function generateShortId(): string {
-  // Use Web Crypto API (works in Node.js, Edge, and Vercel)
   return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 }
 
 export async function POST(req: NextRequest) {
-  return withAuth(req, async ({ tenantId }) => {
+  return withAuth(req, async () => {
     try {
       const body = await req.json();
       const { settlementId, agentMetricId } = body || {};
@@ -26,13 +25,12 @@ export async function POST(req: NextRequest) {
       // Check if a link already exists for this settlement+agent
       const { data: existing, error: selectErr } = await supabaseAdmin
         .from('receipt_links')
-        .select('short_id, expires_at')
+        .select('id, expires_at')
         .eq('settlement_id', settlementId)
         .eq('agent_metric_id', agentMetricId)
         .maybeSingle();
 
       if (selectErr) {
-        // Table might not exist — return detailed error for debugging
         console.error('[generate] Select error:', selectErr);
         return NextResponse.json(
           { success: false, error: `DB select: ${selectErr.message} (code: ${selectErr.code})` },
@@ -46,7 +44,7 @@ export async function POST(req: NextRequest) {
         if (expiresAt > new Date()) {
           return NextResponse.json({
             success: true,
-            data: { url: `/r/${existing.short_id}` },
+            data: { url: `/r/${existing.id}` },
           });
         }
         // Expired — delete and recreate
@@ -64,10 +62,9 @@ export async function POST(req: NextRequest) {
       const { error: insertErr } = await supabaseAdmin
         .from('receipt_links')
         .insert({
-          short_id: shortId,
+          id: shortId,
           settlement_id: settlementId,
           agent_metric_id: agentMetricId,
-          tenant_id: tenantId,
           expires_at: expiresAt,
         });
 
@@ -78,14 +75,14 @@ export async function POST(req: NextRequest) {
         if (insertErr.code === '23505') {
           const { data: retry } = await supabaseAdmin
             .from('receipt_links')
-            .select('short_id')
+            .select('id')
             .eq('settlement_id', settlementId)
             .eq('agent_metric_id', agentMetricId)
             .maybeSingle();
-          if (retry?.short_id) {
+          if (retry?.id) {
             return NextResponse.json({
               success: true,
-              data: { url: `/r/${retry.short_id}` },
+              data: { url: `/r/${retry.id}` },
             });
           }
         }

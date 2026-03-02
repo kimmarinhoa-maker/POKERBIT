@@ -13,11 +13,11 @@ export async function GET(
   const { shortId } = await params;
 
   try {
-    // 1. Lookup short link
+    // 1. Lookup short link (column is "id", not "short_id")
     const { data: link, error: linkErr } = await supabaseAdmin
       .from('receipt_links')
-      .select('settlement_id, agent_metric_id, tenant_id, expires_at')
-      .eq('short_id', shortId)
+      .select('id, settlement_id, agent_metric_id, expires_at')
+      .eq('id', shortId)
       .maybeSingle();
 
     if (linkErr || !link) {
@@ -35,7 +35,7 @@ export async function GET(
       );
     }
 
-    const { settlement_id: settlementId, agent_metric_id: agentMetricId, tenant_id: tenantId } = link;
+    const { settlement_id: settlementId, agent_metric_id: agentMetricId } = link;
 
     // 3. Fetch the agent metric row
     const { data: agentMetric, error: amErr } = await supabaseAdmin
@@ -51,6 +51,9 @@ export async function GET(
         { status: 404 },
       );
     }
+
+    // Get tenant_id from agent_week_metrics (receipt_links table doesn't have it)
+    const tenantId = agentMetric.tenant_id;
 
     // 4. Fetch settlement info
     const { data: settlement } = await supabaseAdmin
@@ -120,7 +123,7 @@ export async function GET(
       .eq('tenant_id', tenantId)
       .maybeSingle();
 
-    // 10. Organization logo (stored in metadata JSONB, not a top-level column)
+    // 10. Organization logo (stored in metadata JSONB)
     let logoUrl: string | null = null;
     if (subclubName) {
       const { data: org } = await supabaseAdmin
