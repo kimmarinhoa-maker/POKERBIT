@@ -6,13 +6,15 @@ import ConfigEstrutura from '@/components/config/ConfigEstrutura';
 import ConfigPagamentos from '@/components/config/ConfigPagamentos';
 import ConfigTaxas from '@/components/config/ConfigTaxas';
 import ConfigWhatsApp from '@/components/config/ConfigWhatsApp';
+import ConfigCategorias from '@/components/config/ConfigCategorias';
 
-type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'whatsapp';
+type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'categorias' | 'whatsapp';
 
 const tabs: { key: ConfigTab; label: string }[] = [
   { key: 'estrutura', label: 'Estrutura' },
   { key: 'pagamentos', label: 'Pagamentos' },
   { key: 'taxas', label: 'Taxas' },
+  { key: 'categorias', label: 'Categorias' },
   { key: 'whatsapp', label: 'WhatsApp' },
 ];
 
@@ -50,6 +52,7 @@ export default function ConfigPage() {
       {activeTab === 'estrutura' && <ConfigEstrutura />}
       {activeTab === 'pagamentos' && <ConfigPagamentos />}
       {activeTab === 'taxas' && <ConfigTaxas />}
+      {activeTab === 'categorias' && <ConfigCategorias />}
       {activeTab === 'whatsapp' && <ConfigWhatsApp />}
     </div>
   );
