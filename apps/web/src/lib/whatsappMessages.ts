@@ -47,31 +47,29 @@ export function buildCobrancaMessage(opts: {
   // saldo > 0 = agent owes club (a pagar), saldo < 0 = club owes agent (a receber)
   const isPagar = saldo > 0;
   const valorLabel = isPagar ? 'Valor a pagar' : 'Valor a receber';
-  const valorEmoji = isPagar ? '💸' : '💰';
 
-  const lines = [
-    `Ola *${agentName}* 👋`,
-    ``,
-    `Segue o fechamento semanal (*${range}*):`,
-    ``,
-    `📊 Jogadores: ${playersCount}`,
-    `💰 Rake: ${formatBRL(rake)}`,
-    `📉 Ganhos/Perdas: ${formatBRL(ganhos)}`,
-    `📋 Resultado: ${formatBRL(resultado)}`,
-    ``,
-    `${valorEmoji} *${valorLabel}: ${formatBRL(Math.abs(saldo))}*`,
-    ``,
+  const lines: string[] = [
+    'Ol\u00e1 *' + agentName + '* \ud83d\udc4b',
+    '',
+    'Segue o fechamento semanal (*' + range + '*):',
+    '',
+    '\ud83d\udcca Jogadores: ' + playersCount,
+    '\ud83d\udcb0 Rake: ' + formatBRL(rake),
+    '\ud83d\udcc9 Ganhos/Perdas: ' + formatBRL(ganhos),
+    '\ud83c\udfe6 Resultado: ' + formatBRL(resultado),
+    '',
+    '\ud83d\udcb5 *' + valorLabel + ': ' + formatBRL(Math.abs(saldo)) + '*',
+    '',
   ];
 
-  if (isPagar && pixKey) {
-    lines.push(`Favor realizar o pagamento via PIX:`);
-    lines.push(`Chave: ${pixKey}`);
-    lines.push(``);
+  if (pixKey) {
+    lines.push('Chave PIX: ' + pixKey);
+    lines.push('');
   }
 
-  lines.push(`Qualquer duvida, estou a disposicao!`);
-  lines.push(``);
-  lines.push(`_Enviado pelo PokerBit_`);
+  lines.push('Qualquer d\u00favida, estou \u00e0 disposi\u00e7\u00e3o!');
+  lines.push('');
+  lines.push('_Enviado pelo PokerBit_');
 
   return lines.join('\n');
 }
@@ -126,7 +124,7 @@ export function buildClubMessage(opts: {
 
   const activeLanc = lancamentos.filter((l) => l.valor !== 0);
   if (activeLanc.length > 0) {
-    lines.push(`*Lancamentos:*`);
+    lines.push('*Lan\u00e7amentos:*');
     activeLanc.forEach((l, i) => {
       const prefix = i === activeLanc.length - 1 ? '└' : '├';
       lines.push(`${prefix} ${l.nome}: ${formatBRL(l.valor)}`);
