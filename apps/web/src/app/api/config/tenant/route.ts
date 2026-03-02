@@ -56,6 +56,15 @@ export async function PATCH(req: NextRequest) {
 
         if (error) throw error;
 
+        // Sync CLUB organization name when tenant name changes
+        if (updates.name) {
+          await supabaseAdmin
+            .from('organizations')
+            .update({ name: updates.name })
+            .eq('tenant_id', ctx.tenantId)
+            .eq('type', 'CLUB');
+        }
+
         logAudit(req, ctx, 'UPDATE', 'tenant', ctx.tenantId, undefined, updates);
         return NextResponse.json({ success: true });
       } catch (err: unknown) {
