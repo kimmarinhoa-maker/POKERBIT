@@ -291,10 +291,19 @@ export async function createTenant(clubName: string, hasSubclubs: boolean = true
   });
 }
 
-export async function createTenantSubclubes(tenantId: string, names: string[]) {
+export async function createTenantSubclubes(
+  tenantId: string,
+  namesOrObjects: string[] | Array<{ name: string; external_id?: string }>,
+) {
+  // Detect format: array of strings (legacy) vs array of objects (new)
+  const isLegacy = namesOrObjects.length === 0 || typeof namesOrObjects[0] === 'string';
+  const payload = isLegacy
+    ? { names: namesOrObjects as string[] }
+    : { subclubes: namesOrObjects };
+
   return apiFetch(`/tenants/${tenantId}/subclubes`, {
     method: 'POST',
-    body: JSON.stringify({ names }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -843,6 +852,26 @@ export async function updateTransactionCategory(
 
 export async function deleteTransactionCategory(id: string): Promise<ApiResponse> {
   return apiFetch(`/config/transaction-categories/${id}`, { method: 'DELETE' });
+}
+
+// ─── Club Platforms ─────────────────────────────────────────────
+
+export async function listClubPlatforms() {
+  return apiFetch('/config/club-platforms');
+}
+
+export async function createClubPlatform(data: {
+  platform: string;
+  club_name?: string;
+  club_external_id?: string;
+  is_primary?: boolean;
+  organization_id?: string;
+}) {
+  return apiFetch('/config/club-platforms', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function deleteClubPlatform(id: string) {
+  return apiFetch(`/config/club-platforms/${id}`, { method: 'DELETE' });
 }
 
 // ─── WhatsApp (Evolution API) ────────────────────────────────────

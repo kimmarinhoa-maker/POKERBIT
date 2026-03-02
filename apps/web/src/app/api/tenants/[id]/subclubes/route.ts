@@ -34,23 +34,33 @@ export async function POST(
         }
 
         const body = await req.json();
-        const { names } = body || {};
+        const { names, subclubes } = body || {};
 
-        if (!Array.isArray(names) || names.length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'Envie pelo menos 1 nome de subclube' },
-            { status: 400 },
-          );
+        // Support two formats:
+        // Legacy: { names: string[] }
+        // New:    { subclubes: [{ name, external_id? }] }
+        type SubclubeInput = { name: string; external_id?: string };
+        let validItems: SubclubeInput[] = [];
+
+        if (Array.isArray(subclubes) && subclubes.length > 0) {
+          // New format
+          validItems = subclubes
+            .filter((s: any) => s && typeof s.name === 'string' && s.name.trim())
+            .map((s: any) => ({
+              name: s.name.trim(),
+              external_id: s.external_id?.trim() || undefined,
+            }));
+        } else if (Array.isArray(names) && names.length > 0) {
+          // Legacy format
+          validItems = names
+            .map((n: unknown) => (typeof n === 'string' ? n.trim() : ''))
+            .filter((n) => n.length > 0)
+            .map((name) => ({ name }));
         }
 
-        // Filter empty names
-        const validNames = names
-          .map((n: unknown) => (typeof n === 'string' ? n.trim() : ''))
-          .filter((n) => n.length > 0);
-
-        if (validNames.length === 0) {
+        if (validItems.length === 0) {
           return NextResponse.json(
-            { success: false, error: 'Nenhum nome valido de subclube' },
+            { success: false, error: 'Envie pelo menos 1 nome de subclube' },
             { status: 400 },
           );
         }
@@ -72,17 +82,18 @@ export async function POST(
         }
 
         // Bulk insert subclubes
-        const rows = validNames.map((name) => ({
+        const rows = validItems.map((item) => ({
           tenant_id: tenantId,
           parent_id: club.id,
           type: 'SUBCLUB' as const,
-          name,
+          name: item.name,
+          ...(item.external_id ? { external_id: item.external_id } : {}),
         }));
 
         const { data, error } = await supabaseAdmin
           .from('organizations')
           .insert(rows)
-          .select('id, name, type');
+          .select('id, name, type, external_id');
 
         if (error) throw error;
 
