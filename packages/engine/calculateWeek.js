@@ -67,6 +67,12 @@ function calculateWeek(players, rates = {}) {
         const resultado = FinanceEngine.calcPlayerResult(engineP, effectiveRate);
         const rbValor = (engineP.rake) * effectiveRate / 100;
 
+        // Hands: prefer top-level (Resume), fallback to rakeBreakdown.hands.total (Statistics)
+        const rb = p.rakeBreakdown;
+        const handsFromBreakdown = rb && rb.hands && typeof rb.hands === 'object'
+          ? (rb.hands.total || Object.values(rb.hands).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0))
+          : 0;
+
         const pm = {
           id: p.id,
           nick: p.nick,
@@ -80,7 +86,7 @@ function calculateWeek(players, rates = {}) {
           rbValor,
           resultado,
           rakeBreakdown: p.rakeBreakdown || null,
-          hands: p.hands || 0,
+          hands: p.hands || handsFromBreakdown || 0,
           games: p.games || 0,
         };
         allPlayerMetrics.push(pm);

@@ -415,28 +415,50 @@ class ImportConfirmService {
     playerUuidMap: Record<string, string>,
     orgNameMap: OrgNameMap,
   ) {
-    const rows = allPlayers.map((p) => ({
-      settlement_id: settlementId,
-      tenant_id: tenantId,
-      week_start: weekStart,
-      player_id: playerUuidMap[p.id] || playerUuidMap[p.externalId] || null,
-      external_player_id: p.id,
-      nickname: p.nick,
-      agent_id: orgNameMap[p.agentName] || orgNameMap[(p.agentName || '').toUpperCase()] || null,
-      external_agent_id: p.agentId || '',
-      agent_name: p.agentName || '',
-      subclub_name: p.clube || null,
-      subclub_id: orgNameMap[p.clube] || orgNameMap[(p.clube || '').toUpperCase()] || null,
-      winnings_brl: round2(p.ganhos || 0),
-      rake_total_brl: round2(p.rake || 0),
-      ggr_brl: round2(p.ggr || 0),
-      rb_rate: p.rbRate || 0,
-      rb_value_brl: round2(p.rbValor || 0),
-      resultado_brl: round2(p.resultado || 0),
-      games: 0,
-      hands: 0,
-      rake_breakdown: p.rakeBreakdown || {},
-    }));
+    // Debug: log first player's rakeBreakdown and hands
+    if (allPlayers.length > 0) {
+      const p0 = allPlayers[0];
+      console.log('[persistPlayerMetrics] First player:', {
+        id: p0.id,
+        nick: p0.nick,
+        hands: p0.hands,
+        games: p0.games,
+        hasRakeBreakdown: !!p0.rakeBreakdown,
+        rakeBreakdownKeys: p0.rakeBreakdown ? Object.keys(p0.rakeBreakdown) : [],
+        rakeBreakdownType: typeof p0.rakeBreakdown,
+      });
+    }
+
+    const rows = allPlayers.map((p) => {
+      // Hands: prefer top-level, fallback to rakeBreakdown.hands.total
+      const rb = p.rakeBreakdown;
+      const handsFromBreakdown = rb && rb.hands && typeof rb.hands === 'object'
+        ? (rb.hands.total || Object.values(rb.hands).reduce((s: number, v: unknown) => s + (typeof v === 'number' ? v : 0), 0))
+        : 0;
+
+      return {
+        settlement_id: settlementId,
+        tenant_id: tenantId,
+        week_start: weekStart,
+        player_id: playerUuidMap[p.id] || playerUuidMap[p.externalId] || null,
+        external_player_id: p.id,
+        nickname: p.nick,
+        agent_id: orgNameMap[p.agentName] || orgNameMap[(p.agentName || '').toUpperCase()] || null,
+        external_agent_id: p.agentId || '',
+        agent_name: p.agentName || '',
+        subclub_name: p.clube || null,
+        subclub_id: orgNameMap[p.clube] || orgNameMap[(p.clube || '').toUpperCase()] || null,
+        winnings_brl: round2(p.ganhos || 0),
+        rake_total_brl: round2(p.rake || 0),
+        ggr_brl: round2(p.ggr || 0),
+        rb_rate: p.rbRate || 0,
+        rb_value_brl: round2(p.rbValor || 0),
+        resultado_brl: round2(p.resultado || 0),
+        games: p.games || 0,
+        hands: p.hands || handsFromBreakdown || 0,
+        rake_breakdown: p.rakeBreakdown || {},
+      };
+    });
 
     const batchSize = 100;
     for (let i = 0; i < rows.length; i += batchSize) {
