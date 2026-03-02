@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
   },
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

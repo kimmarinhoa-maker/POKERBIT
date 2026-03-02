@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ToastProvider } from '@/components/Toast';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import { AuthProvider, useAuth } from '@/lib/useAuth';
+
+const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 import {
   LayoutDashboard,
   Upload,
@@ -261,6 +264,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         <ScrollToTop />
+        <CommandPalette />
       </main>
     </div>
   );
