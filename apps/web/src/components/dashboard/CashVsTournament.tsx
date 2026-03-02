@@ -12,11 +12,23 @@ interface SegmentData {
 interface Props {
   cash: SegmentData;
   tournament: SegmentData;
+  activePlayers?: {
+    thisWeek: number;
+    lastWeek: number | null;
+    newPlayers: number | null;
+  };
 }
 
-export default function CashVsTournament({ cash, tournament }: Props) {
+export default function CashVsTournament({ cash, tournament, activePlayers }: Props) {
   const totalRake = cash.rake + tournament.rake;
   if (totalRake === 0) return null;
+
+  const delta = activePlayers && activePlayers.lastWeek !== null
+    ? activePlayers.thisWeek - activePlayers.lastWeek
+    : null;
+  const deltaPct = activePlayers && activePlayers.lastWeek !== null && activePlayers.lastWeek > 0
+    ? ((delta! / activePlayers.lastWeek) * 100).toFixed(1)
+    : null;
 
   return (
     <div className="card">
@@ -69,6 +81,45 @@ export default function CashVsTournament({ cash, tournament }: Props) {
           <span className="text-[10px] text-blue-400 font-mono">{tournament.pct}%</span>
         </div>
       </div>
+
+      {/* Active Players (inline) */}
+      {activePlayers && (
+        <div className="mt-4 pt-4 border-t border-dark-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Jogadores Ativos</p>
+              <p className="text-xl font-bold text-white font-mono">{activePlayers.thisWeek}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Sem. Anterior</p>
+              <p className="text-sm font-bold text-dark-300 font-mono">
+                {activePlayers.lastWeek !== null ? activePlayers.lastWeek : 'N/D'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">Novos</p>
+              <div className="flex items-center gap-1.5 justify-end">
+                <p className="text-sm font-bold text-dark-300 font-mono">
+                  {activePlayers.newPlayers !== null ? activePlayers.newPlayers : 'N/D'}
+                </p>
+                {delta !== null && (
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      delta > 0
+                        ? 'text-green-400 bg-green-500/10 border border-green-500/20'
+                        : delta < 0
+                          ? 'text-red-400 bg-red-500/10 border border-red-500/20'
+                          : 'text-dark-400 bg-dark-800 border border-dark-700'
+                    }`}
+                  >
+                    {delta > 0 ? '+' : ''}{delta} ({deltaPct}%)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,6 @@ import TopAgentsChart from './TopAgentsChart';
 import TopGainersLosers from './TopGainersLosers';
 import HandsVolumeChart from './HandsVolumeChart';
 import CashVsTournament from './CashVsTournament';
-import ActivePlayersCard from './ActivePlayersCard';
 import RakeWeeklyComparison from './RakeWeeklyComparison';
 
 interface Props {
@@ -79,22 +78,22 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             <TopGainersLosers players={data.topGainersLosers} />
           )}
 
-          {/* Row 3: Donut + Cash vs Tournament + Active Players + Rake Semanal */}
+          {/* Row 3: Donut + Cash/Torneios (com Ativos) + Rake Semanal */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <RakeDonutChart rakeByModality={data.rakeByModality} />
-            <HandsVolumeChart handsByModality={data.handsByModality} />
             <CashVsTournament
               cash={data.cashVsTournament.cash}
               tournament={data.cashVsTournament.tournament}
-            />
-            <ActivePlayersCard
-              thisWeek={data.activePlayers.thisWeek}
-              lastWeek={data.activePlayers.lastWeek}
-              newPlayers={data.activePlayers.new}
+              activePlayers={{
+                thisWeek: data.activePlayers.thisWeek,
+                lastWeek: data.activePlayers.lastWeek,
+                newPlayers: data.activePlayers.new,
+              }}
             />
             {data.rakeWeeklyComparison && data.rakeWeeklyComparison.length >= 2 && (
               <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
             )}
+            <HandsVolumeChart handsByModality={data.handsByModality} />
           </div>
         </div>
       )}
