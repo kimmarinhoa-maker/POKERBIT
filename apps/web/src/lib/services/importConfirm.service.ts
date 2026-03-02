@@ -144,7 +144,7 @@ class ImportConfirmService {
       // ── 4) Build maps ─────────────────────────────────────────────
 
       const playerUuidMap = await this.buildPlayerUuidMap(tenantId);
-      const orgNameMap = await this.buildOrgNameToIdMap(tenantId);
+      const orgNameMap = await this.buildOrgNameToIdMap(tenantId, clubId);
 
       // ── 5) Load rates ─────────────────────────────────────────────
 
@@ -369,18 +369,43 @@ class ImportConfirmService {
     return map;
   }
 
-  private async buildOrgNameToIdMap(tenantId: string): Promise<OrgNameMap> {
+  private async buildOrgNameToIdMap(tenantId: string, clubId?: string): Promise<OrgNameMap> {
     const map: OrgNameMap = {};
     const { data } = await supabaseAdmin
       .from('organizations')
-      .select('id, name')
+      .select('id, name, parent_id, type')
       .eq('tenant_id', tenantId)
       .in('type', ['SUBCLUB', 'AGENT']);
 
+    // Build set of subclub IDs that belong to the target club
+    const clubSubclubIds = new Set<string>();
+    if (clubId) {
+      for (const org of data || []) {
+        if (org.type === 'SUBCLUB' && org.parent_id === clubId) {
+          clubSubclubIds.add(org.id);
+        }
+      }
+    }
+
+    // First pass: add all orgs (fallback)
     (data || []).forEach((org) => {
       map[org.name] = org.id;
       map[org.name.toUpperCase()] = org.id;
     });
+
+    // Second pass: overwrite with orgs belonging to the target club (priority)
+    if (clubId && clubSubclubIds.size > 0) {
+      (data || []).forEach((org) => {
+        if (org.type === 'SUBCLUB' && org.parent_id === clubId) {
+          map[org.name] = org.id;
+          map[org.name.toUpperCase()] = org.id;
+        } else if (org.type === 'AGENT' && org.parent_id && clubSubclubIds.has(org.parent_id)) {
+          map[org.name] = org.id;
+          map[org.name.toUpperCase()] = org.id;
+        }
+      });
+    }
+
     return map;
   }
 

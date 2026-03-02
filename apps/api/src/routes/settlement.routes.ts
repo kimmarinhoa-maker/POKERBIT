@@ -300,14 +300,21 @@ router.post(
       // Buscar orgs SUBCLUB do tenant para mapear nome -> id
       const { data: subclubOrgs } = await supabaseAdmin
         .from('organizations')
-        .select('id, name')
+        .select('id, name, parent_id')
         .eq('tenant_id', tenantId)
         .eq('type', 'SUBCLUB')
         .eq('is_active', true);
 
       const subclubNameMap = new Map<string, string>();
+      // First pass: all subclubes (fallback)
       for (const sc of subclubOrgs || []) {
         subclubNameMap.set(normName(sc.name), sc.id);
+      }
+      // Second pass: prefer subclubes belonging to this settlement's club
+      for (const sc of subclubOrgs || []) {
+        if (sc.parent_id === settlement.club_id) {
+          subclubNameMap.set(normName(sc.name), sc.id);
+        }
       }
 
       // Buscar orgs AGENT existentes do tenant
