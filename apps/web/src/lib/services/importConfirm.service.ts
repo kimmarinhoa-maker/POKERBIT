@@ -235,10 +235,14 @@ class ImportConfirmService {
 
       // ── 7b) Persist chippix_import_data from Manager Trade Record ──
       if (parseResult.chippixTrades && Object.keys(parseResult.chippixTrades).length > 0) {
-        await supabaseAdmin
-          .from('settlements')
-          .update({ chippix_import_data: parseResult.chippixTrades })
-          .eq('id', settlementId);
+        try {
+          await supabaseAdmin
+            .from('settlements')
+            .update({ chippix_import_data: parseResult.chippixTrades })
+            .eq('id', settlementId);
+        } catch {
+          warnings.push('Nao foi possivel salvar dados do Manager Trade Record (coluna pode nao existir ainda)');
+        }
       }
 
       // ── 8) Persist metrics ────────────────────────────────────────

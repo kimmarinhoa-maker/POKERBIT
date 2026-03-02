@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch (err: unknown) {
+        console.error('[preview] Import preview error:', err instanceof Error ? err.stack : err);
         return NextResponse.json(
           { success: false, error: safeErrorMessage(err) },
           { status: 500 },

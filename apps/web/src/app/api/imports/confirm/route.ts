@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        console.error('[confirm] Import confirm error:', err instanceof Error ? err.stack : err);
         return NextResponse.json(
           { success: false, error: safeErrorMessage(err) },
           { status: 500 },
