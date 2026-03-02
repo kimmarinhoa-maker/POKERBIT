@@ -811,21 +811,27 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                               toast('Cadastre o WhatsApp deste agente em Cadastro > Agentes > Dados', 'info');
                               return;
                             }
-                            // Generate signed receipt link
+                            // Generate receipt short link
                             let comprovanteUrl: string | undefined;
-                            if (settlementId) {
+                            const agentMetricId = selectedAgent.agent.id;
+                            console.log('[Cobranca] >>> GERANDO LINK', { settlementId, agentMetricId });
+                            if (settlementId && agentMetricId) {
                               try {
-                                const linkRes = await generateReceiptLink(settlementId, selectedAgent.agent.id);
+                                const linkRes = await generateReceiptLink(settlementId, agentMetricId);
+                                console.log('[Cobranca] >>> RESULTADO LINK', JSON.stringify(linkRes));
                                 if (linkRes.success && linkRes.data?.url) {
                                   comprovanteUrl = window.location.origin + linkRes.data.url;
+                                  console.log('[Cobranca] >>> comprovanteUrl =', comprovanteUrl);
                                 } else {
-                                  console.error('[Comprovantes] generateReceiptLink failed:', linkRes.error || linkRes);
+                                  console.error('[Cobranca] generateReceiptLink failed:', linkRes.error || linkRes);
                                   toast('Link do comprovante nao gerado: ' + (linkRes.error || 'erro desconhecido'), 'error');
                                 }
                               } catch (err) {
-                                console.error('[Comprovantes] generateReceiptLink exception:', err);
+                                console.error('[Cobranca] generateReceiptLink exception:', err);
                                 toast('Erro ao gerar link do comprovante', 'error');
                               }
+                            } else {
+                              console.warn('[Cobranca] Skipped link generation — missing settlementId or agentMetricId', { settlementId, agentMetricId });
                             }
                             const msg = buildCobrancaMessage({
                               agentName: selectedAgent.agent.agent_name,
