@@ -55,20 +55,26 @@ export async function GET(
     // Get tenant_id from agent_week_metrics (receipt_links table doesn't have it)
     const tenantId = agentMetric.tenant_id;
 
-    // 4. Fetch settlement info
-    const { data: settlement } = await supabaseAdmin
+    // 4. Fetch settlement info (week_end doesn't exist in DB — computed below)
+    const { data: settlement, error: settErr } = await supabaseAdmin
       .from('settlements')
-      .select('id, week_start, week_end, status, club_id')
+      .select('id, week_start, status, club_id')
       .eq('id', settlementId)
       .eq('tenant_id', tenantId)
       .single();
 
-    if (!settlement) {
+    if (settErr || !settlement) {
+      console.error('[receipt-short] Settlement error:', settErr);
       return NextResponse.json(
         { success: false, error: 'Settlement nao encontrado' },
         { status: 404 },
       );
     }
+
+    // Compute week_end = week_start + 6 days
+    const weekEndDate = new Date(settlement.week_start + 'T00:00:00');
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    const weekEnd = weekEndDate.toISOString().split('T')[0];
 
     // 5. Fetch players for this agent
     const { data: players } = await supabaseAdmin
@@ -146,7 +152,7 @@ export async function GET(
         settlement: {
           id: settlement.id,
           week_start: settlement.week_start,
-          week_end: settlement.week_end,
+          week_end: weekEnd,
           status: settlement.status,
         },
         subclubName,
