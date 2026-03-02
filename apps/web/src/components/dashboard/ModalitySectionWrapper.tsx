@@ -6,10 +6,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import RakeDonutChart from './RakeDonutChart';
 import TopPlayersChart from './TopPlayersChart';
+import TopGainersLosers from './TopGainersLosers';
 import HandsVolumeChart from './HandsVolumeChart';
 import CashVsTournament from './CashVsTournament';
 import ActivePlayersCard from './ActivePlayersCard';
-
+import RakeWeeklyComparison from './RakeWeeklyComparison';
+import InactivePlayersAlert from './InactivePlayersAlert';
 
 interface Props {
   data: ModalityData | null;
@@ -24,7 +26,7 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
         <div className="h-px flex-1 bg-dark-700" />
         <h2 className="text-sm font-bold text-dark-400 uppercase tracking-widest flex items-center gap-2">
           <BarChart3 className="w-4 h-4" />
-          Analise por Modalidade
+          Analise Detalhada
         </h2>
         <div className="h-px flex-1 bg-dark-700" />
       </div>
@@ -41,13 +43,17 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-[240px]">
                 <div className="h-4 skeleton-shimmer w-32 mb-4" style={{ animationDelay: `${i * 0.1}s` }} />
                 <div className="h-full skeleton-shimmer rounded" />
               </div>
             ))}
+          </div>
+          <div className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-[260px] mb-4">
+            <div className="h-4 skeleton-shimmer w-48 mb-4" />
+            <div className="h-full skeleton-shimmer rounded" />
           </div>
         </div>
       )}
@@ -70,7 +76,12 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             <TopPlayersChart players={data.topPlayersByRake} />
           </div>
 
-          {/* Row 2: Hands + Cash vs Tournament + Active Players */}
+          {/* Row 2: Top Gainers & Losers (full width card, 2 columns inside) */}
+          {data.topGainersLosers && data.topGainersLosers.length > 0 && (
+            <TopGainersLosers players={data.topGainersLosers} />
+          )}
+
+          {/* Row 3: Hands + Cash vs Tournament + Active Players */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <HandsVolumeChart handsByModality={data.handsByModality} />
             <CashVsTournament
@@ -84,6 +95,15 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             />
           </div>
 
+          {/* Row 4: Cash vs Tournament weekly evolution (AreaChart) */}
+          {data.rakeWeeklyComparison && (
+            <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
+          )}
+
+          {/* Row 5: Inactive Players Alert */}
+          {data.inactivePlayers && (
+            <InactivePlayersAlert players={data.inactivePlayers} />
+          )}
         </div>
       )}
     </div>

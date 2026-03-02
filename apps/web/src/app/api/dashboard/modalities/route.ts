@@ -41,6 +41,23 @@ interface ModalityResponse {
     lastWeek: number | null;
     new: number | null;
   };
+  topGainersLosers: Array<{
+    name: string;
+    winnings: number;
+    rake: number;
+    agent: string;
+  }>;
+  rakeWeeklyComparison: Array<{
+    label: string;
+    cash: number;
+    tournament: number;
+  }>;
+  inactivePlayers: Array<{
+    name: string;
+    lastRake: number;
+    agent: string;
+    weeksAway: number;
+  }>;
 }
 
 // ── Known modality keys (filter out legacy fields like ringGame, tlt, total) ──
@@ -151,7 +168,7 @@ export async function GET(req: NextRequest) {
       // 1. Fetch player metrics with rake_breakdown
       let query = supabaseAdmin
         .from('player_week_metrics')
-        .select('nickname, rake_total_brl, rake_breakdown, hands')
+        .select('nickname, rake_total_brl, winnings_brl, agent_name, rake_breakdown, hands')
         .eq('settlement_id', settlementId)
         .eq('tenant_id', ctx.tenantId)
         .not('rake_breakdown', 'is', null);
@@ -188,6 +205,8 @@ export async function GET(req: NextRequest) {
       const parsedRows: Array<{
         nickname: string;
         rakeTotal: number;
+        winnings: number;
+        agentName: string;
         rb: NormalizedBreakdown;
         totalHands: number;
       }> = [];
@@ -214,6 +233,8 @@ export async function GET(req: NextRequest) {
         parsedRows.push({
           nickname: row.nickname,
           rakeTotal: Number(row.rake_total_brl || 0),
+          winnings: Number(row.winnings_brl || 0),
+          agentName: row.agent_name || '',
           rb,
           totalHands: handsTotal,
         });
@@ -326,6 +347,106 @@ export async function GET(req: NextRequest) {
         new: newPlayersCount,
       };
 
+      // 6. Top Gainers/Losers — full array (frontend slices top/bottom 5)
+      const topGainersLosers = parsedRows.map((p) => ({
+        name: p.nickname,
+        winnings: p.winnings,
+        rake: p.rakeTotal,
+        agent: p.agentName,
+      }));
+
+      // 7. Rake Weekly Comparison — last 8 settlements, cash vs tournament
+      let rakeWeeklyComparison: ModalityResponse['rakeWeeklyComparison'] = [];
+      try {
+        const { data: recentSettlements } = await supabaseAdmin
+          .from('settlements')
+          .select('id, week_start')
+          .eq('tenant_id', ctx.tenantId)
+          .order('week_start', { ascending: false })
+          .limit(8);
+
+        if (recentSettlements && recentSettlements.length >= 2) {
+          const sorted = [...recentSettlements].reverse();
+          const compPoints: typeof rakeWeeklyComparison = [];
+
+          for (const s of sorted) {
+            let rbQuery = supabaseAdmin
+              .from('player_week_metrics')
+              .select('rake_breakdown')
+              .eq('settlement_id', s.id)
+              .eq('tenant_id', ctx.tenantId)
+              .not('rake_breakdown', 'is', null);
+            if (subclubId) rbQuery = rbQuery.eq('subclub_id', subclubId);
+
+            const { data: rbRows } = await rbQuery;
+            let cashTotal = 0, tournamentTotal = 0;
+            for (const r of rbRows || []) {
+              const rb = normalizeBreakdown(r.rake_breakdown);
+              cashTotal += sumModalities(rb.rake, CASH_MODALITIES);
+              tournamentTotal += sumModalities(rb.rake, TOURNAMENT_MODALITIES);
+            }
+            const [, mm, dd] = s.week_start.split('-');
+            compPoints.push({ label: `${dd}/${mm}`, cash: cashTotal, tournament: tournamentTotal });
+          }
+          rakeWeeklyComparison = compPoints;
+        }
+      } catch {
+        // Non-critical — leave empty
+      }
+
+      // 8. Inactive Players — players from previous weeks not present this week
+      let inactivePlayers: ModalityResponse['inactivePlayers'] = [];
+      try {
+        const currentNicks = new Set(validRows.map((r) => r.nickname));
+
+        // Fetch last 4 previous settlements (excluding current)
+        const { data: prevSettlementsAll } = await supabaseAdmin
+          .from('settlements')
+          .select('id, week_start')
+          .eq('tenant_id', ctx.tenantId)
+          .lt('week_start', currentSettlement?.week_start || '9999-12-31')
+          .order('week_start', { ascending: false })
+          .limit(4);
+
+        if (prevSettlementsAll && prevSettlementsAll.length > 0) {
+          // Map: nickname -> { lastRake, agent, lastWeekIdx }
+          const inactiveMap = new Map<string, { lastRake: number; agent: string; lastWeekIdx: number }>();
+
+          for (let wi = 0; wi < prevSettlementsAll.length; wi++) {
+            const ps = prevSettlementsAll[wi];
+            let pq = supabaseAdmin
+              .from('player_week_metrics')
+              .select('nickname, rake_total_brl, agent_name')
+              .eq('settlement_id', ps.id)
+              .eq('tenant_id', ctx.tenantId);
+            if (subclubId) pq = pq.eq('subclub_id', subclubId);
+
+            const { data: pRows } = await pq;
+            for (const pr of pRows || []) {
+              if (!currentNicks.has(pr.nickname) && !inactiveMap.has(pr.nickname)) {
+                inactiveMap.set(pr.nickname, {
+                  lastRake: Number(pr.rake_total_brl || 0),
+                  agent: pr.agent_name || '',
+                  lastWeekIdx: wi + 1, // 1 = last week, 2 = two weeks ago, etc.
+                });
+              }
+            }
+          }
+
+          inactivePlayers = Array.from(inactiveMap.entries())
+            .map(([name, data]) => ({
+              name,
+              lastRake: data.lastRake,
+              agent: data.agent,
+              weeksAway: data.lastWeekIdx,
+            }))
+            .sort((a, b) => b.lastRake - a.lastRake)
+            .slice(0, 15);
+        }
+      } catch {
+        // Non-critical — leave empty
+      }
+
       const result: ModalityResponse = {
         rakeByModality,
         winningsByModality,
@@ -333,6 +454,9 @@ export async function GET(req: NextRequest) {
         topPlayersByRake,
         cashVsTournament,
         activePlayers,
+        topGainersLosers,
+        rakeWeeklyComparison,
+        inactivePlayers,
       };
 
       cacheSet(cacheKey, result, 120_000);

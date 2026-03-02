@@ -992,6 +992,23 @@ export interface ModalityData {
     lastWeek: number | null;
     new: number | null;
   };
+  topGainersLosers: Array<{
+    name: string;
+    winnings: number;
+    rake: number;
+    agent: string;
+  }>;
+  rakeWeeklyComparison: Array<{
+    label: string;
+    cash: number;
+    tournament: number;
+  }>;
+  inactivePlayers: Array<{
+    name: string;
+    lastRake: number;
+    agent: string;
+    weeksAway: number;
+  }>;
 }
 
 export async function getDashboardModalities(settlementId: string, subclubId?: string) {

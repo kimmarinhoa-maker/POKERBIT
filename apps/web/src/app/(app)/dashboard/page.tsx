@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { formatBRL, round2, normalizeKey } from '@/lib/formatters';
-import { listSettlements, getSettlementFull, getOrgTree } from '@/lib/api';
+import { listSettlements, getSettlementFull, getOrgTree, getDashboardModalities } from '@/lib/api';
+import type { ModalityData } from '@/lib/api';
+import ModalitySectionWrapper from '@/components/dashboard/ModalitySectionWrapper';
 import KpiCard from '@/components/ui/KpiCard';
 import DeltaBadge from '@/components/ui/DeltaBadge';
 import DraftBanner from '@/components/ui/DraftBanner';
@@ -72,6 +74,10 @@ export default function DashboardPage() {
 
   // Previous week data (for delta comparison)
   const [prevWeek, setPrevWeek] = useState<WeekData | null>(null);
+
+  // Modality analysis data (non-blocking)
+  const [modalityData, setModalityData] = useState<ModalityData | null>(null);
+  const [modalityLoading, setModalityLoading] = useState(false);
 
   // Chart data (multiple weeks)
   const [chartData, setChartData] = useState<Array<{ label: string; rake: number; resultado: number; acerto: number }>>([]);
@@ -214,12 +220,18 @@ export default function DashboardPage() {
           dtEnd.setDate(dtEnd.getDate() + 6);
           setEndDate(dtEnd.toISOString().slice(0, 10));
 
-          // Load previous week (for delta badges) + chart data — non-blocking
+          // Load previous week (for delta badges) + chart data + modalities — non-blocking
           if (res.data.length >= 2) {
             loadWeekData(res.data[1]).then((prev) => {
               if (prev) setPrevWeek(prev);
             });
           }
+
+          // Fetch modality analysis (non-blocking)
+          setModalityLoading(true);
+          getDashboardModalities(latest.id).then((modRes) => {
+            if (modRes.success && modRes.data) setModalityData(modRes.data);
+          }).finally(() => setModalityLoading(false));
 
           // Build chart data from recent settlements (up to 8) — parallel fetch
           const recentSettlements = res.data.slice(0, 8).reverse();
@@ -281,6 +293,13 @@ export default function DashboardPage() {
         if (newData) {
           setCurrentWeek(newData);
           setNotFoundEmpty(false);
+
+          // Re-fetch modality data for new week
+          setModalityLoading(true);
+          setModalityData(null);
+          getDashboardModalities(target.id).then((modRes) => {
+            if (modRes.success && modRes.data) setModalityData(modRes.data);
+          }).finally(() => setModalityLoading(false));
 
         } else {
           setNotFoundEmpty(true);
@@ -582,6 +601,9 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+          {/* Modality Analysis Section */}
+          <ModalitySectionWrapper data={modalityData} loading={modalityLoading} />
 
         </>
       )}
