@@ -8,6 +8,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 import { ALL_RESOURCES, DEFAULT_PERMISSIONS } from '../constants/defaultPermissions';
+import { logger } from '../utils/logger';
 
 // In-memory cache: Map<tenantId:role, { perms, expires }>
 const permCache = new Map<string, { perms: Record<string, boolean>; expires: number }>();
@@ -56,7 +57,7 @@ export function requirePermission(...resources: string[]) {
         entry = { perms, expires: Date.now() + CACHE_TTL };
         permCache.set(cacheKey, entry);
       } catch (err) {
-        console.warn('[permission] Failed to fetch permissions, falling back to defaults:', err);
+        logger.warn('permission', 'Failed to fetch permissions, falling back to defaults:', err);
         // Fallback to defaults only
         const perms: Record<string, boolean> = {};
         const roleDefaults = (DEFAULT_PERMISSIONS as Record<string, Record<string, boolean>>)[role];

@@ -11,6 +11,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
+import { logger } from './utils/logger';
 
 // Rotas
 import authRoutes from './routes/auth.routes';
@@ -158,7 +159,7 @@ app.use((_req, res) => {
 
 // ─── Error handler global ──────────────────────────────────────────
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('[ERROR]', err);
+  logger.error('ERROR', err);
   res.status(err.status || 500).json({
     success: false,
     error: env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.message,
@@ -203,7 +204,7 @@ const server = app.listen(PORT, HOST, () => {
 
 server.on('error', (err: any) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} already in use`);
+    logger.error('server', `Port ${PORT} already in use`);
     process.exit(1);
   }
   throw err;

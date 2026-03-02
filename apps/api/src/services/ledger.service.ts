@@ -9,6 +9,7 @@
 
 import { supabaseAdmin } from '../config/supabase';
 import type { CreateLedgerEntryDTO, MovementDir } from '../types';
+import { logger } from '../utils/logger';
 
 export class LedgerService {
   // ─── Criar movimentação ──────────────────────────────────────────
@@ -43,7 +44,7 @@ export class LedgerService {
         new_data: { entity_id: dto.entity_id, dir: dto.dir, amount: dto.amount },
       });
     } catch (auditErr) {
-      console.warn('[ledger] Audit log insert failed (CREATE):', auditErr);
+      logger.warn('ledger', 'Audit log insert failed (CREATE):', auditErr);
     }
 
     return data;
@@ -132,7 +133,7 @@ export class LedgerService {
         old_data: existing,
       });
     } catch (auditErr) {
-      console.warn('[ledger] Audit log insert failed (DELETE):', auditErr);
+      logger.warn('ledger', 'Audit log insert failed (DELETE):', auditErr);
     }
 
     return { deleted: true };

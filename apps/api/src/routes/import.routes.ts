@@ -20,6 +20,7 @@ import { importConfirmService, ConfirmError } from '../services/importConfirm.se
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -79,7 +80,7 @@ router.post('/preview', requireAuth, requireTenant, requirePermission('page:impo
       },
     });
   } catch (err: unknown) {
-    console.error('[POST /api/imports/preview]', err);
+    logger.error('POST /api/imports/preview', String(err));
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
@@ -157,7 +158,7 @@ router.post(
         return;
       }
 
-      console.error('[POST /api/imports/confirm]', err);
+      logger.error('POST /api/imports/confirm', String(err));
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
@@ -227,7 +228,7 @@ router.post(
         data: result,
       });
     } catch (err: unknown) {
-      console.error('[POST /api/imports]', err);
+      logger.error('POST /api/imports', String(err));
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },
@@ -396,7 +397,7 @@ router.delete(
       logAudit(req, 'DELETE', 'import', importId);
       res.json({ success: true });
     } catch (err: unknown) {
-      console.error('[DELETE /api/imports/:id]', err);
+      logger.error('DELETE /api/imports/:id', String(err));
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
     }
   },

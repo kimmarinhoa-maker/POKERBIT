@@ -13,6 +13,7 @@ import { safeErrorMessage, AppError } from '../utils/apiError';
 import { batchExecute } from '../utils/batch';
 import { logAudit } from '../utils/audit';
 import { cacheGet, cacheSet, cacheInvalidate } from '../utils/cache';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -108,7 +109,7 @@ router.get('/:id/full', requireAuth, requireTenant, requirePermission('page:over
 
     res.json({ success: true, data });
   } catch (err: unknown) {
-    console.error('[settlement/full]', err);
+    logger.error('settlement/full', String(err));
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });
@@ -434,7 +435,7 @@ router.post(
                 .maybeSingle();
               orgId = found?.id;
               if (!orgId) {
-                console.warn(`[sync-agents] Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
+                logger.warn('sync-agents', `Falha ao criar/encontrar org para agente "${agentName}": ${cErr.message}`);
               } else {
                 resolvedOrgMap.set(agentName, orgId);
               }
@@ -462,7 +463,7 @@ router.post(
         fixed = results.filter((r) => r.status === 'fulfilled').length;
         const failures = results.filter((r) => r.status === 'rejected');
         if (failures.length > 0) {
-          console.warn(`[sync-agents] Phase 3: ${failures.length}/${toFixParent.length} parent_id updates failed`);
+          logger.warn('sync-agents', `Phase 3: ${failures.length}/${toFixParent.length} parent_id updates failed`);
         }
       }
 
@@ -526,11 +527,11 @@ router.post(
         p.then((result: any) => {
           if (result?.error) {
             phase4Errors++;
-            console.warn('[sync-agents] Phase 4 error:', result.error);
+            logger.warn('sync-agents', 'Phase 4 error:', result.error);
           }
         }).catch((err: any) => {
           phase4Errors++;
-          console.warn('[sync-agents] Phase 4 exception:', err);
+          logger.warn('sync-agents', 'Phase 4 exception:', err);
         }),
       );
       await Promise.all(checked);
@@ -673,7 +674,7 @@ router.post(
         }
       } catch (rateErr) {
         // Non-critical: log but don't fail the sync
-        console.warn('[sync-agents] Phase 5 (rate auto-populate) error:', rateErr);
+        logger.warn('sync-agents', 'Phase 5 (rate auto-populate) error:', rateErr);
       }
 
       res.json({ success: true, data: { created, fixed, linked, ratesPopulated, phase4Errors } });
@@ -786,7 +787,7 @@ router.patch(
             created_by: req.userId,
           });
         } catch (persistErr) {
-          console.warn('[rb-rate] Failed to persist agent rate:', persistErr);
+          logger.warn('rb-rate', 'Failed to persist agent rate:', persistErr);
         }
       }
 
@@ -833,7 +834,7 @@ router.patch(
           playersPropagated = ok;
         }
       } catch (propErr) {
-        console.warn('[rb-rate] Failed to propagate to players:', propErr);
+        logger.warn('rb-rate', 'Failed to propagate to players:', propErr);
       }
 
       res.json({ success: true, data, playersPropagated });

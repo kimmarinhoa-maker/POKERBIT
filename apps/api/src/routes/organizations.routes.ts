@@ -10,6 +10,7 @@ import { requirePermission } from '../middleware/permission';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ const logoUpload = multer({
 });
 
 // ─── GET /api/organizations — Listar todas ─────────────────────────
-router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/', requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const type = req.query.type as string | undefined;
@@ -60,7 +61,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── GET /api/organizations/tree — Árvore hierárquica ──────────────
-router.get('/tree', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/tree', requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 
@@ -121,7 +122,7 @@ router.get('/tree', requireAuth, requireTenant, async (req: Request, res: Respon
 });
 
 // ─── GET /api/organizations/prefix-rules — Regras de prefixo ──────
-router.get('/prefix-rules', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/prefix-rules', requireAuth, requireTenant, requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
 
@@ -646,7 +647,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     res.json({ success: true, data });
   } catch (err: unknown) {
-    console.error('[PUT /:id/rate] Error:', err);
+    logger.error('PUT /:id/rate', 'Error:', err);
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });

@@ -4,6 +4,7 @@
 
 import { Request } from 'express';
 import { supabaseAdmin } from '../config/supabase';
+import { logger } from './logger';
 
 type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'FINALIZE' | 'VOID';
 
@@ -33,6 +34,6 @@ export function logAudit(
     })
     .then(
       () => {},
-      (err: any) => console.warn('[audit]', err),
+      (err: any) => logger.warn('audit', err),
     );
 }

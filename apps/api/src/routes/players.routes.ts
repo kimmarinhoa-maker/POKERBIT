@@ -9,6 +9,7 @@ import { requirePermission } from '../middleware/permission';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -308,7 +309,7 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
 
     res.json({ success: true, data });
   } catch (err: unknown) {
-    console.error('[PUT player/:id/rate] Error:', err);
+    logger.error('PUT player/:id/rate', 'Error:', err);
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }
 });

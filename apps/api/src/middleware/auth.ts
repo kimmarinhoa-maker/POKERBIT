@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { supabaseAdmin } from '../config/supabase';
+import { logger } from '../utils/logger';
 
 // Roles com acesso total (não precisam de user_org_access)
 export const FULL_ACCESS_ROLES = ['OWNER', 'ADMIN'] as const;
@@ -52,7 +53,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       .eq('is_active', true);
 
     if (tenantError) {
-      console.error('[auth] Erro ao buscar tenants:', tenantError);
+      logger.error('auth', 'Erro ao buscar tenants:', tenantError);
       res.status(500).json({ success: false, error: 'Erro interno de autenticação' });
       return;
     }
@@ -74,7 +75,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     next();
   } catch (err) {
-    console.error('[auth] Erro inesperado:', err);
+    logger.error('auth', 'Erro inesperado:', err);
     res.status(500).json({ success: false, error: 'Erro interno de autenticação' });
   }
 }
@@ -110,7 +111,7 @@ export async function requireTenant(req: Request, res: Response, next: NextFunct
         .eq('tenant_id', tenantId);
       req.allowedSubclubIds = (data || []).map((r) => r.org_id);
     } catch (err) {
-      console.error('[auth] Erro ao buscar org_access:', err);
+      logger.warn('auth', 'Erro ao buscar org_access:', err);
       req.allowedSubclubIds = [];
     }
   }

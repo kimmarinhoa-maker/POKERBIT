@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
+import { logger } from '../utils/logger';
 
 // Carrega .env apenas em dev (em produção Railway/Render injetam env vars direto)
 const envPath = path.resolve(__dirname, '../../../../.env');
@@ -34,9 +35,9 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Variáveis de ambiente inválidas:');
-  console.error(parsed.error.flatten().fieldErrors);
-  console.error('\n📋 Copie .env.example para .env e preencha com suas credenciais do Supabase');
+  logger.error('env', 'Variaveis de ambiente invalidas:');
+  logger.error('env', parsed.error.flatten().fieldErrors);
+  logger.error('env', 'Copie .env.example para .env e preencha com suas credenciais do Supabase');
   process.exit(1);
 }
 

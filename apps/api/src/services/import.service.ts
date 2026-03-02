@@ -18,6 +18,7 @@ import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
 import type { ImportProcessResult } from '../types';
 import { round2 } from '../utils/round2';
+import { logger } from '../utils/logger';
 
 // Importa os pacotes core (CommonJS) — eslint-disable necessário pois são módulos CJS sem typing
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -357,7 +358,7 @@ export class ImportService {
       });
 
       if (error) {
-        console.error(`[import] Erro upsert players batch ${i}:`, error);
+        logger.error('import', `Erro upsert players batch ${i}:`, error);
       }
     }
   }
@@ -420,7 +421,7 @@ export class ImportService {
       const { error } = await supabaseAdmin.from('player_week_metrics').insert(batch);
 
       if (error) {
-        console.error(`[import] Erro insert player_metrics batch ${i}:`, error);
+        logger.error('import', `Erro insert player_metrics batch ${i}:`, error);
         throw error;
       }
     }
@@ -472,7 +473,7 @@ export class ImportService {
       const { error } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
 
       if (error) {
-        console.error('[import] Erro insert agent_metrics:', error);
+        logger.error('import', 'Erro insert agent_metrics:', error);
         throw error;
       }
     }

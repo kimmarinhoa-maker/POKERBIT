@@ -7,6 +7,7 @@ import { requireAuth, requireTenant, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.get('/', ...adminOnly, async (req: Request, res: Response) => {
               const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
               enriched[index].email = authUser?.user?.email || null;
             } catch (authErr: unknown) {
-              console.warn(`[users] Failed to fetch email for user ${userId}:`, safeErrorMessage(authErr));
+              logger.warn('users', `Failed to fetch email for user ${userId}:`, safeErrorMessage(authErr));
             }
           }),
         );

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../config/supabase';
 import { requireAuth, FULL_ACCESS_ROLES } from '../middleware/auth';
 import { safeErrorMessage } from '../utils/apiError';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -123,7 +124,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     // Buscar profile
     const { data: profile, error: profileErr } = await supabaseAdmin.from('user_profiles').select('*').eq('id', req.userId!).maybeSingle();
-    if (profileErr) console.warn('[auth/me] Profile fetch error:', profileErr.message);
+    if (profileErr) logger.warn('auth/me', 'Profile fetch error:', profileErr.message);
 
     // Buscar tenants
     const { data: tenants } = await supabaseAdmin

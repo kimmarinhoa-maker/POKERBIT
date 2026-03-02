@@ -17,6 +17,7 @@ import type { SettlementStatus } from '../types';
 import { round2 } from '../utils/round2';
 import { normName } from '../utils/normName';
 import { AppError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 
 function sumArr(arr: any[], key: string): number {
   return arr.reduce((s, r) => s + (Number(r[key]) || 0), 0);
@@ -442,7 +443,7 @@ export class SettlementService {
         const resultadoSemana = Number(p.resultado_brl) || 0;
         // Fórmula canônica: saldoAtual = resultado + saldoAnterior + pagamentos
         // totalPagamentos (IN=+, OUT=-): pagamento recebido REDUZ dívida do jogador
-        const saldoAtual = round2(resultadoSemana + saldoAnterior + round2(totalPagamentos));
+        const saldoAtual = round2(resultadoSemana + saldoAnterior + totalPagamentos);
 
         p.saldo_anterior = round2(saldoAnterior);
         p.total_pagamentos = round2(totalPagamentos);
@@ -587,7 +588,7 @@ export class SettlementService {
         new_data: { status: 'FINAL', week_start: current.week_start },
       });
     } catch (auditErr) {
-      console.warn('[audit] Failed to log:', auditErr);
+      logger.warn('audit', 'Failed to log:', auditErr);
     }
 
     return data;
@@ -631,7 +632,7 @@ export class SettlementService {
         new_data: { status: 'VOID', reason },
       });
     } catch (auditErr) {
-      console.warn('[audit] Failed to log:', auditErr);
+      logger.warn('audit', 'Failed to log:', auditErr);
     }
 
     return data;

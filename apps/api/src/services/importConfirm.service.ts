@@ -19,6 +19,7 @@ import XLSX from 'xlsx';
 import { supabaseAdmin } from '../config/supabase';
 import { importPreviewService } from './importPreview.service';
 import { round2 } from '../utils/round2';
+import { logger } from '../utils/logger';
 
 // Importa pacotes core (CommonJS)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -338,7 +339,7 @@ class ImportConfirmService {
         .from('players')
         .upsert(batch, { onConflict: 'tenant_id,external_id', ignoreDuplicates: false });
       if (error) {
-        console.warn(`[confirm] Erro upsert players batch ${i}: ${error.message}`);
+        logger.warn('confirm', `Erro upsert players batch ${i}: ${error.message}`);
         throw new ConfirmError(500, `Erro ao upsert players (batch ${i}): ${error.message}`);
       }
     }
@@ -472,8 +473,9 @@ class ImportConfirmService {
       if (error) {
         // If unique constraint violation, clean up conflicting rows and retry
         if (error.code === '23505') {
-          console.warn(
-            `[confirm] Constraint conflict in player_metrics batch ${i}, cleaning up overlapping players...`,
+          logger.warn(
+            'confirm',
+            `Constraint conflict in player_metrics batch ${i}, cleaning up overlapping players...`,
           );
           const extIds = batch.map((r) => r.external_player_id).filter(Boolean);
           if (extIds.length > 0) {
@@ -485,11 +487,11 @@ class ImportConfirmService {
           }
           const { error: retryErr } = await supabaseAdmin.from('player_week_metrics').insert(batch);
           if (retryErr) {
-            console.error(`[confirm] Retry failed for player_metrics batch ${i}:`, retryErr);
+            logger.error('confirm', `Retry failed for player_metrics batch ${i}:`, retryErr);
             throw retryErr;
           }
         } else {
-          console.error(`[confirm] Erro insert player_metrics batch ${i}:`, error);
+          logger.error('confirm', `Erro insert player_metrics batch ${i}:`, error);
           throw error;
         }
       }
@@ -533,7 +535,7 @@ class ImportConfirmService {
       if (error) {
         // If unique constraint violation, clean up conflicting rows and retry
         if (error.code === '23505') {
-          console.warn('[confirm] Constraint conflict in agent_metrics, cleaning up overlapping agents...');
+          logger.warn('confirm', 'Constraint conflict in agent_metrics, cleaning up overlapping agents...');
           const agentNames = rows.map((r) => r.agent_name).filter(Boolean);
           if (agentNames.length > 0) {
             await supabaseAdmin
@@ -544,11 +546,11 @@ class ImportConfirmService {
           }
           const { error: retryErr } = await supabaseAdmin.from('agent_week_metrics').insert(rows);
           if (retryErr) {
-            console.error('[confirm] Retry failed for agent_metrics:', retryErr);
+            logger.error('confirm', 'Retry failed for agent_metrics:', retryErr);
             throw retryErr;
           }
         } else {
-          console.error('[confirm] Erro insert agent_metrics:', error);
+          logger.error('confirm', 'Erro insert agent_metrics:', error);
           throw error;
         }
       }
