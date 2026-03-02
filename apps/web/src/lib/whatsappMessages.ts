@@ -48,22 +48,33 @@ export function buildCobrancaMessage(opts: {
   const isPagar = saldo < 0;
   const valorLabel = isPagar ? 'Valor a pagar' : 'Valor a receber';
 
+  // Use String.fromCodePoint to generate emojis at runtime (avoids surrogate pair encoding issues)
+  const E = {
+    wave: String.fromCodePoint(0x1F44B),
+    chart: String.fromCodePoint(0x1F4CA),
+    money: String.fromCodePoint(0x1F4B0),
+    down: String.fromCodePoint(0x1F4C9),
+    bank: String.fromCodePoint(0x1F3E6),
+    bill: String.fromCodePoint(0x1F4B5),
+    key: String.fromCodePoint(0x1F511),
+    page: String.fromCodePoint(0x1F4C4),
+  };
+
   const lines: string[] = [
-    'Ol\u00e1 *' + agentName + '* \ud83d\udc4b',
+    'Ol\u00e1 *' + agentName + '* ' + E.wave,
     '',
     'Segue o fechamento semanal (*' + range + '*):',
     '',
-    '\ud83d\udcca Jogadores: ' + playersCount,
-    '\ud83d\udcb0 Rake: ' + formatBRL(rake),
-    '\ud83d\udcc9 Ganhos/Perdas: ' + formatBRL(ganhos),
-    '\ud83c\udfe6 Resultado: ' + formatBRL(resultado),
+    E.chart + ' Jogadores: ' + playersCount,
+    E.money + ' Rake: ' + formatBRL(rake),
+    E.down + ' Ganhos/Perdas: ' + formatBRL(ganhos),
     '',
-    '\ud83d\udcb5 *' + valorLabel + ': ' + formatBRL(Math.abs(saldo)) + '*',
+    E.bill + ' *' + valorLabel + ': ' + formatBRL(Math.abs(saldo)) + '*',
     '',
   ];
 
   if (pixKey) {
-    lines.push('Chave PIX: ' + pixKey);
+    lines.push(E.key + ' Chave PIX: ' + pixKey);
     lines.push('');
   }
 
