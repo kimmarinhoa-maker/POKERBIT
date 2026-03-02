@@ -45,15 +45,19 @@ export async function GET(req: NextRequest) {
       }
 
       // Fetch org → chippix_manager_id mapping for subclubs
-      const { data: orgs } = await supabaseAdmin
+      // Use select('*') to avoid PostgREST schema cache issues with new columns
+      const { data: orgs, error: orgError } = await supabaseAdmin
         .from('organizations')
-        .select('id, name, chippix_manager_id')
+        .select('*')
         .eq('tenant_id', ctx.tenantId)
-        .eq('type', 'SUBCLUB')
-        .not('chippix_manager_id', 'is', null);
+        .eq('type', 'SUBCLUB');
+
+      if (orgError) {
+        console.error('[import-summary] org query error:', orgError);
+      }
 
       const managerToClub: Record<string, { org_id: string; org_name: string }> = {};
-      for (const org of orgs || []) {
+      for (const org of (orgs || []) as any[]) {
         if (org.chippix_manager_id) {
           managerToClub[org.chippix_manager_id] = { org_id: org.id, org_name: org.name };
         }
