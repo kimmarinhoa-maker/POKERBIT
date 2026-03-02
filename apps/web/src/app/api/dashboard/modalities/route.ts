@@ -41,7 +41,6 @@ interface ModalityResponse {
     lastWeek: number | null;
     new: number | null;
   };
-  modalityEvolution: Array<Record<string, unknown>>;
 }
 
 // ── Known modality keys (filter out legacy fields like ringGame, tlt, total) ──
@@ -320,47 +319,6 @@ export async function GET(req: NextRequest) {
         new: newPlayersCount,
       };
 
-      // 6. Modality evolution — last 8 settlements
-      const modalityEvolution: Array<Record<string, unknown>> = [];
-
-      const { data: recentSettlements } = await supabaseAdmin
-        .from('settlements')
-        .select('id, week_start')
-        .eq('tenant_id', ctx.tenantId)
-        .order('week_start', { ascending: false })
-        .limit(8);
-
-      if (recentSettlements && recentSettlements.length >= 2) {
-        const ordered = [...recentSettlements].reverse();
-
-        for (const s of ordered) {
-          let weekQuery = supabaseAdmin
-            .from('player_week_metrics')
-            .select('rake_breakdown')
-            .eq('settlement_id', s.id)
-            .eq('tenant_id', ctx.tenantId)
-            .not('rake_breakdown', 'is', null);
-          if (subclubId) weekQuery = weekQuery.eq('subclub_id', subclubId);
-
-          const { data: weekRows } = await weekQuery;
-
-          const weekRake: Record<string, number> = {};
-          for (const wr of weekRows || []) {
-            const rb = normalizeBreakdown(wr.rake_breakdown);
-            for (const [mod, val] of Object.entries(rb.rake)) {
-              addToMap(weekRake, mod, val);
-            }
-          }
-
-          const [, m, d] = s.week_start.split('-');
-          modalityEvolution.push({
-            weekStart: s.week_start,
-            label: `${d}/${m}`,
-            ...weekRake,
-          });
-        }
-      }
-
       const result: ModalityResponse = {
         rakeByModality,
         winningsByModality,
@@ -368,7 +326,6 @@ export async function GET(req: NextRequest) {
         topPlayersByRake,
         cashVsTournament,
         activePlayers,
-        modalityEvolution,
       };
 
       cacheSet(cacheKey, result, 120_000);

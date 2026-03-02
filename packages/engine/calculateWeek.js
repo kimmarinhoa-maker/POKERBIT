@@ -80,6 +80,8 @@ function calculateWeek(players, rates = {}) {
           rbValor,
           resultado,
           rakeBreakdown: p.rakeBreakdown || null,
+          hands: p.hands || 0,
+          games: p.games || 0,
         };
         allPlayerMetrics.push(pm);
         return pm;

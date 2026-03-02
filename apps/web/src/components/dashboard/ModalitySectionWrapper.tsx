@@ -9,7 +9,7 @@ import TopPlayersChart from './TopPlayersChart';
 import HandsVolumeChart from './HandsVolumeChart';
 import CashVsTournament from './CashVsTournament';
 import ActivePlayersCard from './ActivePlayersCard';
-import ModalityEvolutionChart from './ModalityEvolutionChart';
+
 
 interface Props {
   data: ModalityData | null;
@@ -84,8 +84,6 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
             />
           </div>
 
-          {/* Row 3: Evolution chart (full width) */}
-          <ModalityEvolutionChart data={data.modalityEvolution} />
         </div>
       )}
     </div>

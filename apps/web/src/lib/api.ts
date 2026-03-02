@@ -984,7 +984,6 @@ export interface ModalityData {
     lastWeek: number | null;
     new: number | null;
   };
-  modalityEvolution: Array<Record<string, unknown>>;
 }
 
 export async function getDashboardModalities(settlementId: string, subclubId?: string) {
