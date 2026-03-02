@@ -284,10 +284,10 @@ export async function getMe() {
 
 // ─── Tenant management ──────────────────────────────────────────
 
-export async function createTenant(clubName: string) {
+export async function createTenant(clubName: string, hasSubclubs: boolean = true) {
   return apiFetch('/tenants', {
     method: 'POST',
-    body: JSON.stringify({ club_name: clubName }),
+    body: JSON.stringify({ club_name: clubName, has_subclubs: hasSubclubs }),
   });
 }
 
@@ -579,6 +579,19 @@ export async function deleteLedgerEntry(id: string) {
   return apiFetch(`/ledger/${id}`, { method: 'DELETE' });
 }
 
+export interface CategorizedTotal {
+  category_id: string;
+  name: string;
+  dre_type: 'revenue' | 'expense' | null;
+  dre_group: string | null;
+  color: string;
+  total: number;
+}
+
+export async function getCategorizedTotals(weekStart: string): Promise<ApiResponse<CategorizedTotal[]>> {
+  return apiFetch<CategorizedTotal[]>(`/ledger/categorized-totals?week_start=${weekStart}`);
+}
+
 // ─── Config (fees + adjustments) ──────────────────────────────────
 
 export async function getFeeConfig(clubId?: string) {
@@ -783,6 +796,55 @@ export async function deleteBankAccount(id: string) {
   return apiFetch(`/config/bank-accounts/${id}`, { method: 'DELETE' });
 }
 
+// ─── Transaction Categories ─────────────────────────────────────
+
+export interface TransactionCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  direction: 'in' | 'out';
+  dre_type: 'revenue' | 'expense' | null;
+  dre_group: string | null;
+  color: string;
+  icon: string | null;
+  is_system: boolean;
+  auto_match: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listTransactionCategories(): Promise<ApiResponse<TransactionCategory[]>> {
+  return apiFetch<TransactionCategory[]>('/config/transaction-categories');
+}
+
+export async function createTransactionCategory(data: {
+  name: string;
+  direction: 'in' | 'out';
+  dre_type?: string | null;
+  dre_group?: string | null;
+  color?: string;
+  auto_match?: string | null;
+}): Promise<ApiResponse<TransactionCategory>> {
+  return apiFetch<TransactionCategory>('/config/transaction-categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTransactionCategory(
+  id: string,
+  data: Partial<Omit<TransactionCategory, 'id' | 'tenant_id' | 'created_at'>>,
+): Promise<ApiResponse<TransactionCategory>> {
+  return apiFetch<TransactionCategory>(`/config/transaction-categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTransactionCategory(id: string): Promise<ApiResponse> {
+  return apiFetch(`/config/transaction-categories/${id}`, { method: 'DELETE' });
+}
+
 // ─── WhatsApp (Evolution API) ────────────────────────────────────
 
 export async function getWhatsAppConfig() {
@@ -841,10 +903,10 @@ export async function listOFXTransactions(weekStart?: string, status?: string) {
   return apiFetch(`/ofx?${params}`);
 }
 
-export async function linkOFXTransaction(txId: string, entityId: string, entityName: string, category?: string) {
+export async function linkOFXTransaction(txId: string, entityId: string, entityName: string, category?: string, categoryId?: string) {
   return apiFetch(`/ofx/${txId}/link`, {
     method: 'PATCH',
-    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category }),
+    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category, category_id: categoryId }),
   });
 }
 
@@ -908,10 +970,10 @@ export async function listChipPixTransactions(weekStart?: string, status?: strin
   return apiFetch(`/chippix?${params}`);
 }
 
-export async function linkChipPixTransaction(txId: string, entityId: string, entityName: string, category?: string) {
+export async function linkChipPixTransaction(txId: string, entityId: string, entityName: string, categoryId?: string) {
   return apiFetch(`/chippix/${txId}/link`, {
     method: 'PATCH',
-    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category }),
+    body: JSON.stringify({ entity_id: entityId, entity_name: entityName, category_id: categoryId }),
   });
 }
 

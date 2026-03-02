@@ -44,6 +44,7 @@ function OnboardingContent() {
   const [clubName, setClubName] = useState('');
   const [tenantId, setTenantId] = useState<string>(existingTenant?.id || '');
   const [clubOrgId, setClubOrgId] = useState<string>('');
+  const [hasSubclubs, setHasSubclubs] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [subclubeNames, setSubclubeNames] = useState<string[]>(['', '']);
@@ -82,7 +83,7 @@ function OnboardingContent() {
     setError('');
 
     try {
-      const res = await createTenant(clubName.trim());
+      const res = await createTenant(clubName.trim(), hasSubclubs);
       if (res.success && res.data) {
         const newTenantId = (res.data as any).id;
         const orgId = (res.data as any).club_org_id;
@@ -101,7 +102,13 @@ function OnboardingContent() {
           }
         }
 
-        setStep('subclubes');
+        // Skip subclubes step if single-club mode
+        if (!hasSubclubs) {
+          await refreshTenantList();
+          setStep('success');
+        } else {
+          setStep('subclubes');
+        }
       } else {
         setError(res.error || 'Erro ao criar clube');
       }
@@ -266,6 +273,31 @@ function OnboardingContent() {
                 Esse sera o nome da sua nova operacao
               </p>
             </div>
+
+            {/* Toggle subclubes */}
+            <label className="flex items-center justify-between cursor-pointer select-none py-2 px-3 rounded-lg bg-dark-800/50 border border-dark-700/50">
+              <div>
+                <span className="text-sm font-medium text-dark-200">Meu clube tem subclubes</span>
+                <p className="text-[11px] text-dark-500 mt-0.5">
+                  Desative se voce opera apenas um clube sem divisoes internas
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hasSubclubs}
+                onClick={() => setHasSubclubs((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                  hasSubclubs ? 'bg-poker-500' : 'bg-dark-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
+                    hasSubclubs ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </label>
 
             {error && (
               <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm animate-slide-up">

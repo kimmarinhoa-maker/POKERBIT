@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { club_name } = body || {};
+        const { club_name, has_subclubs } = body || {};
 
         if (!club_name || typeof club_name !== 'string' || club_name.trim().length < 2) {
           return NextResponse.json(
@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
 
         const { data: tenant, error: tenantError } = await supabaseAdmin
           .from('tenants')
-          .insert({ name: club_name.trim(), slug })
+          .insert({
+            name: club_name.trim(),
+            slug,
+            ...(has_subclubs === false ? { has_subclubs: false } : {}),
+          })
           .select('id, name, slug, has_subclubs')
           .single();
 
