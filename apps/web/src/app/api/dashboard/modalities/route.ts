@@ -71,15 +71,21 @@ function normalizeBreakdown(raw: unknown): NormalizedBreakdown {
 
   // Check if nested format exists (has .rake sub-object that IS an object)
   if (obj.rake && typeof obj.rake === 'object' && !Array.isArray(obj.rake)) {
-    return {
-      rake: obj.rake as Record<string, number>,
-      winnings: (obj.winnings && typeof obj.winnings === 'object' ? obj.winnings : {}) as Record<string, number>,
-      hands: (obj.hands && typeof obj.hands === 'object' ? obj.hands : {}) as Record<string, number>,
-    };
+    const rakeObj = obj.rake as Record<string, number>;
+    const hasNestedData = Object.values(rakeObj).some((v) => typeof v === 'number' && v > 0);
+
+    if (hasNestedData) {
+      return {
+        rake: rakeObj,
+        winnings: (obj.winnings && typeof obj.winnings === 'object' ? obj.winnings : {}) as Record<string, number>,
+        hands: (obj.hands && typeof obj.hands === 'object' ? obj.hands : {}) as Record<string, number>,
+      };
+    }
+    // Nested objects exist but are all zeros — fall through to flat mapping
   }
 
-  // Legacy flat format: top-level numeric keys are rake values
-  // Map what we can: mtt, sng, spin are directly mappable; ringGame is ambiguous
+  // Legacy flat format OR nested-with-zeros fallback:
+  // Map known modality keys from top-level values
   const rake: Record<string, number> = {};
   const winnings: Record<string, number> = {};
   const hands: Record<string, number> = {};
@@ -88,6 +94,16 @@ function normalizeBreakdown(raw: unknown): NormalizedBreakdown {
     if (typeof val === 'number' && val > 0 && KNOWN_MODALITIES.has(key)) {
       rake[key] = val;
     }
+  }
+  // ringGame → nlh (best effort: can't split cash sub-modalities)
+  const ringGame = obj['ringGame'];
+  if (typeof ringGame === 'number' && ringGame > 0 && !rake['nlh']) {
+    rake['nlh'] = ringGame;
+  }
+
+  // Extract hands from nested object if available (even when rake is zero)
+  if (obj.hands && typeof obj.hands === 'object') {
+    Object.assign(hands, obj.hands as Record<string, number>);
   }
 
   return { rake, winnings, hands };

@@ -421,8 +421,8 @@ class ImportConfirmService {
       rb_rate: p.rbRate || 0,
       rb_value_brl: round2(p.rbValor || 0),
       resultado_brl: round2(p.resultado || 0),
-      games: 0,
-      hands: 0,
+      games: p.games || 0,
+      hands: p.hands || 0,
       rake_breakdown: p.rakeBreakdown || {},
     }));
 

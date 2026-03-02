@@ -419,6 +419,18 @@ function parseStatisticsBreakdown(statsRows) {
       spin:    safeGet(r, C.handsSPIN),
     };
 
+    // ── Fallback: when GU columns don't exist, populate nested objects
+    //    from the Local (flat) values so the dashboard has data ─────────
+    const rakeHasData = Object.values(entry.rake).some(v => v > 0);
+    if (!rakeHasData && entry.total > 0) {
+      // Local values are already in BRL — map tournament modalities directly,
+      // ringGame goes to nlh as best-effort (can't split cash sub-modalities)
+      entry.rake.nlh     = entry.ringGame || 0;
+      entry.rake.mtt     = entry.mtt      || 0;
+      entry.rake.sng     = entry.sng      || 0;
+      entry.rake.spin    = entry.spin     || 0;
+    }
+
     map[pid] = entry;
   }
 
