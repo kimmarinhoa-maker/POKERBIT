@@ -2,17 +2,9 @@
 //  API Client — Comunicação com o backend
 // ══════════════════════════════════════════════════════════════════════
 
-// In production, call API directly (skip Next.js rewrite proxy = ~200ms faster per request).
-// In development (localhost), use /api proxy for convenience (avoids CORS setup).
-const _backendUrl = process.env.NEXT_PUBLIC_API_BACKEND_URL || '';
-const _isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-const API_BASE = _isLocal ? '/api' : _backendUrl ? `${_backendUrl}/api` : '/api';
-
-// Direct backend URL — same as API_BASE now (kept for backwards compat with uploads)
-const API_DIRECT = _isLocal
-  ? (_backendUrl || 'http://localhost:3001') + '/api'
-  : API_BASE;
+// All API calls go to local Next.js API Routes at /api/*
+const API_BASE = '/api';
+const API_DIRECT = '/api';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
