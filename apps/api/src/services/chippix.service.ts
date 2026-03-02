@@ -335,7 +335,7 @@ export class ChipPixService {
         .from('ledger_entries')
         .select('*')
         .eq('tenant_id', tenantId)
-        .in('source', ['chippix', 'chippix_ignored'])
+        .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
         .order('amount', { ascending: false });
 
       if (weekStart) query = query.eq('week_start', weekStart);
@@ -354,7 +354,7 @@ export class ChipPixService {
       .from('ledger_entries')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .in('source', ['chippix', 'chippix_ignored']);
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee']);
 
     if (weekStart) countQuery = countQuery.eq('week_start', weekStart);
 
@@ -365,7 +365,7 @@ export class ChipPixService {
       .from('ledger_entries')
       .select('*')
       .eq('tenant_id', tenantId)
-      .in('source', ['chippix', 'chippix_ignored'])
+      .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
       .order('amount', { ascending: false })
       .range(offset, offset + limit - 1);
 

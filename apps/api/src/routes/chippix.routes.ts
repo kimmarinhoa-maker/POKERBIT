@@ -101,7 +101,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     const weekStart = req.query.week_start as string | undefined;
     const status = req.query.status as string | undefined;
     const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+    const limit = Math.min(5000, Math.max(1, Number(req.query.limit) || 5000));
 
     if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
       res.status(400).json({ success: false, error: 'Formato de data invalido (YYYY-MM-DD)' });
