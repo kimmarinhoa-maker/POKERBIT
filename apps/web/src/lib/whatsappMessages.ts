@@ -36,51 +36,46 @@ export function buildCobrancaMessage(opts: {
   weekEnd?: string;
   playersCount: number;
   rake: number;
+  rakeback?: number;
   ganhos: number;
   resultado: number;
   saldo: number;
   pixKey?: string;
   comprovanteUrl?: string;
 }): string {
-  const { agentName, weekStart, weekEnd, playersCount, rake, ganhos, resultado, saldo, pixKey, comprovanteUrl } = opts;
+  const { agentName, weekStart, weekEnd, playersCount, rake, rakeback, ganhos, saldo, pixKey, comprovanteUrl } = opts;
   const range = dateRange(weekStart, weekEnd);
 
   // Perspectiva do agente: saldo < 0 = a pagar, saldo > 0 = a receber (mesma logica da UI Comprovantes)
   const isPagar = saldo < 0;
   const valorLabel = isPagar ? 'Valor a pagar' : 'Valor a receber';
 
-  // Use String.fromCodePoint to generate emojis at runtime (avoids surrogate pair encoding issues)
-  const E = {
-    wave: String.fromCodePoint(0x1F44B),
-    chart: String.fromCodePoint(0x1F4CA),
-    money: String.fromCodePoint(0x1F4B0),
-    down: String.fromCodePoint(0x1F4C9),
-    bank: String.fromCodePoint(0x1F3E6),
-    bill: String.fromCodePoint(0x1F4B5),
-    key: String.fromCodePoint(0x1F511),
-    page: String.fromCodePoint(0x1F4C4),
-  };
-
+  // Plain text — NO emojis (avoids encoding issues on Windows/wa.me)
   const lines: string[] = [
-    'Ol\u00e1 *' + agentName + '* ' + E.wave,
+    'Ol\u00e1 *' + agentName + '*',
     '',
     'Segue o fechamento semanal (*' + range + '*):',
     '',
-    E.chart + ' Jogadores: ' + playersCount,
-    E.money + ' Rake: ' + formatBRL(rake),
-    E.down + ' Ganhos/Perdas: ' + formatBRL(ganhos),
-    '',
-    E.bill + ' *' + valorLabel + ': ' + formatBRL(Math.abs(saldo)) + '*',
-    '',
+    'Jogadores: ' + playersCount,
+    'Rake: ' + formatBRL(rake),
   ];
 
+  if (rakeback !== undefined && rakeback > 0.01) {
+    lines.push('Rakeback: ' + formatBRL(rakeback));
+  }
+
+  lines.push('Ganhos/Perdas: ' + formatBRL(ganhos));
+  lines.push('');
+  lines.push('*' + valorLabel + ': ' + formatBRL(Math.abs(saldo)) + '*');
+  lines.push('');
+
   if (pixKey) {
-    lines.push(E.key + ' Chave PIX: ' + pixKey);
+    lines.push('Chave PIX: ' + pixKey);
     lines.push('');
   }
 
   if (comprovanteUrl) {
-    lines.push(E.page + ' Confira seu fechamento completo:');
+    lines.push('Confira seu fechamento completo:');
     lines.push(comprovanteUrl);
     lines.push('');
   }
@@ -117,13 +112,13 @@ export function buildClubMessage(opts: {
   const range = dateRange(weekStart, weekEnd);
 
   const lines = [
-    `📊 *FECHAMENTO SEMANAL — ${clubName}*`,
-    `📅 ${range}`,
+    `*FECHAMENTO SEMANAL \u2014 ${clubName}*`,
+    `${range}`,
     ``,
-    `👥 Jogadores: ${playersCount}`,
-    `💰 Rake: ${formatBRL(rake)}`,
-    `📉 P/L: ${formatBRL(profitLoss)}`,
-    `📊 Resultado: ${formatBRL(resultado)}`,
+    `Jogadores: ${playersCount}`,
+    `Rake: ${formatBRL(rake)}`,
+    `P/L: ${formatBRL(profitLoss)}`,
+    `Resultado: ${formatBRL(resultado)}`,
     ``,
     `*Taxas:*`,
     `├ App (${fees.taxaAppPercent}%): ${formatBRL(fees.taxaApp)}`,
@@ -180,21 +175,21 @@ export function buildLigaMessage(opts: {
   const range = dateRange(weekStart, weekEnd);
 
   const lines = [
-    `🏆 *ACERTO LIGA — CONSOLIDADO*`,
-    `📅 ${range}`,
+    `*ACERTO LIGA \u2014 CONSOLIDADO*`,
+    `${range}`,
     ``,
-    `👥 Jogadores: ${totalPlayers}`,
-    `💰 Rake Total: ${formatBRL(totalRake)}`,
-    `📊 Resultado: ${formatBRL(totalResult)}`,
-    `💸 Total Taxas: ${formatBRL(totalTaxas)}`,
+    `Jogadores: ${totalPlayers}`,
+    `Rake Total: ${formatBRL(totalRake)}`,
+    `Resultado: ${formatBRL(totalResult)}`,
+    `Total Taxas: ${formatBRL(totalTaxas)}`,
     ``,
     `*Por Clube:*`,
   ];
 
   clubs.forEach((club, i) => {
     const prefix = i === clubs.length - 1 ? '└' : '├';
-    const emoji = club.acertoLiga >= 0 ? '🟢' : '🔴';
-    lines.push(`${prefix} ${emoji} ${club.name}: ${formatBRL(club.acertoLiga)}`);
+    const marker = club.acertoLiga >= 0 ? '+' : '-';
+    lines.push(`${prefix} ${marker} ${club.name}: ${formatBRL(club.acertoLiga)}`);
   });
 
   lines.push(``);

@@ -815,6 +815,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                               weekEnd,
                               playersCount: selectedAgent.agent.player_count,
                               rake: selectedAgent.rakeTotal,
+                              rakeback: selectedAgent.rbAgente,
                               ganhos: selectedAgent.ganhos,
                               resultado: selectedAgent.resultado,
                               saldo: selectedAgent.pendente,
