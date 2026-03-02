@@ -144,6 +144,7 @@ router.patch(
       }
 
       logAudit(req, 'UPDATE', 'settlement', req.params.id, undefined, { notes });
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -236,6 +237,7 @@ router.patch(
         return;
       }
 
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -644,6 +646,7 @@ router.post(
         logger.warn('sync-agents', 'Phase 5 (rate auto-populate) error:', rateErr);
       }
 
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data: { created, fixed, linked, ratesPopulated, phase4Errors } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -805,6 +808,7 @@ router.patch(
         logger.warn('rb-rate', 'Failed to propagate to players:', propErr);
       }
 
+      cacheInvalidate(`settlement:${req.params.id}`);
       res.json({ success: true, data, playersPropagated });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });
@@ -977,6 +981,7 @@ router.post(
       }
 
       logAudit(req, 'UPDATE', 'settlement', settlementId, undefined, { agentsUpdated, playersUpdated });
+      cacheInvalidate(`settlement:${settlementId}`);
       res.json({ success: true, data: { agentsUpdated, playersUpdated } });
     } catch (err: unknown) {
       res.status(500).json({ success: false, error: safeErrorMessage(err) });

@@ -157,16 +157,16 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/imports', importLimiter, importRoutes);
 app.use('/api/settlements', heavyLimiter, settlementRoutes);
 app.use('/api/ledger', writeLimiter, ledgerRoutes);
-app.use('/api/players', playersRoutes);
-app.use('/api/organizations', organizationsRoutes);
-app.use('/api/config', configRoutes);
-app.use('/api/links', linksRoutes);
+app.use('/api/players', writeLimiter, playersRoutes);
+app.use('/api/organizations', writeLimiter, organizationsRoutes);
+app.use('/api/config', writeLimiter, configRoutes);
+app.use('/api/links', writeLimiter, linksRoutes);
 app.use('/api/carry-forward', writeLimiter, carryForwardRoutes);
 app.use('/api/ofx', writeLimiter, ofxRoutes);
 app.use('/api/chippix', writeLimiter, chipPixRoutes);
 app.use('/api/users', writeLimiter, usersRoutes);
 app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);
-app.use('/api/permissions', permissionsRoutes);
+app.use('/api/permissions', writeLimiter, permissionsRoutes);
 
 // ─── 404 handler ───────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -174,8 +174,9 @@ app.use((_req, res) => {
 });
 
 // ─── Error handler global ──────────────────────────────────────────
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('ERROR', err);
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const requestId = req.headers['x-request-id'] || 'unknown';
+  logger.error('ERROR', `[req:${requestId}]`, err);
   res.status(err.status || 500).json({
     success: false,
     error: env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.message,
