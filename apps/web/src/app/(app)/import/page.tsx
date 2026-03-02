@@ -252,7 +252,15 @@ export default function ImportWizardPage() {
       )}
 
       {step === 'preview' && preview && (
-        <PreviewStep preview={preview} onNext={handlePreviewNext} onBack={() => setStep('upload')} onEditLinks={() => setStep('pendencies')} />
+        <PreviewStep
+          preview={preview}
+          onNext={handlePreviewNext}
+          onBack={() => setStep('upload')}
+          onEditLinks={() => setStep('pendencies')}
+          availableSubclubs={preview.available_subclubs}
+          onLinkAgent={handleLinkAgentInline}
+          onReprocess={handlePreview}
+        />
       )}
 
       {step === 'pendencies' && preview && (

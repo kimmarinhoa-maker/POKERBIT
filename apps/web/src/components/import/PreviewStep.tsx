@@ -7,6 +7,9 @@ interface PreviewStepProps {
   onNext: () => void;
   onBack: () => void;
   onEditLinks?: () => void;
+  availableSubclubs?: Array<{ id: string; name: string }>;
+  onLinkAgent?: (agentName: string, subclubId: string) => Promise<void>;
+  onReprocess?: () => void;
 }
 
 // ─── Status badges ──────────────────────────────────────────────────
@@ -26,13 +29,17 @@ type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 50;
 
-export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: PreviewStepProps) {
+export default function PreviewStep({ preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess }: PreviewStepProps) {
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);
   const [playerSearch, setPlayerSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('rake');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
+
+  // Inline agent linking
+  const [editingAgent, setEditingAgent] = useState<string | null>(null);
+  const [linkingSaving, setLinkingSaving] = useState(false);
 
   // Reimport confirmation
   const [reimportConfirmed, setReimportConfirmed] = useState(false);
@@ -86,6 +93,20 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
     if (sortKey !== key) return '\u2195';
     return sortDir === 'asc' ? '\u2191' : '\u2193';
   }
+
+  async function handleInlineLink(agentName: string, subclubId: string) {
+    if (!onLinkAgent || !subclubId) return;
+    setLinkingSaving(true);
+    try {
+      await onLinkAgent(agentName, subclubId);
+      setEditingAgent(null);
+      onReprocess?.();
+    } finally {
+      setLinkingSaving(false);
+    }
+  }
+
+  const canEditLinks = !!onLinkAgent && !!availableSubclubs && availableSubclubs.length > 0;
 
   // Existing settlement
   const existing = preview.existing_settlement;
@@ -482,7 +503,47 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
                           <td className="p-2 text-dark-400 font-mono">{p.id}</td>
                           <td className="p-2 text-dark-300">{p.aname || '-'}</td>
                           <td className="p-2">
-                            {p.clube ? (
+                            {canEditLinks && (p._status === 'sem_vinculo' || p._status === 'unknown_subclub') ? (
+                              editingAgent === p.aname ? (
+                                <div className="flex items-center gap-1">
+                                  <select
+                                    className="bg-dark-800 border border-dark-600 rounded text-[10px] text-white px-1 py-0.5 max-w-[120px]"
+                                    defaultValue=""
+                                    disabled={linkingSaving}
+                                    onChange={(e) => {
+                                      if (e.target.value && p.aname) handleInlineLink(p.aname, e.target.value);
+                                    }}
+                                  >
+                                    <option value="" disabled>Selecione...</option>
+                                    {availableSubclubs!.map((sc) => (
+                                      <option key={sc.id} value={sc.id}>{sc.name}</option>
+                                    ))}
+                                  </select>
+                                  {linkingSaving ? (
+                                    <span className="text-[10px] text-dark-400 animate-pulse">Salvando...</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => setEditingAgent(null)}
+                                      className="text-dark-500 hover:text-dark-300 text-xs leading-none"
+                                      title="Cancelar"
+                                    >
+                                      {'\u2715'}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingAgent(p.aname)}
+                                  className="group flex items-center gap-1 cursor-pointer"
+                                  title="Clique para vincular a um subclube"
+                                >
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${p.clube ? getClubStyle(p.clube) : 'bg-dark-700/50 text-dark-400 border-dark-600'} group-hover:ring-1 group-hover:ring-amber-500/50 transition-all`}>
+                                    {p.clube || 'SEM VINCULO'}
+                                  </span>
+                                  <span className="text-dark-500 group-hover:text-amber-400 text-[10px] transition-colors">{'\u270E'}</span>
+                                </button>
+                              )
+                            ) : p.clube ? (
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getClubStyle(p.clube)}`}
                               >
@@ -634,7 +695,9 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks }: Pr
             {semVinculoCount} agente{semVinculoCount !== 1 ? 's' : ''} sem sigla
           </p>
           <p className="text-dark-400 text-sm mt-0.5">
-            Importados como &quot;SEM V{'I'}NCULO&quot;. Vincule manualmente em Cadastro {'>'} Agentes apos a importacao.
+            {canEditLinks
+              ? 'Clique no subclube na tabela de jogadores acima para vincular.'
+              : <>Importados como &quot;SEM V{'I'}NCULO&quot;. Vincule manualmente em Cadastro {'>'} Agentes apos a importacao.</>}
           </p>
         </div>
       )}
