@@ -881,6 +881,7 @@ export class ChipPixService {
 
   // ─── Limpar TODOS os registros ChipPix de uma semana ──────────────
   async clearWeek(tenantId: string, weekStart: string) {
+    // 1. Count ledger_entries to report
     const { count } = await supabaseAdmin
       .from('ledger_entries')
       .select('id', { count: 'exact', head: true })
@@ -889,6 +890,7 @@ export class ChipPixService {
       .in('source', ['chippix', 'chippix_ignored', 'chippix_fee'])
       .eq('is_reconciled', false);
 
+    // 2. Delete ledger_entries
     const { error } = await supabaseAdmin
       .from('ledger_entries')
       .delete()
@@ -898,6 +900,21 @@ export class ChipPixService {
       .eq('is_reconciled', false);
 
     if (error) throw new Error(`Erro ao limpar ChipPix: ${error.message}`);
+
+    // 3. Delete corresponding bank_transactions (created during upload)
+    await supabaseAdmin
+      .from('bank_transactions')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart)
+      .eq('source', 'chippix');
+
+    // 4. Clear chippix_import_data from settlement (Suprema cross-reference)
+    await supabaseAdmin
+      .from('settlements')
+      .update({ chippix_import_data: null })
+      .eq('tenant_id', tenantId)
+      .eq('week_start', weekStart);
 
     return { deleted: count || 0 };
   }
