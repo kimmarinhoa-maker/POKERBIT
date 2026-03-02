@@ -3,15 +3,25 @@
 // ══════════════════════════════════════════════════════════════════════
 
 export const MODALITY_COLORS: Record<string, string> = {
-  plo5: '#8B5CF6',
-  plo6: '#EC4899',
+  // Cash
   nlh: '#10B981',
   plo4: '#F59E0B',
-  mtt: '#3B82F6',
-  sng: '#6366F1',
-  ofc: '#14B8A6',
-  spin: '#F97316',
+  plo5: '#8B5CF6',
+  plo6: '#EC4899',
   mixgame: '#78716C',
+  ofc: '#14B8A6',
+  // MTT sub-modalities
+  mtt_nlh: '#3B82F6',
+  mtt_plo4: '#2563EB',
+  mtt_plo5: '#1D4ED8',
+  mtt_plo6: '#1E40AF',
+  // SNG sub-modalities
+  sng_nlh: '#6366F1',
+  sng_plo4: '#4F46E5',
+  sng_plo5: '#4338CA',
+  sng_plo6: '#3730A3',
+  // Spin
+  spin: '#F97316',
 };
 
 export const MODALITY_LABELS: Record<string, string> = {
@@ -19,15 +29,21 @@ export const MODALITY_LABELS: Record<string, string> = {
   plo4: 'PLO4',
   plo5: 'PLO5',
   plo6: 'PLO6',
-  mtt: 'MTT',
-  sng: 'SNG',
-  ofc: 'OFC',
-  spin: 'Spin',
   mixgame: 'Mix Game',
+  ofc: 'OFC',
+  mtt_nlh: 'MTT NLH',
+  mtt_plo4: 'MTT PLO4',
+  mtt_plo5: 'MTT PLO5',
+  mtt_plo6: 'MTT PLO6',
+  sng_nlh: 'SNG NLH',
+  sng_plo4: 'SNG PLO4',
+  sng_plo5: 'SNG PLO5',
+  sng_plo6: 'SNG PLO6',
+  spin: 'Spin',
 };
 
 export const CASH_MODALITIES = ['nlh', 'plo4', 'plo5', 'plo6', 'mixgame', 'ofc'] as const;
-export const TOURNAMENT_MODALITIES = ['mtt', 'sng', 'spin'] as const;
+export const TOURNAMENT_MODALITIES = ['mtt_nlh', 'mtt_plo4', 'mtt_plo5', 'mtt_plo6', 'sng_nlh', 'sng_plo4', 'sng_plo5', 'sng_plo6', 'spin'] as const;
 
 /** Filter entries with value > 0 and sort DESC by value */
 export function filterNonZero(data: Record<string, number>): Array<{ key: string; value: number }> {

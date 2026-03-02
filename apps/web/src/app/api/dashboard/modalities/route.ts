@@ -45,7 +45,14 @@ interface ModalityResponse {
 
 // ── Known modality keys (filter out legacy fields like ringGame, tlt, total) ──
 const KNOWN_MODALITIES = new Set([
-  'nlh', 'plo4', 'plo5', 'plo6', 'mixgame', 'ofc', 'mtt', 'sng', 'spin',
+  // Cash
+  'nlh', 'plo4', 'plo5', 'plo6', 'mixgame', 'ofc',
+  // MTT sub-modalities
+  'mtt_nlh', 'mtt_plo4', 'mtt_plo5', 'mtt_plo6',
+  // SNG sub-modalities
+  'sng_nlh', 'sng_plo4', 'sng_plo5', 'sng_plo6',
+  // Spin
+  'spin',
 ]);
 
 // ── Helpers ─────────────────────────────────────────────────────────
