@@ -83,25 +83,26 @@ export async function withAuth(
       tenantRoles[t.tenant_id] = t.role;
     }
 
-    if (tenantIds.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Usuario nao vinculado a nenhum tenant' },
-        { status: 403 },
-      );
-    }
-
-    // For endpoints that don't need tenant (e.g., auth/me)
+    // For endpoints that don't need tenant (e.g., auth/me, create tenant)
+    // Check skipTenant BEFORE tenantIds.length check so new users can create first tenant
     if (options?.skipTenant) {
       return handler({
         userId: data.user.id,
         userEmail: data.user.email!,
         accessToken: token,
-        tenantId: tenantIds[0],
+        tenantId: tenantIds[0] || '',
         tenantIds,
         tenantRoles,
-        userRole: tenantRoles[tenantIds[0]] || 'FINANCEIRO',
+        userRole: tenantRoles[tenantIds[0]] || 'OWNER',
         allowedSubclubIds: null,
       });
+    }
+
+    if (tenantIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario nao vinculado a nenhum tenant' },
+        { status: 403 },
+      );
     }
 
     // 4. Validate tenant header

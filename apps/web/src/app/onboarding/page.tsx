@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getStoredAuth,
+  setStoredAuth,
   createTenant,
   createTenantSubclubes,
   refreshTenantList,
@@ -171,7 +172,15 @@ function OnboardingContent() {
       setTenantId(newTenantId);
       setClubOrgId(orgId || '');
 
-      // Set tenant in localStorage so apiFetch sends correct X-Tenant-Id
+      // Update stored auth so getTenantId() returns the new tenant ID
+      const currentAuth = getStoredAuth();
+      if (currentAuth) {
+        const newTenant = { id: newTenantId, role: 'OWNER', has_subclubs: hasSubclubs };
+        setStoredAuth({
+          ...currentAuth,
+          tenants: [...(currentAuth.tenants || []), newTenant],
+        });
+      }
       localStorage.setItem('poker_selected_tenant', newTenantId);
 
       // Fire-and-forget parallel operations
