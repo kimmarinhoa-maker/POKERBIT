@@ -243,7 +243,6 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
           agents={agents}
           players={players}
           verificadoOk={verificadoOk}
-          subclubEntityIds={subclubEntityIds}
         />
         </>
       )}
