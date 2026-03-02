@@ -72,6 +72,7 @@ export class ChipPixService {
     const iSai = header.findIndex((h) => h.includes('saida bruta') || h.includes('saída bruta'));
     const iTaxa = header.findIndex((h) => h.includes('taxa'));
     const iNome = header.findIndex((h) => h === 'integrante');
+    const iIdOp = header.findIndex((h) => h.includes('id da opera'));
 
     if (iId < 0) {
       throw new Error('Coluna "Id Jogador" não encontrada. Verifique o arquivo.');
@@ -84,8 +85,13 @@ export class ChipPixService {
       const row = data[r];
       if (!row || row.length === 0) continue;
 
-      const idJog = String(row[iId] || '').trim();
-      if (!idJog) continue;
+      let idJog = String(row[iId] || '').trim();
+      // Rows without player ID (GP withdrawals, service fees) — use operation ID as unique key
+      if (!idJog) {
+        const idOp = iIdOp >= 0 ? String(row[iIdOp] || '').trim() : '';
+        if (!idOp) continue; // truly empty row
+        idJog = `_noid_${idOp}`;
+      }
 
       const parseNum = (val: any): number => {
         if (val === '' || val === null || val === undefined) return 0;
@@ -289,7 +295,7 @@ export class ChipPixService {
           description: `ChipPix · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
           dir: saldoLiq >= 0 ? 'IN' : 'OUT',
           method: 'chippix',
-          entity_id: matchResult?.entityId || `cp_${p.idJog}`,
+          entity_id: matchResult?.entityId || (p.idJog.startsWith('_noid_') ? null : `cp_${p.idJog}`),
           entity_name: matchResult?.entityName || p.nome || p.idJog,
           week_start: weekStart || null,
           settlement_id: settlementId,  // Fix 1: vincular ao settlement
