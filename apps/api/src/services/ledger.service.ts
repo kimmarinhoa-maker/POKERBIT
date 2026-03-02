@@ -9,6 +9,7 @@
 
 import { supabaseAdmin } from '../config/supabase';
 import type { CreateLedgerEntryDTO, MovementDir } from '../types';
+import { AppError } from '../utils/apiError';
 import { logger } from '../utils/logger';
 
 export class LedgerService {
@@ -103,7 +104,7 @@ export class LedgerService {
       .eq('tenant_id', tenantId)
       .single();
 
-    if (!existing) throw new Error('Movimentação não encontrada');
+    if (!existing) throw new AppError('Movimentação não encontrada', 404);
 
     // Verificar se o settlement desta semana esta finalizado
     const { data: settlement } = await supabaseAdmin
@@ -115,7 +116,7 @@ export class LedgerService {
       .maybeSingle();
 
     if (settlement) {
-      throw new Error('Não é possível deletar movimentação de uma semana finalizada');
+      throw new AppError('Não é possível deletar movimentação de uma semana finalizada', 409);
     }
 
     const { error } = await supabaseAdmin.from('ledger_entries').delete().eq('id', entryId).eq('tenant_id', tenantId);

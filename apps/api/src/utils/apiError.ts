@@ -1,4 +1,6 @@
 export function safeErrorMessage(err: unknown, fallback = 'Erro interno'): string {
+  // AppError messages are intentional user-facing errors — always show them
+  if (err instanceof AppError) return err.message;
   if (err instanceof Error) {
     if (process.env.NODE_ENV === 'production') return fallback;
     return err.message;

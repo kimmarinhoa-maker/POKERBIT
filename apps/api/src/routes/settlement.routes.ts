@@ -21,7 +21,6 @@ import { validateUuid } from '../middleware/validateUuid';
 const router = Router();
 
 // ─── Zod Schemas ────────────────────────────────────────────────────
-const uuidParam = z.string().uuid();
 const notesSchema = z.object({ notes: z.string().nullable() });
 const rbRateSchema = z.object({
   rb_rate: z.number().min(0).max(100),
@@ -121,11 +120,6 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
-      const idParsed = uuidParam.safeParse(req.params.id);
-      if (!idParsed.success) {
-        res.status(400).json({ success: false, error: 'ID invalido' });
-        return;
-      }
 
       const parsed = notesSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -167,11 +161,6 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.tenantId!;
-      const idParsed = uuidParam.safeParse(req.params.id);
-      if (!idParsed.success) {
-        res.status(400).json({ success: false, error: 'ID invalido' });
-        return;
-      }
 
       const data = await settlementService.finalizeSettlement(tenantId, req.params.id, req.userId!);
 
@@ -267,11 +256,6 @@ router.post(
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
-      const idParsed = uuidParam.safeParse(settlementId);
-      if (!idParsed.success) {
-        res.status(400).json({ success: false, error: 'ID invalido' });
-        return;
-      }
 
       // Buscar settlement + club_id
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -841,11 +825,6 @@ router.post(
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
-      const idParsed = uuidParam.safeParse(settlementId);
-      if (!idParsed.success) {
-        res.status(400).json({ success: false, error: 'ID invalido' });
-        return;
-      }
 
       // Only DRAFT settlements
       const { data: settlement, error: sErr } = await supabaseAdmin
@@ -1016,12 +995,6 @@ router.delete(
     try {
       const tenantId = req.tenantId!;
       const settlementId = req.params.id;
-
-      const idParsed = uuidParam.safeParse(settlementId);
-      if (!idParsed.success) {
-        res.status(400).json({ success: false, error: 'ID invalido' });
-        return;
-      }
 
       // 1. Verificar se settlement existe, pertence ao tenant, status DRAFT
       const { data: settlement, error: sErr } = await supabaseAdmin
