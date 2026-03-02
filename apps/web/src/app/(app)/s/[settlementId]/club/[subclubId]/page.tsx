@@ -57,7 +57,7 @@ export default function SubclubPanelPage() {
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
-  const [platformGroups, setPlatformGroups] = useState<Array<{ platform: string; label: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
+  const [clubGroups, setClubGroups] = useState<Array<{ clubId: string; label: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -92,16 +92,16 @@ export default function SubclubPanelPage() {
       if (res.success && res.data) {
         setData(res.data);
 
-        // Build platform groups for dropdown (current + siblings)
-        const currentPlatform = res.data.settlement?.platform || 'suprema';
-        const groups: typeof platformGroups = [{
-          platform: currentPlatform,
-          label: currentPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+        // Build club groups for dropdown (current + siblings)
+        const currentClubName = res.data.settlement?.organizations?.name || 'Clube';
+        const groups: typeof clubGroups = [{
+          clubId: res.data.settlement?.club_id,
+          label: currentClubName,
           settlementId,
           subclubs: (res.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
         }];
 
-        // Load sibling settlements from same week
+        // Load sibling settlements from same week (different clubs)
         const weekStart = res.data.settlement?.week_start;
         if (weekStart) {
           try {
@@ -114,10 +114,10 @@ export default function SubclubPanelPage() {
                 try {
                   const sibRes = await getSettlementFull(sib.id);
                   if (sibRes.success && sibRes.data) {
-                    const sibPlatform = sibRes.data.settlement?.platform || 'suprema';
+                    const sibClubName = sibRes.data.settlement?.organizations?.name || 'Clube';
                     groups.push({
-                      platform: sibPlatform,
-                      label: sibPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+                      clubId: sibRes.data.settlement?.club_id,
+                      label: sibClubName,
                       settlementId: sib.id,
                       subclubs: (sibRes.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
                     });
@@ -128,8 +128,8 @@ export default function SubclubPanelPage() {
           } catch { /* optional */ }
         }
 
-        groups.sort((a, b) => a.platform.localeCompare(b.platform));
-        setPlatformGroups(groups);
+        groups.sort((a, b) => a.label.localeCompare(b.label));
+        setClubGroups(groups);
       } else {
         setError(res.error || 'Erro ao carregar settlement');
       }
@@ -395,8 +395,8 @@ export default function SubclubPanelPage() {
               value={subclub.name}
               onChange={(e) => {
                 const target = e.target.value;
-                // Find which platform group contains this subclub
-                for (const g of platformGroups) {
+                // Find which club group contains this subclub
+                for (const g of clubGroups) {
                   const found = g.subclubs.find(sc => sc.name === target);
                   if (found) {
                     router.push(`/s/${g.settlementId}/club/${encodeURIComponent(target)}?tab=${activeTab}`);
@@ -409,11 +409,11 @@ export default function SubclubPanelPage() {
               className="appearance-none bg-dark-800 border border-dark-700 rounded-lg pl-3 pr-7 py-1.5 text-sm text-white font-medium hover:border-dark-600 focus:border-poker-500 focus:outline-none cursor-pointer max-w-[160px] lg:max-w-none transition-colors"
               aria-label="Trocar subclube"
             >
-              {platformGroups.length > 1 ? (
-                platformGroups.map((g) => (
-                  <optgroup key={g.platform} label={g.label}>
+              {clubGroups.length > 1 ? (
+                clubGroups.map((g) => (
+                  <optgroup key={g.clubId} label={g.label}>
                     {g.subclubs.map((sc) => (
-                      <option key={`${g.platform}-${sc.name}`} value={sc.name}>
+                      <option key={`${g.clubId}-${sc.name}`} value={sc.name}>
                         {sc.name}
                       </option>
                     ))}

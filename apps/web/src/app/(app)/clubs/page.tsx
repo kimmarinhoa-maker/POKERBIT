@@ -1,19 +1,25 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getOrgTree } from '@/lib/api';
+import { getOrgTree, updateOrgMetadata } from '@/lib/api';
 import { useToast } from '@/components/Toast';
-import Spinner from '@/components/Spinner';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { Building2 } from 'lucide-react';
 
+const PLATFORM_OPTIONS = [
+  { value: 'suprema', label: 'Suprema Poker' },
+  { value: 'pppoker', label: 'PPPoker' },
+  { value: 'clubgg', label: 'ClubGG' },
+];
+
 export default function ClubsPage() {
   const [tree, setTree] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
+  const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,6 +65,29 @@ export default function ClubsPage() {
     });
   }
 
+  async function handlePlatformChange(clubId: string, platform: string) {
+    setSavingPlatform(clubId);
+    try {
+      const res = await updateOrgMetadata(clubId, { platform });
+      if (res.success) {
+        setTree((prev) =>
+          prev.map((c) =>
+            c.id === clubId
+              ? { ...c, metadata: { ...(c.metadata || {}), platform } }
+              : c,
+          ),
+        );
+        toast('Plataforma atualizada', 'success');
+      } else {
+        toast(res.error || 'Erro ao atualizar plataforma', 'error');
+      }
+    } catch {
+      toast('Erro ao atualizar plataforma', 'error');
+    } finally {
+      setSavingPlatform(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-4 lg:p-8 max-w-5xl animate-tab-fade">
@@ -102,6 +131,24 @@ export default function ClubsPage() {
                   <p className="text-xs text-dark-400">
                     ID: <span className="font-mono">{club.external_id}</span> · {club.subclubes?.length || 0} subclubes
                   </p>
+                </div>
+                {/* Platform selector */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-dark-500">Plataforma:</label>
+                  <select
+                    value={club.metadata?.platform || ''}
+                    onChange={(e) => handlePlatformChange(club.id, e.target.value)}
+                    disabled={savingPlatform === club.id}
+                    className="input text-sm py-1 px-2 w-40"
+                    aria-label={`Plataforma do clube ${club.name}`}
+                  >
+                    <option value="">Selecionar...</option>
+                    {PLATFORM_OPTIONS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

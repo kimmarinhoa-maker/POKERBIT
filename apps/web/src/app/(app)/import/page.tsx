@@ -7,7 +7,8 @@ import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 
 import StepIndicator from '@/components/import/StepIndicator';
-import UploadStep, { type Platform } from '@/components/import/UploadStep';
+import UploadStep from '@/components/import/UploadStep';
+import type { Platform } from '@/components/import/UploadStep';
 import PreviewStep from '@/components/import/PreviewStep';
 import PendenciesStep from '@/components/import/PendenciesStep';
 import ConfirmStep from '@/components/import/ConfirmStep';
@@ -18,7 +19,7 @@ export default function ImportWizardPage() {
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [clubs, setClubs] = useState<Array<{ id: string; name: string }>>([]);
+  const [clubs, setClubs] = useState<Array<{ id: string; name: string; metadata?: { platform?: string } }>>([]);
   const [clubId, setClubId] = useState('');
   const [weekStartOverride, setWeekStartOverride] = useState('');
   const [showWeekOverride, setShowWeekOverride] = useState(false);
@@ -54,8 +55,20 @@ export default function ImportWizardPage() {
       listOrganizations('SUBCLUB'),
     ]);
     if (clubRes.success) {
-      setClubs(clubRes.data || []);
-      if (clubRes.data?.length > 0) setClubId(clubRes.data[0].id);
+      const clubList = (clubRes.data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        metadata: c.metadata || {},
+      }));
+      setClubs(clubList);
+      if (clubList.length > 0) {
+        setClubId(clubList[0].id);
+        // Auto-derive platform from first club's metadata
+        const plat = clubList[0].metadata?.platform;
+        if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
+          setPlatform(plat);
+        }
+      }
     }
     if (subclubRes.success) {
       setSubclubs(subclubRes.data || []);
@@ -66,7 +79,15 @@ export default function ImportWizardPage() {
     loadClubs();
   }, [loadClubs]);
 
-  // Removed showToast wrapper — use toast(msg, type) directly
+  // Auto-derive platform when club changes
+  function handleClubChange(newClubId: string) {
+    setClubId(newClubId);
+    const club = clubs.find((c) => c.id === newClubId);
+    const plat = club?.metadata?.platform;
+    if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
+      setPlatform(plat);
+    }
+  }
 
   // ─── Handlers ─────────────────────────────────────────────────────
 
@@ -249,7 +270,7 @@ export default function ImportWizardPage() {
           setPlatform={setPlatform}
           clubs={clubs}
           clubId={clubId}
-          setClubId={setClubId}
+          setClubId={handleClubChange}
           subclubs={subclubs}
           pppokerSubclube={pppokerSubclube}
           setPppokerSubclube={setPppokerSubclube}

@@ -151,37 +151,37 @@ export default function SettlementOverviewPage() {
 
   const { settlement, subclubs, dashboardTotals } = data;
 
-  // Build platform groups (current + siblings)
-  const platformGroups: Array<{ platform: string; label: string; settlementId: string; subclubs: any[]; totals: any }> = [];
+  // Build club groups (current + siblings)
+  const clubGroups: Array<{ clubId: string; label: string; settlementId: string; subclubs: any[]; totals: any }> = [];
 
-  const currentPlatform = settlement.platform || 'suprema';
-  platformGroups.push({
-    platform: currentPlatform,
-    label: currentPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+  const currentClubName = settlement.organizations?.name || 'Clube';
+  clubGroups.push({
+    clubId: settlement.club_id,
+    label: currentClubName,
     settlementId,
     subclubs,
     totals: dashboardTotals,
   });
 
   for (const sib of siblingData) {
-    const sibPlatform = sib.settlement?.platform || 'suprema';
-    platformGroups.push({
-      platform: sibPlatform,
-      label: sibPlatform === 'pppoker' ? 'PPPoker' : 'Suprema Poker',
+    const sibClubName = sib.settlement?.organizations?.name || 'Clube';
+    clubGroups.push({
+      clubId: sib.settlement.club_id,
+      label: sibClubName,
       settlementId: sib.settlement.id,
       subclubs: sib.subclubs || [],
       totals: sib.dashboardTotals || { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
     });
   }
 
-  // Sort: suprema first, pppoker second
-  platformGroups.sort((a, b) => a.platform.localeCompare(b.platform));
+  // Sort alphabetically by club name
+  clubGroups.sort((a, b) => a.label.localeCompare(b.label));
 
-  const hasMultiplePlatforms = platformGroups.length > 1;
+  const hasMultipleClubs = clubGroups.length > 1;
 
-  // Aggregate KPIs across all platforms
-  const t = hasMultiplePlatforms
-    ? platformGroups.reduce(
+  // Aggregate KPIs across all clubs
+  const t = hasMultipleClubs
+    ? clubGroups.reduce(
         (acc, g) => ({
           players: acc.players + (g.totals.players || 0),
           agents: acc.agents + (g.totals.agents || 0),
@@ -272,18 +272,18 @@ export default function SettlementOverviewPage() {
               />
             </div>
 
-            {/* Subclub cards grouped by platform */}
-            {platformGroups.map(({ platform: plat, label, settlementId: platSettId, subclubs: platSubclubs }) => (
-              <div key={plat} className="mb-6">
+            {/* Subclub cards grouped by club */}
+            {clubGroups.map(({ clubId: cId, label, settlementId: grpSettId, subclubs: grpSubclubs }) => (
+              <div key={cId} className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  {hasMultiplePlatforms ? label : 'Subclubes'}
-                  <span className="text-sm font-normal text-dark-400">({platSubclubs.length})</span>
+                  {hasMultipleClubs ? label : 'Subclubes'}
+                  <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {platSubclubs.map((sc: any) => (
+                  {grpSubclubs.map((sc: any) => (
                     <Link
-                      key={`${plat}-${sc.id || sc.name}`}
-                      href={`/s/${platSettId}/club/${sc.name}`}
+                      key={`${cId}-${sc.id || sc.name}`}
+                      href={`/s/${grpSettId}/club/${sc.name}`}
                       className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
                     >
                       <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />

@@ -11,14 +11,14 @@ import { logAudit } from '../utils/audit';
 
 const router = Router();
 
-// ─── GET /api/config/fees — Lista taxas do tenant ────────────────────
+// ─── GET /api/config/fees — Lista taxas do tenant (por club_id) ──────
 router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const platform = (req.query.platform as string) || undefined;
+    const clubId = (req.query.club_id as string) || undefined;
 
     let query = supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId);
-    if (platform) query = query.eq('platform', platform);
+    if (clubId) query = query.eq('club_id', clubId);
     const { data, error } = await query.order('name');
 
     if (error) throw error;
@@ -28,18 +28,21 @@ router.get('/fees', requireAuth, requireTenant, async (req: Request, res: Respon
   }
 });
 
-// ─── PUT /api/config/fees — Atualiza taxas ───────────────────────────
+// ─── PUT /api/config/fees — Atualiza taxas (por club_id) ─────────────
 router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
-    const { fees } = req.body;
+    const { fees, club_id } = req.body;
 
     if (!fees || !Array.isArray(fees)) {
       res.status(400).json({ success: false, error: 'Campo "fees" (array) obrigatório' });
       return;
     }
 
-    const platform = req.body.platform || 'suprema';
+    if (!club_id) {
+      res.status(400).json({ success: false, error: 'Campo "club_id" obrigatório' });
+      return;
+    }
 
     // Build batch and upsert in a single query
     const upsertRows = fees
@@ -50,21 +53,41 @@ router.put('/fees', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), r
         rate: Number(fee.rate),
         base: fee.base || 'rake',
         is_active: fee.is_active !== false,
-        platform,
+        club_id,
       }));
 
     if (upsertRows.length > 0) {
       const { error: upsertErr } = await supabaseAdmin.from('fee_config').upsert(upsertRows, {
-        onConflict: 'tenant_id,name,platform',
+        onConflict: 'tenant_id,club_id,name',
       });
       if (upsertErr) throw upsertErr;
     }
 
     // Retornar estado atualizado
-    const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('platform', platform).order('name');
+    const { data } = await supabaseAdmin.from('fee_config').select('*').eq('tenant_id', tenantId).eq('club_id', club_id).order('name');
 
     logAudit(req, 'UPDATE', 'fee_config', tenantId, undefined, { fees: upsertRows });
     res.json({ success: true, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: safeErrorMessage(err) });
+  }
+});
+
+// ─── DELETE /api/config/fees/:id — Remover taxa ─────────────────────
+router.delete('/fees/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'), requirePermission('page:clubs'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenantId!;
+    const { id } = req.params;
+
+    const { error } = await supabaseAdmin
+      .from('fee_config')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+
+    if (error) throw error;
+    logAudit(req, 'DELETE', 'fee_config', id, undefined, {});
+    res.json({ success: true, data: { deleted: true } });
   } catch (err: unknown) {
     res.status(500).json({ success: false, error: safeErrorMessage(err) });
   }

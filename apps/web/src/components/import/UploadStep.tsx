@@ -5,18 +5,24 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (same as backend)
 
 export type Platform = 'suprema' | 'pppoker' | 'clubgg';
 
-const PLATFORMS: { value: Platform; label: string; hint: string; enabled: boolean }[] = [
-  { value: 'suprema', label: 'Suprema Poker', hint: 'Arquivo .xlsx com aba "Grand Union Member Resume"', enabled: true },
-  { value: 'pppoker', label: 'PPPoker', hint: 'Arquivo .xlsx com aba "Geral" (relatório semanal)', enabled: true },
-  { value: 'clubgg', label: 'ClubGG', hint: 'Em breve', enabled: false },
-];
+const PLATFORM_LABELS: Record<string, string> = {
+  suprema: 'Suprema Poker',
+  pppoker: 'PPPoker',
+  clubgg: 'ClubGG',
+};
+
+const PLATFORM_HINTS: Record<string, string> = {
+  suprema: 'Arquivo .xlsx com aba "Grand Union Member Resume"',
+  pppoker: 'Arquivo .xlsx com aba "Geral" (relatório semanal)',
+  clubgg: 'Em breve',
+};
 
 interface UploadStepProps {
   file: File | null;
   setFile: (f: File | null) => void;
   platform: Platform;
   setPlatform: (p: Platform) => void;
-  clubs: Array<{ id: string; name: string }>;
+  clubs: Array<{ id: string; name: string; metadata?: { platform?: string } }>;
   clubId: string;
   setClubId: (id: string) => void;
   subclubs: Array<{ id: string; name: string }>;
@@ -89,37 +95,63 @@ export default function UploadStep({
     if (dropped) trySetFile(dropped);
   }
 
-  const activePlatform = PLATFORMS.find((p) => p.value === platform) || PLATFORMS[0];
+  const selectedClub = clubs.find((c) => c.id === clubId);
+  const derivedPlatform = selectedClub?.metadata?.platform || platform;
+  const platformLabel = PLATFORM_LABELS[derivedPlatform] || derivedPlatform;
+  const platformHint = PLATFORM_HINTS[derivedPlatform] || '';
 
   return (
     <div>
-      {/* Platform selector */}
+      {/* Club selector — always visible */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-dark-300 mb-2">Plataforma</label>
-        <div className="flex gap-2">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              disabled={!p.enabled}
-              onClick={() => p.enabled && setPlatform(p.value)}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                platform === p.value
-                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                  : p.enabled
-                    ? 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
-                    : 'bg-dark-900/50 border-dark-800 text-dark-600 cursor-not-allowed'
-              }`}
-            >
-              {p.label}
-              {!p.enabled && <span className="block text-[10px] text-dark-600 mt-0.5">Em breve</span>}
-            </button>
+        <label className="block text-sm font-medium text-dark-300 mb-2">Clube</label>
+        <select
+          value={clubId}
+          onChange={(e) => setClubId(e.target.value)}
+          className="input w-full"
+          aria-label="Selecionar clube"
+        >
+          {clubs.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+              {c.metadata?.platform ? ` (${PLATFORM_LABELS[c.metadata.platform] || c.metadata.platform})` : ''}
+            </option>
           ))}
-        </div>
+        </select>
+        {/* Platform badge */}
+        {selectedClub?.metadata?.platform ? (
+          <p className="text-xs text-dark-500 mt-1.5 flex items-center gap-1.5">
+            Parser:
+            <span className="bg-poker-900/30 text-poker-400 px-2 py-0.5 rounded text-[10px] font-bold border border-poker-700/30">
+              {platformLabel}
+            </span>
+            <span className="text-dark-600">— detectado automaticamente</span>
+          </p>
+        ) : (
+          <div className="mt-2">
+            <p className="text-xs text-amber-400 mb-1.5">Plataforma nao configurada neste clube. Selecione manualmente:</p>
+            <div className="flex gap-2">
+              {(['suprema', 'pppoker'] as Platform[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatform(p)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
+                    platform === p
+                      ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                      : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
+                  }`}
+                >
+                  {PLATFORM_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* PPPoker: subclube destino */}
-      {platform === 'pppoker' && (
+      {derivedPlatform === 'pppoker' && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-dark-300 mb-1.5">Subclube destino</label>
           <select
@@ -193,7 +225,7 @@ export default function UploadStep({
       </div>
 
       {/* Format hint */}
-      <p className="mt-2 text-xs text-dark-500">{activePlatform.hint}</p>
+      <p className="mt-2 text-xs text-dark-500">{platformHint}</p>
 
       {fileError && (
         <div className="mt-3 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">
@@ -233,22 +265,9 @@ export default function UploadStep({
         </div>
       )}
 
-      {clubs.length > 1 && (
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-dark-300 mb-1.5">Clube</label>
-          <select value={clubId} onChange={(e) => setClubId(e.target.value)} className="input w-full">
-            {clubs.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <button
         onClick={onPreview}
-        disabled={!file || loading || (platform === 'pppoker' && !pppokerSubclube)}
+        disabled={!file || loading || (derivedPlatform === 'pppoker' && !pppokerSubclube)}
         className="btn-primary w-full py-3 text-lg mt-6"
         aria-label="Pre-analisar arquivo"
       >

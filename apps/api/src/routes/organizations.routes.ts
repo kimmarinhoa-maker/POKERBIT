@@ -651,12 +651,12 @@ router.put('/:id/rate', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN'
   }
 });
 
-// ─── PATCH /api/organizations/:id/metadata — Dados de contato ───────
+// ─── PATCH /api/organizations/:id/metadata — Dados de contato + platform ─
 router.patch('/:id/metadata', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const orgId = req.params.id;
-    const { full_name, phone, email } = req.body;
+    const { full_name, phone, email, platform } = req.body;
 
     const { data: org } = await supabaseAdmin
       .from('organizations')
@@ -674,6 +674,7 @@ router.patch('/:id/metadata', requireAuth, requireTenant, requireRole('OWNER', '
     if (full_name !== undefined) meta.full_name = full_name || null;
     if (phone !== undefined) meta.phone = phone || null;
     if (email !== undefined) meta.email = email || null;
+    if (platform !== undefined) meta.platform = platform || null;
 
     const { data, error } = await supabaseAdmin
       .from('organizations')

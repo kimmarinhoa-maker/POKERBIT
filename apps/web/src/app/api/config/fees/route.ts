@@ -11,13 +11,13 @@ import { logAudit } from '@/lib/server/audit';
 export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {
     try {
-      const platform = req.nextUrl.searchParams.get('platform') || undefined;
+      const clubId = req.nextUrl.searchParams.get('club_id') || undefined;
 
       let query = supabaseAdmin
         .from('fee_config')
         .select('*')
         .eq('tenant_id', ctx.tenantId);
-      if (platform) query = query.eq('platform', platform);
+      if (clubId) query = query.eq('club_id', clubId);
       const { data, error } = await query.order('name');
 
       if (error) throw error;
@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { fees } = body;
+        const { fees, club_id } = body;
 
         if (!fees || !Array.isArray(fees)) {
           return NextResponse.json(
@@ -46,7 +46,12 @@ export async function PUT(req: NextRequest) {
           );
         }
 
-        const platform = body.platform || 'suprema';
+        if (!club_id) {
+          return NextResponse.json(
+            { success: false, error: 'Campo "club_id" obrigatório' },
+            { status: 400 },
+          );
+        }
 
         // Build batch and upsert in a single query
         const upsertRows = fees
@@ -57,13 +62,13 @@ export async function PUT(req: NextRequest) {
             rate: Number(fee.rate),
             base: fee.base || 'rake',
             is_active: fee.is_active !== false,
-            platform,
+            club_id,
           }));
 
         if (upsertRows.length > 0) {
           const { error: upsertErr } = await supabaseAdmin
             .from('fee_config')
-            .upsert(upsertRows, { onConflict: 'tenant_id,name,platform' });
+            .upsert(upsertRows, { onConflict: 'tenant_id,club_id,name' });
           if (upsertErr) throw upsertErr;
         }
 
@@ -72,7 +77,7 @@ export async function PUT(req: NextRequest) {
           .from('fee_config')
           .select('*')
           .eq('tenant_id', ctx.tenantId)
-          .eq('platform', platform)
+          .eq('club_id', club_id)
           .order('name');
 
         logAudit(req, ctx, 'UPDATE', 'fee_config', ctx.tenantId, undefined, {

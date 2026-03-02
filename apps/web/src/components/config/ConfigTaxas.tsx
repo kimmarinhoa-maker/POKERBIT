@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getFeeConfig, updateFeeConfig } from '@/lib/api';
+import { getFeeConfig, updateFeeConfig, listOrganizations } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 
@@ -11,7 +11,13 @@ interface FeeConfig {
   rate: number;
   base: 'rake' | 'ggr';
   is_active: boolean;
-  platform?: string;
+  club_id?: string;
+}
+
+interface ClubOrg {
+  id: string;
+  name: string;
+  metadata?: { platform?: string; [key: string]: any };
 }
 
 const feesMeta: Record<string, { label: string; sublabel: string; base: 'rake' | 'ggr' | 'conversion' }> = {
@@ -34,10 +40,13 @@ const supremaConversionKeys = ['GU_TO_BRL'];
 // PPPoker: only rake-based fees (no GGR, no GU conversion — values already in BRL)
 const pppokerRakeKeys = ['taxaApp', 'taxaLiga'];
 
-const platforms = [
-  { id: 'suprema', label: 'Suprema Poker' },
-  { id: 'pppoker', label: 'PPPoker' },
-];
+function getFeeKeysForPlatform(platform?: string) {
+  const isSuprema = platform === 'suprema' || !platform;
+  const rakeKeys = isSuprema ? supremaRakeKeys : pppokerRakeKeys;
+  const ggrKeys = isSuprema ? supremaGgrKeys : [];
+  const conversionKeys = isSuprema ? supremaConversionKeys : [];
+  return { rakeKeys, ggrKeys, conversionKeys, allKeys: [...rakeKeys, ...ggrKeys, ...conversionKeys], isSuprema };
+}
 
 export default function ConfigTaxas() {
   const [fees, setFees] = useState<FeeConfig[]>([]);
@@ -47,20 +56,56 @@ export default function ConfigTaxas() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [platform, setPlatform] = useState<string>('suprema');
 
+  // Club selector state
+  const [clubs, setClubs] = useState<ClubOrg[]>([]);
+  const [selectedClubId, setSelectedClubId] = useState<string>('');
+  const [loadingClubs, setLoadingClubs] = useState(true);
+
+  // Load clubs on mount
   useEffect(() => {
-    loadFees(platform);
+    loadClubs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platform]);
+  }, []);
+
+  // Load fees when selected club changes
+  useEffect(() => {
+    if (selectedClubId) {
+      loadFees(selectedClubId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClubId]);
+
+  async function loadClubs() {
+    setLoadingClubs(true);
+    try {
+      const res = await listOrganizations('CLUB');
+      if (res.success && res.data) {
+        const clubList: ClubOrg[] = (res.data || []).map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          metadata: o.metadata || {},
+        }));
+        setClubs(clubList);
+        // Auto-select first club
+        if (clubList.length > 0) {
+          setSelectedClubId(clubList[0].id);
+        }
+      }
+    } catch {
+      toast('Erro ao carregar clubes', 'error');
+    } finally {
+      setLoadingClubs(false);
+    }
+  }
 
   // ─── Fee Config Logic ────────────────────────────────────────────
 
-  async function loadFees(plat: string) {
+  async function loadFees(clubId: string) {
     setLoading(true);
     setEditing(false);
     try {
-      const res = await getFeeConfig(plat);
+      const res = await getFeeConfig(clubId);
       if (res.success) {
         setFees(res.data || []);
       }
@@ -76,11 +121,9 @@ export default function ConfigTaxas() {
     return fee ? Number(fee.rate) : 0;
   }
 
-  const isSuprema = platform === 'suprema';
-  const rakeKeys = isSuprema ? supremaRakeKeys : pppokerRakeKeys;
-  const ggrKeys = isSuprema ? supremaGgrKeys : [];
-  const conversionKeys = isSuprema ? supremaConversionKeys : [];
-  const allKeys = [...rakeKeys, ...ggrKeys, ...conversionKeys];
+  const selectedClub = clubs.find((c) => c.id === selectedClubId);
+  const platform = selectedClub?.metadata?.platform || 'suprema';
+  const { rakeKeys, ggrKeys, conversionKeys, allKeys, isSuprema } = getFeeKeysForPlatform(platform);
 
   function handleStartEdit() {
     const formData: Record<string, string> = {};
@@ -108,7 +151,7 @@ export default function ConfigTaxas() {
         base: feesMeta[key].base,
       }));
 
-      const res = await updateFeeConfig(feesPayload, platform);
+      const res = await updateFeeConfig(feesPayload, selectedClubId);
       if (res.success) {
         setFees(res.data || []);
         setEditing(false);
@@ -125,23 +168,40 @@ export default function ConfigTaxas() {
 
   // ─── Render ──────────────────────────────────────────────────────
 
+  if (loadingClubs) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (clubs.length === 0) {
+    return (
+      <div className="card text-center py-12">
+        <p className="text-dark-400 text-sm">Nenhum clube cadastrado. Crie um clube em Estrutura primeiro.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* Platform tabs */}
-      <div className="flex gap-1 mb-6 bg-dark-800/50 rounded-lg p-1 w-fit">
-        {platforms.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setPlatform(p.id)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              platform === p.id
-                ? 'bg-dark-700 text-white shadow-sm'
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+      {/* Club selector */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-dark-300 mb-2">Clube</label>
+        <select
+          value={selectedClubId}
+          onChange={(e) => setSelectedClubId(e.target.value)}
+          className="input w-full max-w-sm"
+          aria-label="Selecionar clube"
+        >
+          {clubs.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+              {c.metadata?.platform ? ` (${c.metadata.platform})` : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -269,10 +329,10 @@ export default function ConfigTaxas() {
                 </>
               ) : (
                 <>
-                  <p>Taxas aplicadas aos settlements PPPoker. Valores ja em BRL (sem conversao GU).</p>
+                  <p>Taxas aplicadas aos settlements deste clube. Valores ja em BRL (sem conversao GU).</p>
                   <p>
                     <strong className="text-dark-300">Rake:</strong> incide sobre o rake gerado pelos jogadores.
-                    PPPoker nao possui GGR Rodeo.
+                    Este clube nao possui GGR Rodeo.
                   </p>
                 </>
               )}
