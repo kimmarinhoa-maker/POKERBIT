@@ -1,0 +1,6 @@
+{
+  "name": "@poker-manager/importer",
+  "version": "1.0.0",
+  "main": "coreSuprema.js",
+  "private": true
+}
