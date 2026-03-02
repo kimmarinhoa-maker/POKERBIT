@@ -40,8 +40,9 @@ export function buildCobrancaMessage(opts: {
   resultado: number;
   saldo: number;
   pixKey?: string;
+  comprovanteUrl?: string;
 }): string {
-  const { agentName, weekStart, weekEnd, playersCount, rake, ganhos, resultado, saldo, pixKey } = opts;
+  const { agentName, weekStart, weekEnd, playersCount, rake, ganhos, resultado, saldo, pixKey, comprovanteUrl } = opts;
   const range = dateRange(weekStart, weekEnd);
 
   // Perspectiva do agente: saldo < 0 = a pagar, saldo > 0 = a receber (mesma logica da UI Comprovantes)
@@ -75,6 +76,12 @@ export function buildCobrancaMessage(opts: {
 
   if (pixKey) {
     lines.push(E.key + ' Chave PIX: ' + pixKey);
+    lines.push('');
+  }
+
+  if (comprovanteUrl) {
+    lines.push(E.page + ' Confira seu fechamento completo:');
+    lines.push(comprovanteUrl);
     lines.push('');
   }
 

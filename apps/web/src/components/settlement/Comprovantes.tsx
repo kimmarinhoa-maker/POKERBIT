@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry, getTenantConfig } from '@/lib/api';
+import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry, getTenantConfig, generateReceiptLink } from '@/lib/api';
 import { buildCobrancaMessage, openWhatsApp } from '@/lib/whatsappMessages';
 import { round2, fmtDateTime } from '@/lib/formatters';
 import { cc } from '@/lib/colorUtils';
@@ -68,7 +68,7 @@ function clrPrint(v: number): string {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, settlementStatus, onDataChange }: Props) {
+export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, settlementId, settlementStatus, onDataChange }: Props) {
   const agents = useMemo(() => subclub.agents || [], [subclub.agents]);
   const players = useMemo(() => subclub.players || [], [subclub.players]);
   const { toast } = useToast();
@@ -799,6 +799,16 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                               toast('Cadastre o WhatsApp deste agente em Cadastro > Agentes > Dados', 'info');
                               return;
                             }
+                            // Generate signed receipt link
+                            let comprovanteUrl: string | undefined;
+                            if (settlementId) {
+                              try {
+                                const linkRes = await generateReceiptLink(settlementId, selectedAgent.agent.id);
+                                if (linkRes.success && linkRes.data?.url) {
+                                  comprovanteUrl = window.location.origin + linkRes.data.url;
+                                }
+                              } catch { /* non-critical */ }
+                            }
                             const msg = buildCobrancaMessage({
                               agentName: selectedAgent.agent.agent_name,
                               weekStart,
@@ -809,6 +819,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, logoUrl, sett
                               resultado: selectedAgent.resultado,
                               saldo: selectedAgent.pendente,
                               pixKey: pixKey || undefined,
+                              comprovanteUrl,
                             });
                             openWhatsApp(phone, msg);
                           }}

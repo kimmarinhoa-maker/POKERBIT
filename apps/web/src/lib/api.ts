@@ -963,6 +963,43 @@ export async function updateRolePermissions(
   });
 }
 
+// ─── Dashboard Modalities ─────────────────────────────────────────
+
+export interface ModalityData {
+  rakeByModality: Record<string, number>;
+  winningsByModality: Record<string, number>;
+  handsByModality: Record<string, number>;
+  topPlayersByRake: Array<{
+    name: string;
+    rake: number;
+    mainModality: string;
+    hands: number;
+  }>;
+  cashVsTournament: {
+    cash: { rake: number; players: number; hands: number; pct: number };
+    tournament: { rake: number; players: number; hands: number; pct: number };
+  };
+  activePlayers: {
+    thisWeek: number;
+    lastWeek: number | null;
+    new: number | null;
+  };
+  modalityEvolution: Array<Record<string, unknown>>;
+}
+
+export async function getDashboardModalities(settlementId: string) {
+  return apiFetch<ModalityData>(`/dashboard/modalities?settlement_id=${settlementId}`);
+}
+
+// ─── Comprovante (receipt URL generation) ─────────────────────────
+
+export async function generateReceiptLink(settlementId: string, agentMetricId: string) {
+  return apiFetch<{ url: string }>('/comprovante/generate', {
+    method: 'POST',
+    body: JSON.stringify({ settlementId, agentMetricId }),
+  });
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────
 
 export { formatBRL } from './formatters';
