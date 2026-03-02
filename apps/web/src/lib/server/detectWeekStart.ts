@@ -46,7 +46,7 @@ export function detectWeekStart(
 }
 
 function detectFromXlsx(workbook: XLSX.WorkBook): WeekDetectionResult | null {
-  const sheetNames = ['Grand Union Member Resume', 'Grand Union Member Statistics'];
+  const sheetNames = ['Grand Union Member Resume', 'Grand Union Member Statistics', 'Geral'];
 
   for (const name of sheetNames) {
     const sheet = workbook.Sheets[name];

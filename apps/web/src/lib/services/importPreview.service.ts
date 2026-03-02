@@ -19,7 +19,9 @@ import { round2 } from '../server/round2';
 
 // Importa pacotes core (CommonJS)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { parseWorkbook, validateReadiness } = require('../../../../../packages/importer/coreSuprema');
+const { parseWorkbook: parseSuprema, validateReadiness: validateSuprema } = require('../../../../../packages/importer/coreSuprema');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { parseWorkbook: parsePPPoker, validateReadiness: validatePPPoker } = require('../../../../../packages/importer/corePPPoker');
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -133,7 +135,7 @@ class ImportPreviewService {
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
     // 1.5) Validate platform support
-    if (platform !== 'suprema') {
+    if (platform !== 'suprema' && platform !== 'pppoker') {
       return {
         week: { week_start: '', week_end: '', detected_from: 'fallback', confidence: 'low' },
         summary: { total_players: 0, total_agents: 0, total_subclubs: 0, total_winnings_brl: 0, total_rake_brl: 0, total_ggr_brl: 0 },
@@ -142,7 +144,7 @@ class ImportPreviewService {
         subclubs_found: [],
         duplicate_players: [],
         available_agents: [],
-        warnings: [`Plataforma "${platform}" ainda nao suportada. Use Suprema Poker.`],
+        warnings: [`Plataforma "${platform}" ainda nao suportada.`],
         players: [],
       };
     }
@@ -158,6 +160,7 @@ class ImportPreviewService {
       .select('id, version, status')
       .eq('tenant_id', tenantId)
       .eq('week_start', week.week_start)
+      .eq('platform', platform)
       .order('version', { ascending: false })
       .limit(1);
 
@@ -200,7 +203,8 @@ class ImportPreviewService {
     // 4) Carregar subclubes existentes (para saber quais existem)
     const existingSubclubs = await this.loadSubclubs(tenantId);
 
-    // 5) Parse do XLSX (em memória, nada no banco)
+    // 5) Parse do XLSX (em memória, nada no banco) — dispatch by platform
+    const parseWorkbook = platform === 'pppoker' ? parsePPPoker : parseSuprema;
     const parseResult = parseWorkbook(workbook, config);
 
     if (parseResult.error) {
@@ -230,6 +234,7 @@ class ImportPreviewService {
     const warnings: string[] = [];
 
     // Validação do engine
+    const validateReadiness = platform === 'pppoker' ? validatePPPoker : validateSuprema;
     const readiness = validateReadiness(parseResult);
     if (readiness.blockers.length > 0) {
       warnings.push(...readiness.blockers.map((b: string) => `Engine: ${b}`));
