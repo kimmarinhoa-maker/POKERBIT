@@ -10,6 +10,7 @@ import { ledgerService } from '../services/ledger.service';
 import { supabaseAdmin } from '../config/supabase';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 
@@ -115,6 +116,7 @@ router.get('/net', requireAuth, requireTenant, async (req: Request, res: Respons
 // ─── DELETE /api/ledger/:id — Deletar movimentação ─────────────────
 router.delete(
   '/:id',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),
@@ -135,6 +137,7 @@ router.delete(
 // ─── PATCH /api/ledger/:id/reconcile — Toggle conciliação ───────────
 router.patch(
   '/:id/reconcile',
+  validateUuid('id'),
   requireAuth,
   requireTenant,
   requireRole('OWNER', 'ADMIN', 'FINANCEIRO'),

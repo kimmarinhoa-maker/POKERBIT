@@ -6,11 +6,13 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import express from 'express';
+import crypto from 'crypto';
 import compression from 'compression';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
+import { supabaseAdmin } from './config/supabase';
 import { logger } from './utils/logger';
 
 // Rotas
@@ -69,6 +71,12 @@ app.use(
 
 app.use(express.json({ limit: '5mb' }));
 
+// X-Request-Id for log correlation
+app.use((req, _res, next) => {
+  req.headers['x-request-id'] = req.headers['x-request-id'] || crypto.randomUUID();
+  next();
+});
+
 // ─── Rate Limiting ──────────────────────────────────────────────────
 
 // General limiter: 200 requests per minute for all /api/ routes
@@ -126,12 +134,20 @@ const writeLimiter = rateLimit({
   message: { success: false, error: 'Muitas operacoes de escrita. Aguarde 1 minuto.' },
 });
 
-// ─── Health check ──────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
+// ─── Health check (with Supabase ping) ────────────────────────────
+app.get('/health', async (_req, res) => {
+  let dbOk = false;
+  try {
+    const { error } = await supabaseAdmin.from('tenants').select('id', { count: 'exact', head: true }).limit(0);
+    dbOk = !error;
+  } catch { /* db unreachable */ }
+
+  const status = dbOk ? 'ok' : 'degraded';
+  res.status(dbOk ? 200 : 503).json({
+    status,
     version: '0.1.0',
     env: env.NODE_ENV,
+    db: dbOk ? 'connected' : 'unreachable',
     timestamp: new Date().toISOString(),
   });
 });
@@ -209,5 +225,22 @@ server.on('error', (err: any) => {
   }
   throw err;
 });
+
+// ─── Graceful shutdown ──────────────────────────────────────────────
+function shutdown(signal: string) {
+  logger.info('server', `${signal} received — shutting down gracefully`);
+  server.close(() => {
+    logger.info('server', 'HTTP server closed');
+    process.exit(0);
+  });
+  // Force exit after 10s if connections won't close
+  setTimeout(() => {
+    logger.warn('server', 'Forced shutdown after 10s timeout');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 export default app;

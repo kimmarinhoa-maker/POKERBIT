@@ -9,6 +9,7 @@ import { requirePermission } from '../middleware/permission';
 import { chipPixService } from '../services/chippix.service';
 import { safeErrorMessage } from '../utils/apiError';
 import { logAudit } from '../utils/audit';
+import { validateUuid } from '../middleware/validateUuid';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -121,7 +122,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // ─── PATCH /api/chippix/:id/link — Vincular a entidade ───────────
-router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
+router.patch('/:id/link', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { entity_id, entity_name, category_id } = req.body;
@@ -140,7 +141,7 @@ router.patch('/:id/link', requireAuth, requireTenant, requireRole('OWNER', 'ADMI
 });
 
 // ─── PATCH /api/chippix/:id/unlink — Desvincular ─────────────────
-router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
+router.patch('/:id/unlink', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.unlinkTransaction(tenantId, req.params.id);
@@ -151,7 +152,7 @@ router.patch('/:id/unlink', requireAuth, requireTenant, requireRole('OWNER', 'AD
 });
 
 // ─── PATCH /api/chippix/:id/ignore — Ignorar/restaurar ───────────
-router.patch('/:id/ignore', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
+router.patch('/:id/ignore', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const { ignore } = req.body;
@@ -200,7 +201,7 @@ router.delete('/clear/:weekStart', requireAuth, requireTenant, requireRole('OWNE
 });
 
 // ─── DELETE /api/chippix/:id — Deletar transação ─────────────────
-router.delete('/:id', requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
+router.delete('/:id', validateUuid('id'), requireAuth, requireTenant, requireRole('OWNER', 'ADMIN', 'FINANCEIRO'), requirePermission('tab:conciliacao'), async (req: Request, res: Response) => {
   try {
     const tenantId = req.tenantId!;
     const data = await chipPixService.deleteTransaction(tenantId, req.params.id);

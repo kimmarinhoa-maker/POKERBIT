@@ -3,12 +3,15 @@ export function round2(v: number): number {
   return Math.sign(v) * Math.round((Math.abs(v) + Number.EPSILON) * 100) / 100;
 }
 
+/** Cached Intl formatter for BRL (avoid recreating on every call) */
+const brlFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
 /** Format a number as BRL currency using Intl (R$ 1.234,56) */
 export function formatBRL(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
+  return brlFormatter.format(value);
 }
 
 /** Format ISO datetime string as dd/mm HH:mm (pt-BR) */
