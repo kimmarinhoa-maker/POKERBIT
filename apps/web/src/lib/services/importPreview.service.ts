@@ -112,6 +112,9 @@ export interface ImportPreviewResponse {
     agents: string[];
   };
 
+  // Tenant has_subclubs flag (false = single-club mode)
+  has_subclubs?: boolean;
+
   // ChipPix Manager Trade Record data (from Suprema)
   chippix_trades?: Record<string, any>;
 }
@@ -235,6 +238,17 @@ class ImportPreviewService {
     const allPlayers: any[] = parseResult.all || [];
     const warnings: string[] = [];
 
+    // 6.1) Single-club mode: override p.clube to CLUB org name
+    if (!config.hasSubclubs) {
+      const { data: clubOrg } = await supabaseAdmin
+        .from('organizations').select('name')
+        .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
+      const singleName = clubOrg?.name || config.tenantName || 'CLUBE';
+      for (const p of allPlayers) {
+        if (p._status !== 'ignored') p.clube = singleName;
+      }
+    }
+
     // Validação do engine
     const validateReadiness = platform === 'pppoker' ? validatePPPoker : validateSuprema;
     const readiness = validateReadiness(parseResult);
@@ -346,6 +360,7 @@ class ImportPreviewService {
       warnings,
       players: playersList,
       existing_settlement: existingSettlement,
+      has_subclubs: config.hasSubclubs,
       chippix_trades: Object.keys(chippixTrades).length > 0 ? chippixTrades : undefined,
     };
   }
@@ -538,6 +553,13 @@ class ImportPreviewService {
       .eq('name', 'GU_TO_BRL')
       .maybeSingle();
 
+    // Buscar has_subclubs do tenant
+    const { data: tenantRow } = await supabaseAdmin
+      .from('tenants')
+      .select('has_subclubs, name')
+      .eq('id', tenantId)
+      .single();
+
     return {
       agentOverrides,
       manualLinks,
@@ -546,6 +568,8 @@ class ImportPreviewService {
       ignoredAgents: {},
       guToBrl: guRow ? Number(guRow.rate) : undefined, // undefined = use default (5)
       pppokerSubclube: undefined as string | undefined,
+      hasSubclubs: tenantRow?.has_subclubs !== false,
+      tenantName: tenantRow?.name || null as string | null,
     };
   }
 }

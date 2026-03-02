@@ -390,25 +390,27 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
         </div>
       </div>
 
-      {/* ─── Subclub distribution ─── */}
-      <div className="card mb-4">
-        <h3 className="text-sm font-semibold text-dark-300 mb-3">Distribuicao por Subclube</h3>
-        <div className="space-y-2">
-          {preview.subclubs_found.map((sc) => (
-            <div key={sc.subclub_name} className="flex items-center justify-between py-1.5">
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getClubStyle(sc.subclub_name)}`}>
-                  {getClubIcon(sc.subclub_name)} {sc.subclub_name}
-                </span>
-                <span className="text-dark-400 text-xs">
-                  {sc.players_count} jogadores &middot; {sc.agents_count} agentes
-                </span>
+      {/* ─── Subclub distribution (hidden when single-club mode) ─── */}
+      {preview.subclubs_found.length > 1 && (
+        <div className="card mb-4">
+          <h3 className="text-sm font-semibold text-dark-300 mb-3">Distribuicao por Subclube</h3>
+          <div className="space-y-2">
+            {preview.subclubs_found.map((sc) => (
+              <div key={sc.subclub_name} className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getClubStyle(sc.subclub_name)}`}>
+                    {getClubIcon(sc.subclub_name)} {sc.subclub_name}
+                  </span>
+                  <span className="text-dark-400 text-xs">
+                    {sc.players_count} jogadores &middot; {sc.agents_count} agentes
+                  </span>
+                </div>
+                <span className="text-dark-300 text-sm font-mono">{formatBRL(sc.rake_brl)}</span>
               </div>
-              <span className="text-dark-300 text-sm font-mono">{formatBRL(sc.rake_brl)}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ─── ChipPix Manager Trade Record ─── */}
       {preview.chippix_trades && Object.keys(preview.chippix_trades).length > 0 && (

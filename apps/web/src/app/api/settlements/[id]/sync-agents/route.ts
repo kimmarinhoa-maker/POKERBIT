@@ -52,6 +52,11 @@ export async function POST(
           );
         }
 
+        // Verificar has_subclubs do tenant
+        const { data: tenantRow } = await supabaseAdmin
+          .from('tenants').select('has_subclubs').eq('id', ctx.tenantId).single();
+        const hasSubclubs = tenantRow?.has_subclubs !== false;
+
         // Buscar TODOS agent_week_metrics deste settlement (inclui subclub_name)
         const { data: allMetrics, error: mErr } = await supabaseAdmin
           .from('agent_week_metrics')
@@ -124,8 +129,9 @@ export async function POST(
           // Skip agents with SEM VÍNCULO — they must be linked manually
           if (subclubName === 'SEM V\u00cdNCULO') continue;
 
-          const correctParentId =
-            (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
+          const correctParentId = hasSubclubs
+            ? ((subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id)
+            : settlement.club_id;
 
           const orgId =
             orgNameParentMap.get(normName(agentName) + '|' + correctParentId) ||
@@ -246,8 +252,9 @@ export async function POST(
         for (const agentName of uniqueNames) {
           const orgId = resolvedOrgMap.get(agentName);
           const subclubName = agentSubclubMap.get(agentName);
-          const correctParentId =
-            (subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id;
+          const correctParentId = hasSubclubs
+            ? ((subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id)
+            : settlement.club_id;
 
           if (orgId) {
             allPromises.push(

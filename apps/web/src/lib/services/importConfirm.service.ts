@@ -77,6 +77,18 @@ class ImportConfirmService {
 
     // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
+
+    // Single-club mode: override p.clube to CLUB org name
+    if (!config.hasSubclubs) {
+      const { data: clubOrg } = await supabaseAdmin
+        .from('organizations').select('name')
+        .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
+      const singleName = clubOrg?.name || 'CLUBE';
+      for (const p of allPlayers) {
+        if (p._status !== 'ignored') p.clube = singleName;
+      }
+    }
+
     const hasMissing = allPlayers.some((p: any) => p._status === 'missing_agency');
 
     if (hasMissing) {
@@ -375,7 +387,7 @@ class ImportConfirmService {
       .from('organizations')
       .select('id, name, parent_id, type')
       .eq('tenant_id', tenantId)
-      .in('type', ['SUBCLUB', 'AGENT']);
+      .in('type', ['CLUB', 'SUBCLUB', 'AGENT']);
 
     // Build set of subclub IDs that belong to the target club
     const clubSubclubIds = new Set<string>();
