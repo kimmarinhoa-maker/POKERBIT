@@ -24,12 +24,21 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if a link already exists for this settlement+agent
-      const { data: existing } = await supabaseAdmin
+      const { data: existing, error: selectErr } = await supabaseAdmin
         .from('receipt_links')
         .select('short_id, expires_at')
         .eq('settlement_id', settlementId)
         .eq('agent_metric_id', agentMetricId)
         .maybeSingle();
+
+      if (selectErr) {
+        // Table might not exist — return detailed error for debugging
+        console.error('[generate] Select error:', selectErr);
+        return NextResponse.json(
+          { success: false, error: `DB select: ${selectErr.message} (code: ${selectErr.code})` },
+          { status: 500 },
+        );
+      }
 
       if (existing) {
         // If not expired, reuse it
@@ -64,8 +73,25 @@ export async function POST(req: NextRequest) {
 
       if (insertErr) {
         console.error('[generate] Insert error:', insertErr);
+
+        // If unique constraint violation, try to fetch the existing row
+        if (insertErr.code === '23505') {
+          const { data: retry } = await supabaseAdmin
+            .from('receipt_links')
+            .select('short_id')
+            .eq('settlement_id', settlementId)
+            .eq('agent_metric_id', agentMetricId)
+            .maybeSingle();
+          if (retry?.short_id) {
+            return NextResponse.json({
+              success: true,
+              data: { url: `/r/${retry.short_id}` },
+            });
+          }
+        }
+
         return NextResponse.json(
-          { success: false, error: 'Erro ao criar link' },
+          { success: false, error: `DB insert: ${insertErr.message} (code: ${insertErr.code})` },
           { status: 500 },
         );
       }
