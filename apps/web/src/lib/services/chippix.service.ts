@@ -915,12 +915,8 @@ export class ChipPixService {
       .eq('week_start', weekStart)
       .eq('source', 'chippix');
 
-    // 4. Clear chippix_import_data from settlement (Suprema cross-reference)
-    await supabaseAdmin
-      .from('settlements')
-      .update({ chippix_import_data: null })
-      .eq('tenant_id', tenantId)
-      .eq('week_start', weekStart);
+    // NOTE: chippix_import_data (Suprema cross-reference) is NOT cleared here
+    // because it comes from the main spreadsheet import, not ChipPix extrato.
 
     return { deleted: count || 0 };
   }
