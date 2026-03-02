@@ -19,8 +19,7 @@
 const XLSX = require('xlsx');
 const { parseNum } = require('./adapter');
 
-// ─── Reuse resolveSubclube from coreSuprema ──────────────────────
-const { resolveSubclube } = require('./coreSuprema');
+// PPPoker NÃO usa resolveSubclube — todos jogadores vão para UM único subclube
 
 // ─── Normalize agent name: strip PPPoker prefixes ────────────────
 
@@ -244,11 +243,18 @@ function parseWorkbook(workbook, config = {}) {
       }
 
     } else {
-      p.clube = resolveSubclube(normalizedAgent, effectiveId, { agentOverrides, manualLinks, prefixRules });
-      if (p.clube === '?') {
-        // Agente sem sigla — importa como SEM VÍNCULO (não bloqueia)
-        p.clube = 'SEM V\u00cdNCULO';
-        p._status = 'sem_vinculo';
+      // PPPoker: todos jogadores vão para UM único subclube (sem prefix rules)
+      // Honrar apenas overrides/links explícitos do usuário
+      const ovr = agentOverrides[effectiveId];
+      const upper = normalizedAgent.toUpperCase().trim();
+      if (ovr && ovr.subclube) {
+        p.clube = ovr.subclube;
+      } else if (manualLinks[upper]) {
+        p.clube = manualLinks[upper];
+      } else {
+        // Default: todos para o mesmo subclube
+        p.clube = config.pppokerSubclube || 'PPPOKER';
+        p._status = 'ok';
       }
     }
 
