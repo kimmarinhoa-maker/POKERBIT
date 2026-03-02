@@ -187,7 +187,7 @@ export default function ChipPixTab({
       if (res.success) {
         const d = res.data;
         toast(`${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados)`, 'success');
-        loadTxns();
+        await loadTxns();
       } else {
         toast(res.error || 'Erro ao importar', 'error');
       }
@@ -222,7 +222,7 @@ export default function ChipPixTab({
       }
       if (count > 0) {
         toast(`${count} jogadores vinculados`, 'success');
-        loadTxns();
+        await loadTxns();
       } else {
         toast('Nenhum jogador encontrado para vincular', 'info');
       }
@@ -240,7 +240,7 @@ export default function ChipPixTab({
       if (res.success) {
         setLinkingId(null);
         setLinkForm({ entity_id: '', entity_name: '' });
-        loadTxns();
+        await loadTxns();
       }
     } catch {
       toast('Erro ao vincular', 'error');
@@ -249,12 +249,12 @@ export default function ChipPixTab({
 
   async function handleUnlink(txId: string) {
     await unlinkChipPixTransaction(txId);
-    loadTxns();
+    await loadTxns();
   }
 
   async function handleIgnore(txId: string, ignore: boolean) {
     await ignoreChipPixTransaction(txId, ignore);
-    loadTxns();
+    await loadTxns();
   }
 
   async function handleApply() {
@@ -265,7 +265,7 @@ export default function ChipPixTab({
       const res = await applyChipPixTransactions(weekStart);
       if (res.success) {
         toast(`${res.data?.applied || 0} movimentacoes aplicadas ao Ledger`, 'success');
-        loadTxns();
+        await loadTxns();
         onDataChange();
       }
     } catch {
@@ -290,7 +290,7 @@ export default function ChipPixTab({
       const res = await clearChipPixWeek(weekStart);
       if (res.success) {
         toast(`${res.data?.deleted || deletable.length} registros removidos`, 'success');
-        loadTxns();
+        await loadTxns();
         onDataChange();
       } else {
         toast(res.error || 'Erro ao limpar registros', 'error');
