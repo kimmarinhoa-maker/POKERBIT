@@ -101,18 +101,21 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
             // Last import for this week -> full cascade delete
             const sid = settlement.id;
 
+            // Delete all settlement children in order (FKs)
             const cascadeSteps = [
-              { table: 'player_week_metrics', label: 'player metrics' },
-              { table: 'agent_week_metrics', label: 'agent metrics' },
-              { table: 'settlements', label: 'settlement' },
+              { table: 'player_week_metrics', col: 'settlement_id', label: 'player metrics' },
+              { table: 'agent_week_metrics', col: 'settlement_id', label: 'agent metrics' },
+              { table: 'ledger_entries', col: 'settlement_id', label: 'ledger entries' },
+              { table: 'bank_transactions', col: 'settlement_id', label: 'bank transactions' },
+              { table: 'carry_forward', col: 'settlement_id', label: 'carry forward' },
+              { table: 'settlements', col: 'id', label: 'settlement' },
             ] as const;
 
             for (const step of cascadeSteps) {
-              const col = step.table === 'settlements' ? 'id' : 'settlement_id';
               const { error } = await supabaseAdmin
                 .from(step.table)
                 .delete()
-                .eq(col, sid)
+                .eq(step.col, sid)
                 .eq('tenant_id', ctx.tenantId);
               if (error) {
                 throw new Error(

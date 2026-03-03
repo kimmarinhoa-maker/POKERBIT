@@ -40,9 +40,20 @@ export async function GET(req: NextRequest) {
         platformId,
       );
 
+      // Flatten nested `organizations` join into top-level `club_name`
+      // to prevent React #310 (object rendered as child) on the frontend
+      const flat = (data || []).map((row: any) => {
+        const org = row.organizations;
+        return {
+          ...row,
+          club_name: org?.name || null,
+          organizations: undefined,
+        };
+      });
+
       return NextResponse.json({
         success: true,
-        data,
+        data: flat,
         meta: { total, page, limit, pages: Math.ceil(total / limit) },
       });
     } catch (err: unknown) {

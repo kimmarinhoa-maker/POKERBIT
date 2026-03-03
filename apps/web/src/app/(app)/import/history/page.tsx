@@ -81,7 +81,7 @@ export default function ImportHistoryPage() {
   }
 
   async function handleDelete(imp: ImportRecord) {
-    const ok = await confirm({ title: 'Remover Importacao', message: `Remover importacao "${imp.file_name}"?\nIsso nao remove o fechamento associado.`, variant: 'danger' });
+    const ok = await confirm({ title: 'Remover Importacao', message: `Remover importacao "${imp.file_name}"?\nIsso remove o fechamento e todos os dados dessa semana.\nJogadores, agentes e taxas RB sao preservados.`, variant: 'danger' });
     if (!ok) return;
     setDeleting(imp.id);
     try {
