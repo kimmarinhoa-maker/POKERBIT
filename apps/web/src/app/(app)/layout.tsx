@@ -54,15 +54,15 @@ const navSections: NavSection[] = [
   },
   {
     label: 'FECHAMENTOS',
-    requireSubclubs: true,
     items: [
-      { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
+      { href: '/s', label: 'Fechamentos', icon: Building2, permKey: 'page:clubes' },
       { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
     ],
   },
   {
     label: 'CADASTRO',
     items: [
+      { href: '/clubs', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
       { href: '/players', label: 'Agentes / Jogadores', icon: Users, permKey: 'page:players' },
     ],
   },
