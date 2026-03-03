@@ -238,14 +238,19 @@ class ImportPreviewService {
     const allPlayers: any[] = parseResult.all || [];
     const warnings: string[] = [];
 
-    // 6.1) Single-club mode: override p.clube to CLUB org name
-    if (!config.hasSubclubs) {
+    // 6.1) Single-club mode OR no subclubes: override p.clube and resolve blockers
+    if (!config.hasSubclubs || existingSubclubs.length === 0) {
       const { data: clubOrg } = await supabaseAdmin
         .from('organizations').select('name')
         .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
       const singleName = clubOrg?.name || config.tenantName || 'CLUBE';
       for (const p of allPlayers) {
-        if (p._status !== 'ignored') p.clube = singleName;
+        if (p._status === 'missing_agency' || p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
+          p._status = 'ok';
+          p.clube = singleName;
+        } else if (p._status !== 'ignored') {
+          p.clube = singleName;
+        }
       }
     }
 

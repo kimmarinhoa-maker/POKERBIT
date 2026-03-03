@@ -51,11 +51,12 @@ interface ConfirmOptions {
   uploadedBy: string;
   platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
   pppokerSubclube?: string; // Subclube destino para PPPoker
+  noSubclubs?: boolean; // User chose "Não" for subclubes — skip missing_agency blocker
 }
 
 class ImportConfirmService {
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
-    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube } = opts;
+    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube, noSubclubs } = opts;
     const warnings: string[] = [];
 
     // ── 0) Platform guard ─────────────────────────────────────────
@@ -78,14 +79,19 @@ class ImportConfirmService {
     // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
 
-    // Single-club mode: override p.clube to CLUB org name
-    if (!config.hasSubclubs) {
+    // Single-club mode OR no subclubes: override p.clube and resolve blockers
+    if (!config.hasSubclubs || noSubclubs) {
       const { data: clubOrg } = await supabaseAdmin
         .from('organizations').select('name')
         .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
       const singleName = clubOrg?.name || 'CLUBE';
       for (const p of allPlayers) {
-        if (p._status !== 'ignored') p.clube = singleName;
+        if (p._status === 'missing_agency' || p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
+          p._status = 'ok';
+          p.clube = singleName;
+        } else if (p._status !== 'ignored') {
+          p.clube = singleName;
+        }
       }
     }
 
