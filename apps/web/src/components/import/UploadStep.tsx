@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react';
 import Spinner from '@/components/Spinner';
-import type { ClubPlatform } from '@/types/platform';
-import { PLATFORM_LABELS as TYPE_PLATFORM_LABELS, getPlatformColor } from '@/types/platform';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (same as backend)
 
@@ -38,10 +36,6 @@ interface UploadStepProps {
   loading: boolean;
   error: string;
   onPreview: () => void;
-  // Multi-platform
-  clubPlatforms?: ClubPlatform[];
-  selectedClubPlatformId?: string | null;
-  setSelectedClubPlatformId?: (id: string | null) => void;
 }
 
 function validateFile(f: File): string | null {
@@ -76,9 +70,6 @@ export default function UploadStep({
   loading,
   error,
   onPreview,
-  clubPlatforms = [],
-  selectedClubPlatformId,
-  setSelectedClubPlatformId,
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -111,83 +102,8 @@ export default function UploadStep({
   const platformLabel = PLATFORM_LABELS[derivedPlatform] || derivedPlatform;
   const platformHint = PLATFORM_HINTS[derivedPlatform] || '';
 
-  // Platform destination cards (only show if external platforms exist)
-  const hasExternalPlatforms = clubPlatforms.length > 0;
-
-  function handleSelectPlatformCard(cpId: string | null, cp?: ClubPlatform) {
-    if (setSelectedClubPlatformId) setSelectedClubPlatformId(cpId);
-    if (cp) {
-      // Auto-set platform and pppoker subclub
-      const plat = cp.platform as Platform;
-      if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') setPlatform(plat);
-      // If pppoker and subclub has a name, auto-set pppokerSubclube
-      if (plat === 'pppoker' && cp.subclub_name) {
-        setPppokerSubclube(cp.subclub_name);
-      }
-    } else {
-      setPlatform('suprema');
-    }
-  }
-
   return (
     <div>
-      {/* Platform destination cards */}
-      {hasExternalPlatforms && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-dark-300 mb-2">Destino da Importacao</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {/* Suprema (default) card */}
-            <button
-              type="button"
-              onClick={() => handleSelectPlatformCard(null)}
-              className={`p-3 rounded-lg border text-left transition-all ${
-                selectedClubPlatformId === null || selectedClubPlatformId === undefined
-                  ? 'bg-poker-600/15 border-poker-500 ring-1 ring-poker-500/30'
-                  : 'bg-dark-800/50 border-dark-700 hover:border-dark-500'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-poker-600/15 text-poker-400 border-poker-700/30">
-                  Suprema
-                </span>
-              </div>
-              <p className="text-xs text-dark-400">Plataforma principal (Geral)</p>
-            </button>
-
-            {/* External platform cards */}
-            {clubPlatforms.map((cp) => {
-              const color = getPlatformColor(cp.platform);
-              const isSelected = selectedClubPlatformId === cp.id;
-              return (
-                <button
-                  key={cp.id}
-                  type="button"
-                  onClick={() => handleSelectPlatformCard(cp.id, cp)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    isSelected
-                      ? `${color.bg} ${color.border} ring-1 ring-opacity-30`
-                      : 'bg-dark-800/50 border-dark-700 hover:border-dark-500'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${color.bg} ${color.text} ${color.border}`}>
-                      {TYPE_PLATFORM_LABELS[cp.platform] || cp.platform}
-                    </span>
-                  </div>
-                  <p className={`text-sm font-medium ${isSelected ? 'text-dark-100' : 'text-dark-300'}`}>
-                    {cp.club_name || cp.subclub_name || 'Sem nome'}
-                  </p>
-                  <p className="text-xs text-dark-500">
-                    {cp.subclub_name ? `${cp.subclub_name}` : ''}
-                    {cp.club_external_id ? ` · ID: ${cp.club_external_id}` : ''}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Club selector — always visible */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-dark-300 mb-2">Clube</label>

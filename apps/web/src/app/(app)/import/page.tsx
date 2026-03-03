@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, listClubPlatforms } from '@/lib/api';
+import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
-import { usePlatform } from '@/lib/usePlatform';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
-import type { ClubPlatform } from '@/types/platform';
 
 import StepIndicator from '@/components/import/StepIndicator';
 import UploadStep from '@/components/import/UploadStep';
@@ -20,7 +18,6 @@ import SuccessStep, { ConfirmResult } from '@/components/import/SuccessStep';
 export default function ImportWizardPage() {
   usePageTitle('Importar');
   const { hasSubclubs } = useAuth();
-  const { selectedPlatformId } = usePlatform();
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -31,8 +28,6 @@ export default function ImportWizardPage() {
   const [platform, setPlatform] = useState<Platform>('suprema');
   const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
   const [pppokerSubclube, setPppokerSubclube] = useState('');
-  const [clubPlatforms, setClubPlatforms] = useState<ClubPlatform[]>([]);
-  const [selectedClubPlatformId, setSelectedClubPlatformId] = useState<string | null>(selectedPlatformId);
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -57,10 +52,9 @@ export default function ImportWizardPage() {
   const { toast } = useToast();
 
   const loadClubs = useCallback(async () => {
-    const [clubRes, subclubRes, platRes] = await Promise.all([
+    const [clubRes, subclubRes] = await Promise.all([
       listOrganizations('CLUB'),
       listOrganizations('SUBCLUB'),
-      listClubPlatforms(),
     ]);
     if (clubRes.success) {
       const clubList = (clubRes.data || []).map((c: any) => ({
@@ -80,9 +74,6 @@ export default function ImportWizardPage() {
     }
     if (subclubRes.success) {
       setSubclubs(subclubRes.data || []);
-    }
-    if (platRes.success) {
-      setClubPlatforms(platRes.data || []);
     }
   }, []);
 
@@ -231,7 +222,7 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined, selectedClubPlatformId);
+      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
       if (res.success && res.data) {
         setConfirmResult(res.data);
       } else {
@@ -262,7 +253,6 @@ export default function ImportWizardPage() {
     setBulkNewAgentName('');
     setPlatform('suprema');
     setPppokerSubclube('');
-    setSelectedClubPlatformId(selectedPlatformId);
   }
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -294,9 +284,6 @@ export default function ImportWizardPage() {
           loading={loading}
           error={error}
           onPreview={handlePreview}
-          clubPlatforms={clubPlatforms}
-          selectedClubPlatformId={selectedClubPlatformId}
-          setSelectedClubPlatformId={setSelectedClubPlatformId}
         />
       )}
 

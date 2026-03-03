@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { getFeeConfig, updateFeeConfig, deleteFee, listOrganizations } from '@/lib/api';
-import { usePlatform } from '@/lib/usePlatform';
-import { getPlatformColor, PLATFORM_LABELS } from '@/types/platform';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 import { Plus, Trash2, Pencil } from 'lucide-react';
@@ -34,7 +32,6 @@ export default function ConfigTaxas() {
   const [fees, setFees] = useState<FeeConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { selectedPlatformId, selectedPlatform } = usePlatform();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,11 +53,11 @@ export default function ConfigTaxas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load fees when selected club or platform changes
+  // Load fees when selected club changes
   useEffect(() => {
     if (selectedClubId) loadFees(selectedClubId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClubId, selectedPlatformId]);
+  }, [selectedClubId]);
 
   async function loadClubs() {
     setLoadingClubs(true);
@@ -88,7 +85,7 @@ export default function ConfigTaxas() {
     setEditing(false);
     setShowNewFee(false);
     try {
-      const res = await getFeeConfig(clubId, selectedPlatformId);
+      const res = await getFeeConfig(clubId);
       if (res.success) setFees(res.data || []);
     } catch {
       toast('Erro ao carregar taxas', 'error');
@@ -117,7 +114,7 @@ export default function ConfigTaxas() {
           rate: parseFloat(f.rate) || 0,
           base: f.base || 'rake',
         }));
-      const res = await updateFeeConfig(feesPayload, selectedClubId, selectedPlatformId);
+      const res = await updateFeeConfig(feesPayload, selectedClubId);
       if (res.success) {
         setFees(res.data || []);
         setEditing(false);
@@ -160,7 +157,6 @@ export default function ConfigTaxas() {
       const res = await updateFeeConfig(
         [{ name: newFee.name.trim(), rate: parseFloat(newFee.rate) || 0, base: newFee.base }],
         selectedClubId,
-        selectedPlatformId,
       );
       if (res.success) {
         setFees(res.data || []);
@@ -193,21 +189,6 @@ export default function ConfigTaxas() {
 
   return (
     <div>
-      {/* Platform banner */}
-      {selectedPlatformId && selectedPlatform && (() => {
-        const color = getPlatformColor(selectedPlatform.platform);
-        return (
-          <div className={`${color.bg} border ${color.border} rounded-lg px-3 py-2 mb-4 flex items-center gap-2`}>
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${color.bg} ${color.text} ${color.border}`}>
-              {PLATFORM_LABELS[selectedPlatform.platform] || selectedPlatform.platform}
-            </span>
-            <span className={`text-sm ${color.text}`}>
-              Configurando taxas de: <strong>{selectedPlatform.label}</strong>
-            </span>
-          </div>
-        );
-      })()}
-
       {/* Club selector */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-dark-300 mb-2">Clube</label>

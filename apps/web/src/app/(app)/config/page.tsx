@@ -3,17 +3,15 @@
 import { useState } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import ConfigEstrutura from '@/components/config/ConfigEstrutura';
-import ConfigPlataformas from '@/components/config/ConfigPlataformas';
 import ConfigPagamentos from '@/components/config/ConfigPagamentos';
 import ConfigTaxas from '@/components/config/ConfigTaxas';
 import ConfigWhatsApp from '@/components/config/ConfigWhatsApp';
 import ConfigCategorias from '@/components/config/ConfigCategorias';
 
-type ConfigTab = 'estrutura' | 'plataformas' | 'pagamentos' | 'taxas' | 'categorias' | 'whatsapp';
+type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'categorias' | 'whatsapp';
 
 const tabs: { key: ConfigTab; label: string }[] = [
   { key: 'estrutura', label: 'Estrutura' },
-  { key: 'plataformas', label: 'Plataformas' },
   { key: 'pagamentos', label: 'Pagamentos' },
   { key: 'taxas', label: 'Taxas' },
   { key: 'categorias', label: 'Categorias' },
@@ -52,7 +50,6 @@ export default function ConfigPage() {
 
       {/* Tab content */}
       {activeTab === 'estrutura' && <ConfigEstrutura />}
-      {activeTab === 'plataformas' && <ConfigPlataformas />}
       {activeTab === 'pagamentos' && <ConfigPagamentos />}
       {activeTab === 'taxas' && <ConfigTaxas />}
       {activeTab === 'categorias' && <ConfigCategorias />}

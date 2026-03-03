@@ -31,7 +31,6 @@ export class SettlementService {
     endDate?: string,
     page: number = 1,
     limit: number = 50,
-    platformId?: string,
   ) {
     // Count query for total
     let countQuery = supabaseAdmin
@@ -42,10 +41,6 @@ export class SettlementService {
     if (clubId) countQuery = countQuery.eq('club_id', clubId);
     if (startDate) countQuery = countQuery.gte('week_start', startDate);
     if (endDate) countQuery = countQuery.lte('week_start', endDate);
-    // Platform filter
-    if (platformId) {
-      countQuery = countQuery.eq('club_platform_id', platformId);
-    }
 
     const { count: total } = await countQuery;
 
@@ -57,7 +52,6 @@ export class SettlementService {
         `
         id, club_id, week_start, version, status,
         import_id, notes, finalized_at, created_at,
-        club_platform_id,
         organizations!inner(name)
       `,
       )
@@ -73,10 +67,6 @@ export class SettlementService {
     }
     if (endDate) {
       query = query.lte('week_start', endDate);
-    }
-    // Platform filter
-    if (platformId) {
-      query = query.eq('club_platform_id', platformId);
     }
 
     const { data, error } = await query;

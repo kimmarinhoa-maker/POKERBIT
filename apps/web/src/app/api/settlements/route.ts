@@ -17,11 +17,6 @@ export async function GET(req: NextRequest) {
       const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
       const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50));
 
-      // Platform filter: explicit param > header > undefined (all)
-      const platformParam = url.searchParams.get('platform_id') || undefined;
-      const headerPlatformId = req.headers.get('x-platform-id') || undefined;
-      const platformId = platformParam ?? headerPlatformId;
-
       const dateRe = /^\d{4}-\d{2}-\d{2}$/;
       if ((startDate && !dateRe.test(startDate)) || (endDate && !dateRe.test(endDate))) {
         return NextResponse.json(
@@ -37,7 +32,6 @@ export async function GET(req: NextRequest) {
         endDate,
         page,
         limit,
-        platformId,
       );
 
       // Flatten nested `organizations` join into top-level `club_name`
