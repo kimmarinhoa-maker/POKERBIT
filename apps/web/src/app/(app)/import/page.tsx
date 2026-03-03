@@ -123,7 +123,8 @@ export default function ImportWizardPage() {
 
   function handlePreviewNext() {
     if (!preview) return;
-    if (preview.readiness.ready) {
+    // When user chose "Não" for subclubes, skip pendencies (players become direct)
+    if (preview.readiness.ready || temSubclube === false) {
       setStep('confirm');
     } else {
       setStep('pendencies');
@@ -229,7 +230,7 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
+      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined, temSubclube === false ? true : undefined);
       if (res.success && res.data) {
         setConfirmResult(res.data);
       } else {

@@ -128,6 +128,7 @@ router.post(
       const { club_id, week_start } = parsed.data;
       const tenantId = req.tenantId!;
       const platform = req.body.platform || 'suprema';
+      const noSubclubs = req.body.no_subclubs === 'true';
 
       // Validate club belongs to this tenant
       const { data: club } = await supabaseAdmin
@@ -150,6 +151,7 @@ router.post(
         fileBuffer: req.file.buffer,
         uploadedBy: req.userId!,
         platform,
+        noSubclubs,
       });
 
       logAudit(req, 'CREATE', 'settlement', result.settlement_id || '', undefined, { club_id, week_start, fileName: req.file!.originalname });

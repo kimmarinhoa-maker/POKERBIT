@@ -108,6 +108,9 @@ export default function PreviewStep({
         ? !!pppokerSubclube
         : true;
 
+  // When user chose "Não" for subclubes, missing_agency is not a real blocker
+  const effectiveReady = preview.readiness.ready || temSubclube === false;
+
   const players = useMemo(() => preview.players || [], [preview.players]);
 
   const filteredPlayers = useMemo(() => {
@@ -630,13 +633,17 @@ export default function PreviewStep({
       )}
 
       {/* ─── Readiness ─── */}
-      {preview.readiness.ready ? (
+      {effectiveReady ? (
         <div className="bg-dark-900 border border-green-700/40 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
               <span className="text-green-400 text-xs font-bold">{'\u2713'}</span>
             </div>
-            <p className="text-green-400 font-medium text-sm">Tudo pronto! Sem pendencias.</p>
+            <p className="text-green-400 font-medium text-sm">
+              {temSubclube === false && !preview.readiness.ready
+                ? 'Jogadores serao importados como diretos do clube.'
+                : 'Tudo pronto! Sem pendencias.'}
+            </p>
           </div>
         </div>
       ) : (
@@ -941,7 +948,7 @@ export default function PreviewStep({
         >
           {!subclubReady
             ? 'Selecione subclubes acima'
-            : preview.readiness.ready
+            : effectiveReady
               ? needsReimportConfirm
                 ? 'Confirme a reimportacao acima'
                 : 'Confirmar Importacao'

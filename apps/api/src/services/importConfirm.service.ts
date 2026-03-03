@@ -52,11 +52,12 @@ interface ConfirmOptions {
   uploadedBy: string;
   platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
   pppokerSubclube?: string; // Subclube destino para PPPoker
+  noSubclubs?: boolean; // User chose "Não" for subclubes — skip missing_agency blocker
 }
 
 class ImportConfirmService {
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
-    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube } = opts;
+    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube, noSubclubs } = opts;
     const warnings: string[] = [];
 
     // ── 0) Platform guard ─────────────────────────────────────────
@@ -79,19 +80,8 @@ class ImportConfirmService {
     // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
 
-    // Se nao tem subclubes, jogadores sem agencia viram diretos (nao bloqueia)
-    const { data: subclubOrgs } = await supabaseAdmin
-      .from('organizations')
-      .select('id, name')
-      .eq('tenant_id', tenantId)
-      .eq('type', 'SUBCLUB')
-      .eq('is_active', true)
-      .limit(1);
-
-    const hasSubclubs = (subclubOrgs || []).length > 0;
-
-    if (!hasSubclubs) {
-      // Sem subclubes → converter missing_agency para ok (jogador direto)
+    // Se usuario escolheu "Não" para subclubes, jogadores sem agencia viram diretos
+    if (noSubclubs) {
       const { data: clubOrg } = await supabaseAdmin
         .from('organizations')
         .select('name')

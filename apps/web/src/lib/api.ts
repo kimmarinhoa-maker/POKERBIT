@@ -179,7 +179,7 @@ export async function apiFetch<T = any>(
 
   // Mutations: invalidate related cache after completion
   if (!isGet) {
-    const basePath = '/' + path.split('/').slice(1, 3).join('/');
+    const basePath = '/' + path.split('/')[1];
     fetchPromise.then(() => invalidateCache(basePath));
   }
 
@@ -385,13 +385,14 @@ export async function importPreview(file: File, clubId?: string, weekStartOverri
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
-export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string, pppokerSubclube?: string) {
+export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string, pppokerSubclube?: string, noSubclubs?: boolean) {
   const form = new FormData();
   form.append('file', file);
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
   if (platform) form.append('platform', platform);
   if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
+  if (noSubclubs) form.append('no_subclubs', 'true');
 
   return apiFetch(
     '/imports/confirm',
@@ -1181,6 +1182,33 @@ export async function getDashboardModalities(settlementId: string, subclubId?: s
   const params = new URLSearchParams({ settlement_id: settlementId });
   if (subclubId) params.set('subclub_id', subclubId);
   return apiFetch<ModalityData>(`/dashboard/modalities?${params}`);
+}
+
+// ─── Data Integrity ──────────────────────────────────────────────
+
+export interface IntegrityIssue {
+  type: string;
+  severity: 'error' | 'warning';
+  message: string;
+  details: Record<string, unknown>;
+  fixable: boolean;
+}
+
+export interface IntegrityResult {
+  healthy: boolean;
+  issueCount: number;
+  issues: IntegrityIssue[];
+  checkedAt: string;
+}
+
+export async function checkDataIntegrity() {
+  return apiFetch<IntegrityResult>('/config/data-integrity');
+}
+
+export async function fixDataIntegrity() {
+  return apiFetch<{ fixed: number; message: string }>('/config/data-integrity/fix', {
+    method: 'POST',
+  });
 }
 
 // ─── Comprovante (receipt URL generation) ─────────────────────────
