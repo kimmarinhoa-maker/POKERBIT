@@ -97,7 +97,8 @@ export default function ImportWizardPage() {
     if (!file) return;
     setLoading(true);
     setError('');
-    setPreview(null);
+    // NOTE: don't setPreview(null) here — keeps PreviewStep mounted during reprocess
+    // so the table stays open and user doesn't lose position
 
     try {
       const res = await importPreview(file, weekStartOverride || undefined, platform, platform === 'pppoker' ? pppokerSubclube : undefined);

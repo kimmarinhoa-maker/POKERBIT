@@ -22,6 +22,15 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
   missing_agency: { label: 'Sem Agencia', cls: 'bg-red-500/20 text-red-400 border-red-500/40' },
 };
 
+type StatusFilter = 'all' | 'missing_agency' | 'sem_vinculo' | 'pending';
+
+const STATUS_FILTERS: { key: StatusFilter; label: string; match: (s: string) => boolean }[] = [
+  { key: 'all', label: 'Todos', match: () => true },
+  { key: 'pending', label: 'Pendentes', match: (s) => s !== 'ok' && s !== 'auto_resolved' },
+  { key: 'missing_agency', label: 'Sem Agencia', match: (s) => s === 'missing_agency' },
+  { key: 'sem_vinculo', label: 'Sem Vinculo', match: (s) => s === 'sem_vinculo' },
+];
+
 // ─── Sortable columns ──────────────────────────────────────────────
 
 type SortKey = 'nick' | 'ganhos' | 'rake' | 'ggr';
@@ -37,6 +46,9 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
 
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
   // Inline agent linking
   const [editingAgent, setEditingAgent] = useState<string | null>(null);
   const [linkingSaving, setLinkingSaving] = useState(false);
@@ -50,9 +62,15 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
 
   const filteredPlayers = useMemo(() => {
     const q = playerSearch.toLowerCase().trim();
-    const list = q
-      ? players.filter((p) => p.nick.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
-      : [...players];
+    const filterFn = STATUS_FILTERS.find((f) => f.key === statusFilter)?.match || (() => true);
+
+    let list = players.filter((p) => {
+      // Status filter
+      if (!filterFn(p._status || 'ok')) return false;
+      // Text search
+      if (q && !p.nick.toLowerCase().includes(q) && !p.id.toLowerCase().includes(q)) return false;
+      return true;
+    });
 
     list.sort((a, b) => {
       const av = sortKey === 'nick' ? a.nick.toLowerCase() : a[sortKey];
@@ -63,7 +81,7 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
     });
 
     return list;
-  }, [players, playerSearch, sortKey, sortDir]);
+  }, [players, playerSearch, sortKey, sortDir, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / PAGE_SIZE));
   const pagedPlayers = filteredPlayers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -544,6 +562,31 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                 className="input w-full text-xs mb-3"
               />
 
+              {/* Status filter pills */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {STATUS_FILTERS.map((f) => {
+                  const count = f.key === 'all'
+                    ? players.length
+                    : players.filter((p) => f.match(p._status || 'ok')).length;
+                  if (f.key !== 'all' && count === 0) return null;
+                  const isActive = statusFilter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => { setStatusFilter(f.key); setPage(0); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                        isActive
+                          ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                          : 'bg-dark-800/50 border-dark-700 text-dark-400 hover:border-dark-500'
+                      }`}
+                    >
+                      {f.label}
+                      <span className="ml-1 font-mono">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs data-table">
                   <thead>
@@ -563,7 +606,7 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                       <th className="px-3 py-2 text-right font-medium text-[10px] text-dark-400 uppercase tracking-wider cursor-pointer select-none" onClick={() => toggleSort('ggr')}>
                         GGR {sortIcon('ggr')}
                       </th>
-                      <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider">Status</th>
+                      <th className="px-3 py-2 text-center font-medium text-[10px] text-dark-400 uppercase tracking-wider min-w-[100px]">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -620,7 +663,7 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
                           <td className="px-3 py-2 text-right font-mono text-blue-400">{formatBRL(p.rake)}</td>
                           <td className="px-3 py-2 text-right font-mono text-purple-400">{formatBRL(p.ggr)}</td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${st.cls}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${st.cls}`}>
                               {st.label}
                             </span>
                           </td>
