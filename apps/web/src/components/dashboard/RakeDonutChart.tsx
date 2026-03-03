@@ -43,7 +43,7 @@ export default function RakeDonutChart({ rakeByModality }: Props) {
       </h3>
       <div className="flex flex-col items-center">
         <div className="h-[220px] w-full max-w-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <PieChart>
               <Pie
                 data={chartData}

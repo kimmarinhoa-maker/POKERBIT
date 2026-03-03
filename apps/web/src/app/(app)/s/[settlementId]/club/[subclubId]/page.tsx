@@ -179,6 +179,31 @@ export default function SubclubPanelPage() {
     router.push(`/s/${settlementId}/club/${encodeURIComponent(subclubId)}?tab=${tab}`);
   }
 
+  // ─── useMemo hooks MUST be before any conditional return (Rules of Hooks) ──
+  const _weekStart = data?.settlement?.week_start;
+  const _agents = data?.subclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.agents;
+  const _players = data?.subclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.players;
+
+  const weekEnd = useMemo(() => {
+    if (!_weekStart) return undefined;
+    const d = new Date(_weekStart + 'T00:00:00');
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().split('T')[0];
+  }, [_weekStart]);
+
+  const conciliacaoAgents = useMemo(
+    () => (_agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name })),
+    [_agents],
+  );
+  const conciliacaoPlayers = useMemo(
+    () => (_players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null })),
+    [_players],
+  );
+  const subclubEntityIds = useMemo(
+    () => buildSubclubEntityIds(_agents || [], _players || []),
+    [_agents, _players],
+  );
+
   // ─── Loading (skeleton em vez de spinner) ────────────────────────
   // Only show skeleton on initial load (no data yet).
   // During refreshes (loading=true but data exists), keep content mounted
@@ -223,28 +248,6 @@ export default function SubclubPanelPage() {
 
   // Narrow type after guard — TS can't narrow in nested closures
   const subclub: SubclubData = foundSubclub;
-
-  // Calculate week_end
-  const weekEnd = useMemo(() => {
-    if (!settlement.week_start) return undefined;
-    const d = new Date(settlement.week_start + 'T00:00:00');
-    d.setDate(d.getDate() + 6);
-    return d.toISOString().split('T')[0];
-  }, [settlement.week_start]);
-
-  // ─── Memoized derived data (avoid recreating on each render) ──────
-  const conciliacaoAgents = useMemo(
-    () => (subclub.agents || []).map((a) => ({ agent_id: a.agent_id || a.id, agent_name: a.agent_name })),
-    [subclub.agents],
-  );
-  const conciliacaoPlayers = useMemo(
-    () => (subclub.players || []).map((p) => ({ external_player_id: p.external_player_id || null, nickname: p.nickname || null })),
-    [subclub.players],
-  );
-  const subclubEntityIds = useMemo(
-    () => buildSubclubEntityIds(subclub.agents || [], subclub.players || []),
-    [subclub.agents, subclub.players],
-  );
 
   // ─── Render content based on tab ──────────────────────────────────
   function renderContent() {

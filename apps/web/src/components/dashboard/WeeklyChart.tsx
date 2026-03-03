@@ -36,7 +36,7 @@ export default function WeeklyChart({ data }: Props) {
     <div className="card">
       <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider mb-4">Evolucao Semanal</h3>
       <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
           <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <defs>
               <linearGradient id="colorRake" x1="0" y1="0" x2="0" y2="1">
