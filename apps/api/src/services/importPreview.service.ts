@@ -236,8 +236,8 @@ class ImportPreviewService {
       .single();
     const tenantHasSubclubs = tenantRow?.has_subclubs !== false;
 
-    if (!tenantHasSubclubs) {
-      // Get CLUB org name as fallback clube name
+    if (!tenantHasSubclubs || existingSubclubs.length === 0) {
+      // Sem subclubes → todos jogadores viram diretos do clube
       const clubOrgName = existingSubclubs.length > 0 ? existingSubclubs[0].name : 'CLUB';
       const { data: clubOrg } = await supabaseAdmin
         .from('organizations')
@@ -248,7 +248,7 @@ class ImportPreviewService {
       const clubName = clubOrg?.name || clubOrgName;
 
       for (const p of (parseResult.all || [])) {
-        if (p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
+        if (p._status === 'unknown_subclub' || p._status === 'sem_vinculo' || p._status === 'missing_agency') {
           p._status = 'ok';
           p.clube = clubName;
         }

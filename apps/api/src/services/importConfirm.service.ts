@@ -78,6 +78,36 @@ class ImportConfirmService {
 
     // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
+
+    // Se nao tem subclubes, jogadores sem agencia viram diretos (nao bloqueia)
+    const { data: subclubOrgs } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .eq('type', 'SUBCLUB')
+      .eq('is_active', true)
+      .limit(1);
+
+    const hasSubclubs = (subclubOrgs || []).length > 0;
+
+    if (!hasSubclubs) {
+      // Sem subclubes → converter missing_agency para ok (jogador direto)
+      const { data: clubOrg } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('tenant_id', tenantId)
+        .eq('type', 'CLUB')
+        .maybeSingle();
+      const clubName = clubOrg?.name || 'CLUB';
+
+      for (const p of allPlayers) {
+        if (p._status === 'missing_agency' || p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
+          p._status = 'ok';
+          p.clube = clubName;
+        }
+      }
+    }
+
     const hasMissing = allPlayers.some((p: any) => p._status === 'missing_agency');
 
     if (hasMissing) {
@@ -394,6 +424,20 @@ class ImportConfirmService {
         }
       });
     }
+
+    // Third pass: for SUBCLUB orgs, also add individual words (≥3 chars) as keys
+    // so "GRUPO IMPÉRIO" also matches "IMPÉRIO" from import data
+    (data || []).forEach((org) => {
+      if (org.type === 'SUBCLUB') {
+        const words = org.name.split(/\s+/);
+        for (const word of words) {
+          if (word.length >= 3) {
+            if (!map[word]) map[word] = org.id;
+            if (!map[word.toUpperCase()]) map[word.toUpperCase()] = org.id;
+          }
+        }
+      }
+    });
 
     return map;
   }
