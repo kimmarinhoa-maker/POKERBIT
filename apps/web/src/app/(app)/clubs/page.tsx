@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getOrgTree, updateOrgMetadata, updateOrganization } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
@@ -25,25 +25,28 @@ export default function ClubsPage() {
   const [savingExtId, setSavingExtId] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadTree();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadTree() {
+  const loadTree = useCallback(async (signal?: { cancelled: boolean }) => {
     try {
       const res = await getOrgTree();
+      if (signal?.cancelled) return;
       if (res.success) {
         setTree(res.data || []);
       } else {
         toast(res.error || 'Erro ao carregar clubes', 'error');
       }
     } catch {
+      if (signal?.cancelled) return;
       toast('Erro de conexao com o servidor', 'error');
     } finally {
-      setLoading(false);
+      if (!signal?.cancelled) setLoading(false);
     }
-  }
+  }, [toast]);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    loadTree(signal);
+    return () => { signal.cancelled = true; };
+  }, [loadTree]);
 
   // KPIs
   const kpis = useMemo(() => {

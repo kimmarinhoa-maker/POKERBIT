@@ -61,54 +61,62 @@ export default function LigaGlobalPage() {
   const [showConsolidado, setShowConsolidado] = useState(false);
 
   // Load settlements + org tree for logos
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
-        if (treeRes.success && treeRes.data) {
-          const map: Record<string, string | null> = {};
-          for (const club of treeRes.data) {
-            for (const sub of club.subclubes || []) {
-              map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
-            }
+  const loadSettlements = useCallback(async (signal?: { cancelled: boolean }) => {
+    setLoading(true);
+    try {
+      const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
+      if (signal?.cancelled) return;
+      if (treeRes.success && treeRes.data) {
+        const map: Record<string, string | null> = {};
+        for (const club of treeRes.data) {
+          for (const sub of club.subclubes || []) {
+            map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
           }
-          setLogoMap(map);
         }
-        if (res.success) {
-          const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
-            b.week_start.localeCompare(a.week_start),
-          );
-          setSettlements(list);
-          if (list.length > 0) setSelectedId(list[0].id);
-        } else {
-          toast(res.error || 'Erro ao carregar semanas', 'error');
-        }
-      } catch {
-        toast('Erro de conexao com o servidor', 'error');
-      } finally {
-        setLoading(false);
+        setLogoMap(map);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (res.success) {
+        const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
+          b.week_start.localeCompare(a.week_start),
+        );
+        setSettlements(list);
+        if (list.length > 0) setSelectedId(list[0].id);
+      } else {
+        toast(res.error || 'Erro ao carregar semanas', 'error');
+      }
+    } catch {
+      if (signal?.cancelled) return;
+      toast('Erro de conexao com o servidor', 'error');
+    } finally {
+      if (!signal?.cancelled) setLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    loadSettlements(signal);
+    return () => { signal.cancelled = true; };
+  }, [loadSettlements]);
 
   // Load full settlement when selection changes
   useEffect(() => {
     if (!selectedId) return;
+    let cancelled = false;
     (async () => {
       setLoadingFull(true);
       try {
         const res = await getSettlementFull(selectedId);
+        if (cancelled) return;
         if (res.success && res.data?.subclubs) {
           setSubclubs(res.data.subclubs);
         }
       } catch {
-        toast('Erro ao carregar subclubes', 'error');
+        if (!cancelled) toast('Erro ao carregar subclubes', 'error');
       } finally {
-        setLoadingFull(false);
+        if (!cancelled) setLoadingFull(false);
       }
     })();
+    return () => { cancelled = true; };
   }, [selectedId, toast]);
 
   // Grand totals

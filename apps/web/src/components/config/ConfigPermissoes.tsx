@@ -6,7 +6,7 @@ import { useToast } from '@/components/Toast';
 import { CONFIGURABLE_ROLES, getDefaultPermissionsForRole } from '@/lib/defaultPermissions';
 import type { PermRole } from '@/lib/defaultPermissions';
 import { permissionSections } from '@/lib/permissionResources';
-import Spinner from '@/components/Spinner';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 import { Shield } from 'lucide-react';
 
 const roleBadge: Record<string, { bg: string; text: string; border: string }> = {
@@ -94,8 +94,13 @@ export default function ConfigPermissoes() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner />
+      <div className="space-y-6">
+        <div className="flex gap-2 mb-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-10 skeleton-shimmer w-28 rounded-lg" style={{ animationDelay: `${i * 0.1}s` }} />
+          ))}
+        </div>
+        <TableSkeleton columns={4} rows={6} />
       </div>
     );
   }

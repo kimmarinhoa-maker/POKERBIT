@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { LaunchRow, SubClub } from '@/types/launches';
@@ -30,18 +30,12 @@ export default function LancamentosPage() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingOverlay, setSavingOverlay] = useState(false);
 
-  // Load data on mount
-  useEffect(() => {
-    if (authLoading || !isAdmin) return;
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isAdmin]);
-
-  async function loadData(targetWeekStart?: string) {
+  const loadData = useCallback(async (targetWeekStart?: string, signal?: { cancelled: boolean }) => {
     setDataLoading(true);
     try {
       // 1. Get all settlements
       const settRes = await listSettlements();
+      if (signal?.cancelled) return;
       const settlements = settRes?.data || settRes || [];
       if (!settlements.length) {
         toast('Nenhum acerto encontrado', 'error');
@@ -61,6 +55,7 @@ export default function LancamentosPage() {
 
       // 2. Get subclubs
       const orgsRes = await listOrganizations('SUBCLUB');
+      if (signal?.cancelled) return;
       const orgs = orgsRes?.data || orgsRes || [];
       const subclubs: SubClub[] = orgs.map((o: any) => ({
         id: o.id,
@@ -73,6 +68,7 @@ export default function LancamentosPage() {
 
       // 3. Get saved adjustments for this week
       const adjRes = await getClubAdjustments(ws);
+      if (signal?.cancelled) return;
       const adjList = adjRes?.data || adjRes || [];
       const adjMap = new Map<string, any>();
       for (const a of adjList) {
@@ -106,11 +102,23 @@ export default function LancamentosPage() {
       const totalSavedOverlay = rows.reduce((s, r) => s + r.overlay, 0);
       setTotalOverlay(totalSavedOverlay);
     } catch (err: unknown) {
+      if (signal?.cancelled) return;
       toast(err instanceof Error ? err.message : 'Erro ao carregar dados', 'error');
     } finally {
-      setDataLoading(false);
+      if (!signal?.cancelled) setDataLoading(false);
     }
-  }
+  }, [toast]);
+
+  // Load data on mount
+  const hasMountedRef = useRef(false);
+  useEffect(() => {
+    if (authLoading || !isAdmin) return;
+    if (hasMountedRef.current) return;
+    hasMountedRef.current = true;
+    const signal = { cancelled: false };
+    loadData(undefined, signal);
+    return () => { signal.cancelled = true; };
+  }, [authLoading, isAdmin, loadData]);
 
   // Recalculate overlay per club (only used for display before saving)
   const rows = useMemo(() => {

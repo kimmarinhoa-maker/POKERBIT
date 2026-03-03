@@ -15,6 +15,7 @@ import type { TenantUser } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 
 // ─── Role config ─────────────────────────────────────────────────────
 
@@ -82,7 +83,6 @@ export default function ConfigMembros() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   useEffect(() => {
@@ -220,11 +220,7 @@ export default function ConfigMembros() {
   // ── Render ─────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <TableSkeleton columns={5} rows={6} />;
   }
 
   return (

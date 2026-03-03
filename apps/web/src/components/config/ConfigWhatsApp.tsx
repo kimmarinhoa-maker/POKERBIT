@@ -1,10 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getWhatsAppConfig, updateWhatsAppConfig, testWhatsAppConnection } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import Spinner from '@/components/Spinner';
 import { Save, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react';
+
+function FormSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="h-5 skeleton-shimmer w-48 mb-2" />
+        <div className="h-3 skeleton-shimmer w-72" />
+      </div>
+      <div className="rounded-xl border border-dark-700/50 p-4">
+        <div className="h-4 skeleton-shimmer w-24 mb-1" />
+        <div className="h-3 skeleton-shimmer w-40" />
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i}>
+            <div className="h-2.5 skeleton-shimmer w-20 mb-2" style={{ animationDelay: `${i * 0.1}s` }} />
+            <div className="h-10 skeleton-shimmer w-full rounded-lg" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-3">
+        <div className="h-10 skeleton-shimmer w-28 rounded-lg" />
+        <div className="h-10 skeleton-shimmer w-36 rounded-lg" />
+      </div>
+    </div>
+  );
+}
 
 export default function ConfigWhatsApp() {
   const [form, setForm] = useState({
@@ -20,12 +47,7 @@ export default function ConfigWhatsApp() {
   const [showKey, setShowKey] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadConfig() {
+  const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getWhatsAppConfig();
@@ -42,7 +64,11 @@ export default function ConfigWhatsApp() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
 
   async function handleSave() {
     if (!form.api_url || !form.api_key || !form.instance_name) {
@@ -94,11 +120,7 @@ export default function ConfigWhatsApp() {
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <FormSkeleton />;
   }
 
   return (

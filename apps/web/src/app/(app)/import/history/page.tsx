@@ -59,26 +59,29 @@ export default function ImportHistoryPage() {
     getValue: getImportSortValue,
   });
 
-  useEffect(() => {
-    loadImports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadImports() {
+  const loadImports = useCallback(async (signal?: { cancelled: boolean }) => {
     setLoading(true);
     try {
       const res = await listImports();
+      if (signal?.cancelled) return;
       if (res.success) {
         setImports(res.data || []);
       } else {
         toast(res.error || 'Erro ao carregar historico', 'error');
       }
     } catch (err: unknown) {
+      if (signal?.cancelled) return;
       toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
     } finally {
-      setLoading(false);
+      if (!signal?.cancelled) setLoading(false);
     }
-  }
+  }, [toast]);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    loadImports(signal);
+    return () => { signal.cancelled = true; };
+  }, [loadImports]);
 
   async function handleDelete(imp: ImportRecord) {
     const ok = await confirm({ title: 'Remover Importacao', message: `Remover importacao "${imp.file_name}"?\nIsso remove o fechamento e todos os dados dessa semana.\nJogadores, agentes e taxas RB sao preservados.`, variant: 'danger' });

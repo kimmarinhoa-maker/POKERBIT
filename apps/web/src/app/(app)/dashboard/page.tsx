@@ -179,11 +179,13 @@ export default function DashboardPage() {
 
   // Initial load: fetch current week (full) + org tree
   useEffect(() => {
+    let cancelled = false;
     async function init() {
       setLoading(true);
       try {
         // Load org tree + settlement list in parallel
         const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
+        if (cancelled) return;
         if (treeRes.success && treeRes.data) {
           const map: Record<string, string | null> = {};
           for (const club of treeRes.data) {
@@ -204,6 +206,7 @@ export default function DashboardPage() {
 
         // Only the CURRENT week needs full data (subclub breakdown for cards)
         const currentData = await loadWeekData(latest);
+        if (cancelled) return;
 
         if (currentData) {
           setCurrentWeek(currentData);
@@ -217,27 +220,30 @@ export default function DashboardPage() {
           // Load previous week (for delta badges) — non-blocking
           if (res.data.length >= 2) {
             loadWeekData(res.data[1]).then((prev) => {
-              if (prev) setPrevWeek(prev);
+              if (!cancelled && prev) setPrevWeek(prev);
             });
           }
 
           // Fetch modality analysis (non-blocking)
           setModalityLoading(true);
           getDashboardModalities(latest.id).then((modRes) => {
-            if (modRes.success && modRes.data) setModalityData(modRes.data);
-          }).finally(() => setModalityLoading(false));
+            if (!cancelled && modRes.success && modRes.data) setModalityData(modRes.data);
+          }).finally(() => { if (!cancelled) setModalityLoading(false); });
 
         } else {
           setNotFoundEmpty(true);
         }
       } catch {
-        toast('Erro ao carregar dashboard', 'error');
-        setNotFoundEmpty(true);
+        if (!cancelled) {
+          toast('Erro ao carregar dashboard', 'error');
+          setNotFoundEmpty(true);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     init();
+    return () => { cancelled = true; };
   }, [loadWeekData, toast]);
 
   // Week selector handlers — auto-search on date change

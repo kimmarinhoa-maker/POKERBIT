@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/lib/useConfirmDialog';
 import Spinner from '@/components/Spinner';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 import ClubLogo from '@/components/ClubLogo';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -379,11 +380,7 @@ export default function ConfigEstrutura() {
   // ── Render ──────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
+    return <TableSkeleton columns={6} rows={5} />;
   }
 
   async function handleToggleSubclubs() {

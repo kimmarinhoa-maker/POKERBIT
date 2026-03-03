@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, listLedger, getSettlementFull, formatBRL } from '@/lib/api';
 import { round2, fmtDateTime } from '@/lib/formatters';
@@ -39,35 +39,44 @@ export default function CaixaGeralPage() {
   const [search, setSearch] = useState('');
   const [lucro, setLucro] = useState<{ lucroLiquido: number; margem: number; receitaBruta: number; acertoLiga: number } | null>(null);
   const { toast } = useToast();
+  const hasMountedRef = useRef(false);
 
   // Load settlements
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await listSettlements();
-        if (res.success) {
-          const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
-            b.week_start.localeCompare(a.week_start),
-          );
-          setSettlements(list);
-          if (list.length > 0) setSelectedId(list[0].id);
-        } else {
-          toast(res.error || 'Erro ao carregar semanas', 'error');
-        }
-      } catch {
-        toast('Erro de conexao com o servidor', 'error');
-      } finally {
-        setLoading(false);
+  const loadSettlements = useCallback(async (signal?: { cancelled: boolean }) => {
+    setLoading(true);
+    try {
+      const res = await listSettlements();
+      if (signal?.cancelled) return;
+      if (res.success) {
+        const list = (res.data || []).sort((a: Settlement, b: Settlement) =>
+          b.week_start.localeCompare(a.week_start),
+        );
+        setSettlements(list);
+        if (list.length > 0) setSelectedId(list[0].id);
+      } else {
+        toast(res.error || 'Erro ao carregar semanas', 'error');
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    } catch {
+      if (signal?.cancelled) return;
+      toast('Erro de conexao com o servidor', 'error');
+    } finally {
+      if (!signal?.cancelled) setLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    if (hasMountedRef.current) return;
+    hasMountedRef.current = true;
+    const signal = { cancelled: false };
+    loadSettlements(signal);
+    return () => { signal.cancelled = true; };
+  }, [loadSettlements]);
 
   // Load ledger + settlement full when selection changes
   const selectedWeek = settlements.find((s) => s.id === selectedId);
   useEffect(() => {
     if (!selectedWeek?.week_start) return;
+    let cancelled = false;
     (async () => {
       setLoadingEntries(true);
       setLucro(null);
@@ -76,6 +85,7 @@ export default function CaixaGeralPage() {
           listLedger(selectedWeek.week_start),
           getSettlementFull(selectedWeek.id),
         ]);
+        if (cancelled) return;
         if (ledgerRes.success) setEntries(ledgerRes.data || []);
         if (fullRes.success) {
           const dt = fullRes.data.dashboardTotals || {};
@@ -100,11 +110,12 @@ export default function CaixaGeralPage() {
           setLucro({ lucroLiquido, margem, receitaBruta, acertoLiga });
         }
       } catch {
-        toast('Erro ao carregar movimentacoes', 'error');
+        if (!cancelled) toast('Erro ao carregar movimentacoes', 'error');
       } finally {
-        setLoadingEntries(false);
+        if (!cancelled) setLoadingEntries(false);
       }
     })();
+    return () => { cancelled = true; };
   }, [selectedWeek?.week_start, selectedWeek?.id, toast]);
 
   // KPIs

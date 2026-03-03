@@ -92,8 +92,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, settlementId, isDraft, toast]);
+  }, [weekStart, settlementId, isDraft, toast, onDataChange]);
 
   useEffect(() => {
     loadExtras();

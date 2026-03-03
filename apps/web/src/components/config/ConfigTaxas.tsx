@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getFeeConfig, updateFeeConfig, listOrganizations } from '@/lib/api';
 import { useToast } from '@/components/Toast';
-import Spinner from '@/components/Spinner';
+import TableSkeleton from '@/components/ui/TableSkeleton';
 
 interface ClubOrg {
   id: string;
@@ -120,7 +120,7 @@ export default function ConfigTaxas() {
   }
 
   if (loadingClubs) {
-    return <div className="flex justify-center py-20"><Spinner /></div>;
+    return <TableSkeleton columns={3} rows={4} />;
   }
 
   if (clubs.length === 0) {
@@ -155,7 +155,7 @@ export default function ConfigTaxas() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner /></div>
+        <div className="card"><div className="space-y-4">{[1, 2, 3, 4].map((i) => (<div key={i} className="flex items-center gap-4"><div className="flex-1"><div className="h-4 skeleton-shimmer w-32 mb-1" style={{ animationDelay: `${i * 0.1}s` }} /><div className="h-2.5 skeleton-shimmer w-20" style={{ animationDelay: `${i * 0.1 + 0.05}s` }} /></div><div className="h-9 skeleton-shimmer w-32 rounded-lg" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} /></div>))}</div></div>
       ) : (
         <>
           <div className="card">

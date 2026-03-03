@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, Settings } from 'lucide-react';
 import Spinner from '@/components/Spinner';
@@ -122,15 +122,15 @@ export default function UploadStep({
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [platformSelected, setPlatformSelected] = useState(false);
 
-  function autoSelectClub(detectedPlatform: string) {
+  const autoSelectClub = useCallback((detectedPlatform: string) => {
     const matching = clubs.filter((c) => c.metadata?.platform === detectedPlatform);
     if (matching.length > 0 && !matching.some((c) => c.id === clubId)) {
       setClubId(matching[0].id);
     }
-  }
+  }, [clubs, clubId, setClubId]);
 
   // Read sheet names and detect platform (client-side, no API call)
-  async function runDetection(f: File) {
+  const runDetection = useCallback(async (f: File) => {
     setDetecting(true);
     setDetection(null);
     setPlatformSelected(false);
@@ -155,7 +155,7 @@ export default function UploadStep({
     }
 
     setDetecting(false);
-  }
+  }, [setPlatform, autoSelectClub]);
 
   function trySetFile(f: File | null) {
     setFileError(null);
@@ -179,7 +179,7 @@ export default function UploadStep({
     if (file) {
       runDetection(file);
     }
-  }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [file, runDetection]);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -207,7 +207,7 @@ export default function UploadStep({
         setClubId(displayClubs[0].id);
       }
     }
-  }, [platformSelected, platform]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [platformSelected, platform, displayClubs, clubId, setClubId]);
 
   const canPreview = !!file && platformSelected && !!clubId;
 
