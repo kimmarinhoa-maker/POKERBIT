@@ -5,39 +5,48 @@ interface StepIndicatorProps {
   skipPendencies: boolean;
 }
 
-const STEPS: { key: WizardStep; label: string; icon: string }[] = [
-  { key: 'upload', label: 'Upload', icon: '\u{1F4E4}' },
-  { key: 'preview', label: 'Pre-analise', icon: '\u{1F50D}' },
-  { key: 'pendencies', label: 'Pendencias', icon: '\u26A0\uFE0F' },
-  { key: 'confirm', label: 'Confirmar', icon: '\u2705' },
+const STEPS: { key: WizardStep; label: string }[] = [
+  { key: 'upload', label: 'Upload' },
+  { key: 'preview', label: 'Pre-analise' },
+  { key: 'pendencies', label: 'Pendencias' },
+  { key: 'confirm', label: 'Confirmar' },
 ];
 
 export default function StepIndicator({ currentStep, skipPendencies }: StepIndicatorProps) {
   const stepIdx = STEPS.findIndex((s) => s.key === currentStep);
 
   return (
-    <div className="flex items-center gap-2 mb-8">
+    <div className="flex items-center justify-center gap-2 mb-8">
       {STEPS.map((s, i) => {
         if (s.key === 'pendencies' && skipPendencies) return null;
 
         const isActive = s.key === currentStep;
         const isDone = i < stepIdx;
+
         return (
           <div key={s.key} className="flex items-center gap-2">
             {i > 0 && !(s.key === 'pendencies' && skipPendencies) && (
-              <div className={`w-8 h-px ${isDone ? 'bg-poker-500' : 'bg-dark-700'}`} />
+              <div
+                className={`w-8 h-px transition-colors ${isDone ? 'bg-poker-500' : 'bg-dark-700'}`}
+              />
             )}
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-poker-600/20 text-poker-400 border border-poker-500/40'
-                  : isDone
-                    ? 'bg-dark-700/50 text-poker-400'
-                    : 'bg-dark-800/50 text-dark-500'
-              }`}
-            >
-              <span>{isDone ? '\u2713' : s.icon}</span>
-              <span>{s.label}</span>
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`w-[7px] h-[7px] rounded-full transition-all ${
+                  isActive
+                    ? 'bg-poker-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                    : isDone
+                      ? 'bg-poker-500'
+                      : 'bg-dark-600'
+                }`}
+              />
+              <span
+                className={`text-[10px] font-medium transition-colors ${
+                  isActive ? 'text-poker-400' : isDone ? 'text-poker-500/70' : 'text-dark-500'
+                }`}
+              >
+                {s.label}
+              </span>
             </div>
           </div>
         );

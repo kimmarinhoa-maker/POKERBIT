@@ -44,6 +44,10 @@ const config: Config = {
         'progress-fill': {
           '0%': { width: '0%' },
         },
+        'field-in': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'slide-up': 'slide-up 0.2s ease-out',
@@ -52,6 +56,7 @@ const config: Config = {
         'tab-fade': 'tab-fade 0.15s ease-out',
         'shimmer': 'shimmer 1.5s ease-in-out infinite',
         'progress-fill': 'progress-fill 0.8s ease-out',
+        'field-in': 'field-in 0.3s ease-out',
       },
       colors: {
         poker: {
