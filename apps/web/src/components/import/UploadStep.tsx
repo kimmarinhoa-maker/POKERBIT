@@ -27,14 +27,10 @@ interface UploadStepProps {
   clubs: Array<{ id: string; name: string; metadata?: { platform?: string } }>;
   clubId: string;
   setClubId: (id: string) => void;
-  subclubs: Array<{ id: string; name: string }>;
-  pppokerSubclube: string;
-  setPppokerSubclube: (v: string) => void;
   weekStartOverride: string;
   setWeekStartOverride: (v: string) => void;
   showWeekOverride: boolean;
   setShowWeekOverride: (v: boolean) => void;
-  hasSubclubs: boolean;
   loading: boolean;
   error: string;
   onPreview: () => void;
@@ -109,14 +105,10 @@ export default function UploadStep({
   clubs,
   clubId,
   setClubId,
-  subclubs,
-  pppokerSubclube,
-  setPppokerSubclube,
   weekStartOverride,
   setWeekStartOverride,
   showWeekOverride,
   setShowWeekOverride,
-  hasSubclubs,
   loading,
   error,
   onPreview,
@@ -217,12 +209,7 @@ export default function UploadStep({
     }
   }, [platformSelected, platform]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const derivedPlatform = platform;
-  const canPreview =
-    !!file &&
-    platformSelected &&
-    !!clubId &&
-    !(derivedPlatform === 'pppoker' && hasSubclubs && !pppokerSubclube);
+  const canPreview = !!file && platformSelected && !!clubId;
 
   return (
     <div className="space-y-5">
@@ -292,108 +279,121 @@ export default function UploadStep({
         </div>
       )}
 
-      {/* ── Detection Card ──────────────────────────────────── */}
+      {/* ── Detection / Platform / Club ──────────────────────── */}
       {file && (
         <div className="animate-field-in">
-          <label className={LABEL}>Deteccao</label>
           {detecting ? (
             <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex items-center gap-3">
               <span className="w-2.5 h-2.5 rounded-full bg-poker-500 animate-pulse" />
               <span className="text-dark-300 text-sm">Detectando plataforma...</span>
             </div>
-          ) : detection ? (
-            <div
-              className={`bg-dark-900 border rounded-xl p-4 ${confidenceBorder(detection.confidence)}`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-white">
-                  {PLATFORM_LABELS[detection.platform] || 'Desconhecido'}
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${confidenceBadge(detection.confidence)}`}
+          ) : detection && detection.confidence === 'high' && platformSelected ? (
+            /* ── Compact auto-detect card (high confidence) ── */
+            <div className="bg-dark-900 border border-green-500/50 rounded-xl p-4">
+              <label className={LABEL}>Plataforma e Clube</label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-medium text-white">
+                    {PLATFORM_LABELS[platform] || platform}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-green-900/30 text-green-400 border-green-700/30">
+                    auto-detectado
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPlatformSelected(false)}
+                  className="text-dark-500 text-xs hover:text-dark-300 transition-colors"
                 >
-                  {detection.confidence}
-                </span>
+                  Alterar
+                </button>
               </div>
-              {detection.reason && (
-                <p className="text-dark-500 text-xs mt-1.5">{detection.reason}</p>
+              {/* Club name or inline dropdown */}
+              <div className="mt-2">
+                {displayClubs.length > 1 ? (
+                  <select
+                    value={clubId}
+                    onChange={(e) => setClubId(e.target.value)}
+                    className="input w-full text-sm"
+                    aria-label="Selecionar clube"
+                  >
+                    {displayClubs.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-dark-400 text-xs">
+                    Clube: <span className="text-dark-200 font-medium">{displayClubs[0]?.name || '—'}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : detection ? (
+            /* ── Manual fallback (low confidence or "Alterar" clicked) ── */
+            <div className="space-y-4">
+              <div>
+                <label className={LABEL}>Deteccao</label>
+                <div className={`bg-dark-900 border rounded-xl p-4 ${confidenceBorder(detection.confidence)}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-white">
+                      {PLATFORM_LABELS[detection.platform] || 'Desconhecido'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${confidenceBadge(detection.confidence)}`}>
+                      {detection.confidence}
+                    </span>
+                  </div>
+                  {detection.reason && (
+                    <p className="text-dark-500 text-xs mt-1.5">{detection.reason}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className={LABEL}>Plataforma</label>
+                <div className="flex gap-2">
+                  {(['suprema', 'pppoker'] as Platform[]).map((p) => {
+                    const isSelected = platform === p && platformSelected;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handlePlatformClick(p)}
+                        className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                            : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
+                        }`}
+                      >
+                        {PLATFORM_LABELS[p]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {platformSelected && (
+                <div>
+                  <label className={LABEL}>Clube</label>
+                  <select
+                    value={clubId}
+                    onChange={(e) => setClubId(e.target.value)}
+                    className="input w-full"
+                    aria-label="Selecionar clube"
+                  >
+                    {displayClubs.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {c.metadata?.platform
+                          ? ` (${PLATFORM_LABELS[c.metadata.platform] || c.metadata.platform})`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
           ) : null}
-        </div>
-      )}
-
-      {/* ── Platform Buttons ──────────────────────────────────── */}
-      {file && !detecting && detection && (
-        <div className="animate-field-in">
-          <label className={LABEL}>Plataforma</label>
-          <div className="flex gap-2">
-            {(['suprema', 'pppoker'] as Platform[]).map((p) => {
-              const isDetected = detection.platform === p && detection.confidence !== 'low';
-              const isSelected = platform === p && platformSelected;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => handlePlatformClick(p)}
-                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                      : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
-                  }`}
-                >
-                  {PLATFORM_LABELS[p]}
-                  {isDetected && isSelected && (
-                    <span className="ml-1.5 text-poker-500 text-xs">&check; detectado</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Club Select ──────────────────────────────────── */}
-      {platformSelected && (
-        <div className="animate-field-in">
-          <label className={LABEL}>Clube</label>
-          <select
-            value={clubId}
-            onChange={(e) => setClubId(e.target.value)}
-            className="input w-full"
-            aria-label="Selecionar clube"
-          >
-            {displayClubs.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.metadata?.platform
-                  ? ` (${PLATFORM_LABELS[c.metadata.platform] || c.metadata.platform})`
-                  : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── Subclub Select (PPPoker only) ──────────────────── */}
-      {platformSelected && derivedPlatform === 'pppoker' && hasSubclubs && (
-        <div className="animate-field-in">
-          <label className={LABEL}>Subclube destino</label>
-          <select
-            value={pppokerSubclube}
-            onChange={(e) => setPppokerSubclube(e.target.value)}
-            className="input w-full"
-          >
-            <option value="">Selecionar subclube...</option>
-            {subclubs.map((sc) => (
-              <option key={sc.id} value={sc.name}>
-                {sc.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-dark-500 mt-1">
-            No PPPoker todos os jogadores pertencem a um unico subclube
-          </p>
         </div>
       )}
 

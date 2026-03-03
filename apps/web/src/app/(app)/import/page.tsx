@@ -17,7 +17,7 @@ import SuccessStep, { ConfirmResult } from '@/components/import/SuccessStep';
 
 export default function ImportWizardPage() {
   usePageTitle('Importar');
-  const { hasSubclubs } = useAuth();
+  useAuth();
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -28,6 +28,7 @@ export default function ImportWizardPage() {
   const [platform, setPlatform] = useState<Platform>('suprema');
   const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
   const [pppokerSubclube, setPppokerSubclube] = useState('');
+  const [temSubclube, setTemSubclube] = useState<boolean | null>(null);
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -101,10 +102,15 @@ export default function ImportWizardPage() {
     // so the table stays open and user doesn't lose position
 
     try {
-      const res = await importPreview(file, clubId || undefined, weekStartOverride || undefined, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
+      const res = await importPreview(file, clubId || undefined, weekStartOverride || undefined, platform);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');
+        // Auto-detect subclub toggle based on available subclubs
+        if (temSubclube === null) {
+          const subclubCount = (res.data.available_subclubs || []).length;
+          setTemSubclube(subclubCount > 1);
+        }
       } else {
         setError(res.error || 'Erro na pre-analise');
       }
@@ -254,7 +260,14 @@ export default function ImportWizardPage() {
     setBulkNewAgentName('');
     setPlatform('suprema');
     setPppokerSubclube('');
+    setTemSubclube(null);
   }
+
+  // Reload subclubs (after creating a new one in PreviewStep)
+  const reloadSubclubs = useCallback(async () => {
+    const res = await listOrganizations('SUBCLUB');
+    if (res.success) setSubclubs(res.data || []);
+  }, []);
 
   // ─── Render ───────────────────────────────────────────────────────
 
@@ -274,14 +287,10 @@ export default function ImportWizardPage() {
           clubs={clubs}
           clubId={clubId}
           setClubId={handleClubChange}
-          subclubs={subclubs}
-          pppokerSubclube={pppokerSubclube}
-          setPppokerSubclube={setPppokerSubclube}
           weekStartOverride={weekStartOverride}
           setWeekStartOverride={setWeekStartOverride}
           showWeekOverride={showWeekOverride}
           setShowWeekOverride={setShowWeekOverride}
-          hasSubclubs={hasSubclubs}
           loading={loading}
           error={error}
           onPreview={handlePreview}
@@ -297,6 +306,13 @@ export default function ImportWizardPage() {
           availableSubclubs={preview.available_subclubs}
           onLinkAgent={handleLinkAgentInline}
           onReprocess={handlePreview}
+          temSubclube={temSubclube}
+          setTemSubclube={setTemSubclube}
+          pppokerSubclube={pppokerSubclube}
+          setPppokerSubclube={setPppokerSubclube}
+          platform={platform}
+          clubId={clubId}
+          onSubclubCreated={reloadSubclubs}
         />
       )}
 

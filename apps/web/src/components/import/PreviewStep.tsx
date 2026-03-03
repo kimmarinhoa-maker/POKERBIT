@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { PreviewData, getClubStyle, getClubIcon, ChipPixTradeOperator } from '@/types/import';
-import { formatBRL, formatDate } from '@/lib/api';
+import { formatBRL, formatDate, createOrganization } from '@/lib/api';
+import { useToast } from '@/components/Toast';
+import type { Platform } from '@/components/import/UploadStep';
 
 interface PreviewStepProps {
   preview: PreviewData;
@@ -10,6 +12,14 @@ interface PreviewStepProps {
   availableSubclubs?: Array<{ id: string; name: string }>;
   onLinkAgent?: (agentName: string, subclubId: string) => Promise<void>;
   onReprocess?: () => void;
+  // Subclub toggle (moved from UploadStep)
+  temSubclube: boolean | null;
+  setTemSubclube: (v: boolean) => void;
+  pppokerSubclube: string;
+  setPppokerSubclube: (v: string) => void;
+  platform: Platform;
+  clubId: string;
+  onSubclubCreated: () => void;
 }
 
 // ─── Status badges ──────────────────────────────────────────────────
@@ -38,7 +48,11 @@ type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 50;
 
-export default function PreviewStep({ preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess }: PreviewStepProps) {
+export default function PreviewStep({
+  preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess,
+  temSubclube, setTemSubclube, pppokerSubclube, setPppokerSubclube, platform, clubId, onSubclubCreated,
+}: PreviewStepProps) {
+  const { toast } = useToast();
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);
   const [playerSearch, setPlayerSearch] = useState('');
@@ -57,6 +71,42 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
   const [reimportConfirmed, setReimportConfirmed] = useState(false);
   // Diff details toggle
   const [diffOpen, setDiffOpen] = useState(true);
+
+  // "+ Novo" subclub inline form
+  const [showNewSubclub, setShowNewSubclub] = useState(false);
+  const [newSubclubName, setNewSubclubName] = useState('');
+  const [creatingSub, setCreatingSub] = useState(false);
+
+  async function handleCreateSubclub() {
+    const name = newSubclubName.trim();
+    if (!name || !clubId) return;
+    setCreatingSub(true);
+    try {
+      const res = await createOrganization({ name, parent_id: clubId, type: 'SUBCLUB' });
+      if (res.success) {
+        toast(`Subclube "${name}" criado`, 'success');
+        setNewSubclubName('');
+        setShowNewSubclub(false);
+        onSubclubCreated();
+        onReprocess?.();
+      } else {
+        toast(res.error || 'Erro ao criar subclube', 'error');
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
+    } finally {
+      setCreatingSub(false);
+    }
+  }
+
+  // Navigation gate: subclub must be resolved before confirming
+  const subclubReady = temSubclube === null
+    ? false
+    : temSubclube === false
+      ? true
+      : platform === 'pppoker'
+        ? !!pppokerSubclube
+        : true;
 
   const players = useMemo(() => preview.players || [], [preview.players]);
 
@@ -396,8 +446,124 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
         </div>
       </div>
 
+      {/* ─── Subclub toggle ─── */}
+      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-bold text-white">Estrutura de subclubes</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setTemSubclube(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                temSubclube === false
+                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                  : 'bg-dark-800/50 border-dark-700 text-dark-400 hover:border-dark-500'
+              }`}
+            >
+              Nao
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemSubclube(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                temSubclube === true
+                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                  : 'bg-dark-800/50 border-dark-700 text-dark-400 hover:border-dark-500'
+              }`}
+            >
+              Sim
+            </button>
+          </div>
+        </div>
+
+        {temSubclube === true && (
+          <div className="space-y-3">
+            {/* Subclub chips */}
+            <div>
+              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-2">Subclubes cadastrados</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(availableSubclubs || []).map((sc) => (
+                  <span key={sc.id} className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-dark-800/50 border-dark-600 text-dark-200">
+                    {sc.name}
+                  </span>
+                ))}
+                {!showNewSubclub && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewSubclub(true)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold border border-dashed border-dark-600 text-dark-400 hover:border-poker-500/50 hover:text-poker-400 transition-colors"
+                  >
+                    + Novo
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Inline create form */}
+            {showNewSubclub && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Nome do subclube"
+                  value={newSubclubName}
+                  onChange={(e) => setNewSubclubName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSubclub(); }}
+                  className="input flex-1 text-sm"
+                  autoFocus
+                  disabled={creatingSub}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateSubclub}
+                  disabled={!newSubclubName.trim() || creatingSub}
+                  className="btn-primary px-3 py-2 text-xs font-bold disabled:opacity-50"
+                >
+                  {creatingSub ? '...' : 'Criar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowNewSubclub(false); setNewSubclubName(''); }}
+                  className="text-dark-500 hover:text-dark-300 text-xs"
+                  disabled={creatingSub}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+
+            {/* PPPoker subclub dropdown */}
+            {platform === 'pppoker' && (
+              <div>
+                <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Subclube destino</p>
+                <select
+                  value={pppokerSubclube}
+                  onChange={(e) => setPppokerSubclube(e.target.value)}
+                  className="input w-full text-sm"
+                >
+                  <option value="">Selecionar subclube...</option>
+                  {(availableSubclubs || []).map((sc) => (
+                    <option key={sc.id} value={sc.name}>{sc.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-dark-500 mt-1">
+                  No PPPoker todos os jogadores pertencem a um unico subclube
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {temSubclube === false && (
+          <p className="text-dark-500 text-xs">Todos jogadores importados para o clube principal.</p>
+        )}
+
+        {temSubclube === null && (
+          <p className="text-dark-500 text-xs">Selecione se este clube possui subclubes.</p>
+        )}
+      </div>
+
       {/* ─── Subclub distribution ─── */}
-      {preview.subclubs_found.length > 1 && (
+      {temSubclube === true && preview.subclubs_found.length > 1 && (
         <div className="mb-5">
           <h3 className="text-sm font-bold text-white mb-3">Distribuicao por Subclube</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -763,15 +929,23 @@ export default function PreviewStep({ preview, onNext, onBack, onEditLinks, avai
         </button>
         <button
           onClick={onNext}
-          disabled={needsReimportConfirm}
-          className={`btn-primary flex-1 py-2.5 text-sm font-bold ${needsReimportConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={needsReimportConfirm ? 'Marque o checkbox acima para confirmar' : undefined}
+          disabled={needsReimportConfirm || !subclubReady}
+          className={`btn-primary flex-1 py-2.5 text-sm font-bold ${(needsReimportConfirm || !subclubReady) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={
+            !subclubReady
+              ? 'Selecione a estrutura de subclubes acima'
+              : needsReimportConfirm
+                ? 'Marque o checkbox acima para confirmar'
+                : undefined
+          }
         >
-          {preview.readiness.ready
-            ? needsReimportConfirm
-              ? 'Confirme a reimportacao acima'
-              : 'Confirmar Importacao'
-            : 'Resolver Pendencias'}
+          {!subclubReady
+            ? 'Selecione subclubes acima'
+            : preview.readiness.ready
+              ? needsReimportConfirm
+                ? 'Confirme a reimportacao acima'
+                : 'Confirmar Importacao'
+              : 'Resolver Pendencias'}
         </button>
       </div>
     </div>
