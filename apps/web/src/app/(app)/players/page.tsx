@@ -122,11 +122,23 @@ export default function PlayersPage() {
               onChange={(e) => setSelectedSubclubId(e.target.value)}
               className="appearance-none bg-dark-800 border border-dark-700/50 rounded-lg px-4 py-2.5 pr-10 text-sm text-white font-medium focus:border-poker-500 focus:outline-none min-w-0 w-full sm:min-w-[280px] sm:w-auto cursor-pointer"
             >
-              {subclubOptions.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.clubName} &gt; {sub.name}
-                </option>
-              ))}
+              {tree.length > 1 ? (
+                tree.map((club: any) => (
+                  <optgroup key={club.id} label={club.name}>
+                    {(club.subclubes || []).map((sub: any) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              ) : (
+                subclubOptions.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
+                  </option>
+                ))
+              )}
             </select>
             <ChevronDown
               size={14}
