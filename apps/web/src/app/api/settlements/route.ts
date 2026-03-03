@@ -34,13 +34,16 @@ export async function GET(req: NextRequest) {
         limit,
       );
 
-      // Flatten nested `organizations` join into top-level `club_name`
+      // Flatten nested `organizations` join into top-level fields
       // to prevent React #310 (object rendered as child) on the frontend
       const flat = (data || []).map((row: any) => {
         const org = row.organizations;
+        const orgMeta = org?.metadata || {};
         return {
           ...row,
           club_name: org?.name || null,
+          club_external_id: org?.external_id || null,
+          platform: row.platform || orgMeta.platform || null,
           organizations: undefined,
         };
       });
