@@ -204,6 +204,14 @@ async function _apiFetchOnce<T = any>(
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (tenantId) headers['X-Tenant-Id'] = tenantId;
 
+  // Inject platform filter header (multi-platform support)
+  if (typeof window !== 'undefined') {
+    const platformId = localStorage.getItem('poker_selected_platform');
+    if (platformId && platformId !== 'null') {
+      headers['X-Platform-Id'] = platformId;
+    }
+  }
+
   // Don't set Content-Type for FormData (browser sets it with boundary)
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -384,13 +392,14 @@ export async function importPreview(file: File, weekStartOverride?: string, plat
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
-export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string, pppokerSubclube?: string) {
+export async function importConfirm(file: File, clubId: string, weekStart: string, platform?: string, pppokerSubclube?: string, clubPlatformId?: string | null) {
   const form = new FormData();
   form.append('file', file);
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
   if (platform) form.append('platform', platform);
   if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
+  if (clubPlatformId) form.append('club_platform_id', clubPlatformId);
 
   return apiFetch(
     '/imports/confirm',
@@ -611,15 +620,18 @@ export async function getCategorizedTotals(weekStart: string): Promise<ApiRespon
 
 // ─── Config (fees + adjustments) ──────────────────────────────────
 
-export async function getFeeConfig(clubId?: string) {
-  const params = clubId ? `?club_id=${clubId}` : '';
-  return apiFetch(`/config/fees${params}`);
+export async function getFeeConfig(clubId?: string, clubPlatformId?: string | null) {
+  const params = new URLSearchParams();
+  if (clubId) params.set('club_id', clubId);
+  if (clubPlatformId) params.set('club_platform_id', clubPlatformId);
+  const qs = params.toString();
+  return apiFetch(`/config/fees${qs ? `?${qs}` : ''}`);
 }
 
-export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, clubId: string) {
+export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, clubId: string, clubPlatformId?: string | null) {
   return apiFetch('/config/fees', {
     method: 'PUT',
-    body: JSON.stringify({ fees, club_id: clubId }),
+    body: JSON.stringify({ fees, club_id: clubId, club_platform_id: clubPlatformId || null }),
   });
 }
 
@@ -869,6 +881,7 @@ export async function listClubPlatforms() {
 }
 
 export async function createClubPlatform(data: {
+  subclub_id?: string;
   platform: string;
   club_name?: string;
   club_external_id?: string;
@@ -876,6 +889,10 @@ export async function createClubPlatform(data: {
   organization_id?: string;
 }) {
   return apiFetch('/config/club-platforms', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateClubPlatform(id: string, data: { club_name?: string; club_external_id?: string }) {
+  return apiFetch(`/config/club-platforms/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
 export async function deleteClubPlatform(id: string) {

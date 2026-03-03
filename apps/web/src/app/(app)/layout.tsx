@@ -15,6 +15,7 @@ import {
   Receipt,
   Building2,
   Trophy,
+  Landmark,
   Users,
   Settings,
   Spade,
@@ -25,6 +26,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
+import PlatformSwitcher from '@/components/PlatformSwitcher';
+import { PlatformProvider } from '@/lib/usePlatform';
 
 // ─── Sidebar structure ──────────────────────────────────────────────
 
@@ -58,6 +61,7 @@ const navSections: NavSection[] = [
     items: [
       { href: '/s', label: 'Clubes', icon: Building2, permKey: 'page:clubes' },
       { href: '/liga-global', label: 'Liga Global', icon: Trophy, permKey: 'page:liga_global' },
+      { href: '/caixa-consolidado', label: 'Caixa Consolidado', icon: Landmark, permKey: 'page:caixa_geral' },
     ],
   },
   {
@@ -85,6 +89,7 @@ function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/import') return pathname === '/import';
   if (href === '/config') return pathname === '/config' || (pathname.startsWith('/config/') && pathname !== '/config/equipe');
   if (href === '/config/equipe') return pathname === '/config/equipe';
+  if (href === '/caixa-consolidado') return pathname === '/caixa-consolidado';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
@@ -170,6 +175,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
           <TenantSelector collapsed={collapsed} />
+          <PlatformSwitcher collapsed={collapsed} />
         </div>
 
         {/* Navigation */}
@@ -276,7 +282,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <AuthProvider>
-        <AppLayoutInner>{children}</AppLayoutInner>
+        <PlatformProvider>
+          <AppLayoutInner>{children}</AppLayoutInner>
+        </PlatformProvider>
       </AuthProvider>
     </ToastProvider>
   );

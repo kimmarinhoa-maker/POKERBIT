@@ -12,13 +12,25 @@ export async function GET(req: NextRequest) {
     try {
       const { data, error } = await supabaseAdmin
         .from('club_platforms')
-        .select('*')
+        .select('*, organizations!club_platforms_subclub_id_fkey(id, name, logo_url)')
         .eq('tenant_id', ctx.tenantId)
         .order('is_primary', { ascending: false })
         .order('created_at');
 
       if (error) throw error;
-      return NextResponse.json({ success: true, data });
+
+      // Flatten subclub info into top-level fields
+      const enriched = (data || []).map((row: any) => {
+        const org = row.organizations;
+        return {
+          ...row,
+          subclub_name: org?.name || null,
+          subclub_logo_url: org?.logo_url || null,
+          organizations: undefined, // remove nested object
+        };
+      });
+
+      return NextResponse.json({ success: true, data: enriched });
     } catch (err: unknown) {
       return NextResponse.json(
         { success: false, error: safeErrorMessage(err) },
@@ -34,13 +46,31 @@ export async function POST(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { platform, club_name, club_external_id, is_primary, organization_id } = body;
+        const { platform, club_name, club_external_id, is_primary, organization_id, subclub_id } = body;
 
         if (!platform || typeof platform !== 'string') {
           return NextResponse.json(
-            { success: false, error: 'Campo "platform" obrigatório' },
+            { success: false, error: 'Campo "platform" obrigatorio' },
             { status: 400 },
           );
+        }
+
+        // Validate subclub if provided
+        if (subclub_id) {
+          const { data: subclub } = await supabaseAdmin
+            .from('organizations')
+            .select('id')
+            .eq('id', subclub_id)
+            .eq('tenant_id', ctx.tenantId)
+            .in('type', ['SUBCLUB', 'CLUB'])
+            .single();
+
+          if (!subclub) {
+            return NextResponse.json(
+              { success: false, error: 'Subclube nao encontrado para este tenant' },
+              { status: 404 },
+            );
+          }
         }
 
         // If no organization_id provided, use the CLUB org for this tenant
@@ -56,7 +86,7 @@ export async function POST(req: NextRequest) {
 
           if (!club) {
             return NextResponse.json(
-              { success: false, error: 'Clube não encontrado para este tenant' },
+              { success: false, error: 'Clube nao encontrado para este tenant' },
               { status: 404 },
             );
           }
@@ -68,6 +98,7 @@ export async function POST(req: NextRequest) {
           .insert({
             tenant_id: ctx.tenantId,
             organization_id: orgId,
+            subclub_id: subclub_id || null,
             platform: platform.trim(),
             club_name: club_name?.trim() || null,
             club_external_id: club_external_id?.trim() || null,

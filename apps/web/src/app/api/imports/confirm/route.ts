@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
 
         const platform = fields.platform || 'suprema';
         const pppokerSubclube = fields.pppoker_subclube || undefined;
+        const clubPlatformId = fields.club_platform_id || undefined;
 
         const result = await importConfirmService.confirm({
           tenantId: ctx.tenantId,
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
           uploadedBy: ctx.userId,
           platform,
           pppokerSubclube,
+          clubPlatformId,
         });
 
         logAudit(req, ctx, 'CREATE', 'settlement', result.settlement_id || '', undefined, {

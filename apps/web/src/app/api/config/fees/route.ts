@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════
-//  GET/PUT /api/config/fees — Taxas do tenant
+//  GET/PUT /api/config/fees — Taxas do tenant (platform-aware)
 // ══════════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,12 +12,21 @@ export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {
     try {
       const clubId = req.nextUrl.searchParams.get('club_id') || undefined;
+      const clubPlatformId = req.nextUrl.searchParams.get('club_platform_id') || undefined;
 
       let query = supabaseAdmin
         .from('fee_config')
         .select('*')
         .eq('tenant_id', ctx.tenantId);
       if (clubId) query = query.eq('club_id', clubId);
+
+      // Platform scope: if provided, filter by club_platform_id; otherwise show default (null)
+      if (clubPlatformId) {
+        query = query.eq('club_platform_id', clubPlatformId);
+      } else {
+        query = query.is('club_platform_id', null);
+      }
+
       const { data, error } = await query.order('name');
 
       if (error) throw error;
@@ -37,7 +46,7 @@ export async function PUT(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { fees, club_id } = body;
+        const { fees, club_id, club_platform_id } = body;
 
         if (!fees || !Array.isArray(fees)) {
           return NextResponse.json(
@@ -63,6 +72,7 @@ export async function PUT(req: NextRequest) {
             base: fee.base || 'rake',
             is_active: fee.is_active !== false,
             club_id,
+            club_platform_id: club_platform_id || null,
           }));
 
         if (upsertRows.length > 0) {
@@ -72,13 +82,20 @@ export async function PUT(req: NextRequest) {
           if (upsertErr) throw upsertErr;
         }
 
-        // Retornar estado atualizado
-        const { data } = await supabaseAdmin
+        // Return updated state (filtered by platform scope)
+        let returnQuery = supabaseAdmin
           .from('fee_config')
           .select('*')
           .eq('tenant_id', ctx.tenantId)
-          .eq('club_id', club_id)
-          .order('name');
+          .eq('club_id', club_id);
+
+        if (club_platform_id) {
+          returnQuery = returnQuery.eq('club_platform_id', club_platform_id);
+        } else {
+          returnQuery = returnQuery.is('club_platform_id', null);
+        }
+
+        const { data } = await returnQuery.order('name');
 
         logAudit(req, ctx, 'UPDATE', 'fee_config', ctx.tenantId, undefined, {
           fees: upsertRows,

@@ -51,11 +51,12 @@ interface ConfirmOptions {
   uploadedBy: string;
   platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
   pppokerSubclube?: string; // Subclube destino para PPPoker
+  clubPlatformId?: string; // UUID from club_platforms (multi-platform)
 }
 
 class ImportConfirmService {
   async confirm(opts: ConfirmOptions): Promise<ConfirmResult> {
-    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube } = opts;
+    const { tenantId, clubId, weekStart, fileName, fileBuffer, uploadedBy, platform = 'suprema', pppokerSubclube, clubPlatformId } = opts;
     const warnings: string[] = [];
 
     // ── 0) Platform guard ─────────────────────────────────────────
@@ -138,6 +139,7 @@ class ImportConfirmService {
         status: 'PROCESSING',
         row_count: 0,
         player_count: 0,
+        club_platform_id: clubPlatformId || null,
       },
       {
         onConflict: 'id',
@@ -240,6 +242,7 @@ class ImportConfirmService {
             import_id: importId,
             inputs_hash: fileHash,
             platform,
+            club_platform_id: clubPlatformId || null,
           })
           .select('id')
           .single();

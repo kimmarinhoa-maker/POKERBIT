@@ -16,6 +16,8 @@ import Spinner from '@/components/Spinner';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/lib/useAuth';
+import { usePlatform } from '@/lib/usePlatform';
+import { getPlatformColor, PLATFORM_LABELS } from '@/types/platform';
 import type { ClubeData } from '@/types/dashboard';
 
 // ─── helpers ──────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { toast } = useToast();
   const { isAdmin, hasSubclubs } = useAuth();
+  const { selectedPlatformId, selectedPlatform } = usePlatform();
 
   // Data states
   const [loading, setLoading] = useState(true);
@@ -405,6 +408,21 @@ export default function DashboardPage() {
           </Link>
         )}
       </div>
+
+      {/* ── PLATFORM BANNER ── */}
+      {selectedPlatformId && selectedPlatform && (() => {
+        const color = getPlatformColor(selectedPlatform.platform);
+        return (
+          <div className={`${color.bg} border ${color.border} rounded-lg px-3 py-2 mb-4 flex items-center gap-2`}>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${color.bg} ${color.text} ${color.border}`}>
+              {PLATFORM_LABELS[selectedPlatform.platform] || selectedPlatform.platform}
+            </span>
+            <span className={`text-sm ${color.text}`}>
+              Exibindo dados de <strong>{selectedPlatform.label}</strong>
+            </span>
+          </div>
+        );
+      })()}
 
       {/* ── LOADING ── */}
       {loading && (
