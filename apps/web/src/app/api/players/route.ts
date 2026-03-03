@@ -20,23 +20,27 @@ export async function GET(req: NextRequest) {
 
       let playerIdFilter: string[] | null = null;
 
-      if (subclubId) {
-        const { data: agents } = await supabaseAdmin
+      // ── Build agent-name filter for is_direct ──
+      if (isDirect !== undefined) {
+        const semAgentePattern = /^(sem agente|\(sem agente\)|none)$/i;
+
+        // Fetch agents (scoped to subclub if provided, otherwise all)
+        let agentQuery = supabaseAdmin
           .from('organizations')
           .select('id, name, metadata')
           .eq('tenant_id', ctx.tenantId)
-          .eq('parent_id', subclubId)
           .eq('type', 'AGENT')
           .eq('is_active', true);
+        if (subclubId) agentQuery = agentQuery.eq('parent_id', subclubId);
 
+        const { data: agents } = await agentQuery;
         let filteredAgents = agents || [];
-        const semAgentePattern = /^(sem agente|\(sem agente\)|none)$/i;
 
         if (isDirect === 'true') {
           filteredAgents = filteredAgents.filter(
             (a: any) => (a.metadata as any)?.is_direct === true || semAgentePattern.test(a.name),
           );
-        } else if (isDirect === 'false') {
+        } else {
           filteredAgents = filteredAgents.filter(
             (a: any) => !(a.metadata as any)?.is_direct && !semAgentePattern.test(a.name),
           );
@@ -44,6 +48,7 @@ export async function GET(req: NextRequest) {
 
         const agentNames = filteredAgents.map((a: any) => a.name).filter(Boolean);
 
+        // Always include "sem agente" variants for direct players
         if (isDirect === 'true') {
           const semVariants = ['SEM AGENTE', '(sem agente)', 'None', ''];
           for (const v of semVariants) {
@@ -64,14 +69,42 @@ export async function GET(req: NextRequest) {
           .select('player_id')
           .eq('tenant_id', ctx.tenantId)
           .in('agent_name', agentNames);
-
-        if (subclubId) {
-          metricsQuery = metricsQuery.eq('subclub_id', subclubId);
-        }
+        if (subclubId) metricsQuery = metricsQuery.eq('subclub_id', subclubId);
 
         const { data: metrics } = await metricsQuery;
         playerIdFilter = [...new Set((metrics || []).map((m: any) => m.player_id).filter(Boolean))];
 
+        if (playerIdFilter.length === 0) {
+          return NextResponse.json({
+            success: true,
+            data: [],
+            meta: { total: 0, page, limit, pages: 0 },
+          });
+        }
+      } else if (subclubId) {
+        // No is_direct filter, but subclub filter — get all players in this subclub
+        const { data: agents } = await supabaseAdmin
+          .from('organizations')
+          .select('name')
+          .eq('tenant_id', ctx.tenantId)
+          .eq('parent_id', subclubId)
+          .eq('type', 'AGENT')
+          .eq('is_active', true);
+        const agentNames = (agents || []).map((a: any) => a.name).filter(Boolean);
+        if (agentNames.length === 0) {
+          return NextResponse.json({
+            success: true,
+            data: [],
+            meta: { total: 0, page, limit, pages: 0 },
+          });
+        }
+        const { data: metrics } = await supabaseAdmin
+          .from('player_week_metrics')
+          .select('player_id')
+          .eq('tenant_id', ctx.tenantId)
+          .eq('subclub_id', subclubId)
+          .in('agent_name', agentNames);
+        playerIdFilter = [...new Set((metrics || []).map((m: any) => m.player_id).filter(Boolean))];
         if (playerIdFilter.length === 0) {
           return NextResponse.json({
             success: true,
