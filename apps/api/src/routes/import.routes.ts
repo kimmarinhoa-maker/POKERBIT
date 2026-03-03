@@ -53,6 +53,7 @@ router.post('/preview', requireAuth, requireTenant, requirePermission('page:impo
     }
 
     const tenantId = req.tenantId!;
+    const clubId = req.body.club_id || undefined;
     const weekStartOverride = req.body.week_start || undefined;
     const platform = req.body.platform || 'suprema';
 
@@ -64,14 +65,17 @@ router.post('/preview', requireAuth, requireTenant, requirePermission('page:impo
       platform,
     });
 
-    // Também retornar subclubes do tenant para os dropdowns de vinculação
-    const { data: subclubs } = await supabaseAdmin
+    // Retornar subclubes filtrados pelo clube (parent_id)
+    let subclubQuery = supabaseAdmin
       .from('organizations')
       .select('id, name')
       .eq('tenant_id', tenantId)
       .eq('type', 'SUBCLUB')
-      .eq('is_active', true)
-      .order('name');
+      .eq('is_active', true);
+    if (clubId) {
+      subclubQuery = subclubQuery.eq('parent_id', clubId);
+    }
+    const { data: subclubs } = await subclubQuery.order('name');
 
     res.json({
       success: true,

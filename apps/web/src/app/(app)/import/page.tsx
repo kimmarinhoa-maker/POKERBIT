@@ -101,7 +101,7 @@ export default function ImportWizardPage() {
     // so the table stays open and user doesn't lose position
 
     try {
-      const res = await importPreview(file, weekStartOverride || undefined, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
+      const res = await importPreview(file, clubId || undefined, weekStartOverride || undefined, platform, platform === 'pppoker' ? pppokerSubclube : undefined);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');

@@ -366,9 +366,10 @@ export async function uploadXLSX(file: File, clubId: string, weekStart: string) 
 }
 
 // Import Wizard — Preview (não toca no banco)
-export async function importPreview(file: File, weekStartOverride?: string, platform?: string, pppokerSubclube?: string) {
+export async function importPreview(file: File, clubId?: string, weekStartOverride?: string, platform?: string, pppokerSubclube?: string) {
   const form = new FormData();
   form.append('file', file);
+  if (clubId) form.append('club_id', clubId);
   if (weekStartOverride) form.append('week_start', weekStartOverride);
   if (platform) form.append('platform', platform);
   if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);

@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        const clubId = fields.club_id || undefined;
         const weekStartOverride = fields.week_start || undefined;
         const platform = fields.platform || 'suprema';
         const pppokerSubclube = fields.pppoker_subclube || undefined;
@@ -39,14 +40,17 @@ export async function POST(req: NextRequest) {
           pppokerSubclube,
         });
 
-        // Also return tenant subclubs for binding dropdowns
-        const { data: subclubs } = await supabaseAdmin
+        // Return subclubs filtered by club (parent_id) for binding dropdowns
+        let subclubQuery = supabaseAdmin
           .from('organizations')
           .select('id, name')
           .eq('tenant_id', ctx.tenantId)
           .eq('type', 'SUBCLUB')
-          .eq('is_active', true)
-          .order('name');
+          .eq('is_active', true);
+        if (clubId) {
+          subclubQuery = subclubQuery.eq('parent_id', clubId);
+        }
+        const { data: subclubs } = await subclubQuery.order('name');
 
         return NextResponse.json({
           success: true,
