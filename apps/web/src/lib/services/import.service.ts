@@ -233,7 +233,7 @@ export class ImportService {
     // Buscar prefix rules
     const { data: prefixRows } = await supabaseAdmin
       .from('agent_prefix_map')
-      .select('prefix, subclub_id, organizations!inner(name)')
+      .select('prefix, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('priority', { ascending: false });
@@ -253,7 +253,7 @@ export class ImportService {
     // Buscar agent overrides
     const { data: overrideRows } = await supabaseAdmin
       .from('agent_overrides')
-      .select('external_agent_id, agent_name, subclub_id, organizations!inner(name)')
+      .select('external_agent_id, agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const agentOverrides: Record<string, { subclube: string; agentName: string }> = {};
@@ -267,7 +267,7 @@ export class ImportService {
     // Buscar manual links (agente por nome → subclube)
     const { data: manualLinkRows } = await supabaseAdmin
       .from('agent_manual_links')
-      .select('agent_name, subclub_id, organizations!inner(name)')
+      .select('agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const manualLinks: Record<string, string> = {};
@@ -279,7 +279,7 @@ export class ImportService {
     // Buscar player links (jogador individual → agente + subclube)
     const { data: playerLinkRows } = await supabaseAdmin
       .from('player_links')
-      .select('external_player_id, agent_external_id, agent_name, subclub_id, organizations!inner(name)')
+      .select('external_player_id, agent_external_id, agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const playerLinks: Record<string, { agentId: string; agentName: string; subclube: string }> = {};
@@ -304,7 +304,7 @@ export class ImportService {
   private async loadRates(tenantId: string, weekStart: string) {
     const { data: playerRateRows } = await supabaseAdmin
       .from('player_rb_rates')
-      .select('player_id, rate, players!inner(external_id, nickname)')
+      .select('player_id, rate, players(external_id, nickname)')
       .eq('tenant_id', tenantId)
       .lte('effective_from', weekStart)
       .or(`effective_to.is.null,effective_to.gte.${weekStart}`);
@@ -317,7 +317,7 @@ export class ImportService {
 
     const { data: agentRateRows } = await supabaseAdmin
       .from('agent_rb_rates')
-      .select('rate, organizations!inner(name)')
+      .select('rate, organizations(name)')
       .eq('tenant_id', tenantId)
       .lte('effective_from', weekStart)
       .or(`effective_to.is.null,effective_to.gte.${weekStart}`);

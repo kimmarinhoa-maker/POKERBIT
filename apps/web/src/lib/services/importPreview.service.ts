@@ -491,7 +491,7 @@ class ImportPreviewService {
     // Buscar prefix rules
     const { data: prefixRows } = await supabaseAdmin
       .from('agent_prefix_map')
-      .select('prefix, subclub_id, organizations!inner(name)')
+      .select('prefix, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('priority', { ascending: false });
@@ -511,7 +511,7 @@ class ImportPreviewService {
     // Buscar agent overrides
     const { data: overrideRows } = await supabaseAdmin
       .from('agent_overrides')
-      .select('external_agent_id, agent_name, subclub_id, organizations!inner(name)')
+      .select('external_agent_id, agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const agentOverrides: Record<string, { subclube: string; agentName: string }> = {};
@@ -525,7 +525,7 @@ class ImportPreviewService {
     // Buscar manual links (agente por nome → subclube)
     const { data: manualLinkRows } = await supabaseAdmin
       .from('agent_manual_links')
-      .select('agent_name, subclub_id, organizations!inner(name)')
+      .select('agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const manualLinks: Record<string, string> = {};
@@ -537,7 +537,7 @@ class ImportPreviewService {
     // Buscar player links (jogador individual → agente + subclube)
     const { data: playerLinkRows } = await supabaseAdmin
       .from('player_links')
-      .select('external_player_id, agent_external_id, agent_name, subclub_id, organizations!inner(name)')
+      .select('external_player_id, agent_external_id, agent_name, subclub_id, organizations(name)')
       .eq('tenant_id', tenantId);
 
     const playerLinks: Record<string, { agentId: string; agentName: string; subclube: string }> = {};

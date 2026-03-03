@@ -50,9 +50,9 @@ export class SettlementService {
       .from('settlements')
       .select(
         `
-        id, club_id, week_start, version, status,
+        id, club_id, week_start, version, status, platform,
         import_id, notes, finalized_at, created_at,
-        organizations!inner(name)
+        organizations(name, external_id, metadata)
       `,
       )
       .eq('tenant_id', tenantId)

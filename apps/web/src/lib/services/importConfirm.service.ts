@@ -260,6 +260,26 @@ class ImportConfirmService {
         settlementId = settlement.id;
       }
 
+      // ── 7a) Save platform on club org metadata ──────────────────────
+      try {
+        const { data: clubOrg } = await supabaseAdmin
+          .from('organizations')
+          .select('metadata')
+          .eq('id', clubId)
+          .single();
+
+        const currentMeta = (clubOrg?.metadata as Record<string, unknown>) || {};
+        if (currentMeta.platform !== platform) {
+          await supabaseAdmin
+            .from('organizations')
+            .update({ metadata: { ...currentMeta, platform } })
+            .eq('id', clubId);
+        }
+      } catch {
+        // Non-critical — don't fail the import
+        console.warn('[confirm] Could not save platform to club org metadata');
+      }
+
       // ── 7b) Persist chippix_import_data from Manager Trade Record ──
       if (parseResult.chippixTrades && Object.keys(parseResult.chippixTrades).length > 0) {
         try {
@@ -434,7 +454,7 @@ class ImportConfirmService {
   private async loadRates(tenantId: string, weekStart: string) {
     const { data: playerRateRows } = await supabaseAdmin
       .from('player_rb_rates')
-      .select('player_id, rate, players!inner(external_id, nickname)')
+      .select('player_id, rate, players(external_id, nickname)')
       .eq('tenant_id', tenantId)
       .lte('effective_from', weekStart)
       .or(`effective_to.is.null,effective_to.gte.${weekStart}`);
@@ -447,7 +467,7 @@ class ImportConfirmService {
 
     const { data: agentRateRows } = await supabaseAdmin
       .from('agent_rb_rates')
-      .select('rate, organizations!inner(name)')
+      .select('rate, organizations(name)')
       .eq('tenant_id', tenantId)
       .lte('effective_from', weekStart)
       .or(`effective_to.is.null,effective_to.gte.${weekStart}`);

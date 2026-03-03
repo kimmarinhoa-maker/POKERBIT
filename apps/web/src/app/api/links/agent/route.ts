@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
             },
             { onConflict: 'tenant_id,agent_name' },
           )
-          .select('*, organizations!inner(name)')
+          .select('*, organizations(name)')
           .single();
 
         if (error) throw error;
