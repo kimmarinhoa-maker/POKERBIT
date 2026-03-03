@@ -84,11 +84,17 @@ class ImportConfirmService {
     }
 
     // Single-club mode OR no subclubes: override p.clube and resolve blockers
+    // PPPoker: use pppokerSubclube as club name (allows multi-file imports to coexist)
     if (!config.hasSubclubs || noSubclubs) {
-      const { data: clubOrg } = await supabaseAdmin
-        .from('organizations').select('name')
-        .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
-      const singleName = clubOrg?.name || 'CLUBE';
+      let singleName: string;
+      if (pppokerSubclube) {
+        singleName = pppokerSubclube;
+      } else {
+        const { data: clubOrg } = await supabaseAdmin
+          .from('organizations').select('name')
+          .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
+        singleName = clubOrg?.name || 'CLUBE';
+      }
       for (const p of allPlayers) {
         if (p._status === 'missing_agency' || p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
           p._status = 'ok';
@@ -162,6 +168,28 @@ class ImportConfirmService {
       // ── 3) Upsert players ─────────────────────────────────────────
 
       await this.upsertPlayers(tenantId, allPlayers);
+
+      // ── 3b) Auto-create SUBCLUB org for PPPoker club name if needed ──
+
+      if (pppokerSubclube) {
+        const { data: existingOrg } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('name', pppokerSubclube)
+          .in('type', ['SUBCLUB', 'CLUB'])
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingOrg) {
+          await supabaseAdmin.from('organizations').insert({
+            tenant_id: tenantId,
+            name: pppokerSubclube,
+            type: 'SUBCLUB',
+            parent_id: clubId,
+          });
+        }
+      }
 
       // ── 4) Build maps ─────────────────────────────────────────────
 

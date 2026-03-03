@@ -100,12 +100,13 @@ export default function PreviewStep({
   }
 
   // Navigation gate: subclub must be resolved before confirming
+  // PPPoker ALWAYS requires a club name (even in noSubclubs mode)
   const subclubReady = temSubclube === null
     ? false
-    : temSubclube === false
-      ? true
-      : platform === 'pppoker'
-        ? !!pppokerSubclube
+    : platform === 'pppoker'
+      ? !!pppokerSubclube
+      : temSubclube === false
+        ? true
         : true;
 
   // When user chose "Não" for subclubes, missing_agency is not a real blocker
@@ -534,30 +535,34 @@ export default function PreviewStep({
               </div>
             )}
 
-            {/* PPPoker subclub dropdown */}
-            {platform === 'pppoker' && (
-              <div>
-                <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Subclube destino</p>
-                <select
-                  value={pppokerSubclube}
-                  onChange={(e) => setPppokerSubclube(e.target.value)}
-                  className="input w-full text-sm"
-                >
-                  <option value="">Selecionar subclube...</option>
-                  {(availableSubclubs || []).map((sc) => (
-                    <option key={sc.id} value={sc.name}>{sc.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-dark-500 mt-1">
-                  No PPPoker todos os jogadores pertencem a um unico subclube
-                </p>
-              </div>
-            )}
           </div>
         )}
 
-        {temSubclube === false && (
+        {temSubclube === false && platform !== 'pppoker' && (
           <p className="text-dark-500 text-xs">Todos jogadores importados para o clube principal.</p>
+        )}
+
+        {/* PPPoker club name — always visible (even in noSubclubs mode) */}
+        {platform === 'pppoker' && temSubclube !== null && (
+          <div>
+            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Nome do clube PPPoker</p>
+            <input
+              type="text"
+              list="pppoker-subclubs"
+              value={pppokerSubclube}
+              onChange={(e) => setPppokerSubclube(e.target.value)}
+              placeholder="Ex: Clube Suprema, PPPoker VIP..."
+              className="input w-full text-sm"
+            />
+            <datalist id="pppoker-subclubs">
+              {(availableSubclubs || []).map((sc) => (
+                <option key={sc.id} value={sc.name} />
+              ))}
+            </datalist>
+            <p className="text-xs text-dark-500 mt-1">
+              Use nomes diferentes para cada planilha PPPoker importada
+            </p>
+          </div>
         )}
 
         {temSubclube === null && (
