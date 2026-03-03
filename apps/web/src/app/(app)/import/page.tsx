@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers } from '@/lib/api';
+import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
@@ -233,6 +233,10 @@ export default function ImportWizardPage() {
       const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined, temSubclube === false ? true : undefined);
       if (res.success && res.data) {
         setConfirmResult(res.data);
+        // Auto-sync agents (creates AGENT organizations from metrics)
+        if (res.data.settlement_id) {
+          syncSettlementAgents(res.data.settlement_id).catch(() => {});
+        }
       } else {
         setError(res.error || 'Erro ao confirmar importacao');
         if (res.error?.includes('pendencias')) {
