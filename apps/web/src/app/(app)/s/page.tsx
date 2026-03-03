@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { listSettlements, getSettlementFull } from '@/lib/api';
-import { useAuth } from '@/lib/useAuth';
+import { listSettlements } from '@/lib/api';
 import Spinner from '@/components/Spinner';
 
 export default function SemanaRedirectPage() {
   const router = useRouter();
-  const { hasSubclubs } = useAuth();
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -17,15 +15,6 @@ export default function SemanaRedirectPage() {
         const res = await listSettlements();
         if (res.success && res.data && res.data.length > 0) {
           const settlementId = res.data[0].id;
-          if (!hasSubclubs) {
-            // Single-club mode: redirect directly to the first subclub
-            const fullRes = await getSettlementFull(settlementId);
-            const subclubs = fullRes?.data?.subclubs || [];
-            if (subclubs.length > 0) {
-              router.replace(`/s/${settlementId}/club/${subclubs[0].name}`);
-              return;
-            }
-          }
           router.replace(`/s/${settlementId}`);
         } else {
           setError(true);
@@ -34,7 +23,7 @@ export default function SemanaRedirectPage() {
         setError(true);
       }
     })();
-  }, [router, hasSubclubs]);
+  }, [router]);
 
   if (error) {
     return (

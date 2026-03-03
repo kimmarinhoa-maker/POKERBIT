@@ -152,24 +152,28 @@ export default function SettlementOverviewPage() {
   const { settlement, subclubs, dashboardTotals } = data;
 
   // Build club groups (current + siblings)
-  const clubGroups: Array<{ clubId: string; label: string; externalId?: string | null; settlementId: string; subclubs: any[]; totals: any }> = [];
+  const clubGroups: Array<{ clubId: string; label: string; platform?: string; externalId?: string | null; settlementId: string; subclubs: any[]; totals: any }> = [];
 
-  const currentClubName = settlement.organizations?.name || 'Clube';
+  const currentOrg = settlement.organizations;
+  const currentClubName = currentOrg?.name || 'Clube';
   clubGroups.push({
     clubId: settlement.club_id,
     label: currentClubName,
-    externalId: settlement.organizations?.external_id,
+    platform: currentOrg?.metadata?.platform || undefined,
+    externalId: currentOrg?.external_id,
     settlementId,
     subclubs,
     totals: dashboardTotals,
   });
 
   for (const sib of siblingData) {
-    const sibClubName = sib.settlement?.organizations?.name || 'Clube';
+    const sibOrg = sib.settlement?.organizations;
+    const sibClubName = sibOrg?.name || 'Clube';
     clubGroups.push({
       clubId: sib.settlement.club_id,
       label: sibClubName,
-      externalId: sib.settlement?.organizations?.external_id,
+      platform: sibOrg?.metadata?.platform || undefined,
+      externalId: sibOrg?.external_id,
       settlementId: sib.settlement.id,
       subclubs: sib.subclubs || [],
       totals: sib.dashboardTotals || { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
@@ -275,10 +279,13 @@ export default function SettlementOverviewPage() {
             </div>
 
             {/* Subclub cards grouped by club */}
-            {clubGroups.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
+            {clubGroups.map(({ clubId: cId, label, platform, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
               <div key={cId} className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   {hasMultipleClubs ? label : 'Subclubes'}
+                  {platform && (
+                    <span className="text-[10px] font-bold text-dark-500 bg-dark-700/50 px-2 py-0.5 rounded uppercase">{platform}</span>
+                  )}
                   {externalId && <span className="text-xs font-mono font-normal text-dark-500">#{externalId}</span>}
                   <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
                 </h3>

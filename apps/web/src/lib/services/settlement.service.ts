@@ -140,10 +140,10 @@ export class SettlementService {
     settlementId: string,
     allowedSubclubIds?: string[] | null, // null/undefined = todos
   ) {
-    // ── Passo A: fetch settlement ──────────────────────────────────
+    // ── Passo A: fetch settlement (join club org for name/platform) ──
     const { data: settlement, error: sErr } = await supabaseAdmin
       .from('settlements')
-      .select('*')
+      .select('*, organizations:club_id(id, name, external_id, metadata)')
       .eq('id', settlementId)
       .eq('tenant_id', tenantId)
       .single();

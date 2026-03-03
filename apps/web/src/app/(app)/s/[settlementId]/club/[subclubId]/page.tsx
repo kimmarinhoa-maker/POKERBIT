@@ -57,7 +57,7 @@ export default function SubclubPanelPage() {
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
-  const [clubGroups, setClubGroups] = useState<Array<{ clubId: string; label: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
+  const [clubGroups, setClubGroups] = useState<Array<{ clubId: string; label: string; platform?: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
   usePageTitle(subclubId || 'Subclube');
 
   const loadData = useCallback(async () => {
@@ -93,10 +93,13 @@ export default function SubclubPanelPage() {
         setData(res.data);
 
         // Build club groups for dropdown (current + siblings)
-        const currentClubName = res.data.settlement?.organizations?.name || 'Clube';
+        const currentOrg = res.data.settlement?.organizations;
+        const currentClubName = currentOrg?.name || 'Clube';
+        const currentPlatform = currentOrg?.metadata?.platform || undefined;
         const groups: typeof clubGroups = [{
           clubId: res.data.settlement?.club_id,
           label: currentClubName,
+          platform: currentPlatform,
           settlementId,
           subclubs: (res.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
         }];
@@ -114,10 +117,12 @@ export default function SubclubPanelPage() {
                 try {
                   const sibRes = await getSettlementFull(sib.id);
                   if (sibRes.success && sibRes.data) {
-                    const sibClubName = sibRes.data.settlement?.organizations?.name || 'Clube';
+                    const sibOrg = sibRes.data.settlement?.organizations;
+                    const sibClubName = sibOrg?.name || 'Clube';
                     groups.push({
                       clubId: sibRes.data.settlement?.club_id,
                       label: sibClubName,
+                      platform: sibOrg?.metadata?.platform || undefined,
                       settlementId: sib.id,
                       subclubs: (sibRes.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
                     });
@@ -432,7 +437,7 @@ export default function SubclubPanelPage() {
             >
               {clubGroups.length > 1 ? (
                 clubGroups.map((g) => (
-                  <optgroup key={g.clubId} label={g.label}>
+                  <optgroup key={g.clubId} label={`${g.label}${g.platform ? ` · ${g.platform}` : ''}`}>
                     {g.subclubs.map((sc) => (
                       <option key={`${g.clubId}-${sc.name}`} value={sc.name}>
                         {sc.name}
