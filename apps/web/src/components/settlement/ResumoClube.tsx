@@ -3,6 +3,7 @@
 import { useRef, useState, useMemo } from 'react';
 import { formatBRL, sendWhatsApp } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
+import { captureElement } from '@/lib/captureElement';
 import { exportCsv } from '@/lib/exportCsv';
 import { useToast } from '@/components/Toast';
 import { SubclubData, PlayerMetric } from '@/types/settlement';
@@ -73,23 +74,11 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
 
   const safeName = (name || 'resumo').replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  // ─── Capture helpers (shared html2canvas logic) ─────────────────
-  async function captureStatement(): Promise<HTMLCanvasElement | null> {
-    if (!statementRef.current) return null;
-    const html2canvas = (await import('html2canvas')).default;
-    return html2canvas(statementRef.current, {
-      backgroundColor: '#0f0f13',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
-  }
-
   async function handleExportJPG() {
     if (exporting) return;
     setExporting(true);
     try {
-      const canvas = await captureStatement();
+      const canvas = await captureElement(statementRef.current);
       if (!canvas) return;
       const link = document.createElement('a');
       link.download = `fechamento_${safeName}_${weekStart || 'semana'}.jpg`;
@@ -107,7 +96,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
     if (exporting) return;
     setExporting(true);
     try {
-      const canvas = await captureStatement();
+      const canvas = await captureElement(statementRef.current);
       if (!canvas) return;
       canvas.toBlob(async (blob) => {
         if (blob) {
@@ -151,7 +140,7 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
     setExporting(true);
     try {
       toast('Gerando imagem para WhatsApp...', 'info');
-      const canvas = await captureStatement();
+      const canvas = await captureElement(statementRef.current);
       if (!canvas) { setExporting(false); return; }
       const base64 = canvas.toDataURL('image/png');
       const res = await sendWhatsApp({

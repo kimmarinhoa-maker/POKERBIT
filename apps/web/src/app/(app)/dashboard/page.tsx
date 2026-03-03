@@ -67,7 +67,6 @@ export default function DashboardPage() {
   // Week selector state
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [_searching, setSearching] = useState(false);
   const [notFoundSearch, setNotFoundSearch] = useState(false);
 
   // Previous week data (for delta comparison)
@@ -254,7 +253,6 @@ export default function DashboardPage() {
   }
 
   async function doSearch(start: string, end?: string) {
-    setSearching(true);
     setNotFoundSearch(false);
     setNotFoundEmpty(false);
     try {
@@ -288,7 +286,7 @@ export default function DashboardPage() {
       setNotFoundSearch(true);
       setNotFoundEmpty(true);
     } finally {
-      setSearching(false);
+      // search complete
     }
   }
 

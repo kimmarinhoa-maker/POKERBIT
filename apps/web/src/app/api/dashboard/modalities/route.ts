@@ -170,19 +170,18 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: true, data: cached });
       }
 
-      // 1. Fetch player metrics with rake_breakdown
+      // 1. Fetch ALL player metrics (no rake_breakdown filter)
       let query = supabaseAdmin
         .from('player_week_metrics')
         .select('nickname, rake_total_brl, winnings_brl, agent_name, rake_breakdown, hands')
         .eq('settlement_id', settlementId)
-        .eq('tenant_id', ctx.tenantId)
-        .not('rake_breakdown', 'is', null);
+        .eq('tenant_id', ctx.tenantId);
 
       if (subclubId) {
         query = query.eq('subclub_id', subclubId);
       }
 
-      const { data: rows, error } = await query;
+      const { data: allRows, error } = await query;
 
       if (error) {
         return NextResponse.json(
@@ -191,23 +190,19 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      // Filter out rows with empty breakdown
-      const validRows = (rows || []).filter((r) => {
+      if (!allRows || allRows.length === 0) {
+        return NextResponse.json({ success: true, data: null });
+      }
+
+      // Rows with valid rake_breakdown (for modality charts)
+      const validRows = allRows.filter((r) => {
         const rb = r.rake_breakdown;
         if (!rb || (typeof rb === 'object' && Object.keys(rb).length === 0)) return false;
         return true;
       });
 
-      if (validRows.length === 0) {
-        return NextResponse.json({ success: true, data: null });
-      }
-
-      // 2. Aggregate JSONB data
-      const rakeByModality: Record<string, number> = {};
-      const winningsByModality: Record<string, number> = {};
-      const handsByModality: Record<string, number> = {};
-
-      const parsedRows: Array<{
+      // 2a. Parse ALL rows for analytics (topPlayers, topAgents, gainersLosers)
+      const allParsedRows: Array<{
         nickname: string;
         rakeTotal: number;
         winnings: number;
@@ -215,6 +210,31 @@ export async function GET(req: NextRequest) {
         rb: NormalizedBreakdown;
         totalHands: number;
       }> = [];
+
+      for (const row of allRows) {
+        const rb = row.rake_breakdown ? normalizeBreakdown(row.rake_breakdown) : { rake: {}, winnings: {}, hands: {} };
+
+        const handsTotal =
+          (rb.hands as Record<string, number>)['total'] ||
+          Object.values(rb.hands).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0) ||
+          Number(row.hands || 0);
+
+        allParsedRows.push({
+          nickname: row.nickname,
+          rakeTotal: Number(row.rake_total_brl || 0),
+          winnings: Number(row.winnings_brl || 0),
+          agentName: row.agent_name || '',
+          rb,
+          totalHands: handsTotal,
+        });
+      }
+
+      // 2b. Aggregate modality data from validRows only (for charts)
+      const rakeByModality: Record<string, number> = {};
+      const winningsByModality: Record<string, number> = {};
+      const handsByModality: Record<string, number> = {};
+
+      const modalityParsedRows: Array<{ rb: NormalizedBreakdown }> = [];
 
       for (const row of validRows) {
         const rb = normalizeBreakdown(row.rake_breakdown);
@@ -229,34 +249,15 @@ export async function GET(req: NextRequest) {
           addToMap(handsByModality, mod, val);
         }
 
-        // Hands: prefer rb.hands.total, then sum of modality hands, then top-level column
-        const handsTotal =
-          (rb.hands as Record<string, number>)['total'] ||
-          Object.values(rb.hands).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0) ||
-          Number(row.hands || 0);
-
-        parsedRows.push({
-          nickname: row.nickname,
-          rakeTotal: Number(row.rake_total_brl || 0),
-          winnings: Number(row.winnings_brl || 0),
-          agentName: row.agent_name || '',
-          rb,
-          totalHands: handsTotal,
-        });
+        modalityParsedRows.push({ rb });
       }
 
-      // Check if we actually have modality data (not all zeros)
-      const hasModalityData = Object.values(rakeByModality).some((v) => v > 0);
-      if (!hasModalityData) {
-        return NextResponse.json({ success: true, data: null });
-      }
-
-      // 3. Top 10 players by rake
-      const topPlayersByRake = parsedRows
+      // 3. Top 10 players by rake (from ALL rows)
+      const topPlayersByRake = [...allParsedRows]
         .sort((a, b) => b.rakeTotal - a.rakeTotal)
         .slice(0, 10)
         .map((p) => {
-          // Find main modality (highest rake)
+          // Find main modality (highest rake) — may be empty if no breakdown
           let mainMod = '';
           let maxRake = 0;
           for (const [mod, val] of Object.entries(p.rb.rake)) {
@@ -273,9 +274,9 @@ export async function GET(req: NextRequest) {
           };
         });
 
-      // 3b. Top 10 agents by rake (aggregate from parsedRows)
+      // 3b. Top 10 agents by rake (from ALL rows)
       const agentMap = new Map<string, { rake: number; players: number }>();
-      for (const p of parsedRows) {
+      for (const p of allParsedRows) {
         const key = p.agentName || 'SEM AGENTE';
         const cur = agentMap.get(key) || { rake: 0, players: 0 };
         cur.rake += p.rakeTotal;
@@ -291,8 +292,8 @@ export async function GET(req: NextRequest) {
       const cashRake = sumModalities(rakeByModality, CASH_MODALITIES);
       const tournamentRake = sumModalities(rakeByModality, TOURNAMENT_MODALITIES);
       const totalRake = cashRake + tournamentRake;
-      const cashPlayers = countPlayersWithModality(parsedRows, CASH_MODALITIES);
-      const tournamentPlayers = countPlayersWithModality(parsedRows, TOURNAMENT_MODALITIES);
+      const cashPlayers = countPlayersWithModality(modalityParsedRows, CASH_MODALITIES);
+      const tournamentPlayers = countPlayersWithModality(modalityParsedRows, TOURNAMENT_MODALITIES);
       const cashHands = sumModalities(handsByModality, CASH_MODALITIES);
       const tournamentHands = sumModalities(handsByModality, TOURNAMENT_MODALITIES);
 
@@ -312,7 +313,7 @@ export async function GET(req: NextRequest) {
       };
 
       // 5. Active players — get previous settlement for comparison
-      const thisWeekCount = validRows.length;
+      const thisWeekCount = allRows.length;
 
       const { data: currentSettlement } = await supabaseAdmin
         .from('settlements')
@@ -355,7 +356,7 @@ export async function GET(req: NextRequest) {
           const { data: prevNicknames } = await prevNickQuery;
           if (prevNicknames) {
             const prevSet = new Set(prevNicknames.map((p) => p.nickname));
-            newPlayersCount = validRows.filter((r) => !prevSet.has(r.nickname)).length;
+            newPlayersCount = allRows.filter((r) => !prevSet.has(r.nickname)).length;
           }
         }
       }
@@ -367,7 +368,7 @@ export async function GET(req: NextRequest) {
       };
 
       // 6. Top Gainers/Losers — full array (frontend slices top/bottom 5)
-      const topGainersLosers = parsedRows.map((p) => ({
+      const topGainersLosers = allParsedRows.map((p) => ({
         name: p.nickname,
         winnings: p.winnings,
         rake: p.rakeTotal,

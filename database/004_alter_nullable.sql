@@ -9,10 +9,17 @@
 ALTER TABLE player_week_metrics ALTER COLUMN player_id DROP NOT NULL;
 ALTER TABLE agent_week_metrics ALTER COLUMN agent_id DROP NOT NULL;
 
--- Limpar registros órfãos de imports com erro
-DELETE FROM settlements WHERE id NOT IN (
-  SELECT DISTINCT settlement_id FROM player_week_metrics WHERE settlement_id IS NOT NULL
-) AND id NOT IN (
-  SELECT DISTINCT settlement_id FROM agent_week_metrics WHERE settlement_id IS NOT NULL
-);
-DELETE FROM imports WHERE status = 'ERROR';
+-- Limpar registros órfãos de imports com erro (guarded)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'player_week_metrics')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'agent_week_metrics')
+  THEN
+    DELETE FROM settlements WHERE id NOT IN (
+      SELECT DISTINCT settlement_id FROM player_week_metrics WHERE settlement_id IS NOT NULL
+    ) AND id NOT IN (
+      SELECT DISTINCT settlement_id FROM agent_week_metrics WHERE settlement_id IS NOT NULL
+    );
+  END IF;
+
+  DELETE FROM imports WHERE status = 'ERROR';
+END $$;

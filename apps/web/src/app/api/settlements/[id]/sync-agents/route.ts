@@ -84,7 +84,8 @@ export async function POST(
           subclubNameMap.set(normName(sc.name), sc.id);
         }
 
-        // Auto-create missing SUBCLUB orgs from subclub_name in metrics
+        // Fuzzy-match metric subclub names to existing subclubes
+        // e.g. "IMPÉRIO" in metrics matches "GRUPO IMPÉRIO" in orgs
         if (hasSubclubs) {
           const metricSubclubNames = new Set<string>();
           for (const m of allMetrics) {
@@ -93,28 +94,15 @@ export async function POST(
             }
           }
 
-          const missingSubclubs: string[] = [];
           for (const name of metricSubclubNames) {
-            if (!subclubNameMap.has(normName(name))) {
-              missingSubclubs.push(name);
-            }
-          }
-
-          if (missingSubclubs.length > 0) {
-            const insertRows = missingSubclubs.map((name) => ({
-              tenant_id: ctx.tenantId,
-              parent_id: settlement.club_id,
-              type: 'SUBCLUB' as const,
-              name,
-            }));
-
-            const { data: newSubs } = await supabaseAdmin
-              .from('organizations')
-              .insert(insertRows)
-              .select('id, name');
-
-            for (const sc of newSubs || []) {
-              subclubNameMap.set(normName(sc.name), sc.id);
+            const needle = normName(name);
+            if (!subclubNameMap.has(needle)) {
+              for (const [existingNorm, existingId] of subclubNameMap.entries()) {
+                if (existingNorm.includes(needle) || needle.includes(existingNorm)) {
+                  subclubNameMap.set(needle, existingId);
+                  break;
+                }
+              }
             }
           }
         }

@@ -26,7 +26,7 @@ export default memo(function KpiCard({
   hideIfZero,
 }: KpiCardProps) {
   if (hideIfZero) {
-    const numVal = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^\d,.-]/g, '').replace(',', '.'));
+    const numVal = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^\d,.\-−]/g, '').replace(/\./g, '').replace(',', '.'));
     if (numVal === 0 || isNaN(numVal)) return null;
   }
   return (

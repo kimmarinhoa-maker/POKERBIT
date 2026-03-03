@@ -71,12 +71,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
           data = updated;
         } else {
           // Close previous rate
-          await supabaseAdmin
+          const { error: closeErr } = await supabaseAdmin
             .from('agent_rb_rates')
             .update({ effective_to: dateFrom })
             .eq('tenant_id', ctx.tenantId)
             .eq('agent_id', agentId)
             .is('effective_to', null);
+          if (closeErr) throw closeErr;
 
           // Insert new rate
           const { data: inserted, error } = await supabaseAdmin

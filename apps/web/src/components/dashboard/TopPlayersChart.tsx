@@ -20,6 +20,7 @@ export default function TopPlayersChart({ players }: Props) {
   if (players.length === 0) return null;
 
   const maxRake = players[0]?.rake || 1;
+  const hasAnyModality = players.some((p) => p.mainModality !== '');
 
   return (
     <div className="card">
@@ -33,7 +34,7 @@ export default function TopPlayersChart({ players }: Props) {
               <th className="w-8 text-center">#</th>
               <th>Jogador</th>
               <th className="text-right">Rake</th>
-              <th className="text-center">Modalidade</th>
+              {hasAnyModality && <th className="text-center">Modalidade</th>}
               <th className="text-right">Maos</th>
             </tr>
           </thead>
@@ -65,7 +66,7 @@ export default function TopPlayersChart({ players }: Props) {
                         className="absolute inset-y-0 right-0 rounded opacity-15"
                         style={{
                           width: `${barWidth}%`,
-                          backgroundColor: getColor(p.mainModality),
+                          backgroundColor: p.mainModality ? getColor(p.mainModality) : '#6366F1',
                         }}
                       />
                       <span className="relative font-mono text-sm text-dark-200">
@@ -73,18 +74,24 @@ export default function TopPlayersChart({ players }: Props) {
                       </span>
                     </div>
                   </td>
-                  <td className="text-center">
-                    <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
-                      style={{
-                        color: getColor(p.mainModality),
-                        borderColor: getColor(p.mainModality) + '40',
-                        backgroundColor: getColor(p.mainModality) + '15',
-                      }}
-                    >
-                      {getLabel(p.mainModality)}
-                    </span>
-                  </td>
+                  {hasAnyModality && (
+                    <td className="text-center">
+                      {p.mainModality ? (
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                          style={{
+                            color: getColor(p.mainModality),
+                            borderColor: getColor(p.mainModality) + '40',
+                            backgroundColor: getColor(p.mainModality) + '15',
+                          }}
+                        >
+                          {getLabel(p.mainModality)}
+                        </span>
+                      ) : (
+                        <span className="text-dark-600 text-xs">&mdash;</span>
+                      )}
+                    </td>
+                  )}
                   <td className="text-right font-mono text-sm text-dark-400">
                     {p.hands.toLocaleString('pt-BR')}
                   </td>

@@ -46,11 +46,10 @@ export interface AutoMatchSuggestion {
   confidence: 'high' | 'medium' | 'low' | 'none';
   match_tier: 1 | 2 | 3 | 4 | 5;
   match_reason: string;
-  // Extra context for frontend display
   memo: string | null;
   amount: number;
   tx_date: string;
-  dir: string;
+  dir: 'in' | 'out';
 }
 
 export class OFXService {

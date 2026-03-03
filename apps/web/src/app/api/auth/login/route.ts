@@ -4,8 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabase';
-import { safeErrorMessage } from '@/lib/server/apiError';
-import { FULL_ACCESS_ROLES } from '@/lib/server/auth';
+import { buildTenantList } from '@/lib/server/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,37 +37,6 @@ export async function POST(req: NextRequest) {
       .eq('user_id', data.user.id)
       .eq('is_active', true);
 
-    // Buscar org_access (subclubs permitidos)
-    const { data: orgAccess } = await supabaseAdmin
-      .from('user_org_access')
-      .select('tenant_id, org_id, organizations!inner(id, name)')
-      .eq('user_id', data.user.id);
-
-    const orgAccessByTenant = new Map<string, { id: string; name: string }[]>();
-    for (const oa of orgAccess || []) {
-      const tid = oa.tenant_id;
-      if (!orgAccessByTenant.has(tid)) orgAccessByTenant.set(tid, []);
-      orgAccessByTenant.get(tid)!.push({
-        id: (oa as any).organizations.id,
-        name: (oa as any).organizations.name,
-      });
-    }
-
-    // Buscar logo_url das organizacoes CLUB
-    const tenantIds = (tenants || []).map((t) => t.tenant_id);
-    const { data: clubOrgs } = tenantIds.length > 0
-      ? await supabaseAdmin
-          .from('organizations')
-          .select('id, tenant_id, logo_url')
-          .in('tenant_id', tenantIds)
-          .eq('type', 'CLUB')
-      : { data: [] };
-
-    const clubOrgByTenant = new Map<string, { id: string; logo_url: string | null }>();
-    for (const org of clubOrgs || []) {
-      clubOrgByTenant.set(org.tenant_id, { id: org.id, logo_url: org.logo_url || null });
-    }
-
     return NextResponse.json({
       success: true,
       data: {
@@ -81,19 +49,7 @@ export async function POST(req: NextRequest) {
           refresh_token: data.session.refresh_token,
           expires_at: data.session.expires_at,
         },
-        tenants: (tenants || []).map((t) => ({
-          id: (t as any).tenants.id,
-          name: (t as any).tenants.name,
-          slug: (t as any).tenants.slug,
-          role: t.role,
-          status: (t as any).tenants.status || 'active',
-          has_subclubs: (t as any).tenants.has_subclubs ?? true,
-          logo_url: clubOrgByTenant.get(t.tenant_id)?.logo_url || null,
-          club_org_id: clubOrgByTenant.get(t.tenant_id)?.id || null,
-          allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
-            ? null
-            : orgAccessByTenant.get(t.tenant_id) || [],
-        })),
+        tenants: await buildTenantList(data.user.id, tenants),
       },
     });
   } catch (err: unknown) {

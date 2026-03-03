@@ -141,6 +141,7 @@ export default function OFXTab({
         setLinkingId(null);
         setLinkForm({ entity_id: '', entity_name: '', category_id: '' });
         loadTxns();
+        onDataChange();
       }
     } catch {
       toast('Erro ao vincular transacao OFX', 'error');

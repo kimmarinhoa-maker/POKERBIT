@@ -79,6 +79,10 @@ class ImportConfirmService {
     // Verificar blockers (sem_vinculo is NOT a blocker — only missing_agency blocks)
     const allPlayers: any[] = parseResult.all || [];
 
+    if (allPlayers.length === 0) {
+      throw new ConfirmError(400, 'Arquivo vazio: nenhum jogador encontrado na planilha.');
+    }
+
     // Single-club mode OR no subclubes: override p.clube and resolve blockers
     if (!config.hasSubclubs || noSubclubs) {
       const { data: clubOrg } = await supabaseAdmin
@@ -464,20 +468,6 @@ class ImportConfirmService {
     playerUuidMap: Record<string, string>,
     orgNameMap: OrgNameMap,
   ) {
-    // Debug: log first player's rakeBreakdown and hands
-    if (allPlayers.length > 0) {
-      const p0 = allPlayers[0];
-      console.log('[persistPlayerMetrics] First player:', {
-        id: p0.id,
-        nick: p0.nick,
-        hands: p0.hands,
-        games: p0.games,
-        hasRakeBreakdown: !!p0.rakeBreakdown,
-        rakeBreakdownKeys: p0.rakeBreakdown ? Object.keys(p0.rakeBreakdown) : [],
-        rakeBreakdownType: typeof p0.rakeBreakdown,
-      });
-    }
-
     const rows = allPlayers.map((p) => {
       // Hands: prefer top-level, fallback to rakeBreakdown.hands.total
       const rb = p.rakeBreakdown;

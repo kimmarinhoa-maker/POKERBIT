@@ -97,7 +97,7 @@ export class ChipPixService {
 
       const parseNum = (val: any): number => {
         if (val === '' || val === null || val === undefined) return 0;
-        return parseFloat(String(val).replace(',', '.')) || 0;
+        return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
       };
 
       const entrada = iEnt >= 0 ? parseNum(row[iEnt]) : 0;

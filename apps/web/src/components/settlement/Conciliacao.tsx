@@ -184,6 +184,7 @@ export default function Conciliacao({ weekStart, clubId, clubName, chippixManage
       const res = await toggleReconciled(entryId, !currentValue);
       if (res.success) {
         setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, is_reconciled: !currentValue } : e)));
+        onDataChange();
       }
     } catch {
       toast('Erro ao alterar conciliacao', 'error');

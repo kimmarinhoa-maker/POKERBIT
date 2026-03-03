@@ -33,10 +33,10 @@ UPDATE organizations SET parent_id = dm.keeper_id
 FROM dup_map dm
 WHERE organizations.parent_id = dm.dupe_id;
 
--- 3. Reassign FK: agent_week_metrics.org_id
-UPDATE agent_week_metrics SET org_id = dm.keeper_id
+-- 3. Reassign FK: agent_week_metrics.agent_id
+UPDATE agent_week_metrics SET agent_id = dm.keeper_id
 FROM dup_map dm
-WHERE agent_week_metrics.org_id = dm.dupe_id;
+WHERE agent_week_metrics.agent_id = dm.dupe_id;
 
 -- 4. Reassign FK: agent_week_metrics.subclub_id
 UPDATE agent_week_metrics SET subclub_id = dm.keeper_id

@@ -63,40 +63,45 @@ export default function ModalitySectionWrapper({ data, loading }: Props) {
       )}
 
       {/* Content */}
-      {!loading && data && (
-        <div className="space-y-4 animate-tab-fade">
-          {/* Row 1: Top 10 Players + Top 10 Agents */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <TopPlayersChart players={data.topPlayersByRake} />
-            {data.topAgentsByRake && data.topAgentsByRake.length > 0 && (
-              <TopAgentsChart agents={data.topAgentsByRake} />
+      {!loading && data && (() => {
+        const hasModality = Object.values(data.rakeByModality || {}).some((v) => v > 0);
+        return (
+          <div className="space-y-4 animate-tab-fade">
+            {/* Row 1: Top 10 Players + Top 10 Agents (always shown) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TopPlayersChart players={data.topPlayersByRake} />
+              {data.topAgentsByRake && data.topAgentsByRake.length > 0 && (
+                <TopAgentsChart agents={data.topAgentsByRake} />
+              )}
+            </div>
+
+            {/* Row 2: Top Gainers & Losers (always shown) */}
+            {data.topGainersLosers && data.topGainersLosers.length > 0 && (
+              <TopGainersLosers players={data.topGainersLosers} />
+            )}
+
+            {/* Row 3: Modality charts (only when rake_breakdown data exists) */}
+            {hasModality && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <RakeDonutChart rakeByModality={data.rakeByModality} />
+                <CashVsTournament
+                  cash={data.cashVsTournament.cash}
+                  tournament={data.cashVsTournament.tournament}
+                  activePlayers={{
+                    thisWeek: data.activePlayers.thisWeek,
+                    lastWeek: data.activePlayers.lastWeek,
+                    newPlayers: data.activePlayers.new,
+                  }}
+                />
+                {data.rakeWeeklyComparison && data.rakeWeeklyComparison.length >= 2 && (
+                  <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
+                )}
+                <HandsVolumeChart handsByModality={data.handsByModality} />
+              </div>
             )}
           </div>
-
-          {/* Row 2: Top Gainers & Losers (full width card, 2 columns inside) */}
-          {data.topGainersLosers && data.topGainersLosers.length > 0 && (
-            <TopGainersLosers players={data.topGainersLosers} />
-          )}
-
-          {/* Row 3: Donut + Cash/Torneios (com Ativos) + Rake Semanal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <RakeDonutChart rakeByModality={data.rakeByModality} />
-            <CashVsTournament
-              cash={data.cashVsTournament.cash}
-              tournament={data.cashVsTournament.tournament}
-              activePlayers={{
-                thisWeek: data.activePlayers.thisWeek,
-                lastWeek: data.activePlayers.lastWeek,
-                newPlayers: data.activePlayers.new,
-              }}
-            />
-            {data.rakeWeeklyComparison && data.rakeWeeklyComparison.length >= 2 && (
-              <RakeWeeklyComparison data={data.rakeWeeklyComparison} />
-            )}
-            <HandsVolumeChart handsByModality={data.handsByModality} />
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

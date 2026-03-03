@@ -4,7 +4,6 @@
 
 // All API calls go to local Next.js API Routes at /api/*
 const API_BASE = '/api';
-const API_DIRECT = '/api';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -126,13 +125,12 @@ export function invalidateCache(pathPrefix?: string) {
 export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
-  useDirectUrl = false,
 ): Promise<ApiResponse<T>> {
   const method = (options.method || 'GET').toUpperCase();
   const isGet = method === 'GET';
 
-  // Cache: only GET requests, only proxied (not direct uploads)
-  if (isGet && !useDirectUrl) {
+  // Cache: only GET requests
+  if (isGet) {
     // Return cached if fresh
     const cached = _cache.get(path);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
@@ -146,13 +144,13 @@ export async function apiFetch<T = any>(
 
   // Create the actual fetch promise
   const fetchPromise = (async (): Promise<ApiResponse<T>> => {
-    const result = await _apiFetchOnce<T>(path, options, useDirectUrl);
+    const result = await _apiFetchOnce<T>(path, options);
 
     // On 401 — attempt to refresh and retry ONCE
     if (result === _UNAUTHORIZED_SENTINEL) {
       const refreshed = await refreshAuthToken();
       if (refreshed) {
-        const retry = await _apiFetchOnce<T>(path, options, useDirectUrl);
+        const retry = await _apiFetchOnce<T>(path, options);
         if (retry !== _UNAUTHORIZED_SENTINEL) return retry;
       }
       // Refresh failed or retry still 401 — logout
@@ -165,7 +163,7 @@ export async function apiFetch<T = any>(
   })();
 
   // Track in-flight for GET dedup
-  if (isGet && !useDirectUrl) {
+  if (isGet) {
     _inflight.set(path, fetchPromise);
     fetchPromise.finally(() => _inflight.delete(path));
 
@@ -192,7 +190,6 @@ const _UNAUTHORIZED_SENTINEL = Symbol('unauthorized');
 async function _apiFetchOnce<T = any>(
   path: string,
   options: RequestInit = {},
-  useDirectUrl = false,
 ): Promise<ApiResponse<T> | typeof _UNAUTHORIZED_SENTINEL> {
   const token = getToken();
   const tenantId = getTenantId();
@@ -209,14 +206,11 @@ async function _apiFetchOnce<T = any>(
     headers['Content-Type'] = 'application/json';
   }
 
-  // Use direct backend URL for file uploads to avoid Next.js proxy issues
-  const base = useDirectUrl ? API_DIRECT : API_BASE;
-
   let res: Response;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    res = await fetch(`${base}${path}`, {
+    res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers,
       signal: controller.signal,
@@ -355,14 +349,10 @@ export async function uploadXLSX(file: File, clubId: string, weekStart: string) 
   form.append('club_id', clubId);
   form.append('week_start', weekStart);
 
-  return apiFetch(
-    '/imports',
-    {
-      method: 'POST',
-      body: form,
-    },
-    true,
-  );
+  return apiFetch('/imports', {
+    method: 'POST',
+    body: form,
+  });
 }
 
 // Import Wizard — Preview (não toca no banco)
@@ -374,14 +364,10 @@ export async function importPreview(file: File, clubId?: string, weekStartOverri
   if (platform) form.append('platform', platform);
   if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
 
-  return apiFetch(
-    '/imports/preview',
-    {
-      method: 'POST',
-      body: form,
-    },
-    true,
-  );
+  return apiFetch('/imports/preview', {
+    method: 'POST',
+    body: form,
+  });
 }
 
 // Import Wizard — Confirm (persiste settlement + metrics)
@@ -394,14 +380,10 @@ export async function importConfirm(file: File, clubId: string, weekStart: strin
   if (pppokerSubclube) form.append('pppoker_subclube', pppokerSubclube);
   if (noSubclubs) form.append('no_subclubs', 'true');
 
-  return apiFetch(
-    '/imports/confirm',
-    {
-      method: 'POST',
-      body: form,
-    },
-    true,
-  );
+  return apiFetch('/imports/confirm', {
+    method: 'POST',
+    body: form,
+  });
 }
 
 export async function listImports() {
@@ -534,14 +516,10 @@ export async function updateOrganization(
 export async function uploadClubLogo(orgId: string, file: File) {
   const formData = new FormData();
   formData.append('logo', file);
-  return apiFetch(
-    `/organizations/${orgId}/logo`,
-    {
-      method: 'POST',
-      body: formData,
-    },
-    true,
-  );
+  return apiFetch(`/organizations/${orgId}/logo`, {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 export async function deleteClubLogo(orgId: string) {
@@ -932,7 +910,7 @@ export async function uploadOFX(file: File, weekStart?: string) {
   const form = new FormData();
   form.append('file', file);
   if (weekStart) form.append('week_start', weekStart);
-  return apiFetch('/ofx/upload', { method: 'POST', body: form }, true);
+  return apiFetch('/ofx/upload', { method: 'POST', body: form });
 }
 
 export async function listOFXTransactions(weekStart?: string, status?: string) {
@@ -982,7 +960,7 @@ export interface AutoMatchSuggestion {
   memo: string | null;
   amount: number;
   tx_date: string;
-  dir: string;
+  dir: 'in' | 'out';
 }
 
 export async function ofxAutoMatch(weekStart: string): Promise<ApiResponse<AutoMatchSuggestion[]>> {
@@ -999,7 +977,7 @@ export async function uploadChipPix(file: File, weekStart?: string, clubId?: str
   form.append('file', file);
   if (weekStart) form.append('week_start', weekStart);
   if (clubId) form.append('club_id', clubId);
-  return apiFetch('/chippix/upload', { method: 'POST', body: form }, true);
+  return apiFetch('/chippix/upload', { method: 'POST', body: form });
 }
 
 export async function listChipPixTransactions(weekStart?: string, status?: string) {
@@ -1182,33 +1160,6 @@ export async function getDashboardModalities(settlementId: string, subclubId?: s
   const params = new URLSearchParams({ settlement_id: settlementId });
   if (subclubId) params.set('subclub_id', subclubId);
   return apiFetch<ModalityData>(`/dashboard/modalities?${params}`);
-}
-
-// ─── Data Integrity ──────────────────────────────────────────────
-
-export interface IntegrityIssue {
-  type: string;
-  severity: 'error' | 'warning';
-  message: string;
-  details: Record<string, unknown>;
-  fixable: boolean;
-}
-
-export interface IntegrityResult {
-  healthy: boolean;
-  issueCount: number;
-  issues: IntegrityIssue[];
-  checkedAt: string;
-}
-
-export async function checkDataIntegrity() {
-  return apiFetch<IntegrityResult>('/config/data-integrity');
-}
-
-export async function fixDataIntegrity() {
-  return apiFetch<{ fixed: number; message: string }>('/config/data-integrity/fix', {
-    method: 'POST',
-  });
 }
 
 // ─── Comprovante (receipt URL generation) ─────────────────────────

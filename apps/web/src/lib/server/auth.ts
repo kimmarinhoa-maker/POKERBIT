@@ -179,6 +179,59 @@ export async function withAuth(
   }
 }
 
+/**
+ * Shared helper: builds the tenant list with org access + logo for auth responses.
+ */
+export async function buildTenantList(
+  userId: string,
+  tenants: any[] | null,
+) {
+  // Org access map
+  const { data: orgAccess } = await supabaseAdmin
+    .from('user_org_access')
+    .select('tenant_id, org_id, organizations!inner(id, name)')
+    .eq('user_id', userId);
+
+  const orgAccessByTenant = new Map<string, { id: string; name: string }[]>();
+  for (const oa of orgAccess || []) {
+    const tid = oa.tenant_id;
+    if (!orgAccessByTenant.has(tid)) orgAccessByTenant.set(tid, []);
+    orgAccessByTenant.get(tid)!.push({
+      id: (oa as any).organizations.id,
+      name: (oa as any).organizations.name,
+    });
+  }
+
+  // Club org logos
+  const tenantIds = (tenants || []).map((t) => t.tenant_id);
+  const { data: clubOrgs } = tenantIds.length > 0
+    ? await supabaseAdmin
+        .from('organizations')
+        .select('id, tenant_id, logo_url')
+        .in('tenant_id', tenantIds)
+        .eq('type', 'CLUB')
+    : { data: [] };
+
+  const clubOrgByTenant = new Map<string, { id: string; logo_url: string | null }>();
+  for (const org of clubOrgs || []) {
+    clubOrgByTenant.set(org.tenant_id, { id: org.id, logo_url: org.logo_url || null });
+  }
+
+  return (tenants || []).map((t) => ({
+    id: (t as any).tenants.id,
+    name: (t as any).tenants.name,
+    slug: (t as any).tenants.slug,
+    role: t.role,
+    status: (t as any).tenants.status || 'active',
+    has_subclubs: (t as any).tenants.has_subclubs ?? true,
+    logo_url: clubOrgByTenant.get(t.tenant_id)?.logo_url || null,
+    club_org_id: clubOrgByTenant.get(t.tenant_id)?.id || null,
+    allowed_subclubs: (FULL_ACCESS_ROLES as readonly string[]).includes(t.role)
+      ? null
+      : orgAccessByTenant.get(t.tenant_id) || [],
+  }));
+}
+
 async function checkPermissions(
   tenantId: string,
   role: string,

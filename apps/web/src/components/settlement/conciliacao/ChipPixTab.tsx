@@ -199,6 +199,7 @@ export default function ChipPixTab({
         const d = res.data;
         toast(`${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados)`, 'success');
         await loadTxns();
+        onDataChange();
       } else {
         toast(res.error || 'Erro ao importar', 'error');
       }

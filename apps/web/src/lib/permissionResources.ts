@@ -12,7 +12,6 @@ import {
   Trophy,
   Wallet,
   Users,
-  Link as LinkIcon,
   BarChart3,
   Search,
   LineChart,
@@ -59,7 +58,6 @@ export const permissionSections: PermResourceSection[] = [
     items: [
       { key: 'page:players', label: 'Agentes / Jogadores', icon: Users },
       { key: 'page:clubs', label: 'Hierarquia Clubes', icon: Building2 },
-      { key: 'page:links', label: 'Vincular', icon: LinkIcon },
     ],
   },
   {
