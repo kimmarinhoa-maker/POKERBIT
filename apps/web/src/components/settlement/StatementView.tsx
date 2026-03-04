@@ -69,8 +69,11 @@ export default function StatementView({
   const totalDevido = round2(resultadoBase + data.saldoAnterior);
   const pendente = round2(totalDevido + data.pago);
 
-  const isQuitado = Math.abs(pendente) < 0.01 && (Math.abs(totalDevido) > 0.01 || Math.abs(data.pago) > 0.01);
-  const isParcial = !isQuitado && Math.abs(data.pago) > 0.01;
+  // A Vista: resultado final = só RB do agente (sem pagamentos/saldo)
+  const resultadoFinal = isAvista ? data.rbAgente : pendente;
+
+  const isQuitado = !isAvista && Math.abs(pendente) < 0.01 && (Math.abs(totalDevido) > 0.01 || Math.abs(data.pago) > 0.01);
+  const isParcial = !isAvista && !isQuitado && Math.abs(data.pago) > 0.01;
 
   const totalPL = players.reduce((s, p) => s + Number(p.winnings_brl), 0);
   const tipoLabel = isAvista ? 'A Vista' : 'Profit/Loss';
@@ -344,7 +347,7 @@ export default function StatementView({
           </div>
         )}
 
-        {/* Saldo Atual */}
+        {/* Resultado Final */}
         <div className={`rounded-lg p-3 border ${
           isQuitado
             ? 'bg-emerald-950/20 border-emerald-700/30 print:border-green-400 print:bg-green-50'
@@ -353,15 +356,15 @@ export default function StatementView({
           <div className="flex items-center justify-between">
             <span className="text-dark-300 print:text-gray-600 text-sm font-bold uppercase tracking-wider">Resultado Final</span>
             <div className="text-right">
-              <span className={`font-mono font-extrabold text-lg ${clrPrint(pendente)}`}>
-                {formatBRL(Math.abs(pendente))}
+              <span className={`font-mono font-extrabold text-lg ${clrPrint(resultadoFinal)}`}>
+                {formatBRL(Math.abs(resultadoFinal))}
               </span>
-              {Math.abs(pendente) > 0.01 && (
-                <span className={`block text-[10px] font-bold ${pendente > 0 ? 'text-emerald-500 print:text-green-700' : 'text-red-400 print:text-red-700'}`}>
-                  {pendente > 0 ? 'a receber' : 'a pagar'}
+              {Math.abs(resultadoFinal) > 0.01 && (
+                <span className={`block text-[10px] font-bold ${resultadoFinal > 0 ? 'text-emerald-500 print:text-green-700' : 'text-red-400 print:text-red-700'}`}>
+                  {resultadoFinal > 0 ? 'a receber' : 'a pagar'}
                 </span>
               )}
-              {Math.abs(pendente) < 0.01 && (
+              {!isAvista && Math.abs(resultadoFinal) < 0.01 && (
                 <span className="block text-[10px] font-bold text-emerald-400 print:text-green-700">quitado</span>
               )}
             </div>
