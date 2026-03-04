@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════
 //  GET /api/settlements/:id — Detalhe basico (compatibilidade)
-//  DELETE /api/settlements/:id — Apagar settlement DRAFT + todos dados
+//  DELETE /api/settlements/:id — Apagar settlement DRAFT/VOID + todos dados (100% cascade)
 // ══════════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -60,11 +60,11 @@ export async function DELETE(
           );
         }
 
-        if (settlement.status !== 'DRAFT') {
+        if (settlement.status === 'FINAL') {
           return NextResponse.json(
             {
               success: false,
-              error: 'Apenas settlements DRAFT podem ser apagados. Use "Anular" para settlements finalizados.',
+              error: 'Settlements finalizados devem ser anulados primeiro. Use "Anular" e depois exclua.',
             },
             { status: 422 },
           );
@@ -80,12 +80,36 @@ export async function DELETE(
         const agentOrgIds = [...new Set((agentMetrics || []).map((m) => m.agent_id).filter(Boolean))];
 
         // 3. Deletar carry_forward gerado por este settlement
+        //    (source = este settlement propagou saldo para semana seguinte)
         await supabaseAdmin
           .from('carry_forward')
           .delete()
           .eq('source_settlement_id', settlementId);
 
-        // 4. Deletar ledger_entries deste settlement
+        //    Tambem limpar carry_forward que aponta para a semana DESTE settlement
+        //    (saldo anterior transportado DE semana passada para esta)
+        if (settlement.club_id) {
+          const weekStart = (await supabaseAdmin
+            .from('settlements')
+            .select('week_start')
+            .eq('id', settlementId)
+            .single()).data?.week_start;
+          if (weekStart) {
+            await supabaseAdmin
+              .from('carry_forward')
+              .delete()
+              .eq('week_start', weekStart)
+              .eq('club_id', settlement.club_id);
+          }
+        }
+
+        // 4a. Deletar club_adjustments deste settlement
+        await supabaseAdmin
+          .from('club_adjustments')
+          .delete()
+          .eq('settlement_id', settlementId);
+
+        // 4b. Deletar ledger_entries deste settlement
         await supabaseAdmin
           .from('ledger_entries')
           .delete()

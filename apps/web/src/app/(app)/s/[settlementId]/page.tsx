@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, formatBRL, getOrgTree, listSettlements } from '@/lib/api';
+import { getSettlementFull, voidSettlement, deleteSettlement, formatBRL, getOrgTree, listSettlements } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
@@ -36,6 +36,13 @@ export default function SettlementOverviewPage() {
   const [voidLoading, setVoidLoading] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
   const VOID_CONFIRM_WORD = 'ANULAR';
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const DELETE_CONFIRM_WORD = 'EXCLUIR';
+
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [siblingData, setSiblingData] = useState<any[]>([]);
 
@@ -118,6 +125,24 @@ export default function SettlementOverviewPage() {
       setVoidError('Erro de conexao com o servidor');
     } finally {
       setVoidLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (deleteConfirmText.trim().toUpperCase() !== DELETE_CONFIRM_WORD) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await deleteSettlement(settlementId);
+      if (res.success) {
+        router.push('/dashboard');
+      } else {
+        setDeleteError(res.error || 'Erro ao excluir settlement');
+      }
+    } catch {
+      setDeleteError('Erro de conexao com o servidor');
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -245,6 +270,18 @@ export default function SettlementOverviewPage() {
               className="px-4 py-2 text-sm font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Anular Semana
+            </button>
+          )}
+          {(settlement.status === 'DRAFT' || settlement.status === 'VOID') && canAccess('OWNER', 'ADMIN') && (
+            <button
+              onClick={() => {
+                setShowDeleteModal(true);
+                setDeleteConfirmText('');
+                setDeleteError(null);
+              }}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Excluir Fechamento
             </button>
           )}
         </div>
@@ -463,6 +500,91 @@ export default function SettlementOverviewPage() {
                     </>
                   ) : (
                     'Anular Fechamento'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Modal — Confirmacao para exclusao permanente */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Excluir fechamento"
+        >
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !deleteLoading && setShowDeleteModal(false)}
+            aria-hidden="true"
+          />
+          <div className="relative bg-dark-900 border border-red-700/30 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-scale-in">
+            <div className="h-1 bg-red-500 rounded-t-2xl" />
+
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <span className="text-red-400">&#9888;</span> Excluir Fechamento
+              </h3>
+              <p className="text-sm text-dark-300 mb-4">
+                Esta acao e <span className="text-red-400 font-bold">PERMANENTE</span> e ira apagar:
+              </p>
+
+              <div className="bg-red-900/15 border border-red-700/30 rounded-xl p-4 mb-4">
+                <ul className="text-xs text-dark-300 space-y-1.5 list-disc list-inside">
+                  <li>Todos os <span className="text-white font-medium">jogadores e metricas</span> desta semana</li>
+                  <li>Todos os <span className="text-white font-medium">agentes e comissoes</span> desta semana</li>
+                  <li>Todas as <span className="text-white font-medium">movimentacoes</span> (ledger) vinculadas</li>
+                  <li>Todos os <span className="text-white font-medium">ajustes</span> de subclube vinculados</li>
+                  <li><span className="text-white font-medium">Carry-forward</span> gerado por este settlement</li>
+                  <li>Agentes orfaos (sem dados em outras semanas) serao removidos</li>
+                </ul>
+              </div>
+
+              <label className="block text-xs font-bold text-dark-400 uppercase tracking-wider mb-2">
+                Digite <span className="text-red-400 font-mono">{DELETE_CONFIRM_WORD}</span> para confirmar:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={DELETE_CONFIRM_WORD}
+                className={`input w-full text-sm font-mono tracking-widest text-center ${
+                  deleteConfirmText.length > 0 && deleteConfirmText.trim().toUpperCase() !== DELETE_CONFIRM_WORD
+                    ? 'border-red-500/50 focus:ring-red-500/40'
+                    : ''
+                } ${deleteConfirmText.trim().toUpperCase() === DELETE_CONFIRM_WORD ? 'border-red-500/50 focus:ring-red-500/40' : ''}`}
+                autoFocus
+                disabled={deleteLoading}
+              />
+
+              {deleteError && (
+                <p className="text-sm text-red-400 mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-dark-700/50">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 text-sm text-dark-400 hover:text-dark-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteLoading || deleteConfirmText.trim().toUpperCase() !== DELETE_CONFIRM_WORD}
+                  className="px-5 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <Spinner size="sm" variant="white" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    'Excluir Permanentemente'
                   )}
                 </button>
               </div>
