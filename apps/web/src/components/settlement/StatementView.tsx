@@ -186,15 +186,15 @@ export default function StatementView({
             <p className="text-[10px] text-dark-500 print:text-gray-400 uppercase tracking-wider font-bold">
               Fechamento Semanal
             </p>
-            <h2 className="text-lg font-bold text-poker-400 print:text-black mt-0.5">
-              {agent.agent_name}
-              <span className="text-dark-500 print:text-gray-500 text-xs font-mono ml-2">
+            <h2 className="text-lg font-bold text-poker-400 print:text-black mt-0.5 flex items-center flex-wrap gap-1">
+              <span>{agent.agent_name}</span>
+              <span className="text-dark-500 print:text-gray-500 text-xs font-mono">
                 {(() => {
                   const extId = agent.external_agent_id || players[0]?.external_agent_id;
                   return extId ? `#${extId}` : '';
                 })()}
               </span>
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border ml-2 align-middle ${
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold border inline-flex items-center ${
                 isAvista
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 print:text-green-700 print:border-green-600'
                   : 'bg-poker-500/10 text-poker-400 border-poker-500/30 print:text-blue-700 print:border-blue-600'
@@ -311,7 +311,7 @@ export default function StatementView({
               <h4 className="text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">
                 Pagamentos Registrados
               </h4>
-              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border inline-flex items-center leading-none ${
                 isQuitado
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 print:text-green-700 print:border-green-600'
                   : isParcial
