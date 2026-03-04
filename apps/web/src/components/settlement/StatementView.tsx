@@ -72,7 +72,7 @@ export default function StatementView({
   const isQuitado = Math.abs(pendente) < 0.01 && (Math.abs(totalDevido) > 0.01 || Math.abs(data.pago) > 0.01);
   const isParcial = !isQuitado && Math.abs(data.pago) > 0.01;
 
-  const totalResultado = players.reduce((s, p) => s + Number(p.resultado_brl), 0);
+  const totalPL = players.reduce((s, p) => s + Number(p.winnings_brl), 0);
   const tipoLabel = isAvista ? 'A Vista' : 'Profit/Loss';
 
   useEffect(() => {
@@ -216,7 +216,7 @@ export default function StatementView({
                 <th className="py-1.5 text-left text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">Jogador</th>
                 <th className="py-1.5 text-center text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">ID</th>
                 {!isAvista && (
-                  <th className="py-1.5 text-right text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">Resultado</th>
+                  <th className="py-1.5 text-right text-[10px] text-dark-500 print:text-gray-500 uppercase font-bold tracking-wider">Profit/Loss</th>
                 )}
               </tr>
             </thead>
@@ -230,8 +230,8 @@ export default function StatementView({
                     {p.external_player_id || '—'}
                   </td>
                   {!isAvista && (
-                    <td className={`py-1.5 text-right font-mono font-bold text-sm ${clrPrint(Number(p.resultado_brl))}`}>
-                      {formatBRL(Number(p.resultado_brl))}
+                    <td className={`py-1.5 text-right font-mono font-bold text-sm ${clrPrint(Number(p.winnings_brl))}`}>
+                      {formatBRL(Number(p.winnings_brl))}
                     </td>
                   )}
                 </tr>
@@ -241,8 +241,8 @@ export default function StatementView({
               <tfoot>
                 <tr className="border-t border-dark-600/50 print:border-gray-400">
                   <td className="py-2 text-dark-300 print:text-black font-bold text-sm" colSpan={2}>TOTAL</td>
-                  <td className={`py-2 text-right font-mono font-extrabold text-sm ${clrPrint(totalResultado)}`}>
-                    {formatBRL(totalResultado)}
+                  <td className={`py-2 text-right font-mono font-extrabold text-sm ${clrPrint(totalPL)}`}>
+                    {formatBRL(totalPL)}
                   </td>
                 </tr>
               </tfoot>
@@ -290,7 +290,7 @@ export default function StatementView({
             <div className="border-t border-dark-700/30 print:border-gray-300 pt-2 mt-2">
               <div className="flex justify-between items-center">
                 <span className="text-dark-200 print:text-black font-bold text-sm">
-                  Resultado Final
+                  Acerto Semanal
                   {isAvista && <span className="text-dark-500 text-[10px] ml-1 font-normal">(somente RB)</span>}
                 </span>
                 <span className={`font-mono font-extrabold text-base ${clrPrint(totalDevido)}`}>
@@ -351,7 +351,7 @@ export default function StatementView({
             : 'bg-dark-800/30 border-dark-700/50 print:border-gray-300 print:bg-gray-50'
         }`}>
           <div className="flex items-center justify-between">
-            <span className="text-dark-300 print:text-gray-600 text-sm font-medium">Saldo atual</span>
+            <span className="text-dark-300 print:text-gray-600 text-sm font-bold uppercase tracking-wider">Resultado Final</span>
             <div className="text-right">
               <span className={`font-mono font-extrabold text-lg ${clrPrint(pendente)}`}>
                 {formatBRL(Math.abs(pendente))}
