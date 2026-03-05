@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
-import { PreviewData, getClubStyle, getClubIcon, ChipPixTradeOperator } from '@/types/import';
-import { formatBRL, formatDate, createOrganization } from '@/lib/api';
-import { useToast } from '@/components/Toast';
+import { PreviewData, getClubStyle, ChipPixTradeOperator } from '@/types/import';
+import { formatBRL, formatDate } from '@/lib/api';
 import type { Platform } from '@/components/import/UploadStep';
 
 interface PreviewStepProps {
@@ -12,7 +11,7 @@ interface PreviewStepProps {
   availableSubclubs?: Array<{ id: string; name: string }>;
   onLinkAgent?: (agentName: string, subclubId: string) => Promise<void>;
   onReprocess?: () => void;
-  // Subclub toggle (moved from UploadStep)
+  // Subclub toggle (kept for compat but not shown in UI — subclubes will be added later)
   temSubclube: boolean | null;
   setTemSubclube: (v: boolean) => void;
   pppokerSubclube: string;
@@ -52,7 +51,6 @@ export default function PreviewStep({
   preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess,
   temSubclube, setTemSubclube, pppokerSubclube, setPppokerSubclube, platform, clubId, onSubclubCreated,
 }: PreviewStepProps) {
-  const { toast } = useToast();
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);
   const [playerSearch, setPlayerSearch] = useState('');
@@ -72,45 +70,12 @@ export default function PreviewStep({
   // Diff details toggle
   const [diffOpen, setDiffOpen] = useState(true);
 
-  // "+ Novo" subclub inline form
-  const [showNewSubclub, setShowNewSubclub] = useState(false);
-  const [newSubclubName, setNewSubclubName] = useState('');
-  const [creatingSub, setCreatingSub] = useState(false);
 
-  async function handleCreateSubclub() {
-    const name = newSubclubName.trim();
-    if (!name || !clubId) return;
-    setCreatingSub(true);
-    try {
-      const res = await createOrganization({ name, parent_id: clubId, type: 'SUBCLUB' });
-      if (res.success) {
-        toast(`Subclube "${name}" criado`, 'success');
-        setNewSubclubName('');
-        setShowNewSubclub(false);
-        onSubclubCreated();
-        onReprocess?.();
-      } else {
-        toast(res.error || 'Erro ao criar subclube', 'error');
-      }
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
-    } finally {
-      setCreatingSub(false);
-    }
-  }
+  // Subclubes disabled for now — always ready, no subclub gate
+  const subclubReady = true;
 
-  // Navigation gate: subclub must be resolved before confirming
-  // PPPoker ALWAYS requires a club name (even in noSubclubs mode)
-  const subclubReady = temSubclube === null
-    ? false
-    : platform === 'pppoker'
-      ? !!pppokerSubclube
-      : temSubclube === false
-        ? true
-        : true;
-
-  // When user chose "Não" for subclubes, missing_agency is not a real blocker
-  const effectiveReady = preview.readiness.ready || temSubclube === false;
+  // Without subclubes, missing_agency is not a real blocker
+  const effectiveReady = preview.readiness.ready || true;
 
   const players = useMemo(() => preview.players || [], [preview.players]);
 
@@ -450,157 +415,7 @@ export default function PreviewStep({
         </div>
       </div>
 
-      {/* ─── Subclub toggle ─── */}
-      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 mb-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-bold text-white">Estrutura de subclubes</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setTemSubclube(false)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                temSubclube === false
-                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                  : 'bg-dark-800/50 border-dark-700 text-dark-400 hover:border-dark-500'
-              }`}
-            >
-              Nao
-            </button>
-            <button
-              type="button"
-              onClick={() => setTemSubclube(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                temSubclube === true
-                  ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                  : 'bg-dark-800/50 border-dark-700 text-dark-400 hover:border-dark-500'
-              }`}
-            >
-              Sim
-            </button>
-          </div>
-        </div>
-
-        {temSubclube === true && (
-          <div className="space-y-3">
-            {/* Subclub chips */}
-            <div>
-              <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-2">Subclubes cadastrados</p>
-              <div className="flex flex-wrap gap-1.5">
-                {(availableSubclubs || []).map((sc) => (
-                  <span key={sc.id} className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-dark-800/50 border-dark-600 text-dark-200">
-                    {sc.name}
-                  </span>
-                ))}
-                {!showNewSubclub && (
-                  <button
-                    type="button"
-                    onClick={() => setShowNewSubclub(true)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold border border-dashed border-dark-600 text-dark-400 hover:border-poker-500/50 hover:text-poker-400 transition-colors"
-                  >
-                    + Novo
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Inline create form */}
-            {showNewSubclub && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Nome do subclube"
-                  value={newSubclubName}
-                  onChange={(e) => setNewSubclubName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSubclub(); }}
-                  className="input flex-1 text-sm"
-                  autoFocus
-                  disabled={creatingSub}
-                />
-                <button
-                  type="button"
-                  onClick={handleCreateSubclub}
-                  disabled={!newSubclubName.trim() || creatingSub}
-                  className="btn-primary px-3 py-2 text-xs font-bold disabled:opacity-50"
-                >
-                  {creatingSub ? '...' : 'Criar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowNewSubclub(false); setNewSubclubName(''); }}
-                  className="text-dark-500 hover:text-dark-300 text-xs"
-                  disabled={creatingSub}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {temSubclube === false && platform !== 'pppoker' && (
-          <p className="text-dark-500 text-xs">Todos jogadores importados para o clube principal.</p>
-        )}
-
-        {/* PPPoker club name — always visible (even in noSubclubs mode) */}
-        {platform === 'pppoker' && temSubclube !== null && (
-          <div>
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Nome do clube PPPoker</p>
-            <input
-              type="text"
-              list="pppoker-subclubs"
-              value={pppokerSubclube}
-              onChange={(e) => setPppokerSubclube(e.target.value)}
-              placeholder="Ex: Clube Suprema, PPPoker VIP..."
-              className="input w-full text-sm"
-            />
-            <datalist id="pppoker-subclubs">
-              {(availableSubclubs || []).map((sc) => (
-                <option key={sc.id} value={sc.name} />
-              ))}
-            </datalist>
-            <p className="text-xs text-dark-500 mt-1">
-              Use nomes diferentes para cada planilha PPPoker importada
-            </p>
-          </div>
-        )}
-
-        {temSubclube === null && (
-          <p className="text-dark-500 text-xs">Selecione se este clube possui subclubes.</p>
-        )}
-      </div>
-
-      {/* ─── Subclub distribution ─── */}
-      {temSubclube === true && preview.subclubs_found.length > 1 && (
-        <div className="mb-5">
-          <h3 className="text-sm font-bold text-white mb-3">Distribuicao por Subclube</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {preview.subclubs_found.map((sc) => {
-              const pct = preview.summary.total_rake_brl > 0 ? (sc.rake_brl / preview.summary.total_rake_brl) * 100 : 0;
-              return (
-                <div key={sc.subclub_name} className="bg-dark-900 border border-dark-700 rounded-xl p-4 hover:border-dark-600 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getClubStyle(sc.subclub_name)}`}>
-                        {getClubIcon(sc.subclub_name)} {sc.subclub_name}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold font-mono text-white">{formatBRL(sc.rake_brl)}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-[10px] text-dark-400 mb-2">
-                    <span><strong className="text-dark-300">{sc.players_count}</strong> jogadores</span>
-                    <span><strong className="text-dark-300">{sc.agents_count}</strong> agentes</span>
-                    <span><strong className="text-dark-300">{pct.toFixed(0)}%</strong> do rake</span>
-                  </div>
-                  <div className="w-full bg-dark-800 rounded-full h-1.5">
-                    <div className="h-1.5 rounded-full bg-poker-500 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Subclubes toggle removed — will be added later inside club config */}
 
       {/* ─── ChipPix Manager Trade Record ─── */}
       {preview.chippix_trades && Object.keys(preview.chippix_trades).length > 0 && (
@@ -645,9 +460,7 @@ export default function PreviewStep({
               <span className="text-green-400 text-xs font-bold">{'\u2713'}</span>
             </div>
             <p className="text-green-400 font-medium text-sm">
-              {temSubclube === false && !preview.readiness.ready
-                ? 'Jogadores serao importados como diretos do clube.'
-                : 'Tudo pronto! Sem pendencias.'}
+              Tudo pronto! Sem pendencias.
             </p>
           </div>
         </div>
@@ -941,23 +754,13 @@ export default function PreviewStep({
         </button>
         <button
           onClick={onNext}
-          disabled={needsReimportConfirm || !subclubReady}
-          className={`btn-primary flex-1 py-2.5 text-sm font-bold ${(needsReimportConfirm || !subclubReady) ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={
-            !subclubReady
-              ? 'Selecione a estrutura de subclubes acima'
-              : needsReimportConfirm
-                ? 'Marque o checkbox acima para confirmar'
-                : undefined
-          }
+          disabled={needsReimportConfirm}
+          className={`btn-primary flex-1 py-2.5 text-sm font-bold ${needsReimportConfirm ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={needsReimportConfirm ? 'Marque o checkbox acima para confirmar' : undefined}
         >
-          {!subclubReady
-            ? 'Selecione subclubes acima'
-            : effectiveReady
-              ? needsReimportConfirm
-                ? 'Confirme a reimportacao acima'
-                : 'Confirmar Importacao'
-              : 'Resolver Pendencias'}
+          {needsReimportConfirm
+            ? 'Confirme a reimportacao acima'
+            : 'Confirmar Importacao'}
         </button>
       </div>
     </div>

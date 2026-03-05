@@ -28,7 +28,7 @@ export default function ImportWizardPage() {
   const [platform, setPlatform] = useState<Platform>('suprema');
   const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
   const [pppokerSubclube, setPppokerSubclube] = useState('');
-  const [temSubclube, setTemSubclube] = useState<boolean | null>(null);
+  const [temSubclube, setTemSubclube] = useState<boolean | null>(false);
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -151,11 +151,6 @@ export default function ImportWizardPage() {
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');
-        // Auto-detect subclub toggle based on available subclubs
-        if (temSubclube === null) {
-          const subclubCount = (res.data.available_subclubs || []).length;
-          setTemSubclube(subclubCount > 1);
-        }
       } else {
         setError(res.error || 'Erro na pre-analise');
       }
@@ -168,12 +163,8 @@ export default function ImportWizardPage() {
 
   function handlePreviewNext() {
     if (!preview) return;
-    // When user chose "Não" for subclubes, skip pendencies (players become direct)
-    if (preview.readiness.ready || temSubclube === false) {
-      setStep('confirm');
-    } else {
-      setStep('pendencies');
-    }
+    // Subclubes disabled — always skip pendencies, go straight to confirm
+    setStep('confirm');
   }
 
   async function handleLinkAgentInline(agentName: string, subclubId: string) {
@@ -310,7 +301,7 @@ export default function ImportWizardPage() {
     setBulkNewAgentName('');
     setPlatform('suprema');
     setPppokerSubclube('');
-    setTemSubclube(null);
+    setTemSubclube(false);
     setFilenameMeta(null);
   }
 
