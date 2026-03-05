@@ -260,11 +260,11 @@ export default function UploadStep({
     }
   }
 
-  // Filter clubs by selected platform
-  const filteredClubs = platformSelected
+  // Filter clubs by selected platform — do NOT fallback to all clubs
+  // If no clubs match the platform, show "new club will be created"
+  const displayClubs = platformSelected
     ? clubs.filter((c) => c.metadata?.platform === platform)
     : clubs;
-  const displayClubs = filteredClubs.length > 0 ? filteredClubs : clubs;
 
   // Auto-select first club when filtered list changes
   useEffect(() => {
