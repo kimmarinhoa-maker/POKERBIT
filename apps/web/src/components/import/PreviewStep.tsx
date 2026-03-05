@@ -368,7 +368,7 @@ export default function PreviewStep({
       </div>
 
       {/* ─── Summary KPIs ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
           <div className="h-0.5 bg-blue-500" />
           <div className="p-3">
@@ -381,13 +381,6 @@ export default function PreviewStep({
           <div className="p-3">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Agentes</p>
             <p className="text-xl font-bold font-mono text-purple-400">{preview.summary.total_agents}</p>
-          </div>
-        </div>
-        <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
-          <div className="h-0.5 bg-amber-500" />
-          <div className="p-3">
-            <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Subclubes</p>
-            <p className="text-xl font-bold font-mono text-amber-400">{preview.summary.total_subclubs}</p>
           </div>
         </div>
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
