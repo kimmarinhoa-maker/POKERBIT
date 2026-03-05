@@ -110,9 +110,9 @@ export default function ImportWizardPage() {
     setLoading(true);
     setError('');
 
-    // Auto-resolve club if we have filename IDs but no club selected
+    // Use existing clubId, or try auto-create if we have filename metadata
     let resolvedClubId = clubId;
-    if (filenameMeta?.clubExternalId && !resolvedClubId) {
+    if (!resolvedClubId && filenameMeta?.clubExternalId) {
       try {
         const res = await findOrCreateClub({
           platform,
@@ -136,12 +136,18 @@ export default function ImportWizardPage() {
           }
         }
       } catch {
-        // Continue without auto-resolve
+        // Non-critical — user can select club manually
       }
     }
 
+    if (!resolvedClubId) {
+      setError('Selecione um clube antes de continuar.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await importPreview(file, resolvedClubId || undefined, weekStartOverride || undefined, platform);
+      const res = await importPreview(file, resolvedClubId, weekStartOverride || undefined, platform);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');

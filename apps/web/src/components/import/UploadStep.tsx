@@ -171,9 +171,6 @@ export default function UploadStep({
 
     // Extract IDs from filename
     const fMeta = parseFilename(f.name);
-    if (fMeta.weekStart && !weekStartOverride) {
-      setWeekStartOverride(fMeta.weekStart);
-    }
     onFilenameMeta?.(fMeta);
 
     let sheetNames: string[] = [];
@@ -204,7 +201,8 @@ export default function UploadStep({
     }
 
     setDetecting(false);
-  }, [setPlatform, autoSelectClub, autoSelectClubByExternalId, onFilenameMeta, weekStartOverride, setWeekStartOverride]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPlatform, autoSelectClub, autoSelectClubByExternalId]);
 
   function trySetFile(f: File | null) {
     setFileError(null);
