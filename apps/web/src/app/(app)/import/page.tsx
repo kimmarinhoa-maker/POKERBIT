@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents } from '@/lib/api';
+import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents, findOrCreateClub } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 
 import StepIndicator from '@/components/import/StepIndicator';
 import UploadStep from '@/components/import/UploadStep';
-import type { Platform } from '@/components/import/UploadStep';
+import type { Platform, FilenameMeta } from '@/components/import/UploadStep';
 import PreviewStep from '@/components/import/PreviewStep';
 import PendenciesStep from '@/components/import/PendenciesStep';
 import ConfirmStep from '@/components/import/ConfirmStep';
@@ -47,6 +47,9 @@ export default function ImportWizardPage() {
   const [bulkAgentName, setBulkAgentName] = useState('');
   const [bulkNewAgentName, setBulkNewAgentName] = useState('');
 
+  // Filename metadata (league_id, club_external_id, week)
+  const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
+
   // Confirm result
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
 
@@ -61,6 +64,7 @@ export default function ImportWizardPage() {
       const clubList = (clubRes.data || []).map((c: any) => ({
         id: c.id,
         name: c.name,
+        external_id: c.external_id || undefined,
         metadata: c.metadata || {},
       }));
       setClubs(clubList);
@@ -92,17 +96,52 @@ export default function ImportWizardPage() {
     }
   }
 
+  // ─── Auto-resolve club from filename IDs ──────────────────────────
+
+  async function handleFilenameMeta(meta: FilenameMeta) {
+    setFilenameMeta(meta);
+    // Auto-resolve will happen in handlePreview after platform is known
+  }
+
   // ─── Handlers ─────────────────────────────────────────────────────
 
   async function handlePreview() {
     if (!file) return;
     setLoading(true);
     setError('');
-    // NOTE: don't setPreview(null) here — keeps PreviewStep mounted during reprocess
-    // so the table stays open and user doesn't lose position
+
+    // Auto-resolve club if we have filename IDs but no club selected
+    let resolvedClubId = clubId;
+    if (filenameMeta?.clubExternalId && !resolvedClubId) {
+      try {
+        const res = await findOrCreateClub({
+          platform,
+          external_id: filenameMeta.clubExternalId,
+          league_id: filenameMeta.leagueId || undefined,
+        });
+        if (res.success && res.data) {
+          resolvedClubId = res.data.id;
+          setClubId(res.data.id);
+          const newClub = {
+            id: res.data.id,
+            name: res.data.name,
+            external_id: res.data.external_id,
+            metadata: { platform },
+          };
+          if (!clubs.some((c) => c.id === newClub.id)) {
+            setClubs((prev) => [...prev, newClub]);
+          }
+          if (res.data.created) {
+            toast(`Clube criado: ${newClub.name}`, 'success');
+          }
+        }
+      } catch {
+        // Continue without auto-resolve
+      }
+    }
 
     try {
-      const res = await importPreview(file, clubId || undefined, weekStartOverride || undefined, platform);
+      const res = await importPreview(file, resolvedClubId || undefined, weekStartOverride || undefined, platform);
       if (res.success && res.data) {
         setPreview(res.data);
         setStep('preview');
@@ -266,6 +305,7 @@ export default function ImportWizardPage() {
     setPlatform('suprema');
     setPppokerSubclube('');
     setTemSubclube(null);
+    setFilenameMeta(null);
   }
 
   // Reload subclubs (after creating a new one in PreviewStep)
@@ -299,6 +339,7 @@ export default function ImportWizardPage() {
           loading={loading}
           error={error}
           onPreview={handlePreview}
+          onFilenameMeta={handleFilenameMeta}
         />
       )}
 

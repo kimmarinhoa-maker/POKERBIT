@@ -42,6 +42,18 @@ export async function createOrganization(data: {
   return apiFetch('/organizations', { method: 'POST', body: JSON.stringify(data) });
 }
 
+export async function findOrCreateClub(data: {
+  platform: string;
+  external_id: string;
+  league_id?: string;
+  name?: string;
+}) {
+  return apiFetch('/organizations/find-or-create', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function updateOrganization(
   id: string,
   data: {

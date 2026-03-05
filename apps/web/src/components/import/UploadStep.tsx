@@ -13,10 +13,30 @@ const PLATFORM_LABELS: Record<string, string> = {
   clubgg: 'ClubGG',
 };
 
+export interface FilenameMeta {
+  leagueId: string | null;
+  clubExternalId: string | null;
+  weekStart: string | null; // YYYY-MM-DD
+  weekEnd: string | null;   // YYYY-MM-DD
+}
+
+/** Extract IDs from filename pattern: LEAGUE-CLUBID-YYYYMMDD-YYYYMMDD.xlsx */
+export function parseFilename(name: string): FilenameMeta {
+  const match = name.match(/^(\d+)-(\d+)-(\d{4})(\d{2})(\d{2})-(\d{4})(\d{2})(\d{2})/);
+  if (!match) return { leagueId: null, clubExternalId: null, weekStart: null, weekEnd: null };
+  return {
+    leagueId: match[1],
+    clubExternalId: match[2],
+    weekStart: `${match[3]}-${match[4]}-${match[5]}`,
+    weekEnd: `${match[6]}-${match[7]}-${match[8]}`,
+  };
+}
+
 interface DetectionResult {
   platform: string;
   confidence: 'high' | 'medium' | 'low';
   reason: string;
+  filenameMeta?: FilenameMeta;
 }
 
 interface UploadStepProps {
@@ -24,7 +44,7 @@ interface UploadStepProps {
   setFile: (f: File | null) => void;
   platform: Platform;
   setPlatform: (p: Platform) => void;
-  clubs: Array<{ id: string; name: string; metadata?: { platform?: string } }>;
+  clubs: Array<{ id: string; name: string; external_id?: string; metadata?: { platform?: string } }>;
   clubId: string;
   setClubId: (id: string) => void;
   weekStartOverride: string;
@@ -34,6 +54,7 @@ interface UploadStepProps {
   loading: boolean;
   error: string;
   onPreview: () => void;
+  onFilenameMeta?: (meta: FilenameMeta) => void;
 }
 
 const LABEL = 'text-[11px] uppercase tracking-[0.06em] text-dark-500 font-medium mb-2';
@@ -112,6 +133,7 @@ export default function UploadStep({
   loading,
   error,
   onPreview,
+  onFilenameMeta,
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -129,11 +151,30 @@ export default function UploadStep({
     }
   }, [clubs, clubId, setClubId]);
 
+  // Auto-select club by external_id (from filename) + platform
+  const autoSelectClubByExternalId = useCallback((extId: string, detectedPlatform: string) => {
+    const match = clubs.find(
+      (c) => c.external_id === extId && c.metadata?.platform === detectedPlatform,
+    );
+    if (match) {
+      setClubId(match.id);
+      return true;
+    }
+    return false;
+  }, [clubs, setClubId]);
+
   // Read sheet names and detect platform (client-side, no API call)
   const runDetection = useCallback(async (f: File) => {
     setDetecting(true);
     setDetection(null);
     setPlatformSelected(false);
+
+    // Extract IDs from filename
+    const fMeta = parseFilename(f.name);
+    if (fMeta.weekStart && !weekStartOverride) {
+      setWeekStartOverride(fMeta.weekStart);
+    }
+    onFilenameMeta?.(fMeta);
 
     let sheetNames: string[] = [];
     try {
@@ -145,17 +186,25 @@ export default function UploadStep({
     }
 
     const result = detectPlatformBySheets(sheetNames);
+    result.filenameMeta = fMeta;
     setDetection(result);
 
     // Auto-select on high confidence
     if (result.confidence === 'high' && (result.platform === 'suprema' || result.platform === 'pppoker')) {
       setPlatform(result.platform as Platform);
       setPlatformSelected(true);
-      autoSelectClub(result.platform);
+
+      // Try matching by external_id first, then fallback to platform
+      if (fMeta.clubExternalId) {
+        const found = autoSelectClubByExternalId(fMeta.clubExternalId, result.platform);
+        if (!found) autoSelectClub(result.platform);
+      } else {
+        autoSelectClub(result.platform);
+      }
     }
 
     setDetecting(false);
-  }, [setPlatform, autoSelectClub]);
+  }, [setPlatform, autoSelectClub, autoSelectClubByExternalId, onFilenameMeta, weekStartOverride, setWeekStartOverride]);
 
   function trySetFile(f: File | null) {
     setFileError(null);
@@ -209,7 +258,9 @@ export default function UploadStep({
     }
   }, [platformSelected, platform, displayClubs, clubId, setClubId]);
 
-  const canPreview = !!file && platformSelected && !!clubId;
+  // Allow preview without clubId if we have filename metadata (auto-create flow)
+  const hasAutoDetect = !!detection?.filenameMeta?.clubExternalId;
+  const canPreview = !!file && platformSelected && (!!clubId || hasAutoDetect);
 
   return (
     <div className="space-y-5">
@@ -309,9 +360,22 @@ export default function UploadStep({
                   Alterar
                 </button>
               </div>
+              {/* Filename meta info */}
+              {detection?.filenameMeta?.clubExternalId && (
+                <p className="text-dark-500 text-[10px] mt-1.5">
+                  Club ID: {detection.filenameMeta.clubExternalId}
+                  {detection.filenameMeta.leagueId && ` · Liga: ${detection.filenameMeta.leagueId}`}
+                </p>
+              )}
               {/* Club name or inline dropdown */}
               <div className="mt-2">
-                {displayClubs.length > 1 ? (
+                {displayClubs.length === 0 && detection?.filenameMeta?.clubExternalId ? (
+                  <div className="bg-blue-900/20 border border-blue-700/40 rounded-lg px-3 py-2">
+                    <p className="text-blue-300 text-xs font-medium">
+                      Novo clube sera criado: Clube {detection.filenameMeta.clubExternalId}
+                    </p>
+                  </div>
+                ) : displayClubs.length > 1 ? (
                   <select
                     value={clubId}
                     onChange={(e) => setClubId(e.target.value)}
@@ -322,11 +386,11 @@ export default function UploadStep({
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                ) : (
+                ) : displayClubs.length === 1 ? (
                   <p className="text-dark-400 text-xs">
                     Clube: <span className="text-dark-200 font-medium">{displayClubs[0]?.name || '—'}</span>
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           ) : detection ? (
