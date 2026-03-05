@@ -178,24 +178,36 @@ export default function UploadStep({
       setPlatform(result.platform as Platform);
       setPlatformSelected(true);
 
-      // Try matching by external_id first, then fallback to platform
+      // Try matching: league_id+external_id > platform+external_id > platform only
       const currentClubs = clubsRef.current;
       const currentClubId = clubIdRef.current;
+      let matched = false;
 
       if (fMeta.clubExternalId) {
-        const extMatch = currentClubs.find(
-          (c) => c.external_id === fMeta.clubExternalId && c.metadata?.platform === result.platform,
-        );
-        if (extMatch) {
-          setClubId(extMatch.id);
-        } else {
-          // Fallback: select first club matching platform
-          const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
-          if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
-            setClubId(platMatch[0].id);
+        // Best match: league_id + external_id
+        if (fMeta.leagueId) {
+          const leagueMatch = currentClubs.find(
+            (c: any) => c.league_id === fMeta.leagueId && c.external_id === fMeta.clubExternalId,
+          );
+          if (leagueMatch) {
+            setClubId(leagueMatch.id);
+            matched = true;
           }
         }
-      } else {
+        // Fallback: platform + external_id
+        if (!matched) {
+          const extMatch = currentClubs.find(
+            (c) => c.external_id === fMeta.clubExternalId && c.metadata?.platform === result.platform,
+          );
+          if (extMatch) {
+            setClubId(extMatch.id);
+            matched = true;
+          }
+        }
+      }
+
+      // Last fallback: first club matching platform
+      if (!matched) {
         const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
         if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
           setClubId(platMatch[0].id);

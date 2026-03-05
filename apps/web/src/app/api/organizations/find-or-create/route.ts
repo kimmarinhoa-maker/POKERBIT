@@ -32,7 +32,34 @@ export async function POST(req: NextRequest) {
 
         const { platform, external_id, league_id, name } = parsed.data;
 
-        // 1. Try to find existing club
+        // 1. Try to find existing club by (league_id + external_id) — most specific
+        if (league_id) {
+          const { data: byLeague } = await supabaseAdmin
+            .from('organizations')
+            .select('id, name, external_id, platform, league_id, metadata')
+            .eq('tenant_id', ctx.tenantId)
+            .eq('type', 'CLUB')
+            .eq('league_id', league_id)
+            .eq('external_id', external_id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (byLeague) {
+            // Backfill platform if missing
+            if (!byLeague.platform) {
+              await supabaseAdmin
+                .from('organizations')
+                .update({ platform, metadata: { ...(byLeague.metadata as Record<string, unknown> || {}), platform } })
+                .eq('id', byLeague.id);
+            }
+            return NextResponse.json({
+              success: true,
+              data: { ...byLeague, platform: byLeague.platform || platform, created: false },
+            });
+          }
+        }
+
+        // 2. Fallback: find by (platform + external_id)
         const { data: existing } = await supabaseAdmin
           .from('organizations')
           .select('id, name, external_id, platform, league_id, metadata')
@@ -44,7 +71,6 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
 
         if (existing) {
-          // Update league_id if provided and not set
           if (league_id && !existing.league_id) {
             await supabaseAdmin
               .from('organizations')
@@ -57,7 +83,7 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // 2. Also check metadata.platform (legacy backcompat)
+        // 3. Legacy: club with no platform set
         const { data: legacyMatch } = await supabaseAdmin
           .from('organizations')
           .select('id, name, external_id, platform, league_id, metadata')
@@ -69,7 +95,6 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
 
         if (legacyMatch) {
-          // Backfill platform + league_id
           await supabaseAdmin
             .from('organizations')
             .update({
