@@ -86,15 +86,18 @@ export default function ImportWizardPage() {
     loadClubs();
   }, [loadClubs]);
 
-  // Auto-derive platform when club changes
-  function handleClubChange(newClubId: string) {
+  // Auto-derive platform when club changes (useCallback to keep stable reference)
+  const handleClubChange = useCallback((newClubId: string) => {
     setClubId(newClubId);
-    const club = clubs.find((c) => c.id === newClubId);
-    const plat = club?.metadata?.platform;
-    if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
-      setPlatform(plat);
-    }
-  }
+    setClubs((prev) => {
+      const club = prev.find((c) => c.id === newClubId);
+      const plat = club?.metadata?.platform;
+      if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
+        setPlatform(plat);
+      }
+      return prev;
+    });
+  }, []);
 
   // ─── Auto-resolve club from filename IDs ──────────────────────────
 

@@ -143,11 +143,13 @@ export default function UploadStep({
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [platformSelected, setPlatformSelected] = useState(false);
 
-  // Use refs to avoid dependency loops (clubId/clubs changes → recreate callback → re-trigger useEffect)
+  // Use refs to avoid dependency loops (clubId/clubs/setClubId changes → recreate callback → re-trigger useEffect)
   const clubsRef = useRef(clubs);
   clubsRef.current = clubs;
   const clubIdRef = useRef(clubId);
   clubIdRef.current = clubId;
+  const setClubIdRef = useRef(setClubId);
+  setClubIdRef.current = setClubId;
 
   // Read sheet names and detect platform (client-side, no API call)
   // Stable callback — no deps on clubs/clubId (uses refs)
@@ -183,6 +185,8 @@ export default function UploadStep({
       const currentClubId = clubIdRef.current;
       let matched = false;
 
+      const stableSetClubId = setClubIdRef.current;
+
       if (fMeta.clubExternalId) {
         // Best match: league_id + external_id
         if (fMeta.leagueId) {
@@ -190,7 +194,7 @@ export default function UploadStep({
             (c: any) => c.league_id === fMeta.leagueId && c.external_id === fMeta.clubExternalId,
           );
           if (leagueMatch) {
-            setClubId(leagueMatch.id);
+            stableSetClubId(leagueMatch.id);
             matched = true;
           }
         }
@@ -200,7 +204,7 @@ export default function UploadStep({
             (c) => c.external_id === fMeta.clubExternalId && c.metadata?.platform === result.platform,
           );
           if (extMatch) {
-            setClubId(extMatch.id);
+            stableSetClubId(extMatch.id);
             matched = true;
           }
         }
@@ -210,14 +214,14 @@ export default function UploadStep({
       if (!matched) {
         const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
         if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
-          setClubId(platMatch[0].id);
+          stableSetClubId(platMatch[0].id);
         }
       }
     }
 
     setDetecting(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setPlatform, setClubId]);
+  }, [setPlatform]);
 
   function trySetFile(f: File | null) {
     setFileError(null);
