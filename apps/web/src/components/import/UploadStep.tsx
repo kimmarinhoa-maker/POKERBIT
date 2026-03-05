@@ -89,9 +89,12 @@ function detectPlatform(sheetNames: string[], _filename: string): DetectionResul
   }
 
   // PPPoker — known sheet names
+  // Typical sheets: Geral, Detalhado, Partidas, Transações, Demonstrativo, Detalhes do usuário, Retorno de taxa
   if (
     sheetNames.includes('Club Summary') ||
     sheetNames.includes('Geral') ||
+    sheetNames.includes('Detalhado') ||
+    sheetNames.includes('Retorno de taxa') ||
     lower.some((s) => s.includes('pppoker') || s.includes('club summary'))
   ) {
     return { platform: 'pppoker', confidence: 'high', reason: 'Aba do PPPoker detectada' };
@@ -140,26 +143,14 @@ export default function UploadStep({
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [platformSelected, setPlatformSelected] = useState(false);
 
-  const autoSelectClub = useCallback((detectedPlatform: string) => {
-    const matching = clubs.filter((c) => c.metadata?.platform === detectedPlatform);
-    if (matching.length > 0 && !matching.some((c) => c.id === clubId)) {
-      setClubId(matching[0].id);
-    }
-  }, [clubs, clubId, setClubId]);
-
-  // Auto-select club by external_id (from filename) + platform
-  const autoSelectClubByExternalId = useCallback((extId: string, detectedPlatform: string) => {
-    const match = clubs.find(
-      (c) => c.external_id === extId && c.metadata?.platform === detectedPlatform,
-    );
-    if (match) {
-      setClubId(match.id);
-      return true;
-    }
-    return false;
-  }, [clubs, setClubId]);
+  // Use refs to avoid dependency loops (clubId/clubs changes → recreate callback → re-trigger useEffect)
+  const clubsRef = useRef(clubs);
+  clubsRef.current = clubs;
+  const clubIdRef = useRef(clubId);
+  clubIdRef.current = clubId;
 
   // Read sheet names and detect platform (client-side, no API call)
+  // Stable callback — no deps on clubs/clubId (uses refs)
   const runDetection = useCallback(async (f: File) => {
     setDetecting(true);
     setDetection(null);
@@ -188,17 +179,33 @@ export default function UploadStep({
       setPlatformSelected(true);
 
       // Try matching by external_id first, then fallback to platform
+      const currentClubs = clubsRef.current;
+      const currentClubId = clubIdRef.current;
+
       if (fMeta.clubExternalId) {
-        const found = autoSelectClubByExternalId(fMeta.clubExternalId, result.platform);
-        if (!found) autoSelectClub(result.platform);
+        const extMatch = currentClubs.find(
+          (c) => c.external_id === fMeta.clubExternalId && c.metadata?.platform === result.platform,
+        );
+        if (extMatch) {
+          setClubId(extMatch.id);
+        } else {
+          // Fallback: select first club matching platform
+          const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
+          if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
+            setClubId(platMatch[0].id);
+          }
+        }
       } else {
-        autoSelectClub(result.platform);
+        const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
+        if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
+          setClubId(platMatch[0].id);
+        }
       }
     }
 
     setDetecting(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setPlatform, autoSelectClub, autoSelectClubByExternalId]);
+  }, [setPlatform, setClubId]);
 
   function trySetFile(f: File | null) {
     setFileError(null);
@@ -234,7 +241,11 @@ export default function UploadStep({
   function handlePlatformClick(p: Platform) {
     setPlatform(p);
     setPlatformSelected(true);
-    autoSelectClub(p);
+    // Auto-select first club matching platform
+    const matching = clubs.filter((c) => c.metadata?.platform === p);
+    if (matching.length > 0 && !matching.some((c) => c.id === clubId)) {
+      setClubId(matching[0].id);
+    }
   }
 
   // Filter clubs by selected platform
