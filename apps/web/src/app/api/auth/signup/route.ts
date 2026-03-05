@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     const { data: tenant, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .insert({ name: club_name.trim(), slug, status: 'pending' })
+      .insert({ name: club_name.trim(), slug, status: 'active' })
       .select('id, name, slug, has_subclubs, status')
       .single();
 
