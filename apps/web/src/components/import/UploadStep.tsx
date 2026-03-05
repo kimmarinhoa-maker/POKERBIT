@@ -72,39 +72,29 @@ function validateFile(f: File): string | null {
   return null;
 }
 
-// ─── Client-side platform detection by sheet names + filename ─────
-function detectPlatform(sheetNames: string[], filename: string): DetectionResult {
+// ─── Client-side platform detection by sheet names ───────────────
+// NOTE: filename pattern (LEAGUE-CLUBID-YYYYMMDD) is used by BOTH platforms,
+// so it cannot be used for platform detection — only for extracting IDs.
+function detectPlatform(sheetNames: string[], _filename: string): DetectionResult {
   const lower = sheetNames.map((s) => s.toLowerCase());
 
-  // Suprema — known sheet names (strongest signal)
-  const isSupremaSheets =
+  // Suprema — known sheet names
+  if (
     sheetNames.includes('Grand Union Member Statistics') ||
     sheetNames.includes('Manager Trade Record') ||
     sheetNames.includes('Grand Union Member Resume') ||
-    lower.some((s) => s.includes('grand union'));
-
-  if (isSupremaSheets) {
+    lower.some((s) => s.includes('grand union'))
+  ) {
     return { platform: 'suprema', confidence: 'high', reason: 'Aba da Suprema Poker detectada' };
   }
 
-  // Suprema — filename pattern: LEAGUE-CLUBID-YYYYMMDD-YYYYMMDD.xlsx
-  const filenameMatch = filename.match(/^\d+-\d+-\d{8}-\d{8}/);
-  if (filenameMatch) {
-    return { platform: 'suprema', confidence: 'high', reason: 'Formato de arquivo Suprema detectado' };
-  }
-
-  // PPPoker — specific sheet names (NOT "Geral" alone — too generic)
-  const isPPPokerSheets =
+  // PPPoker — known sheet names
+  if (
     sheetNames.includes('Club Summary') ||
-    lower.some((s) => s.includes('pppoker') || s.includes('club summary'));
-
-  if (isPPPokerSheets) {
+    sheetNames.includes('Geral') ||
+    lower.some((s) => s.includes('pppoker') || s.includes('club summary'))
+  ) {
     return { platform: 'pppoker', confidence: 'high', reason: 'Aba do PPPoker detectada' };
-  }
-
-  // "Geral" alone is ambiguous — medium confidence PPPoker
-  if (sheetNames.includes('Geral') && !isSupremaSheets) {
-    return { platform: 'pppoker', confidence: 'medium', reason: 'Aba "Geral" encontrada (pode ser PPPoker)' };
   }
 
   return { platform: 'unknown', confidence: 'low', reason: 'Nenhuma aba reconhecida' };
@@ -192,8 +182,8 @@ export default function UploadStep({
     result.filenameMeta = fMeta;
     setDetection(result);
 
-    // Auto-select on high/medium confidence
-    if ((result.confidence === 'high' || result.confidence === 'medium') && (result.platform === 'suprema' || result.platform === 'pppoker')) {
+    // Auto-select on high confidence
+    if (result.confidence === 'high' && (result.platform === 'suprema' || result.platform === 'pppoker')) {
       setPlatform(result.platform as Platform);
       setPlatformSelected(true);
 
