@@ -77,10 +77,19 @@ function OnboardingContent() {
   const auth = getStoredAuth();
   const existingTenant = auth?.tenants?.[0];
 
-  // If coming from sidebar (?new=1), start at club step; otherwise subclubes
+  // If coming from sidebar (?new=1), start at club step
+  // Otherwise (new signup), skip straight to import
   const initialStep: Step = isNewFromSidebar ? 'club' : 'subclubes';
 
   const [step, setStep] = useState<Step>(initialStep);
+
+  // New signup flow: skip onboarding entirely, go straight to /import
+  useEffect(() => {
+    if (!isNewFromSidebar && auth?.session?.access_token && existingTenant?.id) {
+      localStorage.setItem('poker_selected_tenant', existingTenant.id);
+      window.location.href = '/import';
+    }
+  }, [isNewFromSidebar, auth, existingTenant]);
 
   // ─── Club step state ──────────────────────────────────────────
   const [clubName, setClubName] = useState('');
