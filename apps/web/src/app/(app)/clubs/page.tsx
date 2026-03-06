@@ -251,7 +251,7 @@ export default function MeusClubesPage() {
                           Configurar
                         </Link>
                         <Link
-                          href={`/clubs/${club.clubId}`}
+                          href={club.subclubes.length > 0 ? `/clubs/${club.clubId}` : `/s/${club.latestSettlementId}`}
                           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 transition-all flex-1 justify-center"
                         >
                           Entrar
