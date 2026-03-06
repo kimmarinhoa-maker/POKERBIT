@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   TrendingUp,
   Trophy,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
@@ -57,6 +58,12 @@ const sections: TabSection[] = [
     items: [
       { key: 'dre', icon: TrendingUp, label: 'DRE', permKey: 'tab:dre' },
       { key: 'liga', icon: Trophy, label: 'Liga', permKey: 'tab:liga' },
+    ],
+  },
+  {
+    label: 'CLUBE',
+    items: [
+      { key: 'config', icon: Settings, label: 'Config', permKey: 'tab:resumo' },
     ],
   },
 ];

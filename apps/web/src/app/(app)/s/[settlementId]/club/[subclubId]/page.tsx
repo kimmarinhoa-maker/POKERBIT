@@ -34,6 +34,7 @@ const Caixa = dynamic(() => import('@/components/settlement/Caixa'), { loading: 
 const Rakeback = dynamic(() => import('@/components/settlement/Rakeback'), { loading: () => <TabSkeleton />, ssr: false });
 const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'), { loading: () => <TabSkeleton />, ssr: false });
 const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
+const ConfigTab = dynamic(() => import('@/components/settlement/ConfigTab'), { loading: () => <TabSkeleton />, ssr: false });
 
 export default function SubclubPanelPage() {
   const params = useParams();
@@ -351,6 +352,8 @@ export default function SubclubPanelPage() {
             />
           </TabErrorBoundary>
         );
+      case 'config':
+        return <TabErrorBoundary tabName="Config"><ConfigTab clubId={settlement.club_id} /></TabErrorBoundary>;
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -9,7 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import ClubLogo from '@/components/ClubLogo';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
-import { Building2, Settings, ArrowRight } from 'lucide-react';
+import { Building2, ArrowRight } from 'lucide-react';
 
 const PLATFORM_LABELS: Record<string, string> = {
   suprema: 'Suprema Poker',
@@ -241,18 +241,11 @@ export default function MeusClubesPage() {
                         </span>
                       </div>
 
-                      {/* Actions: Configurar + Entrar */}
-                      <div className="flex gap-2 pt-3 border-t border-dark-700/50">
+                      {/* Action: Entrar → direto pro fechamento */}
+                      <div className="pt-3 border-t border-dark-700/50">
                         <Link
-                          href={`/clubs/${club.clubId}/config`}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-dark-800 text-dark-300 border border-dark-700 hover:border-dark-500 hover:text-white transition-all"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                          Configurar
-                        </Link>
-                        <Link
-                          href={club.subclubes.length > 0 ? `/clubs/${club.clubId}` : `/s/${club.latestSettlementId}`}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 transition-all flex-1 justify-center"
+                          href={`/s/${club.latestSettlementId}`}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 transition-all w-full"
                         >
                           Entrar
                           <ArrowRight className="w-3.5 h-3.5" />
