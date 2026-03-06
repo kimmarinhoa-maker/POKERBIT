@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, FileSpreadsheet, Settings } from 'lucide-react';
+import { Upload, FileSpreadsheet, Settings, CheckCircle2 } from 'lucide-react';
 import Spinner from '@/components/Spinner';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -96,6 +96,8 @@ export default function UploadStep({
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [detected, setDetected] = useState(false);
+  const [platformDetected, setPlatformDetected] = useState(false);
+  const [showPlatformOverride, setShowPlatformOverride] = useState(false);
   const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
 
   // Detect platform when file is set
@@ -117,7 +119,11 @@ export default function UploadStep({
     const plat = detectPlatform(sheetNames);
     if (plat) {
       setPlatform(plat);
+      setPlatformDetected(true);
+    } else {
+      setPlatformDetected(false);
     }
+    setShowPlatformOverride(false);
     setDetected(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setPlatform]);
@@ -129,6 +135,8 @@ export default function UploadStep({
   function trySetFile(f: File | null) {
     setFileError(null);
     setDetected(false);
+    setPlatformDetected(false);
+    setShowPlatformOverride(false);
     setFilenameMeta(null);
     if (!f) { setFile(null); return; }
     const err = validateFile(f);
@@ -197,25 +205,46 @@ export default function UploadStep({
       {/* ── Platform + Club Name + IDs ── */}
       {file && detected && (
         <div className="animate-field-in space-y-4">
-          {/* Platform */}
+          {/* Platform — auto-detected */}
           <div>
             <label className={LABEL}>Plataforma</label>
-            <div className="flex gap-2">
-              {(['suprema', 'pppoker'] as Platform[]).map((p) => (
+            {!showPlatformOverride ? (
+              <div className="flex items-center gap-3">
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border ${
+                  platformDetected
+                    ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                    : 'bg-amber-900/20 border-amber-600/50 text-amber-400'
+                }`}>
+                  {platformDetected && <CheckCircle2 className="w-4 h-4" />}
+                  {PLATFORM_LABELS[platform]}
+                  {!platformDetected && <span className="text-[10px] opacity-70 ml-1">(não detectado)</span>}
+                </div>
                 <button
-                  key={p}
                   type="button"
-                  onClick={() => setPlatform(p)}
-                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                    platform === p
-                      ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                      : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
-                  }`}
+                  onClick={() => setShowPlatformOverride(true)}
+                  className="text-dark-500 text-xs hover:text-dark-300 transition-colors"
                 >
-                  {PLATFORM_LABELS[p]}
+                  Corrigir
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                {(['suprema', 'pppoker'] as Platform[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => { setPlatform(p); setShowPlatformOverride(false); }}
+                    className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
+                      platform === p
+                        ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                        : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
+                    }`}
+                  >
+                    {PLATFORM_LABELS[p]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Club Name */}
