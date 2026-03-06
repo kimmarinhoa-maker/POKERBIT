@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 
         const preview = await importPreviewService.preview({
           tenantId: ctx.tenantId,
+          clubId,
           fileBuffer: file.buffer,
           fileName: file.originalname,
           weekStartOverride,

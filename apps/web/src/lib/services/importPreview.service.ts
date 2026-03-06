@@ -129,11 +129,12 @@ class ImportPreviewService {
     tenantId: string;
     fileBuffer: Buffer;
     fileName: string;
+    clubId?: string; // Club to check for existing settlement
     weekStartOverride?: string; // Se o usuário forçar uma semana
     platform?: string; // 'suprema' | 'pppoker' | 'clubgg' (default: suprema)
     pppokerSubclube?: string; // Subclube destino para PPPoker
   }): Promise<ImportPreviewResponse> {
-    const { tenantId, fileBuffer, fileName, weekStartOverride, platform = 'suprema', pppokerSubclube } = params;
+    const { tenantId, clubId, fileBuffer, fileName, weekStartOverride, platform = 'suprema', pppokerSubclube } = params;
 
     // 1) Ler o XLSX
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -156,15 +157,23 @@ class ImportPreviewService {
     // 2) Detectar semana automaticamente
     const week = detectWeekStart(workbook, fileName, weekStartOverride);
 
-    // 2.5) Check for existing settlement on same week
+    // 2.5) Check for existing settlement on same week AND same club
     let existingSettlement: ImportPreviewResponse['existing_settlement'] = undefined;
     let existingAgentNamesSet: Set<string> = new Set();
-    const { data: existingRows } = await supabaseAdmin
+    let existingQuery = supabaseAdmin
       .from('settlements')
       .select('id, version, status')
       .eq('tenant_id', tenantId)
-      .eq('week_start', week.week_start)
-      .eq('platform', platform)
+      .eq('week_start', week.week_start);
+
+    // Filter by club_id if provided (most specific), otherwise by platform
+    if (clubId) {
+      existingQuery = existingQuery.eq('club_id', clubId);
+    } else {
+      existingQuery = existingQuery.eq('platform', platform);
+    }
+
+    const { data: existingRows } = await existingQuery
       .order('version', { ascending: false })
       .limit(1);
 
