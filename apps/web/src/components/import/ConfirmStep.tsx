@@ -79,10 +79,6 @@ export default function ConfirmStep({ preview, loading, error, onConfirm, onBack
             <p className="text-white font-medium">{preview.summary.total_agents}</p>
           </div>
           <div>
-            <p className="text-dark-500">Subclubes</p>
-            <p className="text-white font-medium">{preview.summary.total_subclubs}</p>
-          </div>
-          <div>
             <p className="text-dark-500">Rake Total</p>
             <p className="text-blue-400 font-medium">{formatBRL(preview.summary.total_rake_brl)}</p>
           </div>
