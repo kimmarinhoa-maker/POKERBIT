@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents, findOrCreateClub } from '@/lib/api';
+import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents, findOrCreateClub, createOrganization, createPrefixRule } from '@/lib/api';
 // NOTE: subclubes feature is disabled for now (noSubclubs=true hardcoded in handleConfirm)
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
@@ -11,7 +11,7 @@ import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
 import StepIndicator from '@/components/import/StepIndicator';
 import UploadStep from '@/components/import/UploadStep';
 import type { Platform, FilenameMeta } from '@/components/import/UploadStep';
-import PreviewStep from '@/components/import/PreviewStep';
+import PreviewStep, { type SubclubeEntry } from '@/components/import/PreviewStep';
 import PendenciesStep from '@/components/import/PendenciesStep';
 import ConfirmStep from '@/components/import/ConfirmStep';
 import SuccessStep, { ConfirmResult } from '@/components/import/SuccessStep';
@@ -48,6 +48,11 @@ export default function ImportWizardPage() {
   // Filename metadata (league_id, club_external_id, week)
   const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
   const [clubFound, setClubFound] = useState(false);
+
+  // New club tracking
+  const [isNewClub, setIsNewClub] = useState(false);
+  const [newSubclubes, setNewSubclubes] = useState<SubclubeEntry[]>([]);
+  const [existingSubclubCount, setExistingSubclubCount] = useState<number | undefined>(undefined);
 
   // Confirm result
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
@@ -103,8 +108,17 @@ export default function ImportWizardPage() {
       if (res.success && res.data) {
         resolvedClubId = res.data.id;
         setClubId(res.data.id);
+        setIsNewClub(!!res.data.created);
         if (res.data.created) {
           toast(`Clube criado: ${res.data.name}`, 'success');
+          setExistingSubclubCount(undefined);
+        } else {
+          // Count existing subclubes for this club
+          const orgsRes = await listOrganizations('SUBCLUB');
+          if (orgsRes.success && orgsRes.data) {
+            const count = orgsRes.data.filter((o: any) => o.parent_id === res.data.id).length;
+            setExistingSubclubCount(count);
+          }
         }
       } else {
         setError(res.error || 'Erro ao resolver clube');
@@ -246,6 +260,33 @@ export default function ImportWizardPage() {
       const res = await importConfirm(file, clubId, weekStart, platform, undefined, true);
       if (res.success && res.data) {
         setConfirmResult(res.data);
+
+        // Create subclubes + prefix rules for new clubs
+        if (isNewClub && newSubclubes.length > 0) {
+          for (const sub of newSubclubes) {
+            try {
+              const orgRes = await createOrganization({
+                name: sub.nome,
+                parent_id: clubId,
+                type: 'SUBCLUB',
+                external_id: sub.sigla,
+              });
+              if (orgRes.success && orgRes.data?.id) {
+                await createPrefixRule({
+                  prefix: sub.sigla,
+                  subclub_id: orgRes.data.id,
+                  priority: 0,
+                });
+              }
+            } catch {
+              toast(`Erro ao criar subclube ${sub.sigla}`, 'error');
+            }
+          }
+          if (newSubclubes.length > 0) {
+            toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
+          }
+        }
+
         // Auto-sync agents (creates AGENT organizations from metrics)
         if (res.data.settlement_id) {
           syncSettlementAgents(res.data.settlement_id).catch(() => {
@@ -282,6 +323,9 @@ export default function ImportWizardPage() {
     setClubName('');
     setClubFound(false);
     setFilenameMeta(null);
+    setIsNewClub(false);
+    setNewSubclubes([]);
+    setExistingSubclubCount(undefined);
   }
 
   // Reload clubs (after creating a new subclub in PreviewStep)
@@ -330,6 +374,12 @@ export default function ImportWizardPage() {
           platform={platform}
           clubId={clubId}
           onSubclubCreated={reloadOrgs}
+          isNewClub={isNewClub}
+          clubName={clubName}
+          onClubNameChange={setClubName}
+          newSubclubes={newSubclubes}
+          onNewSubclubesChange={setNewSubclubes}
+          existingSubclubCount={existingSubclubCount}
         />
       )}
 
