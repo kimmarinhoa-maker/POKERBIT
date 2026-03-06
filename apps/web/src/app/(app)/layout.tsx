@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -22,9 +22,12 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
+import { useSidebarClubs } from '@/lib/useSidebarClubs';
 
 // ─── Sidebar structure ──────────────────────────────────────────────
 
@@ -76,12 +79,35 @@ const navSections: NavSection[] = [
   },
 ];
 
+const PLATFORM_LABELS: Record<string, string> = {
+  suprema: 'Suprema Poker',
+  pppoker: 'PPPoker',
+  clubgg: 'ClubGG',
+  outro: 'Outros',
+};
+
+const PLATFORM_COLORS: Record<string, string> = {
+  suprema: 'bg-amber-500',
+  pppoker: 'bg-green-500',
+  clubgg: 'bg-blue-500',
+  outro: 'bg-dark-500',
+};
+
+const PLATFORM_ICON_BG: Record<string, string> = {
+  suprema: 'bg-amber-900/30 text-amber-400',
+  pppoker: 'bg-green-900/30 text-green-400',
+  clubgg: 'bg-blue-900/30 text-blue-400',
+  outro: 'bg-dark-800 text-dark-400',
+};
+
 // ─── Active route check ─────────────────────────────────────────────
 
-function isRouteActive(pathname: string, href: string): boolean {
+function isRouteActive(pathname: string, href: string, hasClubLinks: boolean): boolean {
   if (href === '#') return false;
   if (href === '/dashboard') return pathname === '/dashboard';
-  if (href === '/s') return pathname.startsWith('/s');
+  // When dynamic club links exist, only highlight "Fechamentos" on the exact /s page (redirect)
+  // When no club links, highlight for all /s/* pages (legacy behavior)
+  if (href === '/s') return hasClubLinks ? pathname === '/s' : pathname.startsWith('/s');
   if (href === '/import') return pathname === '/import';
   if (href === '/config') return pathname === '/config' || (pathname.startsWith('/config/') && pathname !== '/config/equipe');
   if (href === '/config/equipe') return pathname === '/config/equipe';
@@ -93,7 +119,12 @@ function isRouteActive(pathname: string, href: string): boolean {
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, role, tenantName, isAdmin, hasSubclubs, hasPermission, logout, loading } = useAuth();
+  const { groups: clubGroups, loading: clubsLoading, reload: reloadClubs, settlementClubMap } = useSidebarClubs(!loading && !!user);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [clubsExpanded, setClubsExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('sidebar-clubs-expanded') !== 'false';
+  });
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebar-collapsed') === 'true';
@@ -104,9 +135,21 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     localStorage.setItem('sidebar-collapsed', String(collapsed));
   }, [collapsed]);
 
-  // Close sidebar on route change (mobile)
+  // Persist clubs expanded state
+  useEffect(() => {
+    localStorage.setItem('sidebar-clubs-expanded', String(clubsExpanded));
+  }, [clubsExpanded]);
+
+  // Close sidebar on route change (mobile) + reload clubs when leaving /import
+  const prevPathRef = useRef(pathname);
   useEffect(() => {
     setSidebarOpen(false);
+    // Reload sidebar clubs when navigating away from import (new settlement may have been created)
+    if (prevPathRef.current === '/import' && pathname !== '/import') {
+      reloadClubs();
+    }
+    prevPathRef.current = pathname;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   if (loading || !user) {
@@ -202,7 +245,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                         );
                       }
 
-                      const isActive = isRouteActive(pathname, item.href);
+                      const isActive = isRouteActive(pathname, item.href, clubGroups.length > 0);
                       return (
                         <Link
                           key={item.href}
@@ -225,6 +268,66 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
               );
             })}
+
+          {/* ── Dynamic Clubs Section ── */}
+          {!clubsLoading && clubGroups.length > 0 && (() => {
+            // Extract current club_id from pathname (works across weeks of same club)
+            const pathSettlementId = pathname.startsWith('/s/') ? pathname.split('/')[2] : '';
+            const activeClubId = pathSettlementId ? settlementClubMap.get(pathSettlementId) : undefined;
+            return (
+            <div>
+              {/* Toggle button — hidden on collapsed desktop (clubs always show as icons) */}
+              <button
+                onClick={() => setClubsExpanded((v) => !v)}
+                className={`flex items-center w-full px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold hover:text-dark-300 transition-colors ${collapsed ? 'lg:hidden' : ''}`}
+              >
+                {clubsExpanded ? <ChevronDown className="w-3 h-3 mr-1" /> : <ChevronRight className="w-3 h-3 mr-1" />}
+                CLUBES
+              </button>
+              {/* Show clubs: always when collapsed (icon-only), otherwise respect expanded state */}
+              {(clubsExpanded || collapsed) && (
+                <div className="space-y-3">
+                  {clubGroups.map((group) => (
+                    <div key={group.platform}>
+                      <div className={`flex items-center gap-2 px-3 mb-1 ${collapsed ? 'lg:hidden' : ''}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${PLATFORM_COLORS[group.platform] || PLATFORM_COLORS.outro}`} />
+                        <span className="text-[9px] text-dark-500 uppercase tracking-wider font-medium">
+                          {PLATFORM_LABELS[group.platform] || group.platform}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {group.clubs.map((club) => {
+                          const clubHref = `/s/${club.settlementId}`;
+                          const isActive = activeClubId === club.clubId;
+                          const iconBg = PLATFORM_ICON_BG[club.platform] || PLATFORM_ICON_BG.outro;
+                          return (
+                            <Link
+                              key={club.clubId}
+                              href={clubHref}
+                              title={collapsed ? club.clubName : undefined}
+                              className={`flex items-center gap-2.5 rounded-lg transition-colors text-sm font-medium ${
+                                collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-1.5' : 'px-3 py-1.5'
+                              } ${
+                                isActive
+                                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
+                                  : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${iconBg}`}>
+                                <Building2 className="w-3 h-3" />
+                              </div>
+                              <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>{club.clubName}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            );
+          })()}
         </nav>
 
         {/* Collapse toggle (desktop only) */}
