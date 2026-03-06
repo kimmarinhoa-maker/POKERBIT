@@ -349,8 +349,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                       {/* Clubs under this platform */}
                       {platformClubs.map((club) => {
                         const clubActive = isClubActive(club);
+                        // Club with subclubes → overview; without → direct panel
                         const clubHref = club.lastSettlementId
-                          ? `/s/${club.lastSettlementId}/club/${encodeURIComponent(club.name)}`
+                          ? club.subclubes.length > 0
+                            ? `/s/${club.lastSettlementId}`
+                            : `/s/${club.lastSettlementId}/club/${encodeURIComponent(club.name)}`
                           : `/clubs/${club.id}`;
 
                         return (

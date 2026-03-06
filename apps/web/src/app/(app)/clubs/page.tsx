@@ -234,7 +234,10 @@ export default function MeusClubesPage() {
                       {/* Action: Entrar → direto pro fechamento */}
                       <div className="pt-3 border-t border-dark-700/50">
                         <Link
-                          href={`/s/${club.latestSettlementId}/club/${encodeURIComponent(club.clubName)}`}
+                          href={club.subclubes.length > 0
+                            ? `/s/${club.latestSettlementId}`
+                            : `/s/${club.latestSettlementId}/club/${encodeURIComponent(club.clubName)}`
+                          }
                           className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 transition-all w-full"
                         >
                           Entrar
