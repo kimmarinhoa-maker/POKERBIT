@@ -345,72 +345,71 @@ export default function SettlementOverviewPage() {
                     </div>
                   )}
 
-                  {/* Clubs within this platform */}
-                  {platClubs.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
-                    <div key={cId} className="mb-6">
-                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        {hasMultipleClubs ? label : 'Subclubes'}
-                        {externalId && <span className="text-xs font-mono font-normal text-dark-500">#{externalId}</span>}
-                        <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {grpSubclubs.map((sc: any) => (
-                          <Link
-                            key={`${cId}-${sc.id || sc.name}`}
-                            href={`/s/${grpSettId}/club/${sc.name}`}
-                            className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
-                          >
-                            <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+                  {/* All clubs within this platform in a single grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {platClubs.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) =>
+                      grpSubclubs.map((sc: any) => (
+                        <Link
+                          key={`${cId}-${sc.id || sc.name}`}
+                          href={`/s/${grpSettId}/club/${sc.name}`}
+                          className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
+                        >
+                          <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
-                            <div className="p-5">
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                  <ClubLogo
-                                    logoUrl={logoMap[normalizeKey(sc.name)]}
-                                    name={sc.name}
-                                    size="md"
-                                    className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
-                                  />
-                                  <div>
-                                    <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
-                                      {sc.name}
-                                    </h4>
-                                    <p className="text-xs text-dark-400">
-                                      {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                          <div className="p-5">
+                            {/* Club label + subclub name */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <ClubLogo
+                                  logoUrl={logoMap[normalizeKey(sc.name)]}
+                                  name={sc.name}
+                                  size="md"
+                                  className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
+                                />
+                                <div>
+                                  {hasMultipleClubs && (
+                                    <p className="text-[10px] text-dark-500 uppercase tracking-wider mb-0.5">
+                                      {label} {externalId && <span className="font-mono">#{externalId}</span>}
                                     </p>
-                                  </div>
+                                  )}
+                                  <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
+                                    {sc.name}
+                                  </h4>
+                                  <p className="text-xs text-dark-400">
+                                    {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                                  </p>
                                 </div>
-                                <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
                               </div>
+                              <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
+                            </div>
 
-                              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
-                                <div>
-                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
-                                  <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
-                                  <p
-                                    className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                                  >
-                                    {formatBRL(sc.totals.resultado)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
-                                  <p
-                                    className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                                  >
-                                    {formatBRL(sc.acertoLiga)}
-                                  </p>
-                                </div>
+                            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
+                              <div>
+                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
+                                <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
+                                <p
+                                  className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                                >
+                                  {formatBRL(sc.totals.resultado)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
+                                <p
+                                  className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                                >
+                                  {formatBRL(sc.acertoLiga)}
+                                </p>
                               </div>
                             </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                          </div>
+                        </Link>
+                      )),
+                    )}
+                  </div>
                 </div>
               );
             })}
