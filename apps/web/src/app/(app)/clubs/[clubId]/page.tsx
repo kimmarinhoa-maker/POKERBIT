@@ -21,11 +21,12 @@ import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 
 import SubNavTabs from '@/components/settlement/SubNavTabs';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
+import WeekSelector from '@/components/WeekSelector';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import TabSkeleton from '@/components/ui/TabSkeleton';
 import TabErrorBoundary from '@/components/ui/TabErrorBoundary';
 import EmptyState from '@/components/ui/EmptyState';
-import { ArrowLeft, AlertCircle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 
 // ─── Static tab ─────────────────────────────────────────────────────
 import ResumoClube from '@/components/settlement/ResumoClube';
@@ -71,7 +72,6 @@ export default function ClubHubPage() {
   // Settlements for this club (week selector)
   const [settlements, setSettlements] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
-  const [showWeekDropdown, setShowWeekDropdown] = useState(false);
 
   // Subclub selector
   const [activeSubclub, setActiveSubclub] = useState<string>(requestedSubclub);
@@ -245,13 +245,9 @@ export default function ClubHubPage() {
     router.push(`/clubs/${clubId}?${p.toString()}`, { scroll: false });
   }
 
-  function handleWeekChange(weekStart: string) {
-    const target = settlements.find((s) => s.week_start === weekStart);
-    if (target) {
-      setSettlementId(target.id);
-      setSelectedWeek(weekStart);
-    }
-    setShowWeekDropdown(false);
+  function handleWeekFound(newSettlementId: string, weekStart: string) {
+    setSettlementId(newSettlementId);
+    setSelectedWeek(weekStart);
   }
 
   // ─── Tab content ───────────────────────────────────────────────────
@@ -401,59 +397,23 @@ export default function ClubHubPage() {
             <Link href="/clubs" className="text-dark-400 hover:text-white transition-colors" title="Voltar">
               <ArrowLeft className="w-4 h-4" />
             </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-white">{clubName}</h1>
-                {platform && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-dark-700/30 text-dark-400 border-dark-600/30">
-                    {PLATFORM_LABELS[platform] || platform}
-                  </span>
-                )}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                  status === 'FINAL'
-                    ? 'bg-green-500/10 text-green-400 border-green-500/30'
-                    : status === 'DRAFT'
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      : 'bg-red-500/10 text-red-400 border-red-500/30'
-                }`}>
-                  {status}
-                </span>
-              </div>
-              {/* Week dropdown */}
-              <div className="relative mt-0.5">
-                <button
-                  onClick={() => setShowWeekDropdown(!showWeekDropdown)}
-                  className="text-dark-400 text-xs hover:text-dark-200 flex items-center gap-1 transition-colors"
-                >
-                  Semana {selectedWeek}
-                  {settlements.length > 1 && <ChevronDown className="w-3 h-3" />}
-                </button>
-                {showWeekDropdown && settlements.length > 1 && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowWeekDropdown(false)} />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-dark-800 border border-dark-600 rounded-lg shadow-xl py-1 min-w-[180px] max-h-60 overflow-y-auto">
-                      {settlements.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => handleWeekChange(s.week_start)}
-                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                            s.week_start === selectedWeek
-                              ? 'text-poker-400 bg-poker-600/10'
-                              : 'text-dark-300 hover:bg-dark-700'
-                          }`}
-                        >
-                          {s.week_start}
-                          <span className={`ml-2 text-[10px] ${s.status === 'FINAL' ? 'text-green-400' : 'text-amber-400'}`}>
-                            {s.status}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            <h1 className="text-lg font-bold text-white">{clubName}</h1>
+            {platform && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-dark-700/30 text-dark-400 border-dark-600/30">
+                {PLATFORM_LABELS[platform] || platform}
+              </span>
+            )}
           </div>
+
+          {/* Week selector with date pickers */}
+          <WeekSelector
+            currentSettlementId={settlementId}
+            weekStart={data.settlement.week_start}
+            weekEnd={weekEnd || data.settlement.week_start}
+            status={status}
+            clubId={clubId}
+            onWeekFound={handleWeekFound}
+          />
 
           {/* Subclub chips */}
           {subclubs.length > 1 && (

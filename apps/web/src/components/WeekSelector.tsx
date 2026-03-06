@@ -10,7 +10,10 @@ interface WeekSelectorProps {
   weekStart: string;
   weekEnd: string;
   status: string;
+  clubId?: string;
   onNotFound?: () => void;
+  /** When provided, calls this instead of hard-navigating via window.location */
+  onWeekFound?: (settlementId: string, weekStart: string) => void;
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -24,7 +27,9 @@ export default function WeekSelector({
   weekStart,
   weekEnd,
   status,
+  clubId,
   onNotFound,
+  onWeekFound,
 }: WeekSelectorProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,13 +56,18 @@ export default function WeekSelector({
     setSearching(true);
     setNotFound(false);
     try {
-      const res = await listSettlements(undefined, start, end || undefined);
+      const res = await listSettlements(clubId || undefined, start, end || undefined);
       if (res.success && res.data && res.data.length > 0) {
         const target = res.data[0];
-        const suffix = pathname.replace(`/s/${currentSettlementId}`, '');
-        const qs = searchParams.toString();
-        const newUrl = `/s/${target.id}${suffix}${qs ? `?${qs}` : ''}`;
-        window.location.href = newUrl;
+        if (onWeekFound) {
+          onWeekFound(target.id, target.week_start);
+          setSearching(false);
+        } else {
+          const suffix = pathname.replace(`/s/${currentSettlementId}`, '');
+          const qs = searchParams.toString();
+          const newUrl = `/s/${target.id}${suffix}${qs ? `?${qs}` : ''}`;
+          window.location.href = newUrl;
+        }
       } else {
         setNotFound(true);
         setSearching(false);
