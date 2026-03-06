@@ -388,11 +388,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                             {club.subclubes.length > 0 && club.lastSettlementId && (
                               <div className="ml-6 space-y-0.5 mt-0.5">
                                 {club.subclubes.map((sub) => {
-                                  const subActive = isClubActive(club);
+                                  const subActive = pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`;
                                   return (
                                     <Link
                                       key={sub.id}
-                                      href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(club.name)}`}
+                                      href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
                                       className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
                                         subActive
                                           ? 'text-amber-400 bg-amber-500/5'
