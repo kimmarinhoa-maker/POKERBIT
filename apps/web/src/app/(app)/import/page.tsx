@@ -185,6 +185,22 @@ export default function ImportWizardPage() {
     await handlePreview();
   }
 
+  async function handleLinkPlayerDirect(playerId: string, subclubId: string) {
+    if (!subclubId) return;
+    try {
+      const res = await linkPlayer(playerId, subclubId);
+      if (res.success) {
+        setPlayerLinks((prev) => ({ ...prev, [playerId]: subclubId }));
+        const subclub = preview?.available_subclubs.find((s) => s.id === subclubId);
+        toast(`Jogador ${playerId} \u2192 ${subclub?.name || '?'}`, 'success');
+      } else {
+        toast(res.error || 'Erro desconhecido', 'error');
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro de conexao', 'error');
+    }
+  }
+
   async function handleLinkAgentInline(agentName: string, subclubId: string) {
     if (!subclubId) return;
     const key = `agent:${agentName}`;
@@ -371,6 +387,7 @@ export default function ImportWizardPage() {
           onEditLinks={() => setStep('pendencies')}
           availableSubclubs={preview.available_subclubs}
           onLinkAgent={handleLinkAgentInline}
+          onLinkPlayerDirect={handleLinkPlayerDirect}
           onReprocess={handlePreview}
           platform={platform}
           clubId={clubId}

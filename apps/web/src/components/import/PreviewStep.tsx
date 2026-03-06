@@ -16,6 +16,7 @@ interface PreviewStepProps {
   onEditLinks?: () => void;
   availableSubclubs?: Array<{ id: string; name: string }>;
   onLinkAgent?: (agentName: string, subclubId: string) => Promise<void>;
+  onLinkPlayerDirect?: (playerId: string, subclubId: string) => Promise<void>;
   onReprocess?: () => void;
   platform: Platform;
   clubId: string;
@@ -57,7 +58,7 @@ type SortDir = 'asc' | 'desc';
 const PAGE_SIZE = 50;
 
 export default function PreviewStep({
-  preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess,
+  preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onLinkPlayerDirect, onReprocess,
   platform, clubId, onSubclubCreated,
   isNewClub, clubName, onClubNameChange, newSubclubes, onNewSubclubesChange, existingSubclubCount,
   onCreateAndLinkSubclubes,
@@ -155,7 +156,20 @@ export default function PreviewStep({
     }
   }
 
-  const canEditLinks = !!onLinkAgent && !!availableSubclubs && availableSubclubs.length > 0;
+  async function handleInlinePlayerLink(playerId: string, subclubId: string) {
+    if (!onLinkPlayerDirect || !subclubId) return;
+    setLinkingSaving(true);
+    try {
+      await onLinkPlayerDirect(playerId, subclubId);
+      setEditingAgent(null);
+      onReprocess?.();
+    } finally {
+      setLinkingSaving(false);
+    }
+  }
+
+  const canEditLinks = !!availableSubclubs && availableSubclubs.length > 0 && (!!onLinkAgent || !!onLinkPlayerDirect);
+  const hasRealAgent = (aname: string | undefined | null) => !!aname && aname.toLowerCase() !== 'none';
 
   // Existing settlement
   const existing = preview.existing_settlement;
@@ -757,14 +771,21 @@ export default function PreviewStep({
                           <td className="px-3 py-2 text-dark-400 font-mono text-[10px]">{p.id}</td>
                           <td className="px-3 py-2 text-dark-300">{p.aname || '-'}</td>
                           <td className="px-3 py-2">
-                            {canEditLinks && p.aname ? (
-                              editingAgent === p.aname ? (
+                            {canEditLinks && (hasRealAgent(p.aname) || onLinkPlayerDirect) ? (
+                              editingAgent === (hasRealAgent(p.aname) ? p.aname : `player:${p.id}`) ? (
                                 <div className="flex items-center gap-1">
                                   <select
                                     className="bg-dark-800 border border-dark-600 rounded text-[10px] text-white px-1.5 py-0.5 max-w-[120px]"
                                     defaultValue=""
                                     disabled={linkingSaving}
-                                    onChange={(e) => { if (e.target.value && p.aname) handleInlineLink(p.aname, e.target.value); }}
+                                    onChange={(e) => {
+                                      if (!e.target.value) return;
+                                      if (hasRealAgent(p.aname) && p.aname) {
+                                        handleInlineLink(p.aname, e.target.value);
+                                      } else {
+                                        handleInlinePlayerLink(p.id, e.target.value);
+                                      }
+                                    }}
                                   >
                                     <option value="" disabled>Selecione...</option>
                                     {availableSubclubs!.map((sc) => (
@@ -779,7 +800,7 @@ export default function PreviewStep({
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => setEditingAgent(p.aname)}
+                                  onClick={() => setEditingAgent(hasRealAgent(p.aname) ? p.aname! : `player:${p.id}`)}
                                   className="group flex items-center gap-1 cursor-pointer"
                                   title="Vincular a subclube"
                                 >
