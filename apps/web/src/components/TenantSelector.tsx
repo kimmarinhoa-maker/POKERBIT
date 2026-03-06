@@ -129,7 +129,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-dark-200 truncate">{tenantName}</p>
                 {tenants.length > 1 && (
-                  <p className="text-[10px] text-dark-500">{tenants.length} clubes</p>
+                  <p className="text-[10px] text-dark-500">{tenants.length} operacoes</p>
                 )}
               </div>
               <ChevronDown
@@ -156,7 +156,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
                         if (e.key === 'Escape') setEditing(false);
                       }}
                       className="input flex-1 text-xs py-1.5"
-                      placeholder="Nome do clube"
+                      placeholder="Nome da operacao"
                       disabled={saving}
                     />
                     <button
@@ -174,7 +174,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
                       className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-dark-400 hover:bg-dark-800 hover:text-dark-200 transition-colors"
                     >
                       <Pencil className="w-3 h-3" />
-                      <span>Editar nome do clube</span>
+                      <span>Editar nome da operacao</span>
                     </button>
                     <button
                       onClick={() => fileRef.current?.click()}
@@ -256,7 +256,7 @@ export default function TenantSelector({ collapsed }: TenantSelectorProps) {
                 <div className="w-7 h-7 rounded-md bg-dark-800 border border-dashed border-dark-600 flex items-center justify-center">
                   <Plus className="w-3.5 h-3.5" />
                 </div>
-                <span>Criar novo clube</span>
+                <span>Criar nova operacao</span>
               </a>
             </div>
           </div>
