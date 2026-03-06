@@ -206,11 +206,12 @@ class ImportConfirmService {
 
       // ── 7) Create or reuse settlement (merge mode) ────────────────
 
-      // Check for existing DRAFT settlement for this week (scoped by platform)
+      // Check for existing DRAFT settlement for this week + club (each club gets its own settlement)
       const { data: existingSettlements } = await supabaseAdmin
         .from('settlements')
         .select('id, version, status')
         .eq('tenant_id', tenantId)
+        .eq('club_id', clubId)
         .eq('week_start', weekStart)
         .eq('platform', platform)
         .eq('status', 'DRAFT')
@@ -264,7 +265,7 @@ class ImportConfirmService {
         );
       } else {
         // NEW settlement
-        version = await this.getNextVersion(tenantId, weekStart, platform);
+        version = await this.getNextVersion(tenantId, weekStart, platform, clubId);
 
         // Se ha versao anterior nao-DRAFT (FINAL/VOID), incrementa versao
         const { data: settlement, error: settlError } = await supabaseAdmin
@@ -385,13 +386,15 @@ class ImportConfirmService {
     await supabaseAdmin.from('settlements').delete().eq('import_id', importId).eq('tenant_id', tenantId).eq('status', 'DRAFT');
   }
 
-  private async getNextVersion(tenantId: string, weekStart: string, platform: string = 'suprema'): Promise<number> {
-    const { data } = await supabaseAdmin
+  private async getNextVersion(tenantId: string, weekStart: string, platform: string = 'suprema', clubId?: string): Promise<number> {
+    let query = supabaseAdmin
       .from('settlements')
       .select('version')
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart)
-      .eq('platform', platform)
+      .eq('platform', platform);
+    if (clubId) query = query.eq('club_id', clubId);
+    const { data } = await query
       .order('version', { ascending: false })
       .limit(1);
 
