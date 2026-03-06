@@ -92,19 +92,27 @@ export default function UploadStep({
   loading, error, onPreview, onFilenameMeta, clubFound,
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const detectionRef = useRef(0); // Guard against race conditions on rapid file changes
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [detected, setDetected] = useState(false);
-  const [platformDetected, setPlatformDetected] = useState(false);
+  // Detection status: 'idle' | 'detecting' | 'done' (replaces separate detected/platformDetected)
+  const [detection, setDetection] = useState<{ status: 'idle' | 'detecting' | 'done'; platformFound: boolean }>({ status: 'idle', platformFound: false });
   const [showPlatformOverride, setShowPlatformOverride] = useState(false);
   const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
 
   // Detect platform when file is set
   const runDetection = useCallback(async (f: File) => {
-    setDetected(false);
+    const id = ++detectionRef.current; // Race guard: ignore stale results
+    setDetection({ status: 'detecting', platformFound: false });
+
     const fMeta = parseFilename(f.name);
     setFilenameMeta(fMeta);
     onFilenameMeta?.(fMeta);
+
+    // Auto-fill week from filename if available
+    if (fMeta.weekStart) {
+      setWeekStartOverride(fMeta.weekStart);
+    }
 
     let sheetNames: string[] = [];
     try {
@@ -112,20 +120,20 @@ export default function UploadStep({
       const wb = XLSX.read(buffer, { bookSheets: true });
       sheetNames = wb.SheetNames || [];
     } catch {
-      // failed
+      // Invalid XLSX — detection continues with empty sheets
     }
+
+    // If user changed file while we were reading, discard this result
+    if (id !== detectionRef.current) return;
 
     const plat = detectPlatform(sheetNames);
     if (plat) {
       setPlatform(plat);
-      setPlatformDetected(true);
-    } else {
-      setPlatformDetected(false);
     }
     setShowPlatformOverride(false);
-    setDetected(true);
+    setDetection({ status: 'done', platformFound: !!plat });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setPlatform]);
+  }, [setPlatform, setWeekStartOverride]);
 
   useEffect(() => {
     if (file) runDetection(file);
@@ -133,8 +141,7 @@ export default function UploadStep({
 
   function trySetFile(f: File | null) {
     setFileError(null);
-    setDetected(false);
-    setPlatformDetected(false);
+    setDetection({ status: 'idle', platformFound: false });
     setShowPlatformOverride(false);
     setFilenameMeta(null);
     if (!f) { setFile(null); return; }
@@ -150,7 +157,7 @@ export default function UploadStep({
     if (dropped) trySetFile(dropped);
   }
 
-  const canPreview = !!file && detected && clubName.trim().length >= 2;
+  const canPreview = !!file && detection.status === 'done' && clubName.trim().length >= 2;
 
   return (
     <div className="space-y-5">
@@ -202,7 +209,7 @@ export default function UploadStep({
       )}
 
       {/* ── Platform + Club Name + IDs ── */}
-      {file && detected && (
+      {file && detection.status === 'done' && (
         <div className="animate-field-in space-y-4">
           {/* Platform — auto-detected */}
           <div>
@@ -210,13 +217,13 @@ export default function UploadStep({
             {!showPlatformOverride ? (
               <div className="flex items-center gap-3">
                 <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border ${
-                  platformDetected
+                  detection.platformFound
                     ? 'bg-poker-600/15 border-poker-500 text-poker-400'
                     : 'bg-amber-900/20 border-amber-600/50 text-amber-400'
                 }`}>
-                  {platformDetected && <CheckCircle2 className="w-4 h-4" />}
+                  {detection.platformFound && <CheckCircle2 className="w-4 h-4" />}
                   {PLATFORM_LABELS[platform]}
-                  {!platformDetected && <span className="text-[10px] opacity-70 ml-1">(não detectado)</span>}
+                  {!detection.platformFound && <span className="text-[10px] opacity-70 ml-1">(não detectado)</span>}
                 </div>
                 <button
                   type="button"
@@ -259,7 +266,7 @@ export default function UploadStep({
             <input
               type="text"
               value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
+              onChange={(e) => setClubName(e.target.value.replace(/^\s+/, ''))}
               placeholder="Ex: Grupo Imperio, VIP Poker..."
               className="input w-full text-sm"
               autoFocus

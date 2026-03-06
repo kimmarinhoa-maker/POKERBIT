@@ -322,23 +322,31 @@ class ImportConfirmService {
         }
       }
 
-      // ── 8) Persist metrics ────────────────────────────────────────
+      // ── 8) Persist metrics (with rollback on partial failure) ─────
 
-      await this.persistPlayerMetrics(
-        tenantId,
-        settlementId,
-        weekStart,
-        weekResult.allPlayers,
-        playerUuidMap,
-        orgNameMap,
-      );
-      const agentCount = await this.persistAgentMetrics(
-        tenantId,
-        settlementId,
-        weekStart,
-        weekResult.clubs,
-        orgNameMap,
-      );
+      let agentCount = 0;
+      try {
+        await this.persistPlayerMetrics(
+          tenantId,
+          settlementId,
+          weekStart,
+          weekResult.allPlayers,
+          playerUuidMap,
+          orgNameMap,
+        );
+        agentCount = await this.persistAgentMetrics(
+          tenantId,
+          settlementId,
+          weekStart,
+          weekResult.clubs,
+          orgNameMap,
+        );
+      } catch (metricsErr) {
+        // Rollback: delete any metrics that were partially persisted
+        await supabaseAdmin.from('player_week_metrics').delete().eq('settlement_id', settlementId);
+        await supabaseAdmin.from('agent_week_metrics').delete().eq('settlement_id', settlementId);
+        throw metricsErr;
+      }
 
       // ── 9) Mark import as DONE ────────────────────────────────────
 
