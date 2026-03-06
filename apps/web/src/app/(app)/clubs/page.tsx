@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { listSettlements, getOrgTree } from '@/lib/api';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useToast } from '@/components/Toast';
-import KpiSkeleton from '@/components/ui/KpiSkeleton';
-import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
 import ClubLogo from '@/components/ClubLogo';
 import { useRouter } from 'next/navigation';
@@ -113,8 +111,7 @@ export default function MeusClubesPage() {
           <div className="h-7 skeleton-shimmer w-48 mb-2" />
           <div className="h-4 skeleton-shimmer w-36" />
         </div>
-        <KpiSkeleton count={3} />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-40 skeleton-shimmer rounded-xl" />
           ))}
@@ -125,29 +122,25 @@ export default function MeusClubesPage() {
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl animate-tab-fade">
-      {/* Header */}
+      {/* Header + inline stats */}
       <div className="mb-6">
-        <h2 className="text-xl lg:text-2xl font-bold text-white">Meus Clubes</h2>
+        <div className="flex flex-wrap items-center gap-3 mb-1">
+          <h2 className="text-xl lg:text-2xl font-bold text-white">Meus Clubes</h2>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-poker-500/10 text-poker-400 border border-poker-500/30">
+              {clubs.length} clube{clubs.length !== 1 ? 's' : ''}
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+              {grouped.length} plataforma{grouped.length !== 1 ? 's' : ''}
+            </span>
+            {clubs.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                {clubs.reduce((latest, c) => c.weekStart > latest ? c.weekStart : latest, clubs[0].weekStart)}
+              </span>
+            )}
+          </div>
+        </div>
         <p className="text-dark-400 text-sm">Selecione um clube para gerenciar</p>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <KpiCard label="Clubes" value={clubs.length} accentColor="bg-poker-500" valueColor="text-poker-400" />
-        <KpiCard
-          label="Plataformas"
-          value={grouped.length}
-          accentColor="bg-blue-500"
-          valueColor="text-blue-400"
-        />
-        <KpiCard
-          label="Ultimo Fechamento"
-          value={clubs.length > 0
-            ? clubs.reduce((latest, c) => c.weekStart > latest ? c.weekStart : latest, clubs[0].weekStart)
-            : '—'}
-          accentColor="bg-amber-500"
-          valueColor="text-amber-400"
-        />
       </div>
 
       {clubs.length === 0 ? (
