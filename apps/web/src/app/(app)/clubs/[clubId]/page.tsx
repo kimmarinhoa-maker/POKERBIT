@@ -59,6 +59,23 @@ export default function ClubEntryPage() {
     try {
       const [treeRes, settRes] = await Promise.all([getOrgTree(), listSettlements(clubId)]);
 
+      // Find latest settlement first (needed for redirect)
+      let latestId: string | null = null;
+      let latestWS = '';
+      let latestClubName = '';
+      let latestPlatform = '';
+      let latestExternalId: string | null = null;
+      if (settRes.success && settRes.data) {
+        const valid = (settRes.data as any[]).filter((s: any) => s.status !== 'VOID');
+        if (valid.length > 0) {
+          latestId = valid[0].id;
+          latestWS = valid[0].week_start;
+          latestClubName = valid[0].club_name || 'Clube';
+          latestPlatform = (valid[0].platform || '').toLowerCase();
+          latestExternalId = valid[0].club_external_id || null;
+        }
+      }
+
       // Find club in org tree
       let clubInfo: ClubInfo | null = null;
       const subs: SubclubCard[] = [];
@@ -85,27 +102,29 @@ export default function ClubEntryPage() {
           }
         }
       }
-      setClub(clubInfo);
-      setSubclubes(subs);
 
-      // Find latest settlement
-      let latestId: string | null = null;
-      let latestWS = '';
-      if (settRes.success && settRes.data) {
-        const valid = (settRes.data as any[]).filter((s: any) => s.status !== 'VOID');
-        if (valid.length > 0) {
-          latestId = valid[0].id;
-          latestWS = valid[0].week_start;
-        }
+      // Fallback: build clubInfo from settlement data if not in org tree
+      if (!clubInfo && latestId) {
+        clubInfo = {
+          id: clubId,
+          name: latestClubName,
+          platform: latestPlatform,
+          externalId: latestExternalId,
+          logoUrl: null,
+          ligaId: null,
+        };
       }
-      setLatestSettlementId(latestId);
-      setLatestWeekStart(latestWS);
 
-      // AUTO-REDIRECT: No subclubes → go straight to fechamento
+      // AUTO-REDIRECT: No subclubes (0 or 1) → go straight to fechamento
       if (subs.length <= 1 && latestId) {
         router.replace(`/s/${latestId}`);
-        return;
+        return; // Don't set state, navigation in progress
       }
+
+      setClub(clubInfo);
+      setSubclubes(subs);
+      setLatestSettlementId(latestId);
+      setLatestWeekStart(latestWS);
     } catch {
       toast('Erro ao carregar clube', 'error');
     } finally {
