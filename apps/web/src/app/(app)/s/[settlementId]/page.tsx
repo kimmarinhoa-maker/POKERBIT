@@ -210,6 +210,18 @@ export default function SettlementOverviewPage() {
 
   const hasMultipleClubs = clubGroups.length > 1;
 
+  // Group clubs by platform
+  const platformGroups: Record<string, typeof clubGroups> = {};
+  for (const cg of clubGroups) {
+    const plat = (cg.platform || 'outro').toLowerCase();
+    if (!platformGroups[plat]) platformGroups[plat] = [];
+    platformGroups[plat].push(cg);
+  }
+  const platformOrder = ['suprema', 'pppoker', 'clubgg', 'outro'];
+  const sortedPlatforms = Object.keys(platformGroups).sort(
+    (a, b) => platformOrder.indexOf(a) - platformOrder.indexOf(b),
+  );
+
   // Aggregate KPIs across all clubs
   const t = hasMultipleClubs
     ? clubGroups.reduce(
@@ -315,75 +327,93 @@ export default function SettlementOverviewPage() {
               />
             </div>
 
-            {/* Subclub cards grouped by club */}
-            {clubGroups.map(({ clubId: cId, label, platform, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
-              <div key={cId} className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  {hasMultipleClubs ? label : 'Subclubes'}
-                  {platform && (
-                    <span className="text-[10px] font-bold text-dark-500 bg-dark-700/50 px-2 py-0.5 rounded uppercase">{platform}</span>
+            {/* Subclub cards grouped by platform → club */}
+            {sortedPlatforms.map((plat) => {
+              const platClubs = platformGroups[plat];
+              const platLabel = plat === 'suprema' ? 'Suprema Poker' : plat === 'pppoker' ? 'PPPoker' : plat === 'clubgg' ? 'ClubGG' : plat;
+              const showPlatformHeader = hasMultipleClubs || sortedPlatforms.length > 1;
+
+              return (
+                <div key={plat} className="mb-8">
+                  {/* Platform header */}
+                  {showPlatformHeader && (
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-dark-400 bg-dark-800 px-3 py-1 rounded-full border border-dark-700">
+                        {platLabel}
+                      </span>
+                      <div className="flex-1 h-px bg-dark-700/50" />
+                    </div>
                   )}
-                  {externalId && <span className="text-xs font-mono font-normal text-dark-500">#{externalId}</span>}
-                  <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {grpSubclubs.map((sc: any) => (
-                    <Link
-                      key={`${cId}-${sc.id || sc.name}`}
-                      href={`/s/${grpSettId}/club/${sc.name}`}
-                      className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
-                    >
-                      <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
 
-                      <div className="p-5">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <ClubLogo
-                              logoUrl={logoMap[normalizeKey(sc.name)]}
-                              name={sc.name}
-                              size="md"
-                              className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
-                            />
-                            <div>
-                              <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
-                                {sc.name}
-                              </h4>
-                              <p className="text-xs text-dark-400">
-                                {sc.totals.players} jogadores · {sc.totals.agents} agentes
-                              </p>
+                  {/* Clubs within this platform */}
+                  {platClubs.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) => (
+                    <div key={cId} className="mb-6">
+                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        {hasMultipleClubs ? label : 'Subclubes'}
+                        {externalId && <span className="text-xs font-mono font-normal text-dark-500">#{externalId}</span>}
+                        <span className="text-sm font-normal text-dark-400">({grpSubclubs.length})</span>
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {grpSubclubs.map((sc: any) => (
+                          <Link
+                            key={`${cId}-${sc.id || sc.name}`}
+                            href={`/s/${grpSettId}/club/${sc.name}`}
+                            className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
+                          >
+                            <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+
+                            <div className="p-5">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <ClubLogo
+                                    logoUrl={logoMap[normalizeKey(sc.name)]}
+                                    name={sc.name}
+                                    size="md"
+                                    className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
+                                  />
+                                  <div>
+                                    <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
+                                      {sc.name}
+                                    </h4>
+                                    <p className="text-xs text-dark-400">
+                                      {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
+                                <div>
+                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
+                                  <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
+                                  <p
+                                    className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                                  >
+                                    {formatBRL(sc.totals.resultado)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
+                                  <p
+                                    className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
+                                  >
+                                    {formatBRL(sc.acertoLiga)}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
-                          <div>
-                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
-                            <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
-                            <p
-                              className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                            >
-                              {formatBRL(sc.totals.resultado)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
-                            <p
-                              className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                            >
-                              {formatBRL(sc.acertoLiga)}
-                            </p>
-                          </div>
-                        </div>
+                          </Link>
+                        ))}
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>
