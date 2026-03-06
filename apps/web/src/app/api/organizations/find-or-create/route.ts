@@ -111,7 +111,10 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Create new club
-        const clubName = name || `Clube ${external_id} (${platform === 'suprema' ? 'Suprema' : platform === 'pppoker' ? 'PPPoker' : platform})`;
+        const platformLabel = platform === 'suprema' ? 'Suprema' : platform === 'pppoker' ? 'PPPoker' : platform;
+        const clubName = name || (league_id
+          ? `Liga ${league_id} - Clube ${external_id} (${platformLabel})`
+          : `Clube ${external_id} (${platformLabel})`);
 
         const { data: newClub, error: insertErr } = await supabaseAdmin
           .from('organizations')

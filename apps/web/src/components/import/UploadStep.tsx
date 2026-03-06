@@ -143,13 +143,7 @@ export default function UploadStep({
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [platformSelected, setPlatformSelected] = useState(false);
 
-  // Use refs to avoid dependency loops (clubId/clubs/setClubId changes → recreate callback → re-trigger useEffect)
-  const clubsRef = useRef(clubs);
-  clubsRef.current = clubs;
-  const clubIdRef = useRef(clubId);
-  clubIdRef.current = clubId;
-  const setClubIdRef = useRef(setClubId);
-  setClubIdRef.current = setClubId;
+  // Club auto-selection removed from runDetection — find-or-create handles it in handlePreview
 
   // Read sheet names and detect platform (client-side, no API call)
   // Stable callback — no deps on clubs/clubId (uses refs)
@@ -175,48 +169,11 @@ export default function UploadStep({
     result.filenameMeta = fMeta;
     setDetection(result);
 
-    // Auto-select on high confidence
+    // Auto-select platform only — club resolution handled by find-or-create in handlePreview
     if (result.confidence === 'high' && (result.platform === 'suprema' || result.platform === 'pppoker')) {
       setPlatform(result.platform as Platform);
       setPlatformSelected(true);
-
-      // Try matching: league_id+external_id > platform+external_id > platform only
-      const currentClubs = clubsRef.current;
-      const currentClubId = clubIdRef.current;
-      let matched = false;
-
-      const stableSetClubId = setClubIdRef.current;
-
-      if (fMeta.clubExternalId) {
-        // Best match: league_id + external_id
-        if (fMeta.leagueId) {
-          const leagueMatch = currentClubs.find(
-            (c: any) => c.league_id === fMeta.leagueId && c.external_id === fMeta.clubExternalId,
-          );
-          if (leagueMatch) {
-            stableSetClubId(leagueMatch.id);
-            matched = true;
-          }
-        }
-        // Fallback: platform + external_id
-        if (!matched) {
-          const extMatch = currentClubs.find(
-            (c) => c.external_id === fMeta.clubExternalId && c.metadata?.platform === result.platform,
-          );
-          if (extMatch) {
-            stableSetClubId(extMatch.id);
-            matched = true;
-          }
-        }
-      }
-
-      // Last fallback: first club matching platform
-      if (!matched) {
-        const platMatch = currentClubs.filter((c) => c.metadata?.platform === result.platform);
-        if (platMatch.length > 0 && !platMatch.some((c) => c.id === currentClubId)) {
-          stableSetClubId(platMatch[0].id);
-        }
-      }
+      // Do NOT auto-select club here — same external_id can exist in different leagues/platforms
     }
 
     setDetecting(false);

@@ -113,9 +113,10 @@ export default function ImportWizardPage() {
     setLoading(true);
     setError('');
 
-    // Use existing clubId, or try auto-create if we have filename metadata
-    let resolvedClubId = clubId;
-    if (!resolvedClubId && filenameMeta?.clubExternalId) {
+    // ALWAYS use find-or-create when we have filename metadata (league_id + external_id)
+    // This ensures correct club resolution even when same external_id exists in different leagues
+    let resolvedClubId = '';
+    if (filenameMeta?.clubExternalId) {
       try {
         const res = await findOrCreateClub({
           platform,
@@ -129,7 +130,7 @@ export default function ImportWizardPage() {
             id: res.data.id,
             name: res.data.name,
             external_id: res.data.external_id,
-            metadata: { platform },
+            metadata: { platform: res.data.platform || platform },
           };
           if (!clubs.some((c) => c.id === newClub.id)) {
             setClubs((prev) => [...prev, newClub]);
@@ -141,6 +142,11 @@ export default function ImportWizardPage() {
       } catch {
         // Non-critical — user can select club manually
       }
+    }
+
+    // Fallback to manually selected club
+    if (!resolvedClubId) {
+      resolvedClubId = clubId;
     }
 
     if (!resolvedClubId) {
