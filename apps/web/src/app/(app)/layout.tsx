@@ -348,7 +348,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                       {platformClubs.map((club) => {
                         const clubActive = isClubActive(club);
                         const clubHref = club.lastSettlementId
-                          ? `/s/${club.lastSettlementId}`
+                          ? club.subclubes.length > 0
+                            ? `/s/${club.lastSettlementId}/club/${encodeURIComponent(club.subclubes[0].name)}`
+                            : `/s/${club.lastSettlementId}`
                           : `/clubs/${club.id}`;
 
                         return (
