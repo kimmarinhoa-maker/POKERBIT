@@ -1,286 +1,207 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { getOrgTree, updateOrgMetadata, updateOrganization } from '@/lib/api';
+import Link from 'next/link';
+import { listSettlements } from '@/lib/api';
+import { usePageTitle } from '@/lib/usePageTitle';
 import { useToast } from '@/components/Toast';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
-import TableSkeleton from '@/components/ui/TableSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
-import { Building2, Check, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/useAuth';
+import { Building2, ArrowRight } from 'lucide-react';
 
-const PLATFORM_OPTIONS = [
-  { value: 'suprema', label: 'Suprema Poker' },
-  { value: 'pppoker', label: 'PPPoker' },
-  { value: 'clubgg', label: 'ClubGG' },
-];
+const PLATFORM_LABELS: Record<string, string> = {
+  suprema: 'Suprema Poker',
+  pppoker: 'PPPoker',
+  clubgg: 'ClubGG',
+};
 
-export default function ClubsPage() {
-  const [tree, setTree] = useState<any[]>([]);
+const PLATFORM_COLORS: Record<string, string> = {
+  suprema: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  pppoker: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  clubgg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+};
+
+interface ClubCard {
+  clubId: string;
+  clubName: string;
+  platform: string;
+  externalId: string | null;
+  latestSettlementId: string;
+  weekStart: string;
+  status: string;
+}
+
+export default function MeusClubesPage() {
+  usePageTitle('Meus Clubes');
+  useAuth();
+  const router = useRouter();
+  const [clubs, setClubs] = useState<ClubCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
-  const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
-  const [editingExtId, setEditingExtId] = useState<string | null>(null);
-  const [extIdInput, setExtIdInput] = useState('');
-  const [savingExtId, setSavingExtId] = useState(false);
   const { toast } = useToast();
 
-  const loadTree = useCallback(async (signal?: { cancelled: boolean }) => {
+  const loadClubs = useCallback(async () => {
     try {
-      const res = await getOrgTree();
-      if (signal?.cancelled) return;
-      if (res.success) {
-        setTree(res.data || []);
-      } else {
-        toast(res.error || 'Erro ao carregar clubes', 'error');
+      const res = await listSettlements();
+      if (!res.success || !res.data) {
+        setClubs([]);
+        return;
       }
+
+      // Group by club_id, keep only the most recent settlement per club
+      const clubMap = new Map<string, ClubCard>();
+      for (const s of res.data) {
+        if (s.status === 'VOID') continue;
+        if (!clubMap.has(s.club_id)) {
+          clubMap.set(s.club_id, {
+            clubId: s.club_id,
+            clubName: s.club_name || 'Clube',
+            platform: (s.platform || 'outro').toLowerCase(),
+            externalId: s.club_external_id || null,
+            latestSettlementId: s.id,
+            weekStart: s.week_start,
+            status: s.status,
+          });
+        }
+      }
+
+      setClubs([...clubMap.values()].sort((a, b) => a.clubName.localeCompare(b.clubName)));
     } catch {
-      if (signal?.cancelled) return;
-      toast('Erro de conexao com o servidor', 'error');
+      toast('Erro ao carregar clubes', 'error');
+      setClubs([]);
     } finally {
-      if (!signal?.cancelled) setLoading(false);
+      setLoading(false);
     }
   }, [toast]);
 
-  useEffect(() => {
-    const signal = { cancelled: false };
-    loadTree(signal);
-    return () => { signal.cancelled = true; };
-  }, [loadTree]);
+  useEffect(() => { loadClubs(); }, [loadClubs]);
 
-  // KPIs
-  const kpis = useMemo(() => {
-    let subclubes = 0,
-      agents = 0;
-    for (const club of tree) {
-      const subs = club.subclubes || [];
-      subclubes += subs.length;
-      for (const sub of subs) {
-        agents += sub.agents?.length || 0;
-      }
+  // Group by platform
+  const grouped = useMemo(() => {
+    const map = new Map<string, ClubCard[]>();
+    for (const c of clubs) {
+      const list = map.get(c.platform) || [];
+      list.push(c);
+      map.set(c.platform, list);
     }
-    return { clubs: tree.length, subclubes, agents };
-  }, [tree]);
-
-  function toggleExpand(subId: string) {
-    setExpandedSubs((prev) => {
-      const next = new Set(prev);
-      if (next.has(subId)) next.delete(subId);
-      else next.add(subId);
-      return next;
+    const order = ['suprema', 'pppoker', 'clubgg', 'outro'];
+    return [...map.entries()].sort(([a], [b]) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
-  }
-
-  async function handlePlatformChange(clubId: string, platform: string) {
-    setSavingPlatform(clubId);
-    try {
-      const res = await updateOrgMetadata(clubId, { platform });
-      if (res.success) {
-        setTree((prev) =>
-          prev.map((c) =>
-            c.id === clubId
-              ? { ...c, metadata: { ...(c.metadata || {}), platform } }
-              : c,
-          ),
-        );
-        toast('Plataforma atualizada', 'success');
-      } else {
-        toast(res.error || 'Erro ao atualizar plataforma', 'error');
-      }
-    } catch {
-      toast('Erro ao atualizar plataforma', 'error');
-    } finally {
-      setSavingPlatform(null);
-    }
-  }
-
-  function startEditExtId(clubId: string, currentValue: string) {
-    setEditingExtId(clubId);
-    setExtIdInput(currentValue || '');
-  }
-
-  async function handleSaveExternalId(clubId: string) {
-    setSavingExtId(true);
-    try {
-      const res = await updateOrganization(clubId, { external_id: extIdInput.trim() });
-      if (res.success) {
-        setTree((prev) =>
-          prev.map((c) =>
-            c.id === clubId
-              ? { ...c, external_id: extIdInput.trim() || null }
-              : c,
-          ),
-        );
-        setEditingExtId(null);
-        toast('ID do clube atualizado', 'success');
-      } else {
-        toast(res.error || 'Erro ao atualizar ID', 'error');
-      }
-    } catch {
-      toast('Erro ao atualizar ID', 'error');
-    } finally {
-      setSavingExtId(false);
-    }
-  }
+  }, [clubs]);
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-8 max-w-5xl animate-tab-fade">
+      <div className="p-4 lg:p-8 max-w-6xl animate-tab-fade">
         <div className="mb-6">
           <div className="h-7 skeleton-shimmer w-48 mb-2" />
           <div className="h-4 skeleton-shimmer w-36" />
         </div>
         <KpiSkeleton count={3} />
-        <TableSkeleton columns={4} rows={5} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-40 skeleton-shimmer rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl">
+    <div className="p-4 lg:p-8 max-w-6xl animate-tab-fade">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-xl lg:text-2xl font-bold text-white">Clubes e Subclubes</h2>
-        <p className="text-dark-400 text-sm">Hierarquia de organizacoes</p>
+        <h2 className="text-xl lg:text-2xl font-bold text-white">Meus Clubes</h2>
+        <p className="text-dark-400 text-sm">Selecione um clube para gerenciar</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <KpiCard label="Clubes" value={kpis.clubs} accentColor="bg-poker-500" valueColor="text-poker-400" />
-        <KpiCard label="Subclubes" value={kpis.subclubes} accentColor="bg-blue-500" valueColor="text-blue-400" />
-        <KpiCard label="Agentes" value={kpis.agents} accentColor="bg-amber-500" valueColor="text-amber-400" />
+        <KpiCard label="Clubes" value={clubs.length} accentColor="bg-poker-500" valueColor="text-poker-400" />
+        <KpiCard
+          label="Plataformas"
+          value={grouped.length}
+          accentColor="bg-blue-500"
+          valueColor="text-blue-400"
+        />
+        <KpiCard
+          label="Ultimo Fechamento"
+          value={clubs.length > 0
+            ? clubs.reduce((latest, c) => c.weekStart > latest ? c.weekStart : latest, clubs[0].weekStart)
+            : '—'}
+          accentColor="bg-amber-500"
+          valueColor="text-amber-400"
+        />
       </div>
 
-      {tree.length === 0 ? (
+      {clubs.length === 0 ? (
         <div className="card">
-          <EmptyState icon={Building2} title="Nenhum clube" description="Configure a estrutura em Configuracoes > Estrutura" />
+          <EmptyState
+            icon={Building2}
+            title="Nenhum clube encontrado"
+            description="Importe uma planilha para criar seu primeiro clube automaticamente."
+            action={{ label: 'Importar Planilha', onClick: () => router.push('/import') }}
+          />
         </div>
       ) : (
-        <div className="space-y-6">
-          {tree.map((club) => (
-            <div key={club.id} className="card">
-              {/* Club header */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-4 border-b border-dark-700">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white">{club.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    {editingExtId === club.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-dark-500">ID:</span>
-                        <input
-                          type="text"
-                          value={extIdInput}
-                          onChange={(e) => setExtIdInput(e.target.value)}
-                          className="input text-xs py-0.5 px-2 w-32 font-mono"
-                          placeholder="ID do clube"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveExternalId(club.id);
-                            if (e.key === 'Escape') setEditingExtId(null);
-                          }}
-                        />
-                        <button
-                          onClick={() => handleSaveExternalId(club.id)}
-                          disabled={savingExtId}
-                          className="text-green-400 hover:text-green-300 transition-colors"
-                          aria-label="Salvar ID"
-                        >
-                          <Check size={14} />
-                        </button>
-                        <button
-                          onClick={() => setEditingExtId(null)}
-                          className="text-dark-500 hover:text-dark-300 transition-colors"
-                          aria-label="Cancelar"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-dark-400">
-                        ID:{' '}
-                        <button
-                          onClick={() => startEditExtId(club.id, club.external_id || '')}
-                          className="font-mono text-poker-400 hover:text-poker-300 transition-colors cursor-pointer"
-                          title="Clique para editar o ID do clube"
-                        >
-                          {club.external_id || '—'}
-                        </button>
-                        <span className="ml-2">· {club.subclubes?.length || 0} subclubes</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {/* Platform selector */}
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-dark-500">Plataforma:</label>
-                  <select
-                    value={club.metadata?.platform || ''}
-                    onChange={(e) => handlePlatformChange(club.id, e.target.value)}
-                    disabled={savingPlatform === club.id}
-                    className="input text-sm py-1 px-2 w-40"
-                    aria-label={`Plataforma do clube ${club.name}`}
-                  >
-                    <option value="">Selecionar...</option>
-                    {PLATFORM_OPTIONS.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <div className="space-y-8">
+          {grouped.map(([platform, platformClubs]) => (
+            <div key={platform}>
+              {/* Platform header */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${PLATFORM_COLORS[platform] || 'bg-dark-700/30 text-dark-400 border-dark-600/30'}`}>
+                  {PLATFORM_LABELS[platform] || platform.toUpperCase()}
+                </span>
+                <span className="text-dark-500 text-xs">{platformClubs.length} clube{platformClubs.length !== 1 ? 's' : ''}</span>
               </div>
 
-              {/* Subclubs grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(club.subclubes || []).map((sub: any) => {
-                  const agentList = sub.agents || [];
-                  const isExpanded = expandedSubs.has(sub.id);
+              {/* Club cards grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {platformClubs.map((club) => (
+                  <Link
+                    key={club.clubId}
+                    href={`/clubs/${club.clubId}`}
+                    className="group bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 hover:shadow-glow-green transition-all duration-200"
+                  >
+                    {/* Color bar */}
+                    <div className="h-1 bg-poker-500" />
 
-                  return (
-                    <div key={sub.id} className="bg-dark-800 rounded-lg border border-dark-700/50 overflow-hidden">
-                      <div className="p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-dark-100">{sub.name}</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-dark-500 bg-dark-700/50 px-2 py-0.5 rounded">
-                            {agentList.length} ag.
-                          </span>
+                    <div className="p-5">
+                      {/* Club name + arrow */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-bold text-white truncate group-hover:text-poker-400 transition-colors">
+                            {club.clubName}
+                          </h3>
+                          {club.externalId && (
+                            <p className="text-[10px] text-dark-500 font-mono mt-0.5">ID: {club.externalId}</p>
+                          )}
                         </div>
-                        {sub.external_id && (
-                          <p className="text-[10px] text-dark-600 font-mono ml-7">{sub.external_id}</p>
-                        )}
+                        <ArrowRight className="w-4 h-4 text-dark-600 group-hover:text-poker-400 transition-colors mt-1 flex-shrink-0" />
                       </div>
 
-                      {/* Agent list (expandable) */}
-                      {agentList.length > 0 && (
-                        <>
-                          <button
-                            onClick={() => toggleExpand(sub.id)}
-                            className="w-full px-4 py-1.5 text-[10px] text-dark-500 hover:text-dark-300 transition-colors border-t border-dark-700/50 bg-dark-850/30 text-left"
-                            aria-expanded={isExpanded}
-                            aria-label={`Ver agentes de ${sub.name}`}
-                          >
-                            {isExpanded ? '▾' : '▸'} {agentList.length} agentes
-                          </button>
-                          {isExpanded && (
-                            <div className="px-4 py-2 border-t border-dark-700/30 space-y-1">
-                              {agentList.map((ag: any) => (
-                                <div key={ag.id} className="flex items-center gap-2 text-xs">
-                                  <span className="text-dark-600">•</span>
-                                  <span className="text-dark-300 truncate">{ag.name}</span>
-                                  {ag.external_id && (
-                                    <span className="text-dark-600 font-mono text-[9px] ml-auto">{ag.external_id}</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      )}
+                      {/* Status badge */}
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          club.status === 'FINAL'
+                            ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                            : club.status === 'DRAFT'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                              : 'bg-dark-700/30 text-dark-400 border-dark-600/30'
+                        }`}>
+                          {club.status}
+                        </span>
+                        <span className="text-dark-500 text-[10px]">
+                          Semana {club.weekStart}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })}
+                  </Link>
+                ))}
               </div>
             </div>
           ))}
