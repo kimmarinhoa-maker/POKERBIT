@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents, findOrCreateClub } from '@/lib/api';
+// NOTE: subclubes feature is disabled for now (noSubclubs=true hardcoded in handleConfirm)
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
@@ -26,7 +27,6 @@ export default function ImportWizardPage() {
   const [weekStartOverride, setWeekStartOverride] = useState('');
   const [showWeekOverride, setShowWeekOverride] = useState(false);
   const [platform, setPlatform] = useState<Platform>('suprema');
-  const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -58,17 +58,13 @@ export default function ImportWizardPage() {
 
   const { toast } = useToast();
 
-  // Load clubs + subclubs on mount
-  const loadOrgs = useCallback(async () => {
-    const [clubRes, subRes] = await Promise.all([
-      listOrganizations('CLUB'),
-      listOrganizations('SUBCLUB'),
-    ]);
-    if (clubRes.success) setClubs(clubRes.data || []);
-    if (subRes.success) setSubclubs(subRes.data || []);
+  // Load clubs on mount (for auto-lookup by filename IDs)
+  const loadClubs = useCallback(async () => {
+    const res = await listOrganizations('CLUB');
+    if (res.success) setClubs(res.data || []);
   }, []);
 
-  useEffect(() => { loadOrgs(); }, [loadOrgs]);
+  useEffect(() => { loadClubs(); }, [loadClubs]);
 
   // Auto-fill clubName when filenameMeta changes (match existing club by external_id + league_id)
   useEffect(() => {
@@ -252,7 +248,9 @@ export default function ImportWizardPage() {
         setConfirmResult(res.data);
         // Auto-sync agents (creates AGENT organizations from metrics)
         if (res.data.settlement_id) {
-          syncSettlementAgents(res.data.settlement_id).catch(() => {});
+          syncSettlementAgents(res.data.settlement_id).catch(() => {
+            toast('Aviso: sincronizacao de agentes falhou', 'error');
+          });
         }
       } else {
         setError(res.error || 'Erro ao confirmar importacao');
@@ -286,11 +284,10 @@ export default function ImportWizardPage() {
     setFilenameMeta(null);
   }
 
-  // Reload orgs (after creating a new subclub in PreviewStep)
-  const reloadSubclubs = useCallback(async () => {
-    const res = await listOrganizations('SUBCLUB');
-    if (res.success) setSubclubs(res.data || []);
-  }, []);
+  // Reload clubs (after creating a new subclub in PreviewStep)
+  const reloadOrgs = useCallback(async () => {
+    loadClubs();
+  }, [loadClubs]);
 
   // ─── Render ───────────────────────────────────────────────────────
 
@@ -330,13 +327,9 @@ export default function ImportWizardPage() {
           availableSubclubs={preview.available_subclubs}
           onLinkAgent={handleLinkAgentInline}
           onReprocess={handlePreview}
-          temSubclube={null}
-          setTemSubclube={() => {}}
-          pppokerSubclube=""
-          setPppokerSubclube={() => {}}
           platform={platform}
           clubId={clubId}
-          onSubclubCreated={reloadSubclubs}
+          onSubclubCreated={reloadOrgs}
         />
       )}
 

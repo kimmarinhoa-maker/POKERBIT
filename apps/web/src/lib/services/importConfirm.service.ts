@@ -84,15 +84,16 @@ class ImportConfirmService {
     }
 
     // Single-club mode OR no subclubes: override p.clube and resolve blockers
-    // PPPoker: use pppokerSubclube as club name (allows multi-file imports to coexist)
+    // Use the actual club name from the imported club
     if (!config.hasSubclubs || noSubclubs) {
       let singleName: string;
       if (pppokerSubclube) {
         singleName = pppokerSubclube;
       } else {
+        // Use the specific club being imported (not a random one)
         const { data: clubOrg } = await supabaseAdmin
           .from('organizations').select('name')
-          .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
+          .eq('id', clubId).maybeSingle();
         singleName = clubOrg?.name || 'CLUBE';
       }
       for (const p of allPlayers) {

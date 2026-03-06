@@ -11,11 +11,6 @@ interface PreviewStepProps {
   availableSubclubs?: Array<{ id: string; name: string }>;
   onLinkAgent?: (agentName: string, subclubId: string) => Promise<void>;
   onReprocess?: () => void;
-  // Subclub toggle (kept for compat but not shown in UI — subclubes will be added later)
-  temSubclube: boolean | null;
-  setTemSubclube: (v: boolean) => void;
-  pppokerSubclube: string;
-  setPppokerSubclube: (v: string) => void;
   platform: Platform;
   clubId: string;
   onSubclubCreated: () => void;
@@ -49,7 +44,7 @@ const PAGE_SIZE = 50;
 
 export default function PreviewStep({
   preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess,
-  temSubclube, setTemSubclube, pppokerSubclube, setPppokerSubclube, platform, clubId, onSubclubCreated,
+  platform, clubId, onSubclubCreated,
 }: PreviewStepProps) {
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);

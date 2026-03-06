@@ -5,12 +5,11 @@ import Spinner from '@/components/Spinner';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export type Platform = 'suprema' | 'pppoker' | 'clubgg';
+export type Platform = 'suprema' | 'pppoker';
 
 const PLATFORM_LABELS: Record<string, string> = {
   suprema: 'Suprema Poker',
   pppoker: 'PPPoker',
-  clubgg: 'ClubGG',
 };
 
 export interface FilenameMeta {
