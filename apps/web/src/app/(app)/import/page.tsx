@@ -302,7 +302,8 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart, platform, undefined, true);
+      const hasSubclubes = (preview.subclubs_found?.length || 0) > 1 || (existingSubclubCount && existingSubclubCount > 0);
+      const res = await importConfirm(file, clubId, weekStart, platform, undefined, !hasSubclubes);
       if (res.success && res.data) {
         setConfirmResult(res.data);
 
