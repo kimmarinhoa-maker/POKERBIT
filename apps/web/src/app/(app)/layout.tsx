@@ -125,6 +125,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('sidebar-clubs-expanded') !== 'false';
   });
+  const [activePlatformTab, setActivePlatformTab] = useState<string>('');
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebar-collapsed') === 'true';
@@ -139,6 +140,27 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('sidebar-clubs-expanded', String(clubsExpanded));
   }, [clubsExpanded]);
+
+  // Auto-select first platform tab when clubs load (or match active club's platform)
+  useEffect(() => {
+    if (clubGroups.length === 0) return;
+    // If user is viewing a settlement, select its platform
+    const pathSettlementId = pathname.startsWith('/s/') ? pathname.split('/')[2] : '';
+    const currentClubId = pathSettlementId ? settlementClubMap.get(pathSettlementId) : undefined;
+    if (currentClubId) {
+      for (const g of clubGroups) {
+        if (g.clubs.some((c) => c.clubId === currentClubId)) {
+          setActivePlatformTab(g.platform);
+          return;
+        }
+      }
+    }
+    // Default to first platform or keep current
+    if (!activePlatformTab || !clubGroups.some((g) => g.platform === activePlatformTab)) {
+      setActivePlatformTab(clubGroups[0].platform);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clubGroups, pathname, settlementClubMap]);
 
   // Close sidebar on route change (mobile) + reload clubs when leaving /import
   const prevPathRef = useRef(pathname);
@@ -269,60 +291,88 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               );
             })}
 
-          {/* ── Dynamic Clubs Section ── */}
+          {/* ── Dynamic Clubs Section (Tabs) ── */}
           {!clubsLoading && clubGroups.length > 0 && (() => {
-            // Extract current club_id from pathname (works across weeks of same club)
             const pathSettlementId = pathname.startsWith('/s/') ? pathname.split('/')[2] : '';
             const activeClubId = pathSettlementId ? settlementClubMap.get(pathSettlementId) : undefined;
+            const activeGroup = clubGroups.find((g) => g.platform === activePlatformTab) || clubGroups[0];
             return (
             <div>
-              {/* Toggle button — hidden on collapsed desktop (clubs always show as icons) */}
+              {/* Section header with toggle */}
               <button
                 onClick={() => setClubsExpanded((v) => !v)}
-                className={`flex items-center w-full px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold hover:text-dark-300 transition-colors ${collapsed ? 'lg:hidden' : ''}`}
+                className={`flex items-center w-full px-3 mb-2 text-[10px] text-dark-500 uppercase tracking-wider font-semibold hover:text-dark-300 transition-colors ${collapsed ? 'lg:hidden' : ''}`}
               >
                 {clubsExpanded ? <ChevronDown className="w-3 h-3 mr-1" /> : <ChevronRight className="w-3 h-3 mr-1" />}
-                CLUBES
+                MEUS CLUBES
               </button>
-              {/* Show clubs: always when collapsed (icon-only), otherwise respect expanded state */}
+
               {(clubsExpanded || collapsed) && (
-                <div className="space-y-3">
-                  {clubGroups.map((group) => (
-                    <div key={group.platform}>
-                      <div className={`flex items-center gap-2 px-3 mb-1 ${collapsed ? 'lg:hidden' : ''}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${PLATFORM_COLORS[group.platform] || PLATFORM_COLORS.outro}`} />
-                        <span className="text-[9px] text-dark-500 uppercase tracking-wider font-medium">
-                          {PLATFORM_LABELS[group.platform] || group.platform}
-                        </span>
-                      </div>
-                      <div className="space-y-0.5">
-                        {group.clubs.map((club) => {
-                          const clubHref = `/s/${club.settlementId}`;
-                          const isActive = activeClubId === club.clubId;
-                          const iconBg = PLATFORM_ICON_BG[club.platform] || PLATFORM_ICON_BG.outro;
-                          return (
-                            <Link
-                              key={club.clubId}
-                              href={clubHref}
-                              title={collapsed ? club.clubName : undefined}
-                              className={`flex items-center gap-2.5 rounded-lg transition-colors text-sm font-medium ${
-                                collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-1.5' : 'px-3 py-1.5'
-                              } ${
-                                isActive
-                                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
-                                  : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
-                              }`}
-                            >
-                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${iconBg}`}>
-                                <Building2 className="w-3 h-3" />
-                              </div>
-                              <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>{club.clubName}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
+                <div>
+                  {/* Platform tabs — hidden when collapsed */}
+                  {clubGroups.length > 1 && (
+                    <div className={`flex gap-1 px-2 mb-2 ${collapsed ? 'lg:hidden' : ''}`}>
+                      {clubGroups.map((group) => {
+                        const isTabActive = group.platform === activePlatformTab;
+                        const dotColor = PLATFORM_COLORS[group.platform] || PLATFORM_COLORS.outro;
+                        return (
+                          <button
+                            key={group.platform}
+                            onClick={() => setActivePlatformTab(group.platform)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                              isTabActive
+                                ? 'bg-dark-700/80 text-white'
+                                : 'text-dark-500 hover:text-dark-300 hover:bg-dark-800/50'
+                            }`}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                            {PLATFORM_LABELS[group.platform]?.split(' ')[0] || group.platform}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Single platform label when only one platform */}
+                  {clubGroups.length === 1 && (
+                    <div className={`flex items-center gap-2 px-3 mb-1.5 ${collapsed ? 'lg:hidden' : ''}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${PLATFORM_COLORS[activeGroup.platform] || PLATFORM_COLORS.outro}`} />
+                      <span className="text-[9px] text-dark-500 uppercase tracking-wider font-medium">
+                        {PLATFORM_LABELS[activeGroup.platform] || activeGroup.platform}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Club list for active platform */}
+                  <div className="space-y-0.5">
+                    {(collapsed
+                      ? clubGroups.flatMap((g) => g.clubs)
+                      : activeGroup.clubs
+                    ).map((club) => {
+                      const clubHref = `/s/${club.settlementId}`;
+                      const isActive = activeClubId === club.clubId;
+                      const iconBg = PLATFORM_ICON_BG[club.platform] || PLATFORM_ICON_BG.outro;
+                      return (
+                        <Link
+                          key={club.clubId}
+                          href={clubHref}
+                          title={collapsed ? club.clubName : undefined}
+                          className={`flex items-center gap-2.5 rounded-lg transition-colors text-sm font-medium ${
+                            collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-1.5' : 'px-3 py-1.5'
+                          } ${
+                            isActive
+                              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
+                              : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${iconBg}`}>
+                            <Building2 className="w-3 h-3" />
+                          </div>
+                          <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>{club.clubName}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

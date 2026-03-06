@@ -23,7 +23,6 @@ const PLATFORM_ORDER = ['suprema', 'pppoker', 'clubgg', 'outro'];
 export function useSidebarClubs(authReady: boolean) {
   const [groups, setGroups] = useState<PlatformGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  // Map ALL settlement IDs to their club_id (for active state matching across weeks)
   const [settlementClubMap, setSettlementClubMap] = useState<SettlementClubMap>(new Map());
   const mountedRef = useRef(true);
 
@@ -56,13 +55,12 @@ export function useSidebarClubs(authReady: boolean) {
       const clubMap = new Map<string, SidebarClub>();
       for (const s of res.data) {
         if (s.status === 'VOID') continue;
-        // Keep the first (most recent due to order by week_start desc)
         if (!clubMap.has(s.club_id)) {
-          const org = s.organizations;
-          const platform = (org?.metadata?.platform || s.platform || 'outro').toLowerCase();
+          // API flattens organizations join: club_name, club_external_id, platform are top-level
+          const platform = (s.platform || 'outro').toLowerCase();
           clubMap.set(s.club_id, {
             clubId: s.club_id,
-            clubName: org?.name || 'Clube',
+            clubName: s.club_name || 'Clube',
             platform,
             settlementId: s.id,
             weekStart: s.week_start,
