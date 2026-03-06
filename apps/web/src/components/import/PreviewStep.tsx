@@ -89,6 +89,9 @@ export default function PreviewStep({
   const [linkingSubclubes, setLinkingSubclubes] = useState(false);
   const [subclubesLinked, setSubclubesLinked] = useState(false);
 
+  // Local link overrides (optimistic UI — avoid full reprocess)
+  const [localLinks, setLocalLinks] = useState<Record<string, string>>({});
+
 
   const players = useMemo(() => preview.players || [], [preview.players]);
 
@@ -144,13 +147,24 @@ export default function PreviewStep({
     return sortDir === 'asc' ? '\u2191' : '\u2193';
   }
 
+  // Find subclub name by id
+  function subclubName(subclubId: string): string {
+    return availableSubclubs?.find((s) => s.id === subclubId)?.name || '?';
+  }
+
   async function handleInlineLink(agentName: string, subclubId: string) {
     if (!onLinkAgent || !subclubId) return;
     setLinkingSaving(true);
     try {
       await onLinkAgent(agentName, subclubId);
+      // Optimistic: mark all players of this agent as linked locally
+      const scName = subclubName(subclubId);
+      const updates: Record<string, string> = {};
+      for (const p of preview.players || []) {
+        if (p.aname === agentName) updates[p.id] = scName;
+      }
+      setLocalLinks((prev) => ({ ...prev, ...updates }));
       setEditingAgent(null);
-      onReprocess?.();
     } finally {
       setLinkingSaving(false);
     }
@@ -161,8 +175,9 @@ export default function PreviewStep({
     setLinkingSaving(true);
     try {
       await onLinkPlayerDirect(playerId, subclubId);
+      // Optimistic: mark this player as linked locally
+      setLocalLinks((prev) => ({ ...prev, [playerId]: subclubName(subclubId) }));
       setEditingAgent(null);
-      onReprocess?.();
     } finally {
       setLinkingSaving(false);
     }
@@ -765,6 +780,7 @@ export default function PreviewStep({
                   <tbody>
                     {pagedPlayers.map((p) => {
                       const st = STATUS_STYLES[p._status] || STATUS_STYLES.ok;
+                      const effectiveClube = localLinks[p.id] || p.clube;
                       return (
                         <tr key={p.id} className="hover:bg-white/[.02]">
                           <td className="px-3 py-2 text-white font-medium">{p.nick}</td>
@@ -804,14 +820,14 @@ export default function PreviewStep({
                                   className="group flex items-center gap-1 cursor-pointer"
                                   title="Vincular a subclube"
                                 >
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${p.clube ? getClubStyle(p.clube) : 'bg-dark-700/50 text-dark-400 border-dark-600'} group-hover:ring-1 group-hover:ring-amber-500/50 transition-all`}>
-                                    {p.clube || 'SEM VINCULO'}
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${effectiveClube ? getClubStyle(effectiveClube) : 'bg-dark-700/50 text-dark-400 border-dark-600'} group-hover:ring-1 group-hover:ring-amber-500/50 transition-all`}>
+                                    {effectiveClube || 'SEM VINCULO'}
                                   </span>
                                 </button>
                               )
-                            ) : p.clube ? (
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getClubStyle(p.clube)}`}>
-                                {p.clube}
+                            ) : effectiveClube ? (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getClubStyle(effectiveClube)}`}>
+                                {effectiveClube}
                               </span>
                             ) : (
                               <span className="text-dark-500">-</span>
