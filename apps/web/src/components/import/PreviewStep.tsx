@@ -85,12 +85,6 @@ export default function PreviewStep({
   const [newNome, setNewNome] = useState('');
 
 
-  // Subclubes disabled for now — always ready, no subclub gate
-  const subclubReady = true;
-
-  // Without subclubes, missing_agency is not a real blocker
-  const effectiveReady = preview.readiness.ready || true;
-
   const players = useMemo(() => preview.players || [], [preview.players]);
 
   const filteredPlayers = useMemo(() => {
@@ -455,13 +449,16 @@ export default function PreviewStep({
                   />
                   <button
                     onClick={() => {
-                      if (!newSigla.trim() || !newNome.trim()) return;
-                      const updated = [...(newSubclubes || []), { sigla: newSigla.trim(), nome: newNome.trim() }];
+                      const sigla = newSigla.trim();
+                      const nome = newNome.trim();
+                      if (!sigla || !nome) return;
+                      if (newSubclubes?.some((s) => s.sigla === sigla)) return;
+                      const updated = [...(newSubclubes || []), { sigla, nome }];
                       onNewSubclubesChange?.(updated);
                       setNewSigla('');
                       setNewNome('');
                     }}
-                    disabled={!newSigla.trim() || !newNome.trim()}
+                    disabled={!newSigla.trim() || !newNome.trim() || !!newSubclubes?.some((s) => s.sigla === newSigla.trim())}
                     className="px-2.5 py-1.5 rounded-lg bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
                     <Plus className="w-4 h-4" />
@@ -532,8 +529,6 @@ export default function PreviewStep({
         </div>
       </div>
 
-      {/* Subclubes toggle removed — will be added later inside club config */}
-
       {/* ─── ChipPix Manager Trade Record ─── */}
       {preview.chippix_trades && Object.keys(preview.chippix_trades).length > 0 && (
         <div className="mb-5">
@@ -570,7 +565,7 @@ export default function PreviewStep({
       )}
 
       {/* ─── Readiness ─── */}
-      {effectiveReady ? (
+      {preview.readiness.ready ? (
         <div className="bg-dark-900 border border-green-700/40 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">

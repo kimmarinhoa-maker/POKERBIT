@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { importPreview, importConfirm, listOrganizations, linkAgent, linkPlayer, bulkLinkPlayers, syncSettlementAgents, findOrCreateClub, createOrganization, createPrefixRule } from '@/lib/api';
-// NOTE: subclubes feature is disabled for now (noSubclubs=true hardcoded in handleConfirm)
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
 import { WizardStep, PreviewData, PlayerSelection } from '@/types/import';
@@ -154,7 +153,6 @@ export default function ImportWizardPage() {
 
   function handlePreviewNext() {
     if (!preview) return;
-    // Subclubes disabled — always skip pendencies, go straight to confirm
     setStep('confirm');
   }
 
@@ -282,9 +280,7 @@ export default function ImportWizardPage() {
               toast(`Erro ao criar subclube ${sub.sigla}`, 'error');
             }
           }
-          if (newSubclubes.length > 0) {
-            toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
-          }
+          toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
         }
 
         // Auto-sync agents (creates AGENT organizations from metrics)
