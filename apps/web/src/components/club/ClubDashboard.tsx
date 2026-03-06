@@ -12,8 +12,7 @@ interface Props {
 }
 
 export default function ClubDashboard({ data, subclubs, activeSubclub, onSubclubClick }: Props) {
-  const { settlement, dashboardTotals } = data;
-  const totals = dashboardTotals || {};
+  const { settlement } = data;
 
   // If a subclub is selected, show its data
   const filtered = activeSubclub
@@ -23,8 +22,6 @@ export default function ClubDashboard({ data, subclubs, activeSubclub, onSubclub
   const totalPlayers = filtered.reduce((sum, s) => sum + (s.players?.length || 0), 0);
   const totalRake = filtered.reduce((sum, s) => sum + (s.totals?.rake || 0), 0);
   const totalResult = filtered.reduce((sum, s) => sum + (s.totals?.ganhos || 0) + (s.totals?.rake || 0) + (s.totals?.ggr || 0), 0);
-  const totalAgents = filtered.reduce((sum, s) => sum + (s.agents?.length || 0), 0);
-
   return (
     <div className="p-4 lg:p-6 animate-tab-fade">
       <div className="mb-4">

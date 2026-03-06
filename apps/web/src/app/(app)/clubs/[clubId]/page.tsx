@@ -15,8 +15,7 @@ import {
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
-import { getVisibleTabList } from '@/components/settlement/SubNavTabs';
-import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
+import type { SettlementFullResponse } from '@/types/settlement';
 import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 
 import ClubNavTabs from '@/components/club/ClubNavTabs';
@@ -36,7 +35,6 @@ import { ArrowLeft, AlertCircle, ChevronRight } from 'lucide-react';
 
 // ─── Settlement tab components (lazy) ────────────────────────────────
 import ResumoClube from '@/components/settlement/ResumoClube';
-const DashboardClube = dynamic(() => import('@/components/settlement/DashboardClube'), { loading: () => <TabSkeleton />, ssr: false });
 const Detalhamento = dynamic(() => import('@/components/settlement/Detalhamento'), { loading: () => <TabSkeleton />, ssr: false });
 const Jogadores = dynamic(() => import('@/components/settlement/Jogadores'), { loading: () => <TabSkeleton />, ssr: false });
 const Ajustes = dynamic(() => import('@/components/settlement/Ajustes'), { loading: () => <TabSkeleton />, ssr: false });
@@ -112,7 +110,11 @@ export default function ClubHubPage() {
 
   // Persist subclub selection
   useEffect(() => {
-    if (activeSubclub) localStorage.setItem(`club-${clubId}-subclub`, activeSubclub);
+    if (activeSubclub) {
+      localStorage.setItem(`club-${clubId}-subclub`, activeSubclub);
+    } else {
+      localStorage.removeItem(`club-${clubId}-subclub`);
+    }
   }, [activeSubclub, clubId]);
 
   useEffect(() => {
@@ -280,41 +282,49 @@ export default function ClubHubPage() {
     return `${fmt(d)} - ${fmt(end)}`;
   }
 
-  // ─── Settlement tab content ─────────────────────────────────────────
-  function renderSettlementContent() {
+  // ─── Shared settlement tab renderer (used by both settlement mode and club tabs) ──
+  function renderSettlementTab(tabKey: string) {
     if (!data || !subclub || !settlementId) return null;
     const { settlement, fees } = data;
+    const logoUrl = subclubName ? logoMap[normalizeKey(subclubName)] || null : null;
+    const waLink = subclubName ? whatsappLinkMap[normalizeKey(subclubName)] || null : null;
+    const cpManagerId = chippixManagerMap[subclub.id] || (subclubName ? chippixManagerMap[normalizeKey(subclub.name)] : null) || null;
 
-    switch (activeSettlementTab) {
+    switch (tabKey) {
       case 'resumo':
-        return (
-          <TabErrorBoundary tabName="Resumo">
-            <ResumoClube subclub={subclub} fees={fees} weekStart={settlement.week_start} weekEnd={weekEnd}
-              logoUrl={logoMap[normalizeKey(subclubName)] || null}
-              whatsappGroupLink={whatsappLinkMap[normalizeKey(subclubName)] || null} />
-          </TabErrorBoundary>
-        );
+        return <TabErrorBoundary tabName="Resumo"><ResumoClube subclub={subclub} fees={fees} weekStart={settlement.week_start} weekEnd={weekEnd} logoUrl={logoUrl} whatsappGroupLink={waLink} /></TabErrorBoundary>;
       case 'detalhamento':
+      case 'agentes':
         return <TabErrorBoundary tabName="Detalhamento"><Detalhamento subclub={subclub} /></TabErrorBoundary>;
       case 'rakeback':
         return <TabErrorBoundary tabName="Rakeback"><Rakeback subclub={subclub} weekStart={settlement.week_start} fees={fees} settlementId={settlementId} settlementStatus={settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
       case 'comprovantes':
-        return <TabErrorBoundary tabName="Comprovantes"><Comprovantes subclub={subclub} weekStart={settlement.week_start} clubId={settlement.club_id} clubExternalId={settlement.organizations?.external_id} fees={fees} logoUrl={logoMap[normalizeKey(subclubName)] || null} settlementId={settlementId} settlementStatus={settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Comprovantes"><Comprovantes subclub={subclub} weekStart={settlement.week_start} clubId={settlement.club_id} clubExternalId={settlement.organizations?.external_id} fees={fees} logoUrl={logoUrl} settlementId={settlementId} settlementStatus={settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
+      case 'caixa':
       case 'caixa-s':
         return <TabErrorBoundary tabName="Caixa"><Caixa weekStart={settlement.week_start} clubId={subclub.id} subclub={subclub} fees={fees} settlementStatus={settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
+      case 'conciliacao':
       case 'conciliacao-s':
-        return <TabErrorBoundary tabName="Conciliacao"><Conciliacao weekStart={settlement.week_start} clubId={subclub.id} clubName={subclub.name} chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null} settlementStatus={settlement.status} onDataChange={loadData} agents={conciliacaoAgents} players={conciliacaoPlayers} subclubEntityIds={subclubEntityIds} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Conciliacao"><Conciliacao weekStart={settlement.week_start} clubId={subclub.id} clubName={subclub.name} chippixManagerId={cpManagerId} settlementStatus={settlement.status} onDataChange={loadData} agents={conciliacaoAgents} players={conciliacaoPlayers} subclubEntityIds={subclubEntityIds} /></TabErrorBoundary>;
+      case 'dre':
       case 'dre-s':
         return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} weekStart={settlement.week_start} /></TabErrorBoundary>;
       case 'ajustes':
         return <TabErrorBoundary tabName="Ajustes"><Ajustes subclub={subclub} weekStart={settlement.week_start} settlementStatus={settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
+      case 'jogadores':
       case 'jogadores-s':
         return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} /></TabErrorBoundary>;
+      case 'liga':
       case 'liga-s':
         return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} weekStart={settlement.week_start} weekEnd={weekEnd} /></TabErrorBoundary>;
       default:
         return null;
     }
+  }
+
+  // ─── Settlement tab content (settlement mode) ─────────────────────
+  function renderSettlementContent() {
+    return renderSettlementTab(activeSettlementTab);
   }
 
   // ─── Club tab content (non-settlement) ──────────────────────────────
@@ -327,41 +337,17 @@ export default function ClubHubPage() {
         return <ClubFechamentos settlements={settlements} currentSettlementId={settlementId} onSelectSettlement={handleOpenSettlement} />;
       case 'subclubes':
         return <ClubSubclubes subclubs={subclubs} />;
-      case 'agentes':
-        // Reuse settlement Detalhamento for now (shows agents breakdown)
-        if (!data || !subclub) return null;
-        return <TabErrorBoundary tabName="Agentes"><Detalhamento subclub={subclub} /></TabErrorBoundary>;
-      case 'jogadores':
-        if (!data || !subclub) return null;
-        return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} /></TabErrorBoundary>;
-      case 'caixa':
-        if (!data || !subclub || !settlementId) return null;
-        return <TabErrorBoundary tabName="Caixa"><Caixa weekStart={data.settlement.week_start} clubId={subclub.id} subclub={subclub} fees={data.fees} settlementStatus={data.settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
-      case 'conciliacao':
-        if (!data || !subclub || !settlementId) return null;
-        return <TabErrorBoundary tabName="Conciliacao"><Conciliacao weekStart={data.settlement.week_start} clubId={subclub.id} clubName={subclub.name} chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null} settlementStatus={data.settlement.status} onDataChange={loadData} agents={conciliacaoAgents} players={conciliacaoPlayers} subclubEntityIds={subclubEntityIds} /></TabErrorBoundary>;
-      case 'dre':
-        if (!data || !subclub) return null;
-        return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={data.fees} weekStart={data.settlement.week_start} /></TabErrorBoundary>;
-      case 'comprovantes':
-        if (!data || !subclub || !settlementId) return null;
-        return <TabErrorBoundary tabName="Comprovantes"><Comprovantes subclub={subclub} weekStart={data.settlement.week_start} clubId={data.settlement.club_id} clubExternalId={data.settlement.organizations?.external_id} fees={data.fees} logoUrl={logoMap[normalizeKey(subclubName)] || null} settlementId={settlementId} settlementStatus={data.settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
-      case 'liga':
-        if (!data || !subclub) return null;
-        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} weekStart={data.settlement.week_start} weekEnd={weekEnd} /></TabErrorBoundary>;
       case 'dados':
         return <ClubDadosClube clubId={clubId} />;
       case 'taxas':
         return <ClubTaxas clubId={clubId} />;
-      case 'rakeback':
-        if (!data || !subclub || !settlementId) return null;
-        return <TabErrorBoundary tabName="Rakeback"><Rakeback subclub={subclub} weekStart={data.settlement.week_start} fees={data.fees} settlementId={settlementId} settlementStatus={data.settlement.status} onDataChange={loadData} /></TabErrorBoundary>;
       case 'pagamentos':
         return <div className="p-4 lg:p-6 animate-tab-fade"><ConfigPagamentos /></div>;
       case 'categorias':
         return <div className="p-4 lg:p-6 animate-tab-fade"><ConfigCategorias /></div>;
       default:
-        return <div className="flex items-center justify-center py-20 text-dark-400">Tab nao encontrada</div>;
+        // Settlement-based tabs (agentes, jogadores, caixa, conciliacao, dre, comprovantes, liga, rakeback)
+        return renderSettlementTab(activeTab);
     }
   }
 
