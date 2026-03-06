@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ToastProvider } from '@/components/Toast';
@@ -78,6 +78,7 @@ function isRouteActive(pathname: string, href: string): boolean {
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, role, isAdmin, hasPermission, logout, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
@@ -304,7 +305,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           {/* ── MEUS CLUBES (collapsible nav item) ─────────── */}
           <div className={collapsed ? 'lg:hidden' : ''}>
             <button
-              onClick={() => setClubsOpen((o) => !o)}
+              onClick={() => {
+                setClubsOpen((o) => !o);
+                if (pathname !== '/clubs') router.push('/clubs');
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 pathname.startsWith('/s/') || pathname === '/clubs'
                   ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'

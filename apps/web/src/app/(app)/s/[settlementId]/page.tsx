@@ -4,14 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, deleteSettlement, formatBRL, getOrgTree, listSettlements } from '@/lib/api';
+import { getSettlementFull, voidSettlement, deleteSettlement, getOrgTree, listSettlements } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
-import KpiCard from '@/components/ui/KpiCard';
 import WeekSelector from '@/components/WeekSelector';
 import Spinner from '@/components/Spinner';
-import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import TableSkeleton from '@/components/ui/TableSkeleton';
 import ClubLogo from '@/components/ClubLogo';
 import EmptyState from '@/components/ui/EmptyState';
@@ -149,7 +147,6 @@ export default function SettlementOverviewPage() {
   if (loading) {
     return (
       <div className="p-4 lg:p-8 animate-tab-fade">
-        <KpiSkeleton count={5} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-dark-900 border border-dark-700 rounded-xl p-6 h-36">
@@ -174,10 +171,10 @@ export default function SettlementOverviewPage() {
     );
   }
 
-  const { settlement, subclubs, dashboardTotals } = data;
+  const { settlement, subclubs } = data;
 
   // Build club groups (current + siblings)
-  const clubGroups: Array<{ clubId: string; label: string; platform?: string; externalId?: string | null; settlementId: string; subclubs: any[]; totals: any }> = [];
+  const clubGroups: Array<{ clubId: string; label: string; platform?: string; externalId?: string | null; settlementId: string; subclubs: any[] }> = [];
 
   const currentOrg = settlement.organizations;
   const currentClubName = currentOrg?.name || 'Clube';
@@ -188,7 +185,6 @@ export default function SettlementOverviewPage() {
     externalId: currentOrg?.external_id,
     settlementId,
     subclubs,
-    totals: dashboardTotals,
   });
 
   for (const sib of siblingData) {
@@ -201,7 +197,6 @@ export default function SettlementOverviewPage() {
       externalId: sibOrg?.external_id,
       settlementId: sib.settlement.id,
       subclubs: sib.subclubs || [],
-      totals: sib.dashboardTotals || { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
     });
   }
 
@@ -221,20 +216,6 @@ export default function SettlementOverviewPage() {
   const sortedPlatforms = Object.keys(platformGroups).sort(
     (a, b) => platformOrder.indexOf(a) - platformOrder.indexOf(b),
   );
-
-  // Aggregate KPIs across all clubs
-  const t = hasMultipleClubs
-    ? clubGroups.reduce(
-        (acc, g) => ({
-          players: acc.players + (g.totals.players || 0),
-          agents: acc.agents + (g.totals.agents || 0),
-          rake: acc.rake + (g.totals.rake || 0),
-          ggr: acc.ggr + (g.totals.ggr || 0),
-          resultado: acc.resultado + (g.totals.resultado || 0),
-        }),
-        { players: 0, agents: 0, rake: 0, ggr: 0, resultado: 0 },
-      )
-    : dashboardTotals;
 
   const weekEnd = (() => {
     if (!settlement.week_start) return '';
@@ -312,21 +293,6 @@ export default function SettlementOverviewPage() {
         )}
         {!weekNotFound && (
           <>
-            {/* Global KPIs */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-              <KpiCard label="Jogadores" value={String(t.players)} accentColor="bg-blue-500" tooltip="Total de jogadores na semana" />
-              <KpiCard label="Agentes" value={String(t.agents)} accentColor="bg-purple-500" tooltip="Total de agentes ativos" />
-              <KpiCard label="Rake Total" value={formatBRL(t.rake)} accentColor="bg-poker-500" tooltip={`Soma do rake de todos subclubes = ${formatBRL(t.rake)}`} />
-              <KpiCard label="GGR Total" value={formatBRL(t.ggr)} accentColor="bg-purple-500" tooltip={`Soma do GGR de todos subclubes = ${formatBRL(t.ggr)}`} hideIfZero />
-              <KpiCard
-                label="Resultado Total"
-                value={formatBRL(t.resultado)}
-                accentColor={t.resultado >= 0 ? 'bg-amber-500' : 'bg-red-500'}
-                valueColor={t.resultado < 0 ? 'text-red-400' : 'text-amber-400'}
-                tooltip={`resultado = ganhos + rake + ggr (consolidado) = ${formatBRL(t.resultado)}`}
-              />
-            </div>
-
             {/* Subclub cards grouped by platform → club */}
             {sortedPlatforms.map((plat) => {
               const platClubs = platformGroups[plat];
@@ -358,7 +324,7 @@ export default function SettlementOverviewPage() {
 
                           <div className="p-5">
                             {/* Club label + subclub name */}
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <ClubLogo
                                   logoUrl={logoMap[normalizeKey(sc.name)]}
@@ -381,29 +347,6 @@ export default function SettlementOverviewPage() {
                                 </div>
                               </div>
                               <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-dark-700/50">
-                              <div>
-                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Rake</p>
-                                <p className="text-sm font-mono text-dark-200 font-medium">{formatBRL(sc.totals.rake)}</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Resultado</p>
-                                <p
-                                  className={`text-sm font-mono font-medium ${sc.totals.resultado < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                                >
-                                  {formatBRL(sc.totals.resultado)}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-dark-500 uppercase tracking-wider">Acerto</p>
-                                <p
-                                  className={`text-sm font-mono font-medium ${sc.acertoLiga < 0 ? 'text-red-400' : 'text-poker-400'}`}
-                                >
-                                  {formatBRL(sc.acertoLiga)}
-                                </p>
-                              </div>
                             </div>
                           </div>
                         </Link>
