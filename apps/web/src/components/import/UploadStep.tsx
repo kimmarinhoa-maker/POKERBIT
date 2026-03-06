@@ -214,31 +214,12 @@ export default function UploadStep({
   function handlePlatformClick(p: Platform) {
     setPlatform(p);
     setPlatformSelected(true);
-    // Auto-select first club matching platform
-    const matching = clubs.filter((c) => c.metadata?.platform === p);
-    if (matching.length > 0 && !matching.some((c) => c.id === clubId)) {
-      setClubId(matching[0].id);
-    }
   }
 
-  // Filter clubs by selected platform — do NOT fallback to all clubs
-  // If no clubs match the platform, show "new club will be created"
-  const displayClubs = platformSelected
-    ? clubs.filter((c) => c.metadata?.platform === platform)
-    : clubs;
-
-  // Auto-select first club when filtered list changes
-  useEffect(() => {
-    if (platformSelected && displayClubs.length > 0) {
-      if (!displayClubs.some((c) => c.id === clubId)) {
-        setClubId(displayClubs[0].id);
-      }
-    }
-  }, [platformSelected, platform, displayClubs, clubId, setClubId]);
+  // Club selection removed — find-or-create resolves the correct club in handlePreview
 
   // Allow preview without clubId if we have filename metadata (auto-create flow)
-  const hasAutoDetect = !!detection?.filenameMeta?.clubExternalId;
-  const canPreview = !!file && platformSelected && (!!clubId || hasAutoDetect);
+  const canPreview = !!file && platformSelected;
 
   return (
     <div className="space-y-5">
@@ -319,7 +300,7 @@ export default function UploadStep({
           ) : detection && detection.confidence === 'high' && platformSelected ? (
             /* ── Compact auto-detect card (high confidence) ── */
             <div className="bg-dark-900 border border-green-500/50 rounded-xl p-4">
-              <label className={LABEL}>Plataforma e Clube</label>
+              <label className={LABEL}>Plataforma</label>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -338,38 +319,14 @@ export default function UploadStep({
                   Alterar
                 </button>
               </div>
-              {/* Filename meta info */}
               {detection?.filenameMeta?.clubExternalId && (
-                <p className="text-dark-500 text-[10px] mt-1.5">
-                  Club ID: {detection.filenameMeta.clubExternalId}
-                  {detection.filenameMeta.leagueId && ` · Liga: ${detection.filenameMeta.leagueId}`}
+                <p className="text-dark-400 text-xs mt-2">
+                  Liga: <span className="text-white font-medium">{detection.filenameMeta.leagueId || '—'}</span>
+                  {' · '}Club ID: <span className="text-white font-medium">{detection.filenameMeta.clubExternalId}</span>
+                  {' · '}
+                  <span className="text-blue-400">Clube sera encontrado ou criado automaticamente</span>
                 </p>
               )}
-              {/* Club name or inline dropdown */}
-              <div className="mt-2">
-                {displayClubs.length === 0 && detection?.filenameMeta?.clubExternalId ? (
-                  <div className="bg-blue-900/20 border border-blue-700/40 rounded-lg px-3 py-2">
-                    <p className="text-blue-300 text-xs font-medium">
-                      Novo clube sera criado: Clube {detection.filenameMeta.clubExternalId}
-                    </p>
-                  </div>
-                ) : displayClubs.length > 1 ? (
-                  <select
-                    value={clubId}
-                    onChange={(e) => setClubId(e.target.value)}
-                    className="input w-full text-sm"
-                    aria-label="Selecionar clube"
-                  >
-                    {displayClubs.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                ) : displayClubs.length === 1 ? (
-                  <p className="text-dark-400 text-xs">
-                    Clube: <span className="text-dark-200 font-medium">{displayClubs[0]?.name || '—'}</span>
-                  </p>
-                ) : null}
-              </div>
             </div>
           ) : detection ? (
             /* ── Manual fallback (low confidence or "Alterar" clicked) ── */
@@ -414,25 +371,11 @@ export default function UploadStep({
                 </div>
               </div>
 
-              {platformSelected && (
-                <div>
-                  <label className={LABEL}>Clube</label>
-                  <select
-                    value={clubId}
-                    onChange={(e) => setClubId(e.target.value)}
-                    className="input w-full"
-                    aria-label="Selecionar clube"
-                  >
-                    {displayClubs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                        {c.metadata?.platform
-                          ? ` (${PLATFORM_LABELS[c.metadata.platform] || c.metadata.platform})`
-                          : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {platformSelected && detection?.filenameMeta?.clubExternalId && (
+                <p className="text-dark-400 text-xs">
+                  Liga: <span className="text-white font-medium">{detection.filenameMeta.leagueId || '—'}</span>
+                  {' · '}Club ID: <span className="text-white font-medium">{detection.filenameMeta.clubExternalId}</span>
+                </p>
               )}
             </div>
           ) : null}
