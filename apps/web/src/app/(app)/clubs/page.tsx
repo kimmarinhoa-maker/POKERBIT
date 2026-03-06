@@ -150,19 +150,9 @@ export default function MeusClubesPage() {
   return (
     <div className="p-4 lg:p-8 max-w-6xl animate-tab-fade">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 mb-1">
-          <h2 className="text-xl lg:text-2xl font-bold text-white">Meus Clubes</h2>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-poker-500/10 text-poker-400 border border-poker-500/30">
-              {clubs.length} clube{clubs.length !== 1 ? 's' : ''}
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-              {grouped.length} plataforma{grouped.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-        <p className="text-dark-400 text-sm">Selecione um clube para gerenciar</p>
+      <div className="mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Meus Clubes</h1>
+        <p className="text-dark-400 text-sm mt-1">Gestão de clubes de poker online</p>
       </div>
 
       {clubs.length === 0 ? (
