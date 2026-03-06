@@ -156,6 +156,35 @@ export default function ImportWizardPage() {
     setStep('confirm');
   }
 
+  // Create subclubes + prefix rules, then reprocess preview to show linkage
+  async function handleCreateAndLinkSubclubes() {
+    if (!clubId || !newSubclubes.length) return;
+    for (const sub of newSubclubes) {
+      try {
+        const orgRes = await createOrganization({
+          name: sub.nome,
+          parent_id: clubId,
+          type: 'SUBCLUB',
+          external_id: sub.siglas[0],
+        });
+        if (orgRes.success && orgRes.data?.id) {
+          for (const sigla of sub.siglas) {
+            await createPrefixRule({
+              prefix: sigla,
+              subclub_id: orgRes.data.id,
+              priority: 0,
+            });
+          }
+        }
+      } catch {
+        toast(`Erro ao criar subclube ${sub.nome}`, 'error');
+      }
+    }
+    toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
+    // Reprocess preview so players get linked via new prefix rules
+    await handlePreview();
+  }
+
   async function handleLinkAgentInline(agentName: string, subclubId: string) {
     if (!subclubId) return;
     const key = `agent:${agentName}`;
@@ -259,32 +288,6 @@ export default function ImportWizardPage() {
       if (res.success && res.data) {
         setConfirmResult(res.data);
 
-        // Create subclubes + prefix rules for new clubs
-        if (isNewClub && newSubclubes.length > 0) {
-          for (const sub of newSubclubes) {
-            try {
-              const orgRes = await createOrganization({
-                name: sub.nome,
-                parent_id: clubId,
-                type: 'SUBCLUB',
-                external_id: sub.siglas[0],
-              });
-              if (orgRes.success && orgRes.data?.id) {
-                for (const sigla of sub.siglas) {
-                  await createPrefixRule({
-                    prefix: sigla,
-                    subclub_id: orgRes.data.id,
-                    priority: 0,
-                  });
-                }
-              }
-            } catch {
-              toast(`Erro ao criar subclube ${sub.nome}`, 'error');
-            }
-          }
-          toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
-        }
-
         // Auto-sync agents (creates AGENT organizations from metrics)
         if (res.data.settlement_id) {
           syncSettlementAgents(res.data.settlement_id).catch(() => {
@@ -378,6 +381,7 @@ export default function ImportWizardPage() {
           newSubclubes={newSubclubes}
           onNewSubclubesChange={setNewSubclubes}
           existingSubclubCount={existingSubclubCount}
+          onCreateAndLinkSubclubes={handleCreateAndLinkSubclubes}
         />
       )}
 

@@ -27,6 +27,7 @@ interface PreviewStepProps {
   newSubclubes?: SubclubeEntry[];
   onNewSubclubesChange?: (subs: SubclubeEntry[]) => void;
   existingSubclubCount?: number;
+  onCreateAndLinkSubclubes?: () => Promise<void>;
 }
 
 // ─── Status badges ──────────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default function PreviewStep({
   preview, onNext, onBack, onEditLinks, availableSubclubs, onLinkAgent, onReprocess,
   platform, clubId, onSubclubCreated,
   isNewClub, clubName, onClubNameChange, newSubclubes, onNewSubclubesChange, existingSubclubCount,
+  onCreateAndLinkSubclubes,
 }: PreviewStepProps) {
   // Players table state
   const [playersOpen, setPlayersOpen] = useState(false);
@@ -83,6 +85,8 @@ export default function PreviewStep({
   const [subclubesOpen, setSubclubesOpen] = useState(false);
   const [newSigla, setNewSigla] = useState('');
   const [newNome, setNewNome] = useState('');
+  const [linkingSubclubes, setLinkingSubclubes] = useState(false);
+  const [subclubesLinked, setSubclubesLinked] = useState(false);
 
 
   const players = useMemo(() => preview.players || [], [preview.players]);
@@ -441,7 +445,7 @@ export default function PreviewStep({
                     value={newSigla}
                     onChange={(e) => setNewSigla(e.target.value.toUpperCase())}
                     placeholder="Siglas (ex: TGP, TGPVIP)"
-                    className="input w-44 text-xs font-mono"
+                    className="input w-56 text-xs font-mono"
                   />
                   <input
                     type="text"
@@ -472,6 +476,34 @@ export default function PreviewStep({
                 <p className="text-dark-500 text-[10px] mt-1">
                   Separe multiplas siglas com virgula. Cada sigla vira um prefixo para vincular agentes.
                 </p>
+
+                {/* Vincular Subclubes button */}
+                {newSubclubes && newSubclubes.length > 0 && onCreateAndLinkSubclubes && (
+                  <div className="pt-3 mt-2 border-t border-dark-700/50">
+                    {subclubesLinked ? (
+                      <div className="flex items-center gap-2 text-green-400 text-xs">
+                        <span className="font-bold">{'\u2713'}</span>
+                        <span>{newSubclubes.length} subclube{newSubclubes.length !== 1 ? 's' : ''} criado{newSubclubes.length !== 1 ? 's' : ''} e vinculado{newSubclubes.length !== 1 ? 's' : ''}. Confira na tabela abaixo.</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          setLinkingSubclubes(true);
+                          try {
+                            await onCreateAndLinkSubclubes();
+                            setSubclubesLinked(true);
+                          } finally {
+                            setLinkingSubclubes(false);
+                          }
+                        }}
+                        disabled={linkingSubclubes}
+                        className="w-full py-2 rounded-lg text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 hover:bg-blue-600/25 disabled:opacity-50 transition-all"
+                      >
+                        {linkingSubclubes ? 'Criando e vinculando...' : 'Vincular Subclubes'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
