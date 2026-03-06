@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -158,9 +158,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     if (user) loadClubs();
   }, [user, loadClubs]);
 
-  // Re-load clubs after import (detect pathname changes to /s/ or /clubs)
+  // Re-load clubs after import completes (user lands on /s/ from /import)
+  const prevPathRef = useRef(pathname);
   useEffect(() => {
-    if (user && clubsLoaded && (pathname.startsWith('/s/') || pathname === '/clubs')) {
+    const prev = prevPathRef.current;
+    prevPathRef.current = pathname;
+    if (user && clubsLoaded && prev.startsWith('/import') && (pathname.startsWith('/s/') || pathname === '/clubs')) {
       loadClubs();
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -204,12 +207,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   // Check if a club/subclub is active based on current URL
   function isClubActive(club: SidebarClub): boolean {
     if (!club.lastSettlementId) return false;
-    return pathname === `/s/${club.lastSettlementId}` || pathname.startsWith(`/s/${club.lastSettlementId}/`);
+    return pathname.startsWith(`/s/${club.lastSettlementId}`);
   }
   function isSubclubActive(club: SidebarClub, subName: string): boolean {
     if (!club.lastSettlementId) return false;
-    return pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}` ||
-           pathname.startsWith(`/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}?`);
+    return pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}`;
   }
 
   return (
@@ -306,8 +308,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           <div className={collapsed ? 'lg:hidden' : ''}>
             <button
               onClick={() => {
-                setClubsOpen((o) => !o);
-                if (pathname !== '/clubs') router.push('/clubs');
+                if (pathname === '/clubs') {
+                  setClubsOpen((o) => !o);
+                } else {
+                  setClubsOpen(true);
+                  router.push('/clubs');
+                }
               }}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 pathname.startsWith('/s/') || pathname === '/clubs'

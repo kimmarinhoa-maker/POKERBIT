@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { getSettlementFull, voidSettlement, deleteSettlement, getOrgTree, listSettlements } from '@/lib/api';
+import { getSettlementFull, voidSettlement, deleteSettlement, getOrgTree } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
@@ -42,7 +42,6 @@ export default function SettlementOverviewPage() {
   const DELETE_CONFIRM_WORD = 'EXCLUIR';
 
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
-  const [siblingData, setSiblingData] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -60,30 +59,6 @@ export default function SettlementOverviewPage() {
       }
       if (res.success && res.data) {
         setData(res.data);
-
-        // Load sibling settlements from same week (different platforms)
-        const weekStart = res.data.settlement?.week_start;
-        if (weekStart) {
-          try {
-            const siblingsRes = await listSettlements(undefined, weekStart, weekStart);
-            if (siblingsRes.success && siblingsRes.data) {
-              const siblings = (siblingsRes.data || []).filter(
-                (s: any) => s.id !== settlementId && s.status !== 'VOID'
-              );
-              // Load full data for each sibling
-              const siblingFullData: any[] = [];
-              for (const sib of siblings) {
-                try {
-                  const sibRes = await getSettlementFull(sib.id);
-                  if (sibRes.success && sibRes.data) {
-                    siblingFullData.push(sibRes.data);
-                  }
-                } catch { /* skip failed siblings */ }
-              }
-              setSiblingData(siblingFullData);
-            }
-          } catch { /* sibling loading is optional */ }
-        }
       } else {
         setError(res.error || 'Erro ao carregar settlement');
       }
@@ -173,49 +148,10 @@ export default function SettlementOverviewPage() {
 
   const { settlement, subclubs } = data;
 
-  // Build club groups (current + siblings)
-  const clubGroups: Array<{ clubId: string; label: string; platform?: string; externalId?: string | null; settlementId: string; subclubs: any[] }> = [];
-
   const currentOrg = settlement.organizations;
   const currentClubName = currentOrg?.name || 'Clube';
-  clubGroups.push({
-    clubId: settlement.club_id,
-    label: currentClubName,
-    platform: currentOrg?.metadata?.platform || undefined,
-    externalId: currentOrg?.external_id,
-    settlementId,
-    subclubs,
-  });
-
-  for (const sib of siblingData) {
-    const sibOrg = sib.settlement?.organizations;
-    const sibClubName = sibOrg?.name || 'Clube';
-    clubGroups.push({
-      clubId: sib.settlement.club_id,
-      label: sibClubName,
-      platform: sibOrg?.metadata?.platform || undefined,
-      externalId: sibOrg?.external_id,
-      settlementId: sib.settlement.id,
-      subclubs: sib.subclubs || [],
-    });
-  }
-
-  // Sort alphabetically by club name
-  clubGroups.sort((a, b) => a.label.localeCompare(b.label));
-
-  const hasMultipleClubs = clubGroups.length > 1;
-
-  // Group clubs by platform
-  const platformGroups: Record<string, typeof clubGroups> = {};
-  for (const cg of clubGroups) {
-    const plat = (cg.platform || 'outro').toLowerCase();
-    if (!platformGroups[plat]) platformGroups[plat] = [];
-    platformGroups[plat].push(cg);
-  }
-  const platformOrder = ['suprema', 'pppoker', 'clubgg', 'outro'];
-  const sortedPlatforms = Object.keys(platformGroups).sort(
-    (a, b) => platformOrder.indexOf(a) - platformOrder.indexOf(b),
-  );
+  const currentPlatform = (currentOrg?.metadata?.platform || 'outro').toLowerCase();
+  const currentExternalId = currentOrg?.external_id;
 
   const weekEnd = (() => {
     if (!settlement.week_start) return '';
@@ -292,71 +228,43 @@ export default function SettlementOverviewPage() {
           </div>
         )}
         {!weekNotFound && (
-          <>
-            {/* Subclub cards grouped by platform → club */}
-            {sortedPlatforms.map((plat) => {
-              const platClubs = platformGroups[plat];
-              const platLabel = plat === 'suprema' ? 'Suprema Poker' : plat === 'pppoker' ? 'PPPoker' : plat === 'clubgg' ? 'ClubGG' : plat;
-              const showPlatformHeader = hasMultipleClubs || sortedPlatforms.length > 1;
-
-              return (
-                <div key={plat} className="mb-8">
-                  {/* Platform header */}
-                  {showPlatformHeader && (
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-dark-400 bg-dark-800 px-3 py-1 rounded-full border border-dark-700">
-                        {platLabel}
-                      </span>
-                      <div className="flex-1 h-px bg-dark-700/50" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {subclubs.map((sc: any) => (
+              <Link
+                key={sc.id || sc.name}
+                href={`/s/${settlementId}/club/${sc.name}`}
+                className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
+              >
+                <div className={`h-1 ${currentPlatform === 'pppoker' ? 'bg-green-500' : currentPlatform === 'suprema' ? 'bg-amber-500' : 'bg-poker-500'}`} />
+                <div className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <ClubLogo
+                        logoUrl={logoMap[normalizeKey(sc.name)]}
+                        name={sc.name}
+                        size="md"
+                        className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
+                      />
+                      <div>
+                        {currentExternalId && (
+                          <p className="text-[10px] text-dark-500 uppercase tracking-wider mb-0.5">
+                            {currentClubName} <span className="font-mono">#{currentExternalId}</span>
+                          </p>
+                        )}
+                        <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
+                          {sc.name}
+                        </h4>
+                        <p className="text-xs text-dark-400">
+                          {sc.totals.players} jogadores · {sc.totals.agents} agentes
+                        </p>
+                      </div>
                     </div>
-                  )}
-
-                  {/* All clubs within this platform in a single grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {platClubs.map(({ clubId: cId, label, externalId, settlementId: grpSettId, subclubs: grpSubclubs }) =>
-                      grpSubclubs.map((sc: any) => (
-                        <Link
-                          key={`${cId}-${sc.id || sc.name}`}
-                          href={`/s/${grpSettId}/club/${sc.name}`}
-                          className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
-                        >
-                          <div className={`h-1 ${plat === 'pppoker' ? 'bg-green-500' : plat === 'suprema' ? 'bg-amber-500' : 'bg-poker-500'}`} />
-
-                          <div className="p-5">
-                            {/* Club label + subclub name */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <ClubLogo
-                                  logoUrl={logoMap[normalizeKey(sc.name)]}
-                                  name={sc.name}
-                                  size="md"
-                                  className="group-hover:ring-1 group-hover:ring-poker-500/30 transition-all"
-                                />
-                                <div>
-                                  {hasMultipleClubs && (
-                                    <p className="text-[10px] text-dark-500 uppercase tracking-wider mb-0.5">
-                                      {label} {externalId && <span className="font-mono">#{externalId}</span>}
-                                    </p>
-                                  )}
-                                  <h4 className="font-bold text-white group-hover:text-poker-400 transition-colors">
-                                    {sc.name}
-                                  </h4>
-                                  <p className="text-xs text-dark-400">
-                                    {sc.totals.players} jogadores · {sc.totals.agents} agentes
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
-                            </div>
-                          </div>
-                        </Link>
-                      )),
-                    )}
+                    <span className="text-dark-500 group-hover:text-poker-400 transition-colors text-lg">&rarr;</span>
                   </div>
                 </div>
-              );
-            })}
-          </>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
 
