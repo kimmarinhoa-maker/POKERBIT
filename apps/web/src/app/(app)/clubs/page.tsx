@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { listSettlements } from '@/lib/api';
+import { listSettlements, getOrgTree } from '@/lib/api';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useToast } from '@/components/Toast';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
+import ClubLogo from '@/components/ClubLogo';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { Building2, ArrowRight } from 'lucide-react';
@@ -32,6 +33,7 @@ interface ClubCard {
   latestSettlementId: string;
   weekStart: string;
   status: string;
+  logoUrl: string | null;
 }
 
 export default function MeusClubesPage() {
@@ -44,15 +46,24 @@ export default function MeusClubesPage() {
 
   const loadClubs = useCallback(async () => {
     try {
-      const res = await listSettlements();
-      if (!res.success || !res.data) {
+      const [settRes, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
+
+      // Build logo map from org tree: club org id -> logo_url
+      const logoMap = new Map<string, string | null>();
+      if (treeRes.success && treeRes.data) {
+        for (const club of treeRes.data) {
+          logoMap.set(club.id, club.logo_url || club.metadata?.logo_url || null);
+        }
+      }
+
+      if (!settRes.success || !settRes.data) {
         setClubs([]);
         return;
       }
 
       // Group by club_id, keep only the most recent settlement per club
       const clubMap = new Map<string, ClubCard>();
-      for (const s of res.data) {
+      for (const s of settRes.data) {
         if (s.status === 'VOID') continue;
         if (!clubMap.has(s.club_id)) {
           clubMap.set(s.club_id, {
@@ -63,6 +74,7 @@ export default function MeusClubesPage() {
             latestSettlementId: s.id,
             weekStart: s.week_start,
             status: s.status,
+            logoUrl: logoMap.get(s.club_id) || null,
           });
         }
       }
@@ -171,8 +183,9 @@ export default function MeusClubesPage() {
                     <div className="h-1 bg-poker-500" />
 
                     <div className="p-5">
-                      {/* Club name + arrow */}
-                      <div className="flex items-start justify-between mb-3">
+                      {/* Logo + Club name + arrow */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <ClubLogo logoUrl={club.logoUrl} name={club.clubName} size="lg" className="group-hover:ring-2 ring-poker-500/30 transition-all" />
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-bold text-white truncate group-hover:text-poker-400 transition-colors">
                             {club.clubName}
