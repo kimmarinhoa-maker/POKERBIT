@@ -209,10 +209,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     if (!club.lastSettlementId) return false;
     return pathname.startsWith(`/s/${club.lastSettlementId}`);
   }
-  function isSubclubActive(club: SidebarClub, subName: string): boolean {
-    if (!club.lastSettlementId) return false;
-    return pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}`;
-  }
 
   return (
     <div className="min-h-screen flex">
@@ -392,11 +388,11 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                             {club.subclubes.length > 0 && club.lastSettlementId && (
                               <div className="ml-6 space-y-0.5 mt-0.5">
                                 {club.subclubes.map((sub) => {
-                                  const subActive = isSubclubActive(club, sub.name);
+                                  const subActive = isClubActive(club);
                                   return (
                                     <Link
                                       key={sub.id}
-                                      href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
+                                      href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(club.name)}`}
                                       className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
                                         subActive
                                           ? 'text-amber-400 bg-amber-500/5'
