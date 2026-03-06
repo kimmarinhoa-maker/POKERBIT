@@ -336,7 +336,7 @@ export default function ClubHubPage() {
       case 'fechamentos':
         return <ClubFechamentos settlements={settlements} currentSettlementId={settlementId} onSelectSettlement={handleOpenSettlement} />;
       case 'subclubes':
-        return <ClubSubclubes subclubs={subclubs} />;
+        return <ClubSubclubes clubId={clubId} />;
       case 'dados':
         return <ClubDadosClube clubId={clubId} />;
       case 'taxas':
