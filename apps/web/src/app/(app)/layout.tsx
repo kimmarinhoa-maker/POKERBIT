@@ -21,6 +21,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
@@ -34,28 +35,14 @@ interface NavItem {
   permKey?: string;
 }
 
-interface NavSection {
-  label: string;
-  items: NavItem[];
-  adminOnly?: boolean;
-}
+const operacaoItems: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permKey: 'page:dashboard' },
+  { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
+];
 
-const navSections: NavSection[] = [
-  {
-    label: 'OPERACAO',
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permKey: 'page:dashboard' },
-      { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
-    ],
-  },
-  {
-    label: 'ADMIN',
-    adminOnly: true,
-    items: [
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
-      { href: '/config/equipe', label: 'Equipe', icon: Users },
-    ],
-  },
+const adminItems: NavItem[] = [
+  { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
+  { href: '/config/equipe', label: 'Equipe', icon: Users },
 ];
 
 // ─── Club tree types ─────────────────────────────────────────────────
@@ -101,11 +88,20 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   // Club tree state
   const [clubs, setClubs] = useState<SidebarClub[]>([]);
   const [clubsLoaded, setClubsLoaded] = useState(false);
+  const [clubsOpen, setClubsOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('sidebar-clubs-open') !== 'false';
+  });
 
   // Persist collapsed state
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(collapsed));
   }, [collapsed]);
+
+  // Persist clubs open state
+  useEffect(() => {
+    localStorage.setItem('sidebar-clubs-open', String(clubsOpen));
+  }, [clubsOpen]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -267,137 +263,185 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           <TenantSelector collapsed={collapsed} />
         </div>
 
-        {/* Navigation + Clubs */}
+        {/* Navigation: OPERACAO → MEUS CLUBES → ADMIN */}
         <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-4' : 'p-4 space-y-4'}`} aria-label="Menu principal">
-          {/* Standard nav sections (Operacao) */}
-          {navSections
-            .filter((section) => !section.adminOnly || isAdmin)
-            .map((section) => {
-              const visibleItems = section.items.filter((item) => !item.permKey || hasPermission(item.permKey));
-              if (visibleItems.length === 0) return null;
-              return (
-                <div key={section.label}>
-                  <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
-                    {section.label}
-                  </p>
-                  <div className="space-y-0.5">
-                    {visibleItems.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = isRouteActive(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          title={collapsed ? item.label : undefined}
-                          className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
-                            collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
-                          } ${
-                            isActive
-                              ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
-                              : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4 flex-shrink-0" />
-                          <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-
-          {/* ── MEUS CLUBES (tree) ─────────────────────────── */}
-          {clubs.length > 0 && (
-            <div className={collapsed ? 'lg:hidden' : ''}>
-              <p className="px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
-                Meus Clubes
-              </p>
-              <div className="space-y-2">
-                {sortedPlatforms.map(([platform, platformClubs]) => (
-                  <div key={platform}>
-                    {/* Platform label */}
-                    <div className="flex items-center gap-1.5 px-3 py-1">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ background: PLATFORM_COLORS[platform] || '#475569' }}
-                      />
-                      <span
-                        className="text-[9px] uppercase tracking-wider font-semibold"
-                        style={{ color: PLATFORM_COLORS[platform] || '#475569', opacity: 0.7 }}
+          {/* ── OPERACAO ──────────────────────────────────── */}
+          {(() => {
+            const visible = operacaoItems.filter((item) => !item.permKey || hasPermission(item.permKey));
+            if (visible.length === 0) return null;
+            return (
+              <div>
+                <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
+                  Operacao
+                </p>
+                <div className="space-y-0.5">
+                  {visible.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isRouteActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={collapsed ? item.label : undefined}
+                        className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
+                          collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
+                        } ${
+                          isActive
+                            ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
+                            : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+                        }`}
                       >
-                        {PLATFORM_LABELS[platform] || platform}
-                      </span>
-                    </div>
-
-                    {/* Clubs under this platform */}
-                    {platformClubs.map((club) => {
-                      const clubActive = isClubActive(club);
-                      const clubHref = club.lastSettlementId
-                        ? `/s/${club.lastSettlementId}`
-                        : `/clubs/${club.id}`;
-
-                      return (
-                        <div key={club.id}>
-                          {/* Club row */}
-                          <Link
-                            href={clubHref}
-                            className={`flex items-center gap-2 px-3 py-1.5 ml-2 rounded-lg transition-all text-xs border-l-2 ${
-                              clubActive && club.subclubes.length === 0
-                                ? 'text-poker-400 bg-poker-600/10 border-poker-500'
-                                : clubActive
-                                  ? 'text-white bg-dark-800/50 border-poker-500/50'
-                                  : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
-                            }`}
-                          >
-                            <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate leading-tight">{club.name}</div>
-                              {(club.ligaId || club.externalId) && (
-                                <div className="text-[9px] text-dark-600 leading-tight mt-0.5">
-                                  {club.ligaId && `Liga ${club.ligaId}`}
-                                  {club.ligaId && club.externalId && ' · '}
-                                  {club.externalId && `ID ${club.externalId}`}
-                                </div>
-                              )}
-                            </div>
-                            {club.subclubes.length > 0 && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 text-dark-500">
-                                {club.subclubes.length}
-                              </span>
-                            )}
-                          </Link>
-
-                          {/* Subclubes */}
-                          {club.subclubes.length > 0 && club.lastSettlementId && (
-                            <div className="ml-6 space-y-0.5 mt-0.5">
-                              {club.subclubes.map((sub) => {
-                                const subActive = isSubclubActive(club, sub.name);
-                                return (
-                                  <Link
-                                    key={sub.id}
-                                    href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
-                                    className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
-                                      subActive
-                                        ? 'text-amber-400 bg-amber-500/5'
-                                        : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/30'
-                                    }`}
-                                  >
-                                    <ClubLogo logoUrl={sub.logoUrl} name={sub.name} size="xxs" />
-                                    <span className="truncate">{sub.name}</span>
-                                  </Link>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {/* ── MEUS CLUBES (collapsible) ─────────────────── */}
+          <div className={collapsed ? 'lg:hidden' : ''}>
+            <button
+              onClick={() => setClubsOpen((o) => !o)}
+              className="w-full flex items-center justify-between px-3 mb-1.5 group"
+            >
+              <span className="text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                Meus Clubes
+                {clubs.length > 0 && (
+                  <span className="ml-1.5 text-dark-600">{clubs.length}</span>
+                )}
+              </span>
+              <ChevronDown className={`w-3 h-3 text-dark-600 group-hover:text-dark-400 transition-transform ${clubsOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {clubsOpen && (
+              <div className="space-y-2">
+                {clubs.length === 0 && clubsLoaded ? (
+                  <p className="px-3 text-[11px] text-dark-600">Importe uma planilha para ver seus clubes.</p>
+                ) : (
+                  sortedPlatforms.map(([platform, platformClubs]) => (
+                    <div key={platform}>
+                      {/* Platform label */}
+                      <div className="flex items-center gap-1.5 px-3 py-1">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: PLATFORM_COLORS[platform] || '#475569' }}
+                        />
+                        <span
+                          className="text-[9px] uppercase tracking-wider font-semibold"
+                          style={{ color: PLATFORM_COLORS[platform] || '#475569', opacity: 0.7 }}
+                        >
+                          {PLATFORM_LABELS[platform] || platform}
+                        </span>
+                      </div>
+
+                      {/* Clubs under this platform */}
+                      {platformClubs.map((club) => {
+                        const clubActive = isClubActive(club);
+                        const clubHref = club.lastSettlementId
+                          ? `/s/${club.lastSettlementId}`
+                          : `/clubs/${club.id}`;
+
+                        return (
+                          <div key={club.id}>
+                            {/* Club row */}
+                            <Link
+                              href={clubHref}
+                              className={`flex items-center gap-2 px-3 py-1.5 ml-2 rounded-lg transition-all text-xs border-l-2 ${
+                                clubActive && club.subclubes.length === 0
+                                  ? 'text-poker-400 bg-poker-600/10 border-poker-500'
+                                  : clubActive
+                                    ? 'text-white bg-dark-800/50 border-poker-500/50'
+                                    : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
+                              }`}
+                            >
+                              <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate leading-tight">{club.name}</div>
+                                {(club.ligaId || club.externalId) && (
+                                  <div className="text-[9px] text-dark-600 leading-tight mt-0.5">
+                                    {club.ligaId && `Liga ${club.ligaId}`}
+                                    {club.ligaId && club.externalId && ' · '}
+                                    {club.externalId && `ID ${club.externalId}`}
+                                  </div>
+                                )}
+                              </div>
+                              {club.subclubes.length > 0 && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 text-dark-500">
+                                  {club.subclubes.length}
+                                </span>
+                              )}
+                            </Link>
+
+                            {/* Subclubes */}
+                            {club.subclubes.length > 0 && club.lastSettlementId && (
+                              <div className="ml-6 space-y-0.5 mt-0.5">
+                                {club.subclubes.map((sub) => {
+                                  const subActive = isSubclubActive(club, sub.name);
+                                  return (
+                                    <Link
+                                      key={sub.id}
+                                      href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
+                                      className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
+                                        subActive
+                                          ? 'text-amber-400 bg-amber-500/5'
+                                          : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/30'
+                                      }`}
+                                    >
+                                      <ClubLogo logoUrl={sub.logoUrl} name={sub.name} size="xxs" />
+                                      <span className="truncate">{sub.name}</span>
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── ADMIN ─────────────────────────────────────── */}
+          {isAdmin && (() => {
+            const visible = adminItems.filter((item) => !item.permKey || hasPermission(item.permKey));
+            if (visible.length === 0) return null;
+            return (
+              <div>
+                <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
+                  Admin
+                </p>
+                <div className="space-y-0.5">
+                  {visible.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isRouteActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={collapsed ? item.label : undefined}
+                        className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
+                          collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
+                        } ${
+                          isActive
+                            ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
+                            : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </nav>
 
         {/* Collapse toggle (desktop only) */}
