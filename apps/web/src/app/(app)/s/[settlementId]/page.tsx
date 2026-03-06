@@ -354,7 +354,7 @@ export default function SettlementOverviewPage() {
                           href={`/s/${grpSettId}/club/${sc.name}`}
                           className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 shadow-card hover:shadow-card-hover hover:-translate-y-px transition-all duration-200 cursor-pointer text-left group block"
                         >
-                          <div className={`h-0.5 ${sc.acertoLiga >= 0 ? 'bg-poker-500' : 'bg-red-500'}`} />
+                          <div className={`h-1 ${plat === 'pppoker' ? 'bg-green-500' : plat === 'suprema' ? 'bg-amber-500' : 'bg-poker-500'}`} />
 
                           <div className="p-5">
                             {/* Club label + subclub name */}
