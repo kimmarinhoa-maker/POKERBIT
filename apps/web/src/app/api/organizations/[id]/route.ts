@@ -65,6 +65,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
         if (parsed.data.chippix_manager_id !== undefined)
           updates.chippix_manager_id = parsed.data.chippix_manager_id || null;
 
+        // Fetch old name before update (for cascade rename)
+        let oldName: string | null = null;
+        if (updates.name) {
+          const { data: old } = await supabaseAdmin
+            .from('organizations')
+            .select('name')
+            .eq('id', orgId)
+            .single();
+          oldName = old?.name || null;
+        }
+
         const { data, error } = await supabaseAdmin
           .from('organizations')
           .update(updates)
@@ -74,6 +85,23 @@ export async function PUT(req: NextRequest, { params }: Params) {
           .single();
 
         if (error) throw error;
+
+        // Cascade rename: update subclub_name in settlement metrics
+        if (updates.name && oldName && oldName !== updates.name) {
+          await Promise.all([
+            supabaseAdmin
+              .from('player_week_metrics')
+              .update({ subclub_name: updates.name })
+              .eq('tenant_id', ctx.tenantId)
+              .eq('subclub_name', oldName),
+            supabaseAdmin
+              .from('agent_week_metrics')
+              .update({ subclub_name: updates.name })
+              .eq('tenant_id', ctx.tenantId)
+              .eq('subclub_name', oldName),
+          ]);
+        }
+
         return NextResponse.json({ success: true, data });
       } catch (err: unknown) {
         return NextResponse.json(
