@@ -72,6 +72,7 @@ export default function ClubHubPage() {
   // Settlements for this club (week selector)
   const [settlements, setSettlements] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
+  const [weekNotFound, setWeekNotFound] = useState(false);
 
   // Subclub selector
   const [activeSubclub, setActiveSubclub] = useState<string>(requestedSubclub);
@@ -246,8 +247,13 @@ export default function ClubHubPage() {
   }
 
   function handleWeekFound(newSettlementId: string, weekStart: string) {
+    setWeekNotFound(false);
     setSettlementId(newSettlementId);
     setSelectedWeek(weekStart);
+  }
+
+  function handleWeekNotFound() {
+    setWeekNotFound(true);
   }
 
   // ─── Tab content ───────────────────────────────────────────────────
@@ -413,6 +419,7 @@ export default function ClubHubPage() {
             status={status}
             clubId={clubId}
             onWeekFound={handleWeekFound}
+            onNotFound={handleWeekNotFound}
           />
 
           {/* Subclub chips */}
@@ -447,38 +454,48 @@ export default function ClubHubPage() {
       </div>
 
       {/* ── Content: Sidebar + Tab Panel ─────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Tab nav sidebar (desktop) */}
-        <div className="hidden lg:block">
-          <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
-        </div>
-
-        {/* Mobile tab bar */}
-        <div className="lg:hidden overflow-x-auto border-b border-dark-700 bg-dark-900/50 shrink-0">
-          <div className="flex px-2 py-1.5 gap-1">
-            {tabList.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab
-                    ? 'bg-poker-600/15 text-poker-400'
-                    : 'text-dark-400 hover:text-dark-200'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
+      {weekNotFound ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-dark-600 mx-auto mb-3" />
+            <p className="text-dark-400 text-sm">Nenhum fechamento para as datas selecionadas.</p>
+            <p className="text-dark-500 text-xs mt-1">Use o seletor de datas acima para escolher outra semana.</p>
           </div>
         </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Tab nav sidebar (desktop) */}
+          <div className="hidden lg:block">
+            <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
+          </div>
 
-        {/* Tab content */}
-        <div className="flex-1 overflow-y-auto" role="tabpanel">
-          <div className="animate-tab-fade">
-            {renderContent()}
+          {/* Mobile tab bar */}
+          <div className="lg:hidden overflow-x-auto border-b border-dark-700 bg-dark-900/50 shrink-0">
+            <div className="flex px-2 py-1.5 gap-1">
+              {tabList.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    activeTab === tab
+                      ? 'bg-poker-600/15 text-poker-400'
+                      : 'text-dark-400 hover:text-dark-200'
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto" role="tabpanel">
+            <div className="animate-tab-fade">
+              {renderContent()}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Lock modal */}
       {showLockModal && settlementId && (
