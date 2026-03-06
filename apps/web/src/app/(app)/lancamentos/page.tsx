@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { usePageTitle } from '@/lib/usePageTitle';
 import { useToast } from '@/components/Toast';
 import { LaunchRow, SubClub } from '@/types/launches';
 import { listSettlements, listOrganizations, getClubAdjustments, saveClubAdjustments } from '@/lib/api';
@@ -10,6 +11,7 @@ import LaunchesTable from '@/components/launches/LaunchesTable';
 import EditModal from '@/components/launches/EditModal';
 
 export default function LancamentosPage() {
+  usePageTitle('Lançamentos');
   const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
 

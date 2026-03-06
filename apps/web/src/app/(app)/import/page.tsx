@@ -180,7 +180,9 @@ export default function ImportWizardPage() {
         toast(`Erro ao criar subclube ${sub.nome}`, 'error');
       }
     }
-    toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
+    const count = newSubclubes.length;
+    toast(`${count} subclube${count !== 1 ? 's' : ''} criado${count !== 1 ? 's' : ''}`, 'success');
+    setNewSubclubes([]);
     // Reprocess preview so players get linked via new prefix rules
     await handlePreview();
   }
