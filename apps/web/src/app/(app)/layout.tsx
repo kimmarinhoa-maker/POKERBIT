@@ -301,23 +301,26 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             );
           })()}
 
-          {/* ── MEUS CLUBES (collapsible) ─────────────────── */}
+          {/* ── MEUS CLUBES (collapsible nav item) ─────────── */}
           <div className={collapsed ? 'lg:hidden' : ''}>
             <button
               onClick={() => setClubsOpen((o) => !o)}
-              className="w-full flex items-center justify-between px-3 mb-1.5 group"
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                pathname.startsWith('/s/') || pathname === '/clubs'
+                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
+                  : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+              }`}
             >
-              <span className="text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
-                Meus Clubes
-                {clubs.length > 0 && (
-                  <span className="ml-1.5 text-dark-600">{clubs.length}</span>
-                )}
-              </span>
-              <ChevronDown className={`w-3 h-3 text-dark-600 group-hover:text-dark-400 transition-transform ${clubsOpen ? 'rotate-180' : ''}`} />
+              <Spade className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1 text-left">Meus Clubes</span>
+              {clubs.length > 0 && (
+                <span className="text-[10px] text-dark-500 font-mono">{clubs.length}</span>
+              )}
+              <ChevronDown className={`w-3.5 h-3.5 text-dark-500 transition-transform ${clubsOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {clubsOpen && (
-              <div className="space-y-2">
+              <div className="space-y-2 mt-1">
                 {clubs.length === 0 && clubsLoaded ? (
                   <p className="px-3 text-[11px] text-dark-600">Importe uma planilha para ver seus clubes.</p>
                 ) : (
