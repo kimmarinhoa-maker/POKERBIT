@@ -23,6 +23,11 @@ const PLATFORM_COLORS: Record<string, string> = {
   clubgg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 };
 
+interface SubclubInfo {
+  name: string;
+  playerCount?: number;
+}
+
 interface ClubCard {
   clubId: string;
   clubName: string;
@@ -32,6 +37,7 @@ interface ClubCard {
   weekStart: string;
   status: string;
   logoUrl: string | null;
+  subclubes: SubclubInfo[];
 }
 
 export default function MeusClubesPage() {
@@ -46,11 +52,17 @@ export default function MeusClubesPage() {
     try {
       const [settRes, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
 
-      // Build logo map from org tree: club org id -> logo_url
+      // Build maps from org tree
       const logoMap = new Map<string, string | null>();
+      const subclubMap = new Map<string, SubclubInfo[]>();
       if (treeRes.success && treeRes.data) {
         for (const club of treeRes.data) {
           logoMap.set(club.id, club.logo_url || club.metadata?.logo_url || null);
+          const subs: SubclubInfo[] = (club.subclubes || []).map((s: any) => ({
+            name: s.name,
+            playerCount: s.player_count || undefined,
+          }));
+          if (subs.length > 0) subclubMap.set(club.id, subs);
         }
       }
 
@@ -60,11 +72,11 @@ export default function MeusClubesPage() {
       }
 
       // Group by club_id, keep only the most recent settlement per club
-      const clubMap = new Map<string, ClubCard>();
+      const clubMapResult = new Map<string, ClubCard>();
       for (const s of settRes.data) {
         if (s.status === 'VOID') continue;
-        if (!clubMap.has(s.club_id)) {
-          clubMap.set(s.club_id, {
+        if (!clubMapResult.has(s.club_id)) {
+          clubMapResult.set(s.club_id, {
             clubId: s.club_id,
             clubName: s.club_name || 'Clube',
             platform: (s.platform || 'outro').toLowerCase(),
@@ -73,11 +85,12 @@ export default function MeusClubesPage() {
             weekStart: s.week_start,
             status: s.status,
             logoUrl: logoMap.get(s.club_id) || null,
+            subclubes: subclubMap.get(s.club_id) || [],
           });
         }
       }
 
-      setClubs([...clubMap.values()].sort((a, b) => a.clubName.localeCompare(b.clubName)));
+      setClubs([...clubMapResult.values()].sort((a, b) => a.clubName.localeCompare(b.clubName)));
     } catch {
       toast('Erro ao carregar clubes', 'error');
       setClubs([]);
@@ -113,7 +126,7 @@ export default function MeusClubesPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-40 skeleton-shimmer rounded-xl" />
+            <div key={i} className="h-48 skeleton-shimmer rounded-xl" />
           ))}
         </div>
       </div>
@@ -167,9 +180,8 @@ export default function MeusClubesPage() {
               {/* Club cards grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {platformClubs.map((club) => (
-                  <Link
+                  <div
                     key={club.clubId}
-                    href={`/clubs/${club.clubId}`}
                     className="group bg-dark-900 border border-dark-700 rounded-xl overflow-hidden hover:border-poker-600/50 hover:shadow-glow-green transition-all duration-200"
                   >
                     {/* Color bar */}
@@ -177,7 +189,7 @@ export default function MeusClubesPage() {
 
                     <div className="p-5">
                       {/* Logo + Club name + arrow */}
-                      <div className="flex items-start gap-3 mb-3">
+                      <Link href={`/clubs/${club.clubId}`} className="flex items-start gap-3 mb-3">
                         <ClubLogo logoUrl={club.logoUrl} name={club.clubName} size="lg" className="group-hover:ring-2 ring-poker-500/30 transition-all" />
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-bold text-white truncate group-hover:text-poker-400 transition-colors">
@@ -188,10 +200,10 @@ export default function MeusClubesPage() {
                           )}
                         </div>
                         <ArrowRight className="w-4 h-4 text-dark-600 group-hover:text-poker-400 transition-colors mt-1 flex-shrink-0" />
-                      </div>
+                      </Link>
 
                       {/* Status badge */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           club.status === 'FINAL'
                             ? 'bg-green-500/10 text-green-400 border-green-500/30'
@@ -205,8 +217,44 @@ export default function MeusClubesPage() {
                           Semana {club.weekStart}
                         </span>
                       </div>
+
+                      {/* Subclubes */}
+                      {club.subclubes.length > 0 ? (
+                        <div className="border-t border-dark-700/50 pt-3">
+                          <div className="text-[10px] text-dark-500 uppercase tracking-wider font-semibold mb-2">
+                            {club.subclubes.length} Subclube{club.subclubes.length !== 1 ? 's' : ''}
+                          </div>
+                          <div className="space-y-1">
+                            {club.subclubes.map((sub) => (
+                              <Link
+                                key={sub.name}
+                                href={`/clubs/${club.clubId}?subclub=${encodeURIComponent(sub.name)}`}
+                                className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-dark-800/50 transition-colors"
+                              >
+                                <div className="w-1.5 h-1.5 rounded-full bg-dark-500" />
+                                <span className="text-xs text-dark-300 flex-1">{sub.name}</span>
+                                {sub.playerCount !== undefined && (
+                                  <span className="text-[10px] text-dark-500">{sub.playerCount} jog</span>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-t border-dark-700/50 pt-3">
+                          <span className="text-[10px] text-dark-500">Sem subclubes</span>
+                        </div>
+                      )}
+
+                      {/* Enter club */}
+                      <Link
+                        href={`/clubs/${club.clubId}`}
+                        className="block mt-3 pt-3 border-t border-dark-700/50 text-xs text-poker-400 font-medium hover:text-poker-300 transition-colors"
+                      >
+                        Entrar no clube →
+                      </Link>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>
