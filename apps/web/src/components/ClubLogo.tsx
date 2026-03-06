@@ -5,11 +5,13 @@ import { useState, useEffect } from 'react';
 interface ClubLogoProps {
   logoUrl?: string | null;
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xxs' | 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const sizeMap = {
+  xxs: 'w-[18px] h-[18px] text-[8px] rounded',
+  xs: 'w-[22px] h-[22px] text-[9px] rounded-[5px]',
   sm: 'w-8 h-8 text-xs',
   md: 'w-10 h-10 text-sm',
   lg: 'w-14 h-14 text-xl',

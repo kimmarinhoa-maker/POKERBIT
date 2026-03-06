@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ToastProvider } from '@/components/Toast';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import { AuthProvider, useAuth } from '@/lib/useAuth';
+import { getOrgTree, listSettlements } from '@/lib/api';
+import ClubLogo from '@/components/ClubLogo';
 
 const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 import {
   LayoutDashboard,
   Upload,
-  Building2,
   Wallet,
   Users,
   Spade,
@@ -24,7 +25,7 @@ import {
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
 
-// ─── Sidebar structure (5 items) ────────────────────────────────────
+// ─── Sidebar nav structure ───────────────────────────────────────────
 
 interface NavItem {
   href: string;
@@ -41,34 +42,46 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    label: 'OPERAÇÃO',
+    label: 'OPERACAO',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permKey: 'page:dashboard' },
       { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
     ],
   },
   {
-    label: 'GESTÃO',
-    items: [
-      { href: '/clubs', label: 'Meus Clubes', icon: Building2, permKey: 'page:clubes' },
-      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
-    ],
-  },
-  {
     label: 'ADMIN',
     adminOnly: true,
     items: [
+      { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
       { href: '/config/equipe', label: 'Equipe', icon: Users },
     ],
   },
 ];
+
+// ─── Club tree types ─────────────────────────────────────────────────
+
+interface SidebarSubclub {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+}
+
+interface SidebarClub {
+  id: string;
+  name: string;
+  platform: string;
+  externalId: string | null;
+  ligaId: string | null;
+  logoUrl: string | null;
+  subclubes: SidebarSubclub[];
+  lastSettlementId: string | null;
+}
 
 // ─── Active route check ─────────────────────────────────────────────
 
 function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   if (href === '/import') return pathname === '/import' || pathname.startsWith('/import/');
-  if (href === '/clubs') return pathname === '/clubs' || pathname.startsWith('/clubs/');
   if (href === '/caixa-geral') return pathname === '/caixa-geral';
   if (href === '/config/equipe') return pathname === '/config/equipe';
   return pathname === href || pathname.startsWith(href + '/');
@@ -85,6 +98,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     return localStorage.getItem('sidebar-collapsed') === 'true';
   });
 
+  // Club tree state
+  const [clubs, setClubs] = useState<SidebarClub[]>([]);
+  const [clubsLoaded, setClubsLoaded] = useState(false);
+
   // Persist collapsed state
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(collapsed));
@@ -95,6 +112,62 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
+  // Load club tree
+  const loadClubs = useCallback(async () => {
+    try {
+      const [treeRes, settRes] = await Promise.all([getOrgTree(), listSettlements()]);
+
+      // Build latest settlement map: clubId → settlementId
+      const lastSettMap = new Map<string, string>();
+      if (settRes.success && settRes.data) {
+        for (const s of settRes.data as any[]) {
+          if (s.status === 'VOID') continue;
+          if (!lastSettMap.has(s.club_id)) {
+            lastSettMap.set(s.club_id, s.id);
+          }
+        }
+      }
+
+      if (treeRes.success && treeRes.data) {
+        const result: SidebarClub[] = [];
+        for (const club of treeRes.data) {
+          if (club.type !== 'CLUB') continue;
+          const subs: SidebarSubclub[] = (club.subclubes || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            logoUrl: s.logo_url || s.metadata?.logo_url || null,
+          }));
+          result.push({
+            id: club.id,
+            name: club.name,
+            platform: (club.metadata?.platform || 'outro').toLowerCase(),
+            externalId: club.external_id || null,
+            ligaId: club.metadata?.liga_id || null,
+            logoUrl: club.logo_url || club.metadata?.logo_url || null,
+            subclubes: subs,
+            lastSettlementId: lastSettMap.get(club.id) || null,
+          });
+        }
+        setClubs(result);
+      }
+    } catch {
+      // silent — clubs in sidebar are non-critical
+    } finally {
+      setClubsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) loadClubs();
+  }, [user, loadClubs]);
+
+  // Re-load clubs after import (detect pathname changes to /s/ or /clubs)
+  useEffect(() => {
+    if (user && clubsLoaded && (pathname.startsWith('/s/') || pathname === '/clubs')) {
+      loadClubs();
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-950">
@@ -104,6 +177,42 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // Group clubs by platform
+  const platformOrder = ['suprema', 'pppoker', 'clubgg', 'outro'];
+  const clubsByPlatform = new Map<string, SidebarClub[]>();
+  for (const c of clubs) {
+    const list = clubsByPlatform.get(c.platform) || [];
+    list.push(c);
+    clubsByPlatform.set(c.platform, list);
+  }
+  const sortedPlatforms = [...clubsByPlatform.entries()].sort(([a], [b]) => {
+    const ia = platformOrder.indexOf(a);
+    const ib = platformOrder.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
+  const PLATFORM_COLORS: Record<string, string> = {
+    suprema: '#22c55e',
+    pppoker: '#a855f7',
+    clubgg: '#3b82f6',
+  };
+  const PLATFORM_LABELS: Record<string, string> = {
+    suprema: 'Suprema',
+    pppoker: 'PPPoker',
+    clubgg: 'ClubGG',
+  };
+
+  // Check if a club/subclub is active based on current URL
+  function isClubActive(club: SidebarClub): boolean {
+    if (!club.lastSettlementId) return false;
+    return pathname === `/s/${club.lastSettlementId}` || pathname.startsWith(`/s/${club.lastSettlementId}/`);
+  }
+  function isSubclubActive(club: SidebarClub, subName: string): boolean {
+    if (!club.lastSettlementId) return false;
+    return pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}` ||
+           pathname.startsWith(`/s/${club.lastSettlementId}/club/${encodeURIComponent(subName)}?`);
   }
 
   return (
@@ -158,8 +267,9 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           <TenantSelector collapsed={collapsed} />
         </div>
 
-        {/* Navigation */}
-        <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-5' : 'p-4 space-y-5'}`} aria-label="Menu principal">
+        {/* Navigation + Clubs */}
+        <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-4' : 'p-4 space-y-4'}`} aria-label="Menu principal">
+          {/* Standard nav sections (Operacao) */}
           {navSections
             .filter((section) => !section.adminOnly || isAdmin)
             .map((section) => {
@@ -196,6 +306,98 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
               );
             })}
+
+          {/* ── MEUS CLUBES (tree) ─────────────────────────── */}
+          {clubs.length > 0 && (
+            <div className={collapsed ? 'lg:hidden' : ''}>
+              <p className="px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                Meus Clubes
+              </p>
+              <div className="space-y-2">
+                {sortedPlatforms.map(([platform, platformClubs]) => (
+                  <div key={platform}>
+                    {/* Platform label */}
+                    <div className="flex items-center gap-1.5 px-3 py-1">
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: PLATFORM_COLORS[platform] || '#475569' }}
+                      />
+                      <span
+                        className="text-[9px] uppercase tracking-wider font-semibold"
+                        style={{ color: PLATFORM_COLORS[platform] || '#475569', opacity: 0.7 }}
+                      >
+                        {PLATFORM_LABELS[platform] || platform}
+                      </span>
+                    </div>
+
+                    {/* Clubs under this platform */}
+                    {platformClubs.map((club) => {
+                      const clubActive = isClubActive(club);
+                      const clubHref = club.lastSettlementId
+                        ? `/s/${club.lastSettlementId}`
+                        : `/clubs/${club.id}`;
+
+                      return (
+                        <div key={club.id}>
+                          {/* Club row */}
+                          <Link
+                            href={clubHref}
+                            className={`flex items-center gap-2 px-3 py-1.5 ml-2 rounded-lg transition-all text-xs border-l-2 ${
+                              clubActive && club.subclubes.length === 0
+                                ? 'text-poker-400 bg-poker-600/10 border-poker-500'
+                                : clubActive
+                                  ? 'text-white bg-dark-800/50 border-poker-500/50'
+                                  : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
+                            }`}
+                          >
+                            <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate leading-tight">{club.name}</div>
+                              {(club.ligaId || club.externalId) && (
+                                <div className="text-[9px] text-dark-600 leading-tight mt-0.5">
+                                  {club.ligaId && `Liga ${club.ligaId}`}
+                                  {club.ligaId && club.externalId && ' · '}
+                                  {club.externalId && `ID ${club.externalId}`}
+                                </div>
+                              )}
+                            </div>
+                            {club.subclubes.length > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 text-dark-500">
+                                {club.subclubes.length}
+                              </span>
+                            )}
+                          </Link>
+
+                          {/* Subclubes */}
+                          {club.subclubes.length > 0 && club.lastSettlementId && (
+                            <div className="ml-6 space-y-0.5 mt-0.5">
+                              {club.subclubes.map((sub) => {
+                                const subActive = isSubclubActive(club, sub.name);
+                                return (
+                                  <Link
+                                    key={sub.id}
+                                    href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
+                                    className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
+                                      subActive
+                                        ? 'text-amber-400 bg-amber-500/5'
+                                        : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/30'
+                                    }`}
+                                  >
+                                    <ClubLogo logoUrl={sub.logoUrl} name={sub.name} size="xxs" />
+                                    <span className="truncate">{sub.name}</span>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Collapse toggle (desktop only) */}
