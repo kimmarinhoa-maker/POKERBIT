@@ -5,7 +5,7 @@ import type { Platform } from '@/components/import/UploadStep';
 import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 
 export interface SubclubeEntry {
-  sigla: string;
+  siglas: string[];
   nome: string;
 }
 
@@ -414,9 +414,13 @@ export default function PreviewStep({
                 {/* Existing entries */}
                 {newSubclubes && newSubclubes.map((sub, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-dark-800 border border-dark-600 rounded text-xs font-mono text-white min-w-[60px] text-center">
-                      {sub.sigla}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {sub.siglas.map((s) => (
+                        <span key={s} className="px-2 py-1 bg-dark-800 border border-dark-600 rounded text-xs font-mono text-white text-center">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
                     <span className="text-sm text-dark-300 flex-1">{sub.nome}</span>
                     <button
                       onClick={() => {
@@ -436,9 +440,8 @@ export default function PreviewStep({
                     type="text"
                     value={newSigla}
                     onChange={(e) => setNewSigla(e.target.value.toUpperCase())}
-                    placeholder="Sigla"
-                    className="input w-20 text-xs font-mono text-center"
-                    maxLength={10}
+                    placeholder="Siglas (ex: TGP, TGPVIP)"
+                    className="input w-44 text-xs font-mono"
                   />
                   <input
                     type="text"
@@ -449,16 +452,17 @@ export default function PreviewStep({
                   />
                   <button
                     onClick={() => {
-                      const sigla = newSigla.trim();
+                      const siglas = newSigla.split(',').map((s) => s.trim()).filter(Boolean);
                       const nome = newNome.trim();
-                      if (!sigla || !nome) return;
-                      if (newSubclubes?.some((s) => s.sigla === sigla)) return;
-                      const updated = [...(newSubclubes || []), { sigla, nome }];
+                      if (!siglas.length || !nome) return;
+                      const allExisting = new Set((newSubclubes || []).flatMap((s) => s.siglas));
+                      if (siglas.some((s) => allExisting.has(s))) return;
+                      const updated = [...(newSubclubes || []), { siglas, nome }];
                       onNewSubclubesChange?.(updated);
                       setNewSigla('');
                       setNewNome('');
                     }}
-                    disabled={!newSigla.trim() || !newNome.trim() || !!newSubclubes?.some((s) => s.sigla === newSigla.trim())}
+                    disabled={!newSigla.trim() || !newNome.trim()}
                     className="px-2.5 py-1.5 rounded-lg bg-poker-600/15 text-poker-400 border border-poker-500/30 hover:bg-poker-600/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
                     <Plus className="w-4 h-4" />
@@ -466,7 +470,7 @@ export default function PreviewStep({
                 </div>
 
                 <p className="text-dark-500 text-[10px] mt-1">
-                  A sigla sera usada como prefixo para vincular agentes automaticamente.
+                  Separe multiplas siglas com virgula. Cada sigla vira um prefixo para vincular agentes.
                 </p>
               </div>
             )}

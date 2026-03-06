@@ -267,17 +267,19 @@ export default function ImportWizardPage() {
                 name: sub.nome,
                 parent_id: clubId,
                 type: 'SUBCLUB',
-                external_id: sub.sigla,
+                external_id: sub.siglas[0],
               });
               if (orgRes.success && orgRes.data?.id) {
-                await createPrefixRule({
-                  prefix: sub.sigla,
-                  subclub_id: orgRes.data.id,
-                  priority: 0,
-                });
+                for (const sigla of sub.siglas) {
+                  await createPrefixRule({
+                    prefix: sigla,
+                    subclub_id: orgRes.data.id,
+                    priority: 0,
+                  });
+                }
               }
             } catch {
-              toast(`Erro ao criar subclube ${sub.sigla}`, 'error');
+              toast(`Erro ao criar subclube ${sub.nome}`, 'error');
             }
           }
           toast(`${newSubclubes.length} subclube${newSubclubes.length !== 1 ? 's' : ''} criado${newSubclubes.length !== 1 ? 's' : ''}`, 'success');
