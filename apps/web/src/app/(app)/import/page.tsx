@@ -21,14 +21,12 @@ export default function ImportWizardPage() {
   // Wizard state
   const [step, setStep] = useState<WizardStep>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [clubs, setClubs] = useState<Array<{ id: string; name: string; metadata?: { platform?: string } }>>([]);
   const [clubId, setClubId] = useState('');
+  const [clubName, setClubName] = useState('');
   const [weekStartOverride, setWeekStartOverride] = useState('');
   const [showWeekOverride, setShowWeekOverride] = useState(false);
   const [platform, setPlatform] = useState<Platform>('suprema');
   const [subclubs, setSubclubs] = useState<Array<{ id: string; name: string }>>([]);
-  const [pppokerSubclube, setPppokerSubclube] = useState('');
-  const [temSubclube, setTemSubclube] = useState<boolean | null>(false);
 
   // Preview data
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -49,108 +47,82 @@ export default function ImportWizardPage() {
 
   // Filename metadata (league_id, club_external_id, week)
   const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
+  const [clubFound, setClubFound] = useState(false);
 
   // Confirm result
   const [confirmResult, setConfirmResult] = useState<ConfirmResult | null>(null);
 
+  // All clubs (for auto-lookup by filename IDs)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [clubs, setClubs] = useState<any[]>([]);
+
   const { toast } = useToast();
 
-  const loadClubs = useCallback(async () => {
-    const [clubRes, subclubRes] = await Promise.all([
+  // Load clubs + subclubs on mount
+  const loadOrgs = useCallback(async () => {
+    const [clubRes, subRes] = await Promise.all([
       listOrganizations('CLUB'),
       listOrganizations('SUBCLUB'),
     ]);
-    if (clubRes.success) {
-      const clubList = (clubRes.data || []).map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        external_id: c.external_id || undefined,
-        metadata: c.metadata || {},
-      }));
-      setClubs(clubList);
-      if (clubList.length > 0) {
-        setClubId(clubList[0].id);
-        // Auto-derive platform from first club's metadata
-        const plat = clubList[0].metadata?.platform;
-        if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
-          setPlatform(plat);
-        }
-      }
-    }
-    if (subclubRes.success) {
-      setSubclubs(subclubRes.data || []);
-    }
+    if (clubRes.success) setClubs(clubRes.data || []);
+    if (subRes.success) setSubclubs(subRes.data || []);
   }, []);
 
+  useEffect(() => { loadOrgs(); }, [loadOrgs]);
+
+  // Auto-fill clubName when filenameMeta changes (match existing club by external_id + league_id)
   useEffect(() => {
-    loadClubs();
-  }, [loadClubs]);
-
-  // Auto-derive platform when club changes (useCallback to keep stable reference)
-  const handleClubChange = useCallback((newClubId: string) => {
-    setClubId(newClubId);
-    setClubs((prev) => {
-      const club = prev.find((c) => c.id === newClubId);
-      const plat = club?.metadata?.platform;
-      if (plat === 'pppoker' || plat === 'suprema' || plat === 'clubgg') {
-        setPlatform(plat);
-      }
-      return prev;
+    if (!filenameMeta?.clubExternalId || clubName) return;
+    const match = clubs.find((c) => {
+      if (c.external_id !== filenameMeta.clubExternalId) return false;
+      if (filenameMeta.leagueId && c.league_id) return c.league_id === filenameMeta.leagueId;
+      return true;
     });
-  }, []);
-
-  // ─── Auto-resolve club from filename IDs ──────────────────────────
-
-  async function handleFilenameMeta(meta: FilenameMeta) {
-    setFilenameMeta(meta);
-    // Auto-resolve will happen in handlePreview after platform is known
-  }
+    if (match) {
+      setClubName(match.name);
+      setClubId(match.id);
+      setClubFound(true);
+    } else {
+      setClubFound(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filenameMeta, clubs]);
 
   // ─── Handlers ─────────────────────────────────────────────────────
 
   async function handlePreview() {
-    if (!file) return;
+    if (!file || !clubName.trim()) return;
     setLoading(true);
     setError('');
 
-    // ALWAYS use find-or-create when we have filename metadata (league_id + external_id)
-    // This ensures correct club resolution even when same external_id exists in different leagues
+    // Find or create club by league_id + external_id + name
     let resolvedClubId = '';
-    if (filenameMeta?.clubExternalId) {
-      try {
-        const res = await findOrCreateClub({
-          platform,
-          external_id: filenameMeta.clubExternalId,
-          league_id: filenameMeta.leagueId || undefined,
-        });
-        if (res.success && res.data) {
-          resolvedClubId = res.data.id;
-          setClubId(res.data.id);
-          const newClub = {
-            id: res.data.id,
-            name: res.data.name,
-            external_id: res.data.external_id,
-            metadata: { platform: res.data.platform || platform },
-          };
-          if (!clubs.some((c) => c.id === newClub.id)) {
-            setClubs((prev) => [...prev, newClub]);
-          }
-          if (res.data.created) {
-            toast(`Clube criado: ${newClub.name}`, 'success');
-          }
+    try {
+      const res = await findOrCreateClub({
+        platform,
+        external_id: filenameMeta?.clubExternalId || '',
+        league_id: filenameMeta?.leagueId || undefined,
+        name: clubName.trim(),
+      });
+      if (res.success && res.data) {
+        resolvedClubId = res.data.id;
+        setClubId(res.data.id);
+        if (res.data.created) {
+          toast(`Clube criado: ${res.data.name}`, 'success');
         }
-      } catch {
-        // Non-critical — user can select club manually
+      } else {
+        setError(res.error || 'Erro ao resolver clube');
+        setLoading(false);
+        return;
       }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao resolver clube');
+      setLoading(false);
+      return;
     }
 
-    // Fallback to manually selected club
     if (!resolvedClubId) {
-      resolvedClubId = clubId;
-    }
-
-    if (!resolvedClubId) {
-      setError('Selecione um clube antes de continuar.');
+      setError('Erro ao resolver clube.');
       setLoading(false);
       return;
     }
@@ -275,7 +247,7 @@ export default function ImportWizardPage() {
 
     try {
       const weekStart = preview.week.week_start;
-      const res = await importConfirm(file, clubId, weekStart, platform, platform === 'pppoker' ? pppokerSubclube : undefined, temSubclube === false ? true : undefined);
+      const res = await importConfirm(file, clubId, weekStart, platform, undefined, true);
       if (res.success && res.data) {
         setConfirmResult(res.data);
         // Auto-sync agents (creates AGENT organizations from metrics)
@@ -309,12 +281,12 @@ export default function ImportWizardPage() {
     setBulkAgentName('');
     setBulkNewAgentName('');
     setPlatform('suprema');
-    setPppokerSubclube('');
-    setTemSubclube(false);
+    setClubName('');
+    setClubFound(false);
     setFilenameMeta(null);
   }
 
-  // Reload subclubs (after creating a new one in PreviewStep)
+  // Reload orgs (after creating a new subclub in PreviewStep)
   const reloadSubclubs = useCallback(async () => {
     const res = await listOrganizations('SUBCLUB');
     if (res.success) setSubclubs(res.data || []);
@@ -335,9 +307,8 @@ export default function ImportWizardPage() {
           }}
           platform={platform}
           setPlatform={setPlatform}
-          clubs={clubs}
-          clubId={clubId}
-          setClubId={handleClubChange}
+          clubName={clubName}
+          setClubName={setClubName}
           weekStartOverride={weekStartOverride}
           setWeekStartOverride={setWeekStartOverride}
           showWeekOverride={showWeekOverride}
@@ -345,7 +316,8 @@ export default function ImportWizardPage() {
           loading={loading}
           error={error}
           onPreview={handlePreview}
-          onFilenameMeta={handleFilenameMeta}
+          onFilenameMeta={(meta: FilenameMeta) => { setFilenameMeta(meta); setClubFound(false); }}
+          clubFound={clubFound}
         />
       )}
 
@@ -358,10 +330,10 @@ export default function ImportWizardPage() {
           availableSubclubs={preview.available_subclubs}
           onLinkAgent={handleLinkAgentInline}
           onReprocess={handlePreview}
-          temSubclube={temSubclube}
-          setTemSubclube={setTemSubclube}
-          pppokerSubclube={pppokerSubclube}
-          setPppokerSubclube={setPppokerSubclube}
+          temSubclube={null}
+          setTemSubclube={() => {}}
+          pppokerSubclube=""
+          setPppokerSubclube={() => {}}
           platform={platform}
           clubId={clubId}
           onSubclubCreated={reloadSubclubs}

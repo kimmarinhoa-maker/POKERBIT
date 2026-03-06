@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, Settings } from 'lucide-react';
 import Spinner from '@/components/Spinner';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (same as backend)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export type Platform = 'suprema' | 'pppoker' | 'clubgg';
 
@@ -16,8 +16,8 @@ const PLATFORM_LABELS: Record<string, string> = {
 export interface FilenameMeta {
   leagueId: string | null;
   clubExternalId: string | null;
-  weekStart: string | null; // YYYY-MM-DD
-  weekEnd: string | null;   // YYYY-MM-DD
+  weekStart: string | null;
+  weekEnd: string | null;
 }
 
 /** Extract IDs from filename pattern: LEAGUE-CLUBID-YYYYMMDD-YYYYMMDD.xlsx */
@@ -32,21 +32,13 @@ export function parseFilename(name: string): FilenameMeta {
   };
 }
 
-interface DetectionResult {
-  platform: string;
-  confidence: 'high' | 'medium' | 'low';
-  reason: string;
-  filenameMeta?: FilenameMeta;
-}
-
 interface UploadStepProps {
   file: File | null;
   setFile: (f: File | null) => void;
   platform: Platform;
   setPlatform: (p: Platform) => void;
-  clubs: Array<{ id: string; name: string; external_id?: string; metadata?: { platform?: string } }>;
-  clubId: string;
-  setClubId: (id: string) => void;
+  clubName: string;
+  setClubName: (v: string) => void;
   weekStartOverride: string;
   setWeekStartOverride: (v: string) => void;
   showWeekOverride: boolean;
@@ -55,41 +47,33 @@ interface UploadStepProps {
   error: string;
   onPreview: () => void;
   onFilenameMeta?: (meta: FilenameMeta) => void;
+  clubFound?: boolean;
 }
 
 const LABEL = 'text-[11px] uppercase tracking-[0.06em] text-dark-500 font-medium mb-2';
 
 function validateFile(f: File): string | null {
-  if (!f.name.endsWith('.xlsx')) {
-    return 'Apenas arquivos .xlsx sao aceitos.';
-  }
-  if (f.size === 0) {
-    return 'O arquivo esta vazio.';
-  }
-  if (f.size > MAX_FILE_SIZE) {
-    return `O arquivo excede o limite de 10 MB (${(f.size / 1024 / 1024).toFixed(1)} MB).`;
-  }
+  if (!f.name.endsWith('.xlsx')) return 'Apenas arquivos .xlsx sao aceitos.';
+  if (f.size === 0) return 'O arquivo esta vazio.';
+  if (f.size > MAX_FILE_SIZE) return `O arquivo excede o limite de 10 MB (${(f.size / 1024 / 1024).toFixed(1)} MB).`;
   return null;
 }
 
-// ─── Client-side platform detection by sheet names ───────────────
-// NOTE: filename pattern (LEAGUE-CLUBID-YYYYMMDD) is used by BOTH platforms,
-// so it cannot be used for platform detection — only for extracting IDs.
-function detectPlatform(sheetNames: string[], _filename: string): DetectionResult {
+// Detect platform by XLSX sheet names
+function detectPlatform(sheetNames: string[]): Platform | null {
   const lower = sheetNames.map((s) => s.toLowerCase());
 
-  // Suprema — known sheet names
+  // Suprema
   if (
     sheetNames.includes('Grand Union Member Statistics') ||
     sheetNames.includes('Manager Trade Record') ||
     sheetNames.includes('Grand Union Member Resume') ||
     lower.some((s) => s.includes('grand union'))
   ) {
-    return { platform: 'suprema', confidence: 'high', reason: 'Aba da Suprema Poker detectada' };
+    return 'suprema';
   }
 
-  // PPPoker — known sheet names
-  // Typical sheets: Geral, Detalhado, Partidas, Transações, Demonstrativo, Detalhes do usuário, Retorno de taxa
+  // PPPoker
   if (
     sheetNames.includes('Club Summary') ||
     sheetNames.includes('Geral') ||
@@ -97,63 +81,28 @@ function detectPlatform(sheetNames: string[], _filename: string): DetectionResul
     sheetNames.includes('Retorno de taxa') ||
     lower.some((s) => s.includes('pppoker') || s.includes('club summary'))
   ) {
-    return { platform: 'pppoker', confidence: 'high', reason: 'Aba do PPPoker detectada' };
+    return 'pppoker';
   }
 
-  return { platform: 'unknown', confidence: 'low', reason: 'Nenhuma aba reconhecida' };
-}
-
-function confidenceBorder(confidence: string) {
-  if (confidence === 'high') return 'border-green-500/50';
-  if (confidence === 'medium') return 'border-amber-500/50';
-  return 'border-dark-600';
-}
-
-function confidenceBadge(confidence: string) {
-  if (confidence === 'high')
-    return 'bg-green-900/30 text-green-400 border-green-700/30';
-  if (confidence === 'medium')
-    return 'bg-amber-900/30 text-amber-400 border-amber-700/30';
-  return 'bg-dark-800 text-dark-400 border-dark-600';
+  return null;
 }
 
 export default function UploadStep({
-  file,
-  setFile,
-  platform,
-  setPlatform,
-  clubs,
-  clubId,
-  setClubId,
-  weekStartOverride,
-  setWeekStartOverride,
-  showWeekOverride,
-  setShowWeekOverride,
-  loading,
-  error,
-  onPreview,
-  onFilenameMeta,
+  file, setFile, platform, setPlatform, clubName, setClubName,
+  weekStartOverride, setWeekStartOverride, showWeekOverride, setShowWeekOverride,
+  loading, error, onPreview, onFilenameMeta, clubFound,
 }: UploadStepProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [detected, setDetected] = useState(false);
+  const [filenameMeta, setFilenameMeta] = useState<FilenameMeta | null>(null);
 
-  // Detection state
-  const [detecting, setDetecting] = useState(false);
-  const [detection, setDetection] = useState<DetectionResult | null>(null);
-  const [platformSelected, setPlatformSelected] = useState(false);
-
-  // Club auto-selection removed from runDetection — find-or-create handles it in handlePreview
-
-  // Read sheet names and detect platform (client-side, no API call)
-  // Stable callback — no deps on clubs/clubId (uses refs)
+  // Detect platform when file is set
   const runDetection = useCallback(async (f: File) => {
-    setDetecting(true);
-    setDetection(null);
-    setPlatformSelected(false);
-
-    // Extract IDs from filename
+    setDetected(false);
     const fMeta = parseFilename(f.name);
+    setFilenameMeta(fMeta);
     onFilenameMeta?.(fMeta);
 
     let sheetNames: string[] = [];
@@ -162,47 +111,30 @@ export default function UploadStep({
       const wb = XLSX.read(buffer, { bookSheets: true });
       sheetNames = wb.SheetNames || [];
     } catch {
-      // sheet name extraction failed
+      // failed
     }
 
-    const result = detectPlatform(sheetNames, f.name);
-    result.filenameMeta = fMeta;
-    setDetection(result);
-
-    // Auto-select platform only — club resolution handled by find-or-create in handlePreview
-    if (result.confidence === 'high' && (result.platform === 'suprema' || result.platform === 'pppoker')) {
-      setPlatform(result.platform as Platform);
-      setPlatformSelected(true);
-      // Do NOT auto-select club here — same external_id can exist in different leagues/platforms
+    const plat = detectPlatform(sheetNames);
+    if (plat) {
+      setPlatform(plat);
     }
-
-    setDetecting(false);
+    setDetected(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setPlatform]);
 
+  useEffect(() => {
+    if (file) runDetection(file);
+  }, [file, runDetection]);
+
   function trySetFile(f: File | null) {
     setFileError(null);
-    setDetection(null);
-    setPlatformSelected(false);
-    if (!f) {
-      setFile(null);
-      return;
-    }
+    setDetected(false);
+    setFilenameMeta(null);
+    if (!f) { setFile(null); return; }
     const err = validateFile(f);
-    if (err) {
-      setFileError(err);
-      setFile(null);
-      return;
-    }
+    if (err) { setFileError(err); setFile(null); return; }
     setFile(f);
   }
-
-  // Trigger detection when file is set
-  useEffect(() => {
-    if (file) {
-      runDetection(file);
-    }
-  }, [file, runDetection]);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -211,39 +143,23 @@ export default function UploadStep({
     if (dropped) trySetFile(dropped);
   }
 
-  function handlePlatformClick(p: Platform) {
-    setPlatform(p);
-    setPlatformSelected(true);
-  }
-
-  // Club selection removed — find-or-create resolves the correct club in handlePreview
-
-  // Allow preview without clubId if we have filename metadata (auto-create flow)
-  const canPreview = !!file && platformSelected;
+  const canPreview = !!file && detected && clubName.trim().length >= 2;
 
   return (
     <div className="space-y-5">
-      {/* ── Drop Zone ──────────────────────────────────────── */}
+      {/* ── Drop Zone ── */}
       <div>
         <label className={LABEL}>Arquivo</label>
         <div
           onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onClick={() => fileRef.current?.click()}
           role="button"
           tabIndex={0}
           aria-label="Selecionar arquivo XLSX"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click();
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
           className={`bg-dark-900 border-2 border-dashed rounded-xl cursor-pointer text-center py-8 transition-all duration-200 ${
             dragOver
               ? 'border-poker-400 bg-poker-900/20 scale-[1.01]'
@@ -252,14 +168,7 @@ export default function UploadStep({
                 : 'border-dark-600 hover:border-poker-500/50 hover:bg-dark-800/30'
           }`}
         >
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx"
-            className="hidden"
-            aria-label="Selecionar arquivo XLSX"
-            onChange={(e) => trySetFile(e.target.files?.[0] || null)}
-          />
+          <input ref={fileRef} type="file" accept=".xlsx" className="hidden" onChange={(e) => trySetFile(e.target.files?.[0] || null)} />
           {dragOver ? (
             <div>
               <Upload className="w-8 h-8 text-poker-400 mx-auto mb-2 animate-bounce" />
@@ -269,9 +178,7 @@ export default function UploadStep({
             <div>
               <FileSpreadsheet className="w-8 h-8 text-poker-400 mx-auto mb-2" />
               <p className="text-poker-400 font-medium text-sm">{file.name}</p>
-              <p className="text-dark-500 text-xs mt-1">
-                {(file.size / 1024).toFixed(0)} KB &middot; Clique para trocar
-              </p>
+              <p className="text-dark-500 text-xs mt-1">{(file.size / 1024).toFixed(0)} KB &middot; Clique para trocar</p>
             </div>
           ) : (
             <div>
@@ -284,105 +191,68 @@ export default function UploadStep({
       </div>
 
       {fileError && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">
-          {fileError}
-        </div>
+        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{fileError}</div>
       )}
 
-      {/* ── Detection / Platform / Club ──────────────────────── */}
-      {file && (
-        <div className="animate-field-in">
-          {detecting ? (
-            <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-poker-500 animate-pulse" />
-              <span className="text-dark-300 text-sm">Detectando plataforma...</span>
-            </div>
-          ) : detection && detection.confidence === 'high' && platformSelected ? (
-            /* ── Compact auto-detect card (high confidence) ── */
-            <div className="bg-dark-900 border border-green-500/50 rounded-xl p-4">
-              <label className={LABEL}>Plataforma</label>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-white">
-                    {PLATFORM_LABELS[platform] || platform}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-green-900/30 text-green-400 border-green-700/30">
-                    auto-detectado
-                  </span>
-                </div>
+      {/* ── Platform + Club Name + IDs ── */}
+      {file && detected && (
+        <div className="animate-field-in space-y-4">
+          {/* Platform */}
+          <div>
+            <label className={LABEL}>Plataforma</label>
+            <div className="flex gap-2">
+              {(['suprema', 'pppoker'] as Platform[]).map((p) => (
                 <button
+                  key={p}
                   type="button"
-                  onClick={() => setPlatformSelected(false)}
-                  className="text-dark-500 text-xs hover:text-dark-300 transition-colors"
+                  onClick={() => setPlatform(p)}
+                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
+                    platform === p
+                      ? 'bg-poker-600/15 border-poker-500 text-poker-400'
+                      : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
+                  }`}
                 >
-                  Alterar
+                  {PLATFORM_LABELS[p]}
                 </button>
-              </div>
-              {detection?.filenameMeta?.clubExternalId && (
-                <p className="text-dark-400 text-xs mt-2">
-                  Liga: <span className="text-white font-medium">{detection.filenameMeta.leagueId || '—'}</span>
-                  {' · '}Club ID: <span className="text-white font-medium">{detection.filenameMeta.clubExternalId}</span>
-                  {' · '}
-                  <span className="text-blue-400">Clube sera encontrado ou criado automaticamente</span>
-                </p>
+              ))}
+            </div>
+          </div>
+
+          {/* Club Name */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-[11px] uppercase tracking-[0.06em] text-dark-500 font-medium">Nome do Clube</label>
+              {clubFound && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-900/30 text-green-400 border border-green-700/50">
+                  Clube encontrado
+                </span>
               )}
             </div>
-          ) : detection ? (
-            /* ── Manual fallback (low confidence or "Alterar" clicked) ── */
-            <div className="space-y-4">
-              <div>
-                <label className={LABEL}>Deteccao</label>
-                <div className={`bg-dark-900 border rounded-xl p-4 ${confidenceBorder(detection.confidence)}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-white">
-                      {PLATFORM_LABELS[detection.platform] || 'Desconhecido'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${confidenceBadge(detection.confidence)}`}>
-                      {detection.confidence}
-                    </span>
-                  </div>
-                  {detection.reason && (
-                    <p className="text-dark-500 text-xs mt-1.5">{detection.reason}</p>
-                  )}
-                </div>
-              </div>
+            <input
+              type="text"
+              value={clubName}
+              onChange={(e) => setClubName(e.target.value)}
+              placeholder="Ex: Grupo Imperio, VIP Poker..."
+              className="input w-full text-sm"
+              autoFocus
+            />
+          </div>
 
-              <div>
-                <label className={LABEL}>Plataforma</label>
-                <div className="flex gap-2">
-                  {(['suprema', 'pppoker'] as Platform[]).map((p) => {
-                    const isSelected = platform === p && platformSelected;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => handlePlatformClick(p)}
-                        className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                          isSelected
-                            ? 'bg-poker-600/15 border-poker-500 text-poker-400'
-                            : 'bg-dark-800/50 border-dark-700 text-dark-300 hover:border-dark-500'
-                        }`}
-                      >
-                        {PLATFORM_LABELS[p]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {platformSelected && detection?.filenameMeta?.clubExternalId && (
-                <p className="text-dark-400 text-xs">
-                  Liga: <span className="text-white font-medium">{detection.filenameMeta.leagueId || '—'}</span>
-                  {' · '}Club ID: <span className="text-white font-medium">{detection.filenameMeta.clubExternalId}</span>
-                </p>
-              )}
+          {/* Filename IDs (read-only info) */}
+          {filenameMeta?.clubExternalId && (
+            <div className="bg-dark-900 border border-dark-700 rounded-lg px-3 py-2">
+              <p className="text-dark-400 text-xs">
+                ID do Clube: <span className="text-white font-mono font-medium">{filenameMeta.clubExternalId}</span>
+                {filenameMeta.leagueId && (
+                  <> {' · '} Liga: <span className="text-white font-mono font-medium">{filenameMeta.leagueId}</span></>
+                )}
+              </p>
             </div>
-          ) : null}
+          )}
         </div>
       )}
 
-      {/* ── Week Override ──────────────────────────────────── */}
+      {/* ── Week Override ── */}
       {file && (
         <div className="animate-field-in">
           {!showWeekOverride ? (
@@ -397,19 +267,8 @@ export default function UploadStep({
             <div>
               <label className={LABEL}>Semana</label>
               <div className="flex items-center gap-3">
-                <input
-                  type="date"
-                  value={weekStartOverride}
-                  onChange={(e) => setWeekStartOverride(e.target.value)}
-                  className="input flex-1"
-                />
-                <button
-                  onClick={() => {
-                    setShowWeekOverride(false);
-                    setWeekStartOverride('');
-                  }}
-                  className="text-dark-500 text-xs hover:text-dark-300"
-                >
+                <input type="date" value={weekStartOverride} onChange={(e) => setWeekStartOverride(e.target.value)} className="input flex-1" />
+                <button onClick={() => { setShowWeekOverride(false); setWeekStartOverride(''); }} className="text-dark-500 text-xs hover:text-dark-300">
                   Auto-detectar
                 </button>
               </div>
@@ -418,12 +277,11 @@ export default function UploadStep({
         </div>
       )}
 
-      {/* ── Pre-analisar Button ──────────────────────────────── */}
+      {/* ── Pre-analisar ── */}
       <button
         onClick={onPreview}
         disabled={!canPreview || loading}
         className="btn-primary w-full py-3 text-lg mt-2"
-        aria-label="Pre-analisar arquivo"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -435,11 +293,8 @@ export default function UploadStep({
         )}
       </button>
 
-      {/* ── Error Display ──────────────────────────────────── */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300 text-sm">
-          {error}
-        </div>
+        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-red-300 text-sm">{error}</div>
       )}
     </div>
   );
