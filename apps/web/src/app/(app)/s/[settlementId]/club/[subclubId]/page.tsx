@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
@@ -79,7 +79,16 @@ function mergeAllSubclubs(subclubs: SubclubData[], clubName: string): SubclubDat
   };
 }
 
-export default function SubclubPanelPage() {
+// Wrapper with Suspense for useSearchParams (required in Next.js 15 production)
+export default function SubclubPanelPageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-6 space-y-6"><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <CardSkeleton key={i} />)}</div><TabSkeleton /></div>}>
+      <SubclubPanelPage />
+    </Suspense>
+  );
+}
+
+function SubclubPanelPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
