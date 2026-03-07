@@ -148,19 +148,16 @@ export default function ClubTaxas({ clubId }: Props) {
     }
   }
 
-  if (loading) return <div className="p-4 lg:p-6"><TableSkeleton columns={3} rows={4} /></div>;
+  if (loading) return <TableSkeleton columns={3} rows={4} />;
 
   const activeFees = fees.filter((f) => f.is_active);
   const inactiveFees = fees.filter((f) => !f.is_active);
 
   return (
-    <div className="p-4 lg:p-6 animate-tab-fade max-w-lg">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-base font-bold text-white">Taxas</h3>
-          <p className="text-dark-500 text-xs mt-0.5">Taxas aplicadas nos fechamentos deste clube</p>
-        </div>
-        {/* Add fee button */}
+    <div className="animate-tab-fade">
+      {/* Header with Add button */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-dark-500 text-xs">Taxas aplicadas nos fechamentos deste clube</p>
         {availableToAdd.length > 0 && (
           <div className="relative">
             <button
@@ -191,11 +188,11 @@ export default function ClubTaxas({ clubId }: Props) {
       </div>
 
       <div className="card">
-        <div className="space-y-3">
+        <div className="space-y-2">
           {fees.map((fee) => (
             <div
               key={fee.name}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
                 fee.is_active
                   ? 'border-dark-700/50 bg-dark-800/30'
                   : 'border-dark-800/30 bg-dark-900/30 opacity-50'
@@ -209,25 +206,21 @@ export default function ClubTaxas({ clubId }: Props) {
                 }`}
                 title={fee.is_active ? 'Desativar taxa' : 'Ativar taxa'}
               >
-                <span
-                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-                    fee.is_active ? 'translate-x-4' : 'translate-x-0.5'
-                  }`}
-                />
+                <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${fee.is_active ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </button>
 
-              {/* Label */}
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm font-medium ${fee.is_active ? 'text-dark-200' : 'text-dark-500 line-through'}`}>
+              {/* Label + base inline */}
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className={`text-sm font-medium ${fee.is_active ? 'text-dark-200' : 'text-dark-500 line-through'}`}>
                   {fee.label}
-                </div>
-                <div className="text-[10px] text-dark-500 uppercase tracking-wider">
-                  {fee.base === 'ggr' ? '% do GGR' : '% do Rake'}
-                </div>
+                </span>
+                <span className="text-[10px] text-dark-600 uppercase">
+                  {fee.base === 'ggr' ? 'GGR' : 'Rake'}
+                </span>
               </div>
 
               {/* Rate input */}
-              <div className="flex items-center gap-2 w-28">
+              <div className="flex items-center gap-1.5 w-24">
                 <input
                   type="number"
                   step="0.01"
@@ -238,7 +231,7 @@ export default function ClubTaxas({ clubId }: Props) {
                   disabled={!fee.is_active}
                   className="input w-full text-sm font-mono text-right disabled:opacity-40 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span className="text-dark-500 text-sm font-bold">%</span>
+                <span className="text-dark-500 text-xs font-bold">%</span>
               </div>
 
               {/* Delete */}
@@ -247,7 +240,7 @@ export default function ClubTaxas({ clubId }: Props) {
                 className="text-dark-600 hover:text-red-400 transition-colors shrink-0"
                 title="Excluir taxa"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
@@ -264,27 +257,24 @@ export default function ClubTaxas({ clubId }: Props) {
           )}
         </div>
 
-        {/* Summary */}
+        {/* Footer: summary + save */}
         {fees.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-dark-700/50">
+          <div className="mt-3 pt-3 border-t border-dark-700/50 flex items-center justify-between">
             <div className="flex items-center gap-3 text-xs text-dark-500">
               <span className="text-green-400 font-medium">{activeFees.length} ativa{activeFees.length !== 1 ? 's' : ''}</span>
               {inactiveFees.length > 0 && (
                 <span className="text-dark-600">{inactiveFees.length} desativada{inactiveFees.length !== 1 ? 's' : ''}</span>
               )}
             </div>
+            <button
+              onClick={handleSave}
+              disabled={saving || !dirty}
+              className="btn-primary text-xs px-5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Salvando...' : 'Salvar Taxas'}
+            </button>
           </div>
         )}
-
-        <div className="flex justify-end mt-4 pt-4 border-t border-dark-700/50">
-          <button
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            className="btn-primary text-sm px-6 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? 'Salvando...' : 'Salvar Taxas'}
-          </button>
-        </div>
       </div>
 
       {ConfirmDialogElement}

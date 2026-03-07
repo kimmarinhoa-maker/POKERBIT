@@ -290,16 +290,13 @@ export default function ClubSubclubes({ clubId }: Props) {
 
   // ── Render ──────────────────────────────────────────────────────
 
-  if (loading) return <div className="p-4 lg:p-6"><TableSkeleton columns={6} rows={4} /></div>;
+  if (loading) return <TableSkeleton columns={6} rows={4} />;
 
   if (subclubes.length === 0) {
     return (
-      <div className="p-4 lg:p-6 animate-tab-fade">
+      <div className="animate-tab-fade">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-bold text-white">Subclubes</h3>
-            <p className="text-dark-500 text-xs mt-0.5">Nenhum subclube cadastrado</p>
-          </div>
+          <p className="text-dark-500 text-xs">Nenhum subclube cadastrado</p>
           <button onClick={openSubCreate} className="btn-primary text-xs px-3 py-1.5">+ Novo Subclube</button>
         </div>
 
@@ -362,12 +359,9 @@ export default function ClubSubclubes({ clubId }: Props) {
   }
 
   return (
-    <div className="p-4 lg:p-6 animate-tab-fade">
+    <div className="animate-tab-fade">
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-base font-bold text-white">Subclubes</h3>
-          <p className="text-dark-500 text-xs mt-0.5">{subclubes.length} subclube{subclubes.length !== 1 ? 's' : ''} cadastrado{subclubes.length !== 1 ? 's' : ''}</p>
-        </div>
+        <p className="text-dark-500 text-xs">{subclubes.length} subclube{subclubes.length !== 1 ? 's' : ''} cadastrado{subclubes.length !== 1 ? 's' : ''}</p>
       </div>
 
       {/* Sub-tabs */}

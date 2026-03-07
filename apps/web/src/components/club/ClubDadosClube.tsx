@@ -34,17 +34,10 @@ export default function ClubDadosClube({ orgId }: Props) {
       const res = await getOrgTree();
       if (res.success && res.data) {
         let found: any = null;
-        // Search in clubs first, then subclubes
         for (const club of res.data) {
-          if (club.id === orgId) {
-            found = club;
-            break;
-          }
+          if (club.id === orgId) { found = club; break; }
           for (const sub of club.subclubes || []) {
-            if (sub.id === orgId) {
-              found = sub;
-              break;
-            }
+            if (sub.id === orgId) { found = sub; break; }
           }
           if (found) break;
         }
@@ -94,12 +87,8 @@ export default function ClubDadosClube({ orgId }: Props) {
     if (!org || !e.target.files?.[0]) return;
     try {
       const res = await uploadClubLogo(org.id, e.target.files[0]);
-      if (res.success) {
-        toast('Logo atualizada', 'success');
-        loadOrg();
-      } else {
-        toast(res.error || 'Erro ao enviar logo', 'error');
-      }
+      if (res.success) { toast('Logo atualizada', 'success'); loadOrg(); }
+      else toast(res.error || 'Erro ao enviar logo', 'error');
     } catch {
       toast('Erro ao enviar logo', 'error');
     }
@@ -109,95 +98,90 @@ export default function ClubDadosClube({ orgId }: Props) {
     if (!org) return;
     try {
       const res = await deleteClubLogo(org.id);
-      if (res.success) {
-        toast('Logo removida', 'success');
-        loadOrg();
-      } else {
-        toast(res.error || 'Erro ao remover logo', 'error');
-      }
+      if (res.success) { toast('Logo removida', 'success'); loadOrg(); }
+      else toast(res.error || 'Erro ao remover logo', 'error');
     } catch {
       toast('Erro ao remover logo', 'error');
     }
   }
 
-  if (loading) return <div className="p-4 lg:p-6"><TableSkeleton columns={2} rows={4} /></div>;
-  if (!org) return <div className="p-4 lg:p-6 text-dark-400">Organizacao nao encontrada</div>;
+  if (loading) return <TableSkeleton columns={2} rows={3} />;
+  if (!org) return <div className="text-dark-400 text-sm">Organizacao nao encontrada</div>;
 
   const isSubclub = org.type === 'SUBCLUB';
-  const title = isSubclub ? 'Dados do Subclube' : 'Dados do Clube';
 
   return (
-    <div className="p-4 lg:p-6 animate-tab-fade max-w-lg">
-      <div className="mb-6">
-        <h3 className="text-base font-bold text-white">{title}</h3>
-        <p className="text-dark-500 text-xs mt-0.5">Informacoes e identidade visual</p>
-      </div>
+    <div className="animate-tab-fade">
+      {/* Compact layout: Logo + Fields side by side */}
+      <div className="card">
+        <div className="flex gap-6 items-start">
+          {/* Logo column */}
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <ClubLogo logoUrl={org.logo_url} name={org.name} size="lg" />
+            <div className="flex gap-2">
+              <label className="text-[11px] text-poker-400 hover:text-poker-300 cursor-pointer font-medium transition-colors">
+                Alterar
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+              </label>
+              {org.logo_url && (
+                <button onClick={handleLogoDelete} className="text-[11px] text-dark-500 hover:text-red-400 transition-colors">
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
 
-      {/* Logo */}
-      <div className="mb-6">
-        <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-2">Logo</label>
-        <div className="flex items-center gap-4">
-          <ClubLogo logoUrl={org.logo_url} name={org.name} size="lg" />
-          <div className="flex flex-col gap-2">
-            <label className="btn-primary text-xs px-3 py-1.5 cursor-pointer text-center">
-              Alterar
-              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-            </label>
-            {org.logo_url && (
-              <button onClick={handleLogoDelete} className="text-xs text-red-400 hover:text-red-300">
-                Remover
+          {/* Fields column */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Name — editable */}
+            <div>
+              <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">
+                {isSubclub ? 'Nome do Subclube' : 'Nome do Clube'}
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setDirty(true); }}
+                className="input w-full text-sm"
+              />
+            </div>
+
+            {/* Platform + ID — inline row */}
+            <div className="flex gap-3">
+              {!isSubclub && org.platform && (
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">Plataforma</label>
+                  <div className="input w-full bg-dark-800/50 text-dark-400 cursor-not-allowed text-sm flex items-center gap-2">
+                    <span className="truncate">{org.platform}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-400 border border-green-500/20 shrink-0">auto</span>
+                  </div>
+                </div>
+              )}
+              {org.external_id && (
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">
+                    {isSubclub ? 'ID Subclube' : 'ID Clube'}
+                  </label>
+                  <div className="input w-full bg-dark-800/50 text-dark-400 cursor-not-allowed text-sm font-mono flex items-center gap-2">
+                    <span className="truncate">{org.external_id}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-400 border border-green-500/20 shrink-0">auto</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Save — right aligned, compact */}
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={handleSave}
+                disabled={saving || !dirty}
+                className="btn-primary text-xs px-5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Salvando...' : 'Salvar'}
               </button>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Name */}
-      <div className="mb-4">
-        <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1.5">
-          {isSubclub ? 'Nome do Subclube' : 'Nome do Clube'}
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => { setName(e.target.value); setDirty(true); }}
-          className="input w-full"
-        />
-      </div>
-
-      {/* Platform (read-only, only for clubs) */}
-      {!isSubclub && org.platform && (
-        <div className="mb-4">
-          <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1.5">Plataforma</label>
-          <div className="input w-full bg-dark-800/50 text-dark-400 cursor-not-allowed flex items-center gap-2">
-            {org.platform}
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">auto-detectado</span>
-          </div>
-        </div>
-      )}
-
-      {/* External ID (read-only) */}
-      {org.external_id && (
-        <div className="mb-4">
-          <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1.5">
-            {isSubclub ? 'ID do Subclube' : 'ID do Clube'}
-          </label>
-          <div className="input w-full bg-dark-800/50 text-dark-400 cursor-not-allowed font-mono flex items-center gap-2">
-            {org.external_id}
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">auto-detectado</span>
-          </div>
-        </div>
-      )}
-
-      {/* Save */}
-      <div className="flex gap-3 mt-6 pt-4 border-t border-dark-700/50">
-        <button
-          onClick={handleSave}
-          disabled={saving || !dirty}
-          className="btn-primary text-sm px-6 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {saving ? 'Salvando...' : 'Salvar'}
-        </button>
       </div>
     </div>
   );

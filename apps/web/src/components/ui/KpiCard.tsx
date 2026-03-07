@@ -37,8 +37,8 @@ export default memo(function KpiCard({
       <div className="p-4">
         <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">
           {label}
+          {subtitle && <span className="text-dark-600 font-medium tracking-wider ml-1">· {subtitle}</span>}
         </p>
-        {subtitle && <p className="text-[10px] text-dark-600 uppercase tracking-wider">{subtitle}</p>}
         <p
           className={`text-xl font-bold mt-2 font-mono ${valueColor || 'text-white'} ${tooltip ? 'explainable inline-block' : ''}`}
           title={tooltip}

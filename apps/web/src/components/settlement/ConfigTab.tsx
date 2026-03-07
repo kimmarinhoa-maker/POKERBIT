@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import ClubDadosClube from '@/components/club/ClubDadosClube';
 import ClubSubclubes from '@/components/club/ClubSubclubes';
 import ClubTaxas from '@/components/club/ClubTaxas';
@@ -10,40 +11,61 @@ interface Props {
   isSubclub?: boolean;
 }
 
+type ConfigSection = 'geral' | 'taxas' | 'subclubes';
+
+const mainTabs: { key: ConfigSection; label: string }[] = [
+  { key: 'geral', label: 'Geral' },
+  { key: 'taxas', label: 'Taxas' },
+  { key: 'subclubes', label: 'Subclubes' },
+];
+
+const subclubTabs: { key: ConfigSection; label: string }[] = [
+  { key: 'geral', label: 'Geral' },
+];
+
 export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
-  // When viewing a subclub, show subclub's own data (logo, name, etc.)
-  // When viewing the main club (_all mode), show club data + taxas + subclubes
+  const [activeSection, setActiveSection] = useState<ConfigSection>('geral');
   const orgIdForDados = isSubclub && subclubOrgId ? subclubOrgId : clubId;
+  const tabs = isSubclub ? subclubTabs : mainTabs;
 
   return (
-    <div className="p-4 lg:p-6 animate-tab-fade max-w-2xl space-y-6">
-      <div>
-        <h3 className="text-base font-bold text-white mb-1">
+    <div className="p-4 lg:p-6 animate-tab-fade max-w-3xl">
+      {/* Header */}
+      <div className="mb-5">
+        <h3 className="text-base font-bold text-white">
           {isSubclub ? 'Configuracoes do Subclube' : 'Configuracoes do Clube'}
         </h3>
-        <p className="text-dark-500 text-xs">
+        <p className="text-dark-500 text-xs mt-0.5">
           {isSubclub ? 'Dados do subclube' : 'Dados, taxas e subclubes'}
         </p>
       </div>
 
-      {/* Dados do Clube/Subclube */}
-      <div className="card p-0 overflow-hidden">
-        <ClubDadosClube orgId={orgIdForDados} />
-      </div>
-
-      {/* Taxas — only for main club */}
-      {!isSubclub && (
-        <div className="card p-0 overflow-hidden">
-          <ClubTaxas clubId={clubId} />
+      {/* Tabs — underline style */}
+      {tabs.length > 1 && (
+        <div className="flex gap-6 mb-6 border-b border-dark-700/50">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveSection(tab.key)}
+              className={`pb-2.5 text-sm font-semibold transition-colors relative whitespace-nowrap ${
+                activeSection === tab.key
+                  ? 'text-white'
+                  : 'text-dark-500 hover:text-dark-300'
+              }`}
+            >
+              {tab.label}
+              {activeSection === tab.key && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-poker-500 rounded-full" />
+              )}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Subclubes — only for main club */}
-      {!isSubclub && (
-        <div className="card p-0 overflow-hidden">
-          <ClubSubclubes clubId={clubId} />
-        </div>
-      )}
+      {/* Tab content */}
+      {activeSection === 'geral' && <ClubDadosClube orgId={orgIdForDados} />}
+      {activeSection === 'taxas' && !isSubclub && <ClubTaxas clubId={clubId} />}
+      {activeSection === 'subclubes' && !isSubclub && <ClubSubclubes clubId={clubId} />}
     </div>
   );
 }
