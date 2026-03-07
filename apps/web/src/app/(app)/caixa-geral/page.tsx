@@ -154,8 +154,8 @@ export default function CaixaGeralPage() {
             totalTaxas: Number(dt.totalTaxas ?? 0),
             rbTotal: Number(dt.rbTotal ?? 0),
             acertoLiga: Number(dt.acertoLiga ?? 0),
-            playerCount: Number(dt.playerCount ?? 0),
-            agentCount: Number(dt.agentCount ?? 0),
+            playerCount: Number(dt.players ?? dt.playerCount ?? 0),
+            agentCount: Number(dt.agents ?? dt.agentCount ?? 0),
             subclubCount: subclubs.length,
           });
         }

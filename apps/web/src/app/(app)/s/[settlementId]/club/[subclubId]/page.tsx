@@ -36,6 +36,49 @@ const Conciliacao = dynamic(() => import('@/components/settlement/Conciliacao'),
 const Comprovantes = dynamic(() => import('@/components/settlement/Comprovantes'), { loading: () => <TabSkeleton />, ssr: false });
 const ConfigTab = dynamic(() => import('@/components/settlement/ConfigTab'), { loading: () => <TabSkeleton />, ssr: false });
 
+const IS_ALL = '_all';
+
+/** Merge all subclubes into a single consolidated virtual subclub */
+function mergeAllSubclubs(subclubs: SubclubData[], clubName: string): SubclubData {
+  const allPlayers = subclubs.flatMap((sc) => sc.players);
+  const allAgents = subclubs.flatMap((sc) => sc.agents);
+  const sum = (fn: (sc: SubclubData) => number) => subclubs.reduce((acc, sc) => acc + fn(sc), 0);
+
+  return {
+    id: IS_ALL,
+    name: clubName,
+    players: allPlayers,
+    agents: allAgents,
+    totals: {
+      players: sum((sc) => sc.totals.players),
+      agents: sum((sc) => sc.totals.agents),
+      ganhos: sum((sc) => sc.totals.ganhos),
+      rake: sum((sc) => sc.totals.rake),
+      netProfit: sum((sc) => sc.totals.netProfit),
+      ggr: sum((sc) => sc.totals.ggr),
+      rbTotal: sum((sc) => sc.totals.rbTotal),
+      resultado: sum((sc) => sc.totals.resultado),
+    },
+    feesComputed: {
+      taxaApp: sum((sc) => sc.feesComputed.taxaApp),
+      taxaLiga: sum((sc) => sc.feesComputed.taxaLiga),
+      taxaRodeoGGR: sum((sc) => sc.feesComputed.taxaRodeoGGR),
+      taxaRodeoApp: sum((sc) => sc.feesComputed.taxaRodeoApp),
+      totalTaxasSigned: sum((sc) => sc.feesComputed.totalTaxasSigned),
+    },
+    adjustments: {
+      overlay: sum((sc) => sc.adjustments.overlay),
+      compras: sum((sc) => sc.adjustments.compras),
+      security: sum((sc) => sc.adjustments.security),
+      outros: sum((sc) => sc.adjustments.outros),
+      obs: null,
+    },
+    totalLancamentos: sum((sc) => sc.totalLancamentos),
+    acertoLiga: sum((sc) => sc.acertoLiga),
+    acertoDirecao: sum((sc) => sc.acertoLiga) >= 0 ? 'receber' : 'pagar',
+  };
+}
+
 export default function SubclubPanelPage() {
   const params = useParams();
   const router = useRouter();
@@ -44,6 +87,7 @@ export default function SubclubPanelPage() {
 
   const settlementId = params.settlementId as string;
   const subclubId = decodeURIComponent(params.subclubId as string);
+  const isAllMode = subclubId === IS_ALL;
   const requestedTab = searchParams.get('tab') || 'resumo';
   // Fallback: if requested tab is not visible for this role, redirect to 'resumo'
   const visibleTabs = getVisibleTabKeys(hasPermission);
@@ -59,7 +103,7 @@ export default function SubclubPanelPage() {
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
   const [clubGroups, setClubGroups] = useState<Array<{ clubId: string; label: string; platform?: string; settlementId: string; subclubs: Array<{ name: string }> }>>([]);
-  usePageTitle(subclubId || 'Subclube');
+  usePageTitle(isAllMode ? 'Fechamento Geral' : (subclubId || 'Subclube'));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -187,8 +231,13 @@ export default function SubclubPanelPage() {
 
   // ─── useMemo hooks MUST be before any conditional return (Rules of Hooks) ──
   const _weekStart = data?.settlement?.week_start;
-  const _agents = data?.subclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.agents;
-  const _players = data?.subclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.players;
+  const _allSubclubs = data?.subclubs;
+  const _agents = isAllMode
+    ? _allSubclubs?.flatMap((sc: SubclubData) => sc.agents)
+    : _allSubclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.agents;
+  const _players = isAllMode
+    ? _allSubclubs?.flatMap((sc: SubclubData) => sc.players)
+    : _allSubclubs?.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId)?.players;
 
   const weekEnd = useMemo(() => {
     if (!_weekStart) return undefined;
@@ -239,8 +288,11 @@ export default function SubclubPanelPage() {
 
   const { settlement, fees, subclubs } = data;
 
-  // Find current subclub
-  const foundSubclub = subclubs.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId);
+  // Find current subclub (or merge all for consolidated view)
+  const currentClubName = settlement.organizations?.name || 'Clube';
+  const foundSubclub = isAllMode
+    ? (subclubs.length > 0 ? mergeAllSubclubs(subclubs, currentClubName) : null)
+    : subclubs.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId);
 
   if (!foundSubclub) {
     return (
@@ -399,7 +451,7 @@ export default function SubclubPanelPage() {
               <span className="hidden sm:inline">Semana</span>
             </button>
             <span className="mx-1.5 text-dark-600">/</span>
-            <span className="text-white font-medium truncate max-w-[120px] lg:max-w-none">{subclub.name}</span>
+            <span className="text-white font-medium truncate max-w-[120px] lg:max-w-none">{isAllMode ? `${currentClubName} (Geral)` : subclub.name}</span>
             {settlement.organizations?.external_id && (
               <span className="ml-1.5 text-[10px] font-mono text-dark-500">#{settlement.organizations.external_id}</span>
             )}
@@ -421,9 +473,13 @@ export default function SubclubPanelPage() {
           <div className="h-4 w-px bg-dark-700 hidden md:block" />
           <div className="relative">
             <select
-              value={subclub.name}
+              value={isAllMode ? IS_ALL : subclub.name}
               onChange={(e) => {
                 const target = e.target.value;
+                if (target === IS_ALL) {
+                  router.push(`/s/${settlementId}/club/${IS_ALL}?tab=${activeTab}`);
+                  return;
+                }
                 // Find which club group contains this subclub
                 for (const g of clubGroups) {
                   const found = g.subclubs.find(sc => sc.name === target);
@@ -438,6 +494,11 @@ export default function SubclubPanelPage() {
               className="appearance-none bg-dark-800 border border-dark-700 rounded-lg pl-3 pr-7 py-1.5 text-sm text-white font-medium hover:border-dark-600 focus:border-poker-500 focus:outline-none cursor-pointer max-w-[160px] lg:max-w-none transition-colors"
               aria-label="Trocar subclube"
             >
+              {subclubs.length > 1 && (
+                <option value={IS_ALL}>
+                  {currentClubName} (Geral)
+                </option>
+              )}
               {clubGroups.length > 1 ? (
                 clubGroups.map((g) => (
                   <optgroup key={g.clubId} label={`${g.label}${g.platform ? ` · ${g.platform}` : ''}`}>

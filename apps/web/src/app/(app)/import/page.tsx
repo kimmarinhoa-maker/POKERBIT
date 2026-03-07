@@ -183,6 +183,8 @@ export default function ImportWizardPage() {
     const count = newSubclubes.length;
     toast(`${count} subclube${count !== 1 ? 's' : ''} criado${count !== 1 ? 's' : ''}`, 'success');
     setNewSubclubes([]);
+    // Update existing subclub count so hasSubclubes is correct at confirm time
+    setExistingSubclubCount((prev) => (prev || 0) + count);
     // Reprocess preview so players get linked via new prefix rules
     await handlePreview();
   }

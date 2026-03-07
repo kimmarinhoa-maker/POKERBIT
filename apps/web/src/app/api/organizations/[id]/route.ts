@@ -88,7 +88,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
         // Cascade rename: update subclub_name in settlement metrics
         if (updates.name && oldName && oldName !== updates.name) {
-          await Promise.all([
+          const [r1, r2] = await Promise.all([
             supabaseAdmin
               .from('player_week_metrics')
               .update({ subclub_name: updates.name })
@@ -100,6 +100,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
               .eq('tenant_id', ctx.tenantId)
               .eq('subclub_name', oldName),
           ]);
+          if (r1.error) throw r1.error;
+          if (r2.error) throw r2.error;
         }
 
         return NextResponse.json({ success: true, data });

@@ -349,47 +349,62 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                       {/* Clubs under this platform */}
                       {platformClubs.map((club) => {
                         const clubActive = isClubActive(club);
-                        // Club with subclubes → overview; without → direct panel
+                        // Club with subclubes → consolidated view (_all); without → direct panel
                         const clubHref = club.lastSettlementId
                           ? club.subclubes.length > 0
-                            ? `/s/${club.lastSettlementId}`
+                            ? `/s/${club.lastSettlementId}/club/_all`
                             : `/s/${club.lastSettlementId}/club/${encodeURIComponent(club.name)}`
                           : `/clubs/${club.id}`;
 
+                        const isAllActive = pathname === `/s/${club.lastSettlementId}/club/_all`;
+                        const hasSubclubes = club.subclubes.length > 0;
+
                         return (
                           <div key={club.id}>
-                            {/* Club row */}
+                            {/* Club row — destaque visual para clube principal */}
                             <Link
                               href={clubHref}
-                              className={`flex items-center gap-2 px-3 py-1.5 ml-2 rounded-lg transition-all text-xs border-l-2 ${
-                                clubActive && club.subclubes.length === 0
-                                  ? 'text-poker-400 bg-poker-600/10 border-poker-500'
-                                  : clubActive
-                                    ? 'text-white bg-dark-800/50 border-poker-500/50'
-                                    : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
+                              className={`flex items-center gap-2 ml-2 rounded-lg transition-all text-xs ${
+                                hasSubclubes
+                                  ? `px-3 py-2 border ${
+                                      isAllActive
+                                        ? 'border-poker-500/60 bg-poker-600/10 text-white shadow-[0_0_12px_rgba(34,197,94,0.08)]'
+                                        : clubActive
+                                          ? 'border-dark-600 bg-dark-800/60 text-white'
+                                          : 'border-dark-700/50 bg-dark-800/30 text-dark-300 hover:text-white hover:border-dark-600 hover:bg-dark-800/50'
+                                    }`
+                                  : `px-3 py-1.5 border-l-2 ${
+                                      clubActive
+                                        ? 'text-poker-400 bg-poker-600/10 border-poker-500'
+                                        : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
+                                    }`
                               }`}
                             >
                               <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate leading-tight">{club.name}</div>
+                                <div className={`truncate leading-tight ${hasSubclubes ? 'font-bold text-[13px]' : 'font-medium'}`}>{club.name}</div>
                                 {(club.ligaId || club.externalId) && (
-                                  <div className="text-[9px] text-dark-600 leading-tight mt-0.5">
+                                  <div className="text-[9px] text-dark-500 leading-tight mt-0.5">
                                     {club.ligaId && `Liga ${club.ligaId}`}
                                     {club.ligaId && club.externalId && ' · '}
                                     {club.externalId && `ID ${club.externalId}`}
                                   </div>
                                 )}
                               </div>
-                              {club.subclubes.length > 0 && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 text-dark-500">
+                              {hasSubclubes && (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${
+                                  isAllActive
+                                    ? 'bg-poker-500/20 text-poker-400'
+                                    : 'bg-dark-700/60 text-dark-400'
+                                }`}>
                                   {club.subclubes.length}
                                 </span>
                               )}
                             </Link>
 
                             {/* Subclubes */}
-                            {club.subclubes.length > 0 && club.lastSettlementId && (
-                              <div className="ml-6 space-y-0.5 mt-0.5">
+                            {hasSubclubes && club.lastSettlementId && (
+                              <div className="ml-5 space-y-0.5 mt-1 pl-3 border-l border-dark-700/40">
                                 {club.subclubes.map((sub) => {
                                   const subActive = pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`;
                                   return (
