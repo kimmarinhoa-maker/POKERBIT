@@ -304,7 +304,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           <div className={collapsed ? 'lg:hidden' : ''}>
             <button
               onClick={() => {
-                if (pathname === '/clubs') {
+                if (pathname === '/clubs' || pathname.startsWith('/s/')) {
                   setClubsOpen((o) => !o);
                 } else {
                   setClubsOpen(true);
@@ -312,7 +312,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                 }
               }}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
-                pathname.startsWith('/s/') || pathname === '/clubs'
+                pathname === '/clubs'
                   ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
                   : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
               }`}
