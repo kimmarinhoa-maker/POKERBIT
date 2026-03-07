@@ -28,6 +28,7 @@ const DashboardClube = dynamic(() => import('@/components/settlement/DashboardCl
 const Detalhamento = dynamic(() => import('@/components/settlement/Detalhamento'), { loading: () => <TabSkeleton />, ssr: false });
 const Jogadores = dynamic(() => import('@/components/settlement/Jogadores'), { loading: () => <TabSkeleton />, ssr: false });
 const Ajustes = dynamic(() => import('@/components/settlement/Ajustes'), { loading: () => <TabSkeleton />, ssr: false });
+const Lancamentos = dynamic(() => import('@/components/settlement/Lancamentos'), { loading: () => <TabSkeleton />, ssr: false });
 const DRE = dynamic(() => import('@/components/settlement/DRE'), { loading: () => <TabSkeleton />, ssr: false });
 const Liga = dynamic(() => import('@/components/settlement/Liga'), { loading: () => <TabSkeleton />, ssr: false });
 const Caixa = dynamic(() => import('@/components/settlement/Caixa'), { loading: () => <TabSkeleton />, ssr: false });
@@ -302,15 +303,24 @@ function SubclubPanelPage() {
         return <TabErrorBoundary tabName="Jogadores"><Jogadores subclub={subclub} /></TabErrorBoundary>;
 
       // Tabs funcionais
-      case 'ajustes':
+      case 'lancamentos':
         return (
-          <TabErrorBoundary tabName="Ajustes">
-            <Ajustes
-              subclub={subclub}
-              weekStart={settlement.week_start}
-              settlementStatus={settlement.status}
-              onDataChange={loadData}
-            />
+          <TabErrorBoundary tabName="Lancamentos">
+            {isAllMode || subclubs.length <= 1 ? (
+              <Lancamentos
+                subclubs={subclubs}
+                weekStart={settlement.week_start}
+                settlementStatus={settlement.status}
+                onDataChange={loadData}
+              />
+            ) : (
+              <Ajustes
+                subclub={subclub}
+                weekStart={settlement.week_start}
+                settlementStatus={settlement.status}
+                onDataChange={loadData}
+              />
+            )}
           </TabErrorBoundary>
         );
       case 'dre':
