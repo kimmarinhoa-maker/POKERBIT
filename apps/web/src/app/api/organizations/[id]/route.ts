@@ -11,7 +11,7 @@ import { supabaseAdmin } from '@/lib/server/supabase';
 
 type Params = { params: Promise<{ id: string }> };
 
-// ─── PUT — Edit SUBCLUB ─────────────────────────────────────────────
+// ─── PUT — Edit CLUB or SUBCLUB ─────────────────────────────────────
 const updateOrgSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   external_id: z.string().optional(),
@@ -48,9 +48,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
             { status: 404 },
           );
         }
-        if (existing.type !== 'SUBCLUB') {
+        if (existing.type !== 'SUBCLUB' && existing.type !== 'CLUB') {
           return NextResponse.json(
-            { success: false, error: 'Apenas subclubes podem ser editados' },
+            { success: false, error: 'Apenas clubes e subclubes podem ser editados' },
             { status: 400 },
           );
         }
@@ -77,7 +77,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
         if (error) throw error;
 
-        // Cascade rename: update subclub_name in settlement metrics
+        // Cascade rename: update subclub_name in settlement metrics (both CLUB and SUBCLUB)
         if (updates.name && oldName && oldName !== updates.name) {
           const [r1, r2] = await Promise.all([
             supabaseAdmin

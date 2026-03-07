@@ -264,7 +264,7 @@ function SubclubPanelPage() {
   const currentClubName = settlement.organizations?.name || 'Clube';
   const foundSubclub = isAllMode
     ? (subclubs.length > 0 ? mergeAllSubclubs(subclubs, currentClubName) : null)
-    : subclubs.find((sc: SubclubData) => sc.name === subclubId || sc.id === subclubId);
+    : subclubs.find((sc: SubclubData) => sc.id === subclubId || sc.name === subclubId);
 
   if (!foundSubclub) {
     return (
@@ -377,7 +377,20 @@ function SubclubPanelPage() {
           </TabErrorBoundary>
         );
       case 'config':
-        return <TabErrorBoundary tabName="Config"><ConfigTab clubId={settlement.club_id} subclubOrgId={isAllMode ? undefined : subclub.id} isSubclub={!isAllMode && subclubs.length > 1} /></TabErrorBoundary>;
+        {
+          // subclub.id is a real UUID only when it doesn't start with 'name:' and is not empty
+          const isRealSubclubId = subclub.id && !subclub.id.startsWith('name:') && subclub.id !== IS_ALL;
+          const isViewingSubclub = !isAllMode && subclubs.length > 1 && isRealSubclubId;
+          return (
+            <TabErrorBoundary tabName="Config">
+              <ConfigTab
+                clubId={settlement.club_id}
+                subclubOrgId={isViewingSubclub ? subclub.id : undefined}
+                isSubclub={!!isViewingSubclub}
+              />
+            </TabErrorBoundary>
+          );
+        }
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 text-center">
