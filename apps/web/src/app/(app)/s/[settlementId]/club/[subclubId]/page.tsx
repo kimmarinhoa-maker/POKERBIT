@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
 import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
-import { normalizeKey } from '@/lib/formatters';
+import { normalizeKey, buildLogoMap } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
 import type { SettlementFullResponse, SubclubData } from '@/types/settlement';
@@ -125,23 +125,19 @@ function SubclubPanelPage() {
 
       const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
       if (treeRes.success && treeRes.data) {
-        const map: Record<string, string | null> = {};
+        setLogoMap(buildLogoMap(treeRes.data));
         const waMap: Record<string, string | null> = {};
         const cpMap: Record<string, string> = {};
         for (const club of treeRes.data) {
-          // Add club itself (for _all mode and single-club views)
-          map[normalizeKey(club.name)] = club.logo_url || club.metadata?.logo_url || null;
           waMap[normalizeKey(club.name)] = club.whatsapp_group_link || null;
           for (const sub of club.subclubes || []) {
-            map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
             waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;
             if (sub.chippix_manager_id) {
               cpMap[sub.id] = sub.chippix_manager_id;
-              cpMap[normalizeKey(sub.name)] = sub.chippix_manager_id; // fallback by name
+              cpMap[normalizeKey(sub.name)] = sub.chippix_manager_id;
             }
           }
         }
-        setLogoMap(map);
         setWhatsappLinkMap(waMap);
         setChippixManagerMap(cpMap);
       }

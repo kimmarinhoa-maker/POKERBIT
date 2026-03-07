@@ -28,3 +28,17 @@ export function fmtDateTime(dt: string): string {
 export function normalizeKey(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
+
+/** Build a logo map from org tree data (clubs + subclubes) keyed by normalizeKey(name) */
+export function buildLogoMap(
+  treeData: Array<{ name: string; logo_url?: string | null; metadata?: Record<string, any>; subclubes?: Array<{ name: string; logo_url?: string | null; metadata?: Record<string, any> }> }>,
+): Record<string, string | null> {
+  const map: Record<string, string | null> = {};
+  for (const club of treeData) {
+    map[normalizeKey(club.name)] = club.logo_url || club.metadata?.logo_url || null;
+    for (const sub of club.subclubes || []) {
+      map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
+    }
+  }
+  return map;
+}

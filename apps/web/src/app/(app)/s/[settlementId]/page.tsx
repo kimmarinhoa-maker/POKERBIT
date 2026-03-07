@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
 import { getSettlementFull, voidSettlement, deleteSettlement, getOrgTree } from '@/lib/api';
-import { normalizeKey } from '@/lib/formatters';
+import { normalizeKey, buildLogoMap } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import LockWeekModal from '@/components/settlement/LockWeekModal';
 import WeekSelector from '@/components/WeekSelector';
@@ -49,14 +49,7 @@ export default function SettlementOverviewPage() {
     try {
       const [res, treeRes] = await Promise.all([getSettlementFull(settlementId), getOrgTree()]);
       if (treeRes.success && treeRes.data) {
-        const map: Record<string, string | null> = {};
-        for (const club of treeRes.data) {
-          map[normalizeKey(club.name)] = club.logo_url || club.metadata?.logo_url || null;
-          for (const sub of club.subclubes || []) {
-            map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
-          }
-        }
-        setLogoMap(map);
+        setLogoMap(buildLogoMap(treeRes.data));
       }
       if (res.success && res.data) {
         setData(res.data);

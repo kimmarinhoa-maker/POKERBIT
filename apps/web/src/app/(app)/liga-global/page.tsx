@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { listSettlements, getSettlementFull, formatBRL, getOrgTree } from '@/lib/api';
-import { round2, normalizeKey } from '@/lib/formatters';
+import { round2, normalizeKey, buildLogoMap } from '@/lib/formatters';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
 import ClubLogo from '@/components/ClubLogo';
@@ -67,13 +67,7 @@ export default function LigaGlobalPage() {
       const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
       if (signal?.cancelled) return;
       if (treeRes.success && treeRes.data) {
-        const map: Record<string, string | null> = {};
-        for (const club of treeRes.data) {
-          for (const sub of club.subclubes || []) {
-            map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
-          }
-        }
-        setLogoMap(map);
+        setLogoMap(buildLogoMap(treeRes.data));
       }
       if (res.success) {
         const list = (res.data || []).sort((a: Settlement, b: Settlement) =>

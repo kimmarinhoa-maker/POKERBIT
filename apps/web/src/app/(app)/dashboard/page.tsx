@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import Link from 'next/link';
-import { formatBRL, round2, normalizeKey } from '@/lib/formatters';
+import { formatBRL, round2, normalizeKey, buildLogoMap } from '@/lib/formatters';
 import { listSettlements, getSettlementFull, getOrgTree, getDashboardModalities } from '@/lib/api';
 import type { ModalityData } from '@/lib/api';
 import ModalitySectionWrapper from '@/components/dashboard/ModalitySectionWrapper';
@@ -187,13 +187,7 @@ export default function DashboardPage() {
         const [res, treeRes] = await Promise.all([listSettlements(), getOrgTree()]);
         if (cancelled) return;
         if (treeRes.success && treeRes.data) {
-          const map: Record<string, string | null> = {};
-          for (const club of treeRes.data) {
-            for (const sub of club.subclubes || []) {
-              map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
-            }
-          }
-          logoMapRef.current = map;
+          logoMapRef.current = buildLogoMap(treeRes.data);
         }
         if (!res.success || !res.data?.length) {
           setNotFoundEmpty(true);
