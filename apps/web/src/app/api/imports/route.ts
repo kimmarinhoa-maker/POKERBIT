@@ -28,6 +28,10 @@ export async function GET(req: NextRequest) {
 
       if (error) throw error;
 
+      // Auto-cleanup: find orphaned settlements (import_id points to non-existent import)
+      // Run in background — don't block the response
+      cleanupOrphanedSettlements(ctx.tenantId).catch(() => {});
+
       return NextResponse.json({
         success: true,
         data: data || [],
@@ -122,4 +126,56 @@ export async function POST(req: NextRequest) {
     },
     { roles: ['OWNER', 'ADMIN'], permissions: ['page:import'] },
   );
+}
+
+// ─── Cleanup orphaned settlements ────────────────────────────────────
+// Finds settlements whose import_id points to a deleted import and cascade-deletes them
+async function cleanupOrphanedSettlements(tenantId: string) {
+  // Get all settlements for this tenant
+  const { data: settlements } = await supabaseAdmin
+    .from('settlements')
+    .select('id, status, import_id, week_start')
+    .eq('tenant_id', tenantId);
+
+  if (!settlements || settlements.length === 0) return;
+
+  // Get all existing import IDs
+  const { data: imports } = await supabaseAdmin
+    .from('imports')
+    .select('id')
+    .eq('tenant_id', tenantId);
+
+  const existingImportIds = new Set((imports || []).map((i: { id: string }) => i.id));
+
+  for (const s of settlements) {
+    // Skip if import still exists or if finalized
+    if (s.import_id && existingImportIds.has(s.import_id)) continue;
+    if (s.status === 'FINAL') continue;
+
+    const sid = s.id;
+
+    // Cascade delete all children
+    const tables = [
+      { table: 'player_week_metrics', col: 'settlement_id' },
+      { table: 'agent_week_metrics', col: 'settlement_id' },
+      { table: 'ledger_entries', col: 'settlement_id' },
+      { table: 'club_adjustments', col: 'settlement_id' },
+      { table: 'carry_forward', col: 'source_settlement_id' },
+    ];
+
+    for (const { table, col } of tables) {
+      await supabaseAdmin.from(table).delete().eq('tenant_id', tenantId).eq(col, sid);
+    }
+
+    if (s.week_start) {
+      await supabaseAdmin
+        .from('bank_transactions')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('week_start', s.week_start);
+    }
+
+    // Delete settlement
+    await supabaseAdmin.from('settlements').delete().eq('id', sid).eq('tenant_id', tenantId);
+  }
 }

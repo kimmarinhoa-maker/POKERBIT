@@ -64,151 +64,146 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
           );
         }
 
-        // Find associated settlement (settlements.import_id -> imports.id)
-        const { data: settlement } = await supabaseAdmin
+        // Find ALL settlements linked to this import (direct or reassigned)
+        // Also find orphaned settlements for the same week with dangling import_ids
+        const { data: directSettlement } = await supabaseAdmin
           .from('settlements')
           .select('id, status')
           .eq('import_id', importId)
           .eq('tenant_id', ctx.tenantId)
           .maybeSingle();
 
-        if (settlement) {
-          // Guard: block deletion if settlement is finalized or voided
-          if (settlement.status === 'FINAL' || settlement.status === 'VOID') {
-            return NextResponse.json(
-              { success: false, error: 'Nao e possivel excluir: settlement ja finalizado' },
-              { status: 422 },
-            );
-          }
+        // Also find settlements for this week whose import_id no longer exists
+        const { data: weekSettlements } = await supabaseAdmin
+          .from('settlements')
+          .select('id, status, import_id')
+          .eq('week_start', imp.week_start)
+          .eq('tenant_id', ctx.tenantId);
 
-          // Check if there are OTHER imports for the same week (sibling imports)
-          const { data: siblings } = await supabaseAdmin
-            .from('imports')
-            .select('id')
-            .eq('tenant_id', ctx.tenantId)
-            .eq('week_start', imp.week_start)
-            .eq('status', 'DONE')
-            .neq('id', importId)
-            .limit(1);
+        // Collect all settlement IDs to delete
+        const settlementsToDelete: { id: string; status: string }[] = [];
+        if (directSettlement) settlementsToDelete.push(directSettlement);
 
-          if (siblings && siblings.length > 0) {
-            // Has sibling imports -> preserve settlement, reassign import_id to a sibling
-            await supabaseAdmin
-              .from('settlements')
-              .update({ import_id: siblings[0].id })
-              .eq('id', settlement.id);
-          } else {
-            // Last import for this week -> full cascade delete
-            const sid = settlement.id;
-
-            // 1. Collect agent_ids before deleting metrics (for orphan cleanup)
-            const { data: agentMetrics } = await supabaseAdmin
-              .from('agent_week_metrics')
-              .select('agent_id')
-              .eq('settlement_id', sid)
-              .not('agent_id', 'is', null);
-
-            const agentOrgIds = [
-              ...new Set((agentMetrics || []).map((m: { agent_id: string }) => m.agent_id).filter(Boolean)),
-            ];
-
-            // 2. Collect subclub_ids before deleting metrics (for orphan cleanup)
-            const { data: subclubMetrics } = await supabaseAdmin
-              .from('agent_week_metrics')
-              .select('subclub_id')
-              .eq('settlement_id', sid)
-              .not('subclub_id', 'is', null);
-
-            const subclubOrgIds = [
-              ...new Set((subclubMetrics || []).map((m: { subclub_id: string }) => m.subclub_id).filter(Boolean)),
-            ];
-
-            // 3. Delete all settlement children in order (FKs)
-            const cascadeSteps = [
-              { table: 'player_week_metrics', col: 'settlement_id', label: 'player metrics' },
-              { table: 'agent_week_metrics', col: 'settlement_id', label: 'agent metrics' },
-              { table: 'ledger_entries', col: 'settlement_id', label: 'ledger entries' },
-              { table: 'bank_transactions', col: 'week_start', label: 'bank transactions', useWeek: true as const },
-              { table: 'carry_forward', col: 'source_settlement_id', label: 'carry forward' },
-            ];
-
-            for (const step of cascadeSteps) {
-              let query = supabaseAdmin
-                .from(step.table)
-                .delete()
+        // Check for orphaned settlements (import_id points to non-existent import)
+        if (weekSettlements) {
+          for (const ws of weekSettlements) {
+            if (settlementsToDelete.some((s) => s.id === ws.id)) continue;
+            if (ws.import_id) {
+              const { count } = await supabaseAdmin
+                .from('imports')
+                .select('id', { count: 'exact', head: true })
+                .eq('id', ws.import_id)
                 .eq('tenant_id', ctx.tenantId);
-
-              if ('useWeek' in step && step.useWeek) {
-                query = query.eq(step.col, imp.week_start);
-              } else {
-                query = query.eq(step.col, sid);
+              if (count === 0) {
+                // Orphaned — import_id points to deleted import
+                settlementsToDelete.push(ws);
               }
-
-              const { error } = await query;
-              if (error) {
-                throw new Error(
-                  `Falha ao excluir ${step.label} (${step.table}): ${error.message}`,
-                );
-              }
-            }
-
-            // 4. Cleanup: AGENT orgs órfãs (sem nenhum agent_week_metrics restante)
-            if (agentOrgIds.length > 0) {
-              for (const orgId of agentOrgIds) {
-                const { count } = await supabaseAdmin
-                  .from('agent_week_metrics')
-                  .select('id', { count: 'exact', head: true })
-                  .eq('agent_id', orgId);
-
-                if (count === 0) {
-                  await supabaseAdmin
-                    .from('organizations')
-                    .delete()
-                    .eq('id', orgId)
-                    .eq('type', 'AGENT')
-                    .eq('tenant_id', ctx.tenantId);
-                }
-              }
-            }
-
-            // 5. Cleanup: SUBCLUB orgs órfãs (auto-criadas, sem métricas nem ajustes)
-            if (subclubOrgIds.length > 0) {
-              for (const orgId of subclubOrgIds) {
-                const { count: metricsCount } = await supabaseAdmin
-                  .from('agent_week_metrics')
-                  .select('id', { count: 'exact', head: true })
-                  .eq('subclub_id', orgId);
-
-                if (metricsCount === 0) {
-                  const { count: adjustCount } = await supabaseAdmin
-                    .from('club_adjustments')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('subclub_id', orgId)
-                    .eq('tenant_id', ctx.tenantId);
-
-                  if (adjustCount === 0) {
-                    await supabaseAdmin
-                      .from('organizations')
-                      .delete()
-                      .eq('id', orgId)
-                      .eq('type', 'SUBCLUB')
-                      .eq('tenant_id', ctx.tenantId);
-                  }
-                }
-              }
-            }
-
-            // 6. Delete settlement itself
-            const { error: delSettErr } = await supabaseAdmin
-              .from('settlements')
-              .delete()
-              .eq('id', sid)
-              .eq('tenant_id', ctx.tenantId);
-
-            if (delSettErr) {
-              throw new Error(`Falha ao excluir settlement: ${delSettErr.message}`);
             }
           }
+        }
+
+        // Cascade delete each settlement
+        for (const settlement of settlementsToDelete) {
+          if (settlement.status === 'FINAL') {
+            continue; // Skip finalized — user must void first
+          }
+
+          const sid = settlement.id;
+
+          // 1. Collect agent_ids before deleting metrics (for orphan cleanup)
+          const { data: agentMetrics } = await supabaseAdmin
+            .from('agent_week_metrics')
+            .select('agent_id')
+            .eq('settlement_id', sid)
+            .not('agent_id', 'is', null);
+
+          const agentOrgIds = [
+            ...new Set((agentMetrics || []).map((m: { agent_id: string }) => m.agent_id).filter(Boolean)),
+          ];
+
+          // 2. Collect subclub_ids before deleting metrics (for orphan cleanup)
+          const { data: subclubMetrics } = await supabaseAdmin
+            .from('agent_week_metrics')
+            .select('subclub_id')
+            .eq('settlement_id', sid)
+            .not('subclub_id', 'is', null);
+
+          const subclubOrgIds = [
+            ...new Set((subclubMetrics || []).map((m: { subclub_id: string }) => m.subclub_id).filter(Boolean)),
+          ];
+
+          // 3. Delete all settlement children in order (FKs)
+          const cascadeTables = [
+            'player_week_metrics',
+            'agent_week_metrics',
+            'ledger_entries',
+            'club_adjustments',
+            'carry_forward',
+          ];
+
+          for (const table of cascadeTables) {
+            const col = table === 'carry_forward' ? 'source_settlement_id' : 'settlement_id';
+            const { error } = await supabaseAdmin
+              .from(table)
+              .delete()
+              .eq('tenant_id', ctx.tenantId)
+              .eq(col, sid);
+            if (error) throw new Error(`Falha ao excluir ${table}: ${error.message}`);
+          }
+
+          // bank_transactions by week
+          await supabaseAdmin
+            .from('bank_transactions')
+            .delete()
+            .eq('tenant_id', ctx.tenantId)
+            .eq('week_start', imp.week_start);
+
+          // 4. Cleanup: AGENT orgs órfãs
+          for (const orgId of agentOrgIds) {
+            const { count } = await supabaseAdmin
+              .from('agent_week_metrics')
+              .select('id', { count: 'exact', head: true })
+              .eq('agent_id', orgId);
+            if (count === 0) {
+              await supabaseAdmin
+                .from('organizations')
+                .delete()
+                .eq('id', orgId)
+                .eq('type', 'AGENT')
+                .eq('tenant_id', ctx.tenantId);
+            }
+          }
+
+          // 5. Cleanup: SUBCLUB orgs órfãs
+          for (const orgId of subclubOrgIds) {
+            const { count: mc } = await supabaseAdmin
+              .from('agent_week_metrics')
+              .select('id', { count: 'exact', head: true })
+              .eq('subclub_id', orgId);
+            if (mc === 0) {
+              const { count: ac } = await supabaseAdmin
+                .from('club_adjustments')
+                .select('id', { count: 'exact', head: true })
+                .eq('subclub_id', orgId)
+                .eq('tenant_id', ctx.tenantId);
+              if (ac === 0) {
+                await supabaseAdmin
+                  .from('organizations')
+                  .delete()
+                  .eq('id', orgId)
+                  .eq('type', 'SUBCLUB')
+                  .eq('tenant_id', ctx.tenantId);
+              }
+            }
+          }
+
+          // 6. Delete settlement itself
+          const { error: delSettErr } = await supabaseAdmin
+            .from('settlements')
+            .delete()
+            .eq('id', sid)
+            .eq('tenant_id', ctx.tenantId);
+          if (delSettErr) throw new Error(`Falha ao excluir settlement: ${delSettErr.message}`);
         }
 
         // Delete import record
