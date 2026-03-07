@@ -377,7 +377,7 @@ function SubclubPanelPage() {
           </TabErrorBoundary>
         );
       case 'config':
-        return <TabErrorBoundary tabName="Config"><ConfigTab clubId={settlement.club_id} subclubOrgId={isAllMode ? undefined : subclub.id} isSubclub={!isAllMode} /></TabErrorBoundary>;
+        return <TabErrorBoundary tabName="Config"><ConfigTab clubId={settlement.club_id} subclubOrgId={isAllMode ? undefined : subclub.id} isSubclub={!isAllMode && subclubs.length > 1} /></TabErrorBoundary>;
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 text-center">
