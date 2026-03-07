@@ -22,6 +22,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  Landmark,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
@@ -40,8 +42,12 @@ const operacaoItems: NavItem[] = [
   { href: '/import', label: 'Importar', icon: Upload, permKey: 'page:import' },
 ];
 
+const financeiroItems: NavItem[] = [
+  { href: '/financeiro/caixa', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
+  { href: '/financeiro/agentes', label: 'Fech. Agentes', icon: UserCheck, permKey: 'page:caixa_geral' },
+];
+
 const adminItems: NavItem[] = [
-  { href: '/caixa-geral', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
   { href: '/config/equipe', label: 'Equipe', icon: Users },
 ];
 
@@ -69,7 +75,8 @@ interface SidebarClub {
 function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   if (href === '/import') return pathname === '/import' || pathname.startsWith('/import/');
-  if (href === '/caixa-geral') return pathname === '/caixa-geral';
+  if (href === '/financeiro/caixa') return pathname === '/financeiro/caixa' || pathname === '/caixa-geral';
+  if (href === '/financeiro/agentes') return pathname === '/financeiro/agentes';
   if (href === '/config/equipe') return pathname === '/config/equipe';
   return pathname === href || pathname.startsWith(href + '/');
 }
@@ -401,7 +408,41 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {/* ── Divider ──────────────────────────────────── */}
+          {/* ── Divider FINANCEIRO ────────────────────── */}
+          {isAdmin && <div className={`border-t border-dark-700/60 my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />}
+
+          {/* ── FINANCEIRO ──────────────────────────────── */}
+          {isAdmin && (() => {
+            const visible = financeiroItems.filter((item) => !item.permKey || hasPermission(item.permKey));
+            if (visible.length === 0) return null;
+            return (
+              <div className="space-y-0.5">
+                {!collapsed && (
+                  <div className="flex items-center gap-1.5 px-3 mb-1">
+                    <Landmark className="w-3 h-3 text-dark-600" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-dark-600">Financeiro</span>
+                  </div>
+                )}
+                {visible.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isRouteActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={navLinkClass(isActive, collapsed)}
+                    >
+                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-white' : 'text-dark-500'}`} />
+                      <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* ── Divider ADMIN ─────────────────────────── */}
           {isAdmin && <div className={`border-t border-dark-700/60 my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />}
 
           {/* ── ADMIN ─────────────────────────────────────── */}

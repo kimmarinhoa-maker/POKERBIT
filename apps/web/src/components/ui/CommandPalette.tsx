@@ -14,6 +14,8 @@ import {
   Users,
   Link as LinkIcon,
   Settings,
+  Wallet,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,7 +34,8 @@ const commands: CommandItem[] = [
   { label: 'Vincular', href: '/import/vincular', icon: LinkIcon, section: 'Operacao', keywords: 'link associar jogadores' },
   { label: 'Lancamentos', href: '/lancamentos', icon: Receipt, section: 'Operacao', keywords: 'manual ajuste' },
   { label: 'Meus Clubes', href: '/clubs', icon: Building2, section: 'Gestao', keywords: 'clube club gerenciar' },
-  { label: 'Caixa Geral', href: '/caixa-geral', icon: Eye, section: 'Gestao', keywords: 'financeiro saldo' },
+  { label: 'Caixa Geral', href: '/financeiro/caixa', icon: Wallet, section: 'Financeiro', keywords: 'financeiro saldo caixa' },
+  { label: 'Fechamento Agentes', href: '/financeiro/agentes', icon: UserCheck, section: 'Financeiro', keywords: 'consolidado agente plataforma' },
   { label: 'Fechamentos', href: '/s', icon: Building2, section: 'Fechamentos', keywords: 'settlement acerto semana' },
   { label: 'Liga Global', href: '/liga-global', icon: Trophy, section: 'Fechamentos', keywords: 'consolidado total' },
   { label: 'Agentes / Jogadores', href: '/players', icon: Users, section: 'Cadastro', keywords: 'player agent cadastro' },

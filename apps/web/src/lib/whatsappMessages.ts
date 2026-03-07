@@ -160,6 +160,57 @@ export function buildClubMessage(opts: {
   return lines.join('\n');
 }
 
+// ─── Agent consolidated (cross-platform) message ────────────────────
+export function buildAgentConsolidadoMessage(opts: {
+  agentName: string;
+  weekStart?: string;
+  weekEnd?: string;
+  platforms: Array<{
+    platform: string;
+    club_name?: string;
+    winnings: number;
+    rake: number;
+    rb_rate: number;
+    rb_value: number;
+    resultado: number;
+  }>;
+  total: { winnings: number; rake: number; rb_value: number; resultado: number };
+}): string {
+  const { agentName, weekStart, weekEnd, platforms, total } = opts;
+  const range = dateRange(weekStart, weekEnd);
+
+  const PLATFORM_LABELS: Record<string, string> = {
+    suprema: 'Suprema Poker',
+    pppoker: 'PPPoker',
+    clubgg: 'ClubGG',
+  };
+
+  const lines = [
+    '*FECHAMENTO SEMANAL*',
+    `*${agentName}*`,
+    `Semana: ${range}`,
+    '',
+  ];
+
+  for (const p of platforms) {
+    const label = PLATFORM_LABELS[p.platform] || p.platform;
+    lines.push(`*${label}*${p.club_name ? ` (${p.club_name})` : ''}`);
+    lines.push(`P/L: ${formatBRL(p.winnings)}`);
+    lines.push(`Rake: ${formatBRL(p.rake)}`);
+    lines.push(`RB (${(p.rb_rate * 100).toFixed(0)}%): ${formatBRL(p.rb_value)}`);
+    lines.push(`Resultado: ${formatBRL(p.resultado)}`);
+    lines.push('');
+  }
+
+  lines.push('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
+  lines.push(`*RESULTADO FINAL: ${formatBRL(total.resultado)}*`);
+  lines.push(`Direcao: ${total.resultado >= 0 ? 'A RECEBER' : 'A PAGAR'}`);
+  lines.push('');
+  lines.push('_Gerado pelo PokerBit_');
+
+  return lines.join('\n');
+}
+
 // ─── Liga consolidated message ──────────────────────────────────────
 export function buildLigaMessage(opts: {
   weekStart?: string;
