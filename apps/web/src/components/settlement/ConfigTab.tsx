@@ -6,10 +6,15 @@ import ClubTaxas from '@/components/club/ClubTaxas';
 
 interface Props {
   clubId: string;
+  subclubOrgId?: string;
   isSubclub?: boolean;
 }
 
-export default function ConfigTab({ clubId, isSubclub }: Props) {
+export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
+  // When viewing a subclub, show subclub's own data (logo, name, etc.)
+  // When viewing the main club (_all mode), show club data + taxas + subclubes
+  const orgIdForDados = isSubclub && subclubOrgId ? subclubOrgId : clubId;
+
   return (
     <div className="p-4 lg:p-6 animate-tab-fade max-w-2xl space-y-6">
       <div>
@@ -21,9 +26,9 @@ export default function ConfigTab({ clubId, isSubclub }: Props) {
         </p>
       </div>
 
-      {/* Dados do Clube */}
+      {/* Dados do Clube/Subclube */}
       <div className="card p-0 overflow-hidden">
-        <ClubDadosClube clubId={clubId} />
+        <ClubDadosClube orgId={orgIdForDados} />
       </div>
 
       {/* Taxas — only for main club */}

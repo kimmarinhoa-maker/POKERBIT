@@ -16,6 +16,7 @@ const STANDARD_FEES = [
 interface FeeRow {
   id?: string;
   name: string;
+  label: string;
   rate: string;
   base: string;
   is_active: boolean;
@@ -30,6 +31,7 @@ export default function ClubTaxas({ clubId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const { toast } = useToast();
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
@@ -40,15 +42,16 @@ export default function ClubTaxas({ clubId }: Props) {
       const res = await getFeeConfig(clubId);
       if (res.success) {
         const existing = res.data || [];
-        // Map standard fees, merging with DB data
-        const rows: FeeRow[] = STANDARD_FEES.map((sf) => {
-          const dbRow = existing.find((r: any) => r.name === sf.name);
+        // Only show fees that exist in DB
+        const rows: FeeRow[] = existing.map((r: any) => {
+          const sf = STANDARD_FEES.find((s) => s.name === r.name);
           return {
-            id: dbRow?.id,
-            name: sf.name,
-            rate: dbRow ? String(dbRow.rate) : '0',
-            base: sf.base,
-            is_active: dbRow ? dbRow.is_active !== false : true,
+            id: r.id,
+            name: r.name,
+            label: sf?.label || r.name,
+            rate: String(r.rate),
+            base: r.base || sf?.base || 'rake',
+            is_active: r.is_active !== false,
           };
         });
         setFees(rows);
@@ -62,8 +65,30 @@ export default function ClubTaxas({ clubId }: Props) {
 
   useEffect(() => { loadFees(); }, [loadFees]);
 
+  // Standard fees not yet added
+  const availableToAdd = STANDARD_FEES.filter(
+    (sf) => !fees.some((f) => f.name === sf.name)
+  );
+
+  function handleAddFee(sf: typeof STANDARD_FEES[0]) {
+    setFees((prev) => [...prev, {
+      name: sf.name,
+      label: sf.label,
+      rate: '0',
+      base: sf.base,
+      is_active: true,
+    }]);
+    setShowAddMenu(false);
+    setDirty(true);
+  }
+
   function handleRateChange(name: string, value: string) {
     setFees((prev) => prev.map((f) => f.name === name ? { ...f, rate: value } : f));
+    setDirty(true);
+  }
+
+  function handleLabelChange(name: string, value: string) {
+    setFees((prev) => prev.map((f) => f.name === name ? { ...f, label: value } : f));
     setDirty(true);
   }
 
@@ -73,10 +98,9 @@ export default function ClubTaxas({ clubId }: Props) {
   }
 
   async function handleDelete(fee: FeeRow) {
-    const sf = STANDARD_FEES.find((s) => s.name === fee.name);
     const ok = await confirm({
       title: 'Excluir Taxa',
-      message: `Excluir "${sf?.label || fee.name}"? A taxa sera removida e nao sera mais calculada nos fechamentos.`,
+      message: `Excluir "${fee.label}"? Voce pode inclui-la novamente depois.`,
       variant: 'danger',
     });
     if (!ok) return;
@@ -131,78 +155,112 @@ export default function ClubTaxas({ clubId }: Props) {
 
   return (
     <div className="p-4 lg:p-6 animate-tab-fade max-w-lg">
-      <div className="mb-6">
-        <h3 className="text-base font-bold text-white">Taxas</h3>
-        <p className="text-dark-500 text-xs mt-0.5">Taxas aplicadas nos fechamentos deste clube</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-base font-bold text-white">Taxas</h3>
+          <p className="text-dark-500 text-xs mt-0.5">Taxas aplicadas nos fechamentos deste clube</p>
+        </div>
+        {/* Add fee button */}
+        {availableToAdd.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              className="btn-primary text-xs px-3 py-1.5"
+            >
+              + Incluir Taxa
+            </button>
+            {showAddMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAddMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-dark-800 border border-dark-700 rounded-lg shadow-xl py-1 min-w-[200px]">
+                  {availableToAdd.map((sf) => (
+                    <button
+                      key={sf.name}
+                      onClick={() => handleAddFee(sf)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-dark-200 hover:bg-dark-700/50 transition-colors"
+                    >
+                      <div className="font-medium">{sf.label}</div>
+                      <div className="text-[10px] text-dark-500 uppercase">{sf.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">
         <div className="space-y-3">
-          {fees.map((fee) => {
-            const sf = STANDARD_FEES.find((s) => s.name === fee.name);
-            return (
-              <div
-                key={fee.name}
-                className={`flex items-center gap-4 p-3 rounded-lg border transition-all ${
-                  fee.is_active
-                    ? 'border-dark-700/50 bg-dark-800/30'
-                    : 'border-dark-800/30 bg-dark-900/30 opacity-50'
+          {fees.map((fee) => (
+            <div
+              key={fee.name}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                fee.is_active
+                  ? 'border-dark-700/50 bg-dark-800/30'
+                  : 'border-dark-800/30 bg-dark-900/30 opacity-50'
+              }`}
+            >
+              {/* Toggle */}
+              <button
+                onClick={() => handleToggle(fee.name)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
+                  fee.is_active ? 'bg-poker-600' : 'bg-dark-600'
                 }`}
+                title={fee.is_active ? 'Desativar taxa' : 'Ativar taxa'}
               >
-                {/* Toggle */}
-                <button
-                  onClick={() => handleToggle(fee.name)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
-                    fee.is_active ? 'bg-poker-600' : 'bg-dark-600'
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                    fee.is_active ? 'translate-x-4' : 'translate-x-0.5'
                   }`}
-                  title={fee.is_active ? 'Desativar taxa' : 'Ativar taxa'}
-                >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-                      fee.is_active ? 'translate-x-4' : 'translate-x-0.5'
-                    }`}
-                  />
-                </button>
+                />
+              </button>
 
-                {/* Label */}
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm font-medium ${fee.is_active ? 'text-dark-200' : 'text-dark-500 line-through'}`}>
-                    {sf?.label || fee.name}
-                  </div>
-                  <div className="text-[10px] text-dark-500 uppercase tracking-wider">{sf?.description}</div>
+              {/* Label */}
+              <div className="flex-1 min-w-0">
+                <div className={`text-sm font-medium ${fee.is_active ? 'text-dark-200' : 'text-dark-500 line-through'}`}>
+                  {fee.label}
                 </div>
-
-                {/* Rate input */}
-                <div className="flex items-center gap-2 w-28">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={fee.rate}
-                    onChange={(e) => handleRateChange(fee.name, e.target.value)}
-                    disabled={!fee.is_active}
-                    className="input w-full text-sm font-mono text-right disabled:opacity-40 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-dark-500 text-sm font-bold">%</span>
+                <div className="text-[10px] text-dark-500 uppercase tracking-wider">
+                  {fee.base === 'ggr' ? '% do GGR' : '% do Rake'}
                 </div>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(fee)}
-                  className="text-dark-600 hover:text-red-400 transition-colors shrink-0"
-                  title="Excluir taxa"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
               </div>
-            );
-          })}
+
+              {/* Rate input */}
+              <div className="flex items-center gap-2 w-28">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={fee.rate}
+                  onChange={(e) => handleRateChange(fee.name, e.target.value)}
+                  disabled={!fee.is_active}
+                  className="input w-full text-sm font-mono text-right disabled:opacity-40 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-dark-500 text-sm font-bold">%</span>
+              </div>
+
+              {/* Delete */}
+              <button
+                onClick={() => handleDelete(fee)}
+                className="text-dark-600 hover:text-red-400 transition-colors shrink-0"
+                title="Excluir taxa"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          ))}
 
           {fees.length === 0 && (
-            <p className="text-dark-500 text-sm text-center py-4">Nenhuma taxa configurada.</p>
+            <div className="text-center py-6">
+              <p className="text-dark-500 text-sm mb-3">Nenhuma taxa configurada.</p>
+              {availableToAdd.length > 0 && (
+                <p className="text-dark-600 text-xs">Use o botao &quot;+ Incluir Taxa&quot; para adicionar.</p>
+              )}
+            </div>
           )}
         </div>
 
@@ -227,12 +285,6 @@ export default function ClubTaxas({ clubId }: Props) {
             {saving ? 'Salvando...' : 'Salvar Taxas'}
           </button>
         </div>
-      </div>
-
-      <div className="mt-4 text-xs text-dark-500 space-y-1">
-        <p>Taxas <strong className="text-dark-400">ativas</strong> sao aplicadas automaticamente no calculo do acerto.</p>
-        <p>Taxas <strong className="text-dark-400">desativadas</strong> nao sao calculadas (valor zerado).</p>
-        <p>Taxas <strong className="text-dark-400">excluidas</strong> sao removidas permanentemente.</p>
       </div>
 
       {ConfirmDialogElement}
