@@ -162,6 +162,24 @@ function parseWorkbook(workbook, config = {}) {
     if (feeIdx !== undefined) ganhosClubeCols = [feeIdx];
   }
 
+  // 3b) Filter "Ganhos do clube" to ONLY actual tax columns
+  // PPPoker includes many non-rake sub-columns under "Ganhos do clube":
+  //   Geral (total), Taxa (subtotal), Taxa (jogos PPST/PPSR/...), Buy-in SPINUP,
+  //   Apostas Caribbean+, Taxa do Jackpot, Prêmios Jackpot, Dividir EV, etc.
+  // Only "Taxa (jogos ...)" columns are actual rake — exclude Geral, summaries,
+  // jackpot, dividir EV, buy-ins, premiações, apostas, prêmios.
+  const subHeaderRow = rows[headerRowIdx + 1] || [];
+  if (ganhosClubeCols.length > 1 && subHeaderRow.length > 0) {
+    const taxaPattern = /^taxa\s*\(/i; // Matches "Taxa (jogos PPST)" etc.
+    const filteredCols = ganhosClubeCols.filter(c => {
+      const sub = String(subHeaderRow[c] || '').trim();
+      return taxaPattern.test(sub);
+    });
+    if (filteredCols.length > 0) {
+      ganhosClubeCols = filteredCols;
+    }
+  }
+
   // 4) Parse data rows
   const dataStartRow = headerRowIdx + 1;
   // Check if there's a sub-header row (row 3) - skip it if so
