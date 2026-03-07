@@ -74,6 +74,18 @@ function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
+// ─── Reusable nav link styles (Apple-style) ─────────────────────────
+
+function navLinkClass(isActive: boolean, collapsed: boolean): string {
+  return `flex items-center gap-3 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+    collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-[7px]' : 'px-3 py-[7px]'
+  } ${
+    isActive
+      ? 'bg-white/[0.08] text-white'
+      : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
+  }`;
+}
+
 // ─── Inner Layout (uses useAuth) ────────────────────────────────────
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
@@ -94,49 +106,31 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     return localStorage.getItem('sidebar-clubs-open') !== 'false';
   });
 
-  // Persist collapsed state
-  useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', String(collapsed));
-  }, [collapsed]);
-
-  // Persist clubs open state
-  useEffect(() => {
-    localStorage.setItem('sidebar-clubs-open', String(clubsOpen));
-  }, [clubsOpen]);
-
-  // Close sidebar on route change (mobile)
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+  useEffect(() => { localStorage.setItem('sidebar-collapsed', String(collapsed)); }, [collapsed]);
+  useEffect(() => { localStorage.setItem('sidebar-clubs-open', String(clubsOpen)); }, [clubsOpen]);
+  useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   // Load club tree
   const loadClubs = useCallback(async () => {
     try {
       const [treeRes, settRes] = await Promise.all([getOrgTree(), listSettlements()]);
-
-      // Build latest settlement map: clubId → settlementId
       const lastSettMap = new Map<string, string>();
       if (settRes.success && settRes.data) {
         for (const s of settRes.data as any[]) {
           if (s.status === 'VOID') continue;
-          if (!lastSettMap.has(s.club_id)) {
-            lastSettMap.set(s.club_id, s.id);
-          }
+          if (!lastSettMap.has(s.club_id)) lastSettMap.set(s.club_id, s.id);
         }
       }
-
       if (treeRes.success && treeRes.data) {
         const result: SidebarClub[] = [];
         for (const club of treeRes.data) {
           if (club.type !== 'CLUB') continue;
           const subs: SidebarSubclub[] = (club.subclubes || []).map((s: any) => ({
-            id: s.id,
-            name: s.name,
+            id: s.id, name: s.name,
             logoUrl: s.logo_url || s.metadata?.logo_url || null,
           }));
           result.push({
-            id: club.id,
-            name: club.name,
+            id: club.id, name: club.name,
             platform: (club.metadata?.platform || 'outro').toLowerCase(),
             externalId: club.external_id || null,
             ligaId: club.metadata?.liga_id || null,
@@ -148,17 +142,14 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         setClubs(result);
       }
     } catch {
-      // silent — clubs in sidebar are non-critical
+      // silent
     } finally {
       setClubsLoaded(true);
     }
   }, []);
 
-  useEffect(() => {
-    if (user) loadClubs();
-  }, [user, loadClubs]);
+  useEffect(() => { if (user) loadClubs(); }, [user, loadClubs]);
 
-  // Re-load clubs after import completes (user lands on /s/ from /import)
   const prevPathRef = useRef(pathname);
   useEffect(() => {
     const prev = prevPathRef.current;
@@ -193,10 +184,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
-  const PLATFORM_COLORS: Record<string, string> = {
-    suprema: '#22c55e',
-    pppoker: '#a855f7',
-    clubgg: '#3b82f6',
+  const PLATFORM_DOT: Record<string, string> = {
+    suprema: 'bg-emerald-400',
+    pppoker: 'bg-violet-400',
+    clubgg: 'bg-blue-400',
   };
   const PLATFORM_LABELS: Record<string, string> = {
     suprema: 'Suprema',
@@ -204,35 +195,42 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
     clubgg: 'ClubGG',
   };
 
-  // Check if a club/subclub is active based on current URL
   function isClubActive(club: SidebarClub): boolean {
     if (!club.lastSettlementId) return false;
     return pathname.startsWith(`/s/${club.lastSettlementId}`);
   }
 
+  // User initials for avatar
+  const userInitials = (user.email || '?')
+    .split('@')[0]
+    .split(/[._-]/)
+    .slice(0, 2)
+    .map((s: string) => s[0]?.toUpperCase() || '')
+    .join('');
+
   return (
     <div className="min-h-screen flex">
       {/* Mobile top bar */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-dark-900 border-b border-dark-700 flex items-center px-4 h-14 lg:hidden">
+      <div className="fixed top-0 left-0 right-0 z-40 bg-dark-900/95 backdrop-blur-md border-b border-white/[0.06] flex items-center px-4 h-14 lg:hidden">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="text-dark-300 hover:text-white p-1.5 -ml-1 transition-colors"
+          className="text-dark-400 hover:text-white p-1.5 -ml-1 transition-colors"
           aria-label="Abrir menu"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5" />
         </button>
         <Link href="/dashboard" className="flex items-center gap-2 ml-3">
           <div className="w-7 h-7 rounded-lg bg-poker-600 flex items-center justify-center">
             <Spade className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-white text-sm">POKERBIT</span>
+          <span className="font-bold text-white text-sm tracking-tight">POKERBIT</span>
         </Link>
       </div>
 
       {/* Sidebar overlay (mobile) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -242,65 +240,57 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         role="navigation"
         className={`
-        fixed inset-y-0 left-0 z-50 bg-dark-900 border-r border-dark-700 flex flex-col
+        fixed inset-y-0 left-0 z-50 bg-dark-950 border-r border-white/[0.06] flex flex-col
         transform transition-all duration-200 ease-in-out
         lg:relative lg:translate-x-0 lg:shrink-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         ${collapsed ? 'lg:w-[68px] w-64' : 'w-64'}
       `}
       >
-        {/* Logo + Tenant Selector */}
-        <div className={`border-b border-dark-700 ${collapsed ? 'lg:p-3 p-6' : 'px-4 pt-5 pb-4'}`}>
+        {/* Logo + Tenant */}
+        <div className={`border-b border-white/[0.06] ${collapsed ? 'lg:p-3 p-5' : 'px-4 pt-5 pb-4'}`}>
           <Link href="/dashboard" className="flex items-center gap-3" title={collapsed ? 'POKERBIT' : undefined}>
-            <div className="w-10 h-10 rounded-xl bg-poker-600 flex items-center justify-center shrink-0">
-              <Spade className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-poker-600 flex items-center justify-center shrink-0">
+              <Spade className="w-[18px] h-[18px] text-white" />
             </div>
             <div className={collapsed ? 'lg:hidden' : ''}>
-              <h1 className="font-bold text-white text-lg leading-tight">POKERBIT</h1>
+              <h1 className="font-bold text-white text-base tracking-tight leading-none">POKERBIT</h1>
             </div>
           </Link>
           <TenantSelector collapsed={collapsed} />
         </div>
 
-        {/* Navigation: OPERACAO → MEUS CLUBES → ADMIN */}
-        <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:p-2 p-4 lg:space-y-3 space-y-4' : 'p-4 space-y-4'}`} aria-label="Menu principal">
+        {/* Navigation */}
+        <nav className={`flex-1 overflow-y-auto ${collapsed ? 'lg:px-2 lg:py-3 p-3' : 'px-3 py-3'} space-y-1`} aria-label="Menu principal">
           {/* ── OPERACAO ──────────────────────────────────── */}
           {(() => {
             const visible = operacaoItems.filter((item) => !item.permKey || hasPermission(item.permKey));
             if (visible.length === 0) return null;
             return (
-              <div>
-                <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
-                  Operacao
-                </p>
-                <div className="space-y-0.5">
-                  {visible.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = isRouteActive(pathname, item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        title={collapsed ? item.label : undefined}
-                        className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
-                          collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
-                        } ${
-                          isActive
-                            ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
-                            : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+              <div className="space-y-0.5">
+                {visible.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isRouteActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={navLinkClass(isActive, collapsed)}
+                    >
+                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-white' : 'text-dark-500'}`} />
+                      <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
             );
           })()}
 
-          {/* ── MEUS CLUBES (collapsible nav item) ─────────── */}
+          {/* ── Divider ──────────────────────────────────── */}
+          <div className={`border-t border-white/[0.06] my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />
+
+          {/* ── MEUS CLUBES ─────────────────────────────── */}
           <div className={collapsed ? 'lg:hidden' : ''}>
             <button
               onClick={() => {
@@ -311,37 +301,31 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                   router.push('/clubs');
                 }
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+              className={`w-full flex items-center gap-3 px-3 py-[7px] rounded-lg transition-all duration-150 text-[13px] font-medium ${
                 pathname === '/clubs'
-                  ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
-                  : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
               }`}
             >
-              <Spade className="w-4 h-4 flex-shrink-0" />
+              <Spade className={`w-[18px] h-[18px] flex-shrink-0 ${pathname === '/clubs' ? 'text-white' : 'text-dark-500'}`} />
               <span className="flex-1 text-left">Meus Clubes</span>
               {clubs.length > 0 && (
-                <span className="text-[10px] text-dark-500 font-mono">{clubs.length}</span>
+                <span className="text-[10px] text-dark-500 font-mono tabular-nums">{clubs.length}</span>
               )}
-              <ChevronDown className={`w-3.5 h-3.5 text-dark-500 transition-transform ${clubsOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-dark-600 transition-transform duration-200 ${clubsOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {clubsOpen && (
-              <div className="space-y-2 mt-1">
+              <div className="mt-1 space-y-3 ml-1">
                 {clubs.length === 0 && clubsLoaded ? (
                   <p className="px-3 text-[11px] text-dark-600">Importe uma planilha para ver seus clubes.</p>
                 ) : (
                   sortedPlatforms.map(([platform, platformClubs]) => (
                     <div key={platform}>
                       {/* Platform label */}
-                      <div className="flex items-center gap-1.5 px-3 py-1">
-                        <div
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ background: PLATFORM_COLORS[platform] || '#475569' }}
-                        />
-                        <span
-                          className="text-[9px] uppercase tracking-wider font-semibold"
-                          style={{ color: PLATFORM_COLORS[platform] || '#475569', opacity: 0.7 }}
-                        >
+                      <div className="flex items-center gap-1.5 px-3 mb-1">
+                        <div className={`w-1.5 h-1.5 rounded-full ${PLATFORM_DOT[platform] || 'bg-dark-500'}`} />
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-dark-500">
                           {PLATFORM_LABELS[platform] || platform}
                         </span>
                       </div>
@@ -349,7 +333,6 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                       {/* Clubs under this platform */}
                       {platformClubs.map((club) => {
                         const clubActive = isClubActive(club);
-                        // Club with subclubes → consolidated view (_all); without → direct panel
                         const clubHref = club.lastSettlementId
                           ? club.subclubes.length > 0
                             ? `/s/${club.lastSettlementId}/club/_all`
@@ -360,43 +343,27 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                         const hasSubclubes = club.subclubes.length > 0;
 
                         return (
-                          <div key={club.id}>
-                            {/* Club row — destaque visual para clube principal */}
+                          <div key={club.id} className="mb-1">
+                            {/* Club row */}
                             <Link
                               href={clubHref}
-                              className={`flex items-center gap-2 ml-2 rounded-lg transition-all text-xs ${
-                                hasSubclubes
-                                  ? `px-3 py-2 border ${
-                                      isAllActive
-                                        ? 'border-poker-500/60 bg-poker-600/10 text-white shadow-[0_0_12px_rgba(34,197,94,0.08)]'
-                                        : clubActive
-                                          ? 'border-dark-600 bg-dark-800/60 text-white'
-                                          : 'border-dark-700/50 bg-dark-800/30 text-dark-300 hover:text-white hover:border-dark-600 hover:bg-dark-800/50'
-                                    }`
-                                  : `px-3 py-1.5 border-l-2 ${
-                                      clubActive
-                                        ? 'text-poker-400 bg-poker-600/10 border-poker-500'
-                                        : 'text-dark-300 hover:text-white hover:bg-dark-800/30 border-transparent'
-                                    }`
+                              className={`flex items-center gap-2.5 px-3 py-[6px] ml-1 rounded-lg transition-all duration-150 text-[12px] ${
+                                (hasSubclubes ? isAllActive : clubActive)
+                                  ? 'bg-white/[0.08] text-white font-semibold'
+                                  : clubActive && hasSubclubes
+                                    ? 'text-dark-200 font-semibold'
+                                    : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
                               }`}
                             >
                               <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
                               <div className="flex-1 min-w-0">
-                                <div className={`truncate leading-tight ${hasSubclubes ? 'font-bold text-[13px]' : 'font-medium'}`}>{club.name}</div>
-                                {(club.ligaId || club.externalId) && (
-                                  <div className="text-[9px] text-dark-500 leading-tight mt-0.5">
-                                    {club.ligaId && `Liga ${club.ligaId}`}
-                                    {club.ligaId && club.externalId && ' · '}
-                                    {club.externalId && `ID ${club.externalId}`}
-                                  </div>
+                                <div className="truncate leading-tight">{club.name}</div>
+                                {club.externalId && (
+                                  <div className="text-[9px] text-dark-600 leading-tight">ID {club.externalId}</div>
                                 )}
                               </div>
                               {hasSubclubes && (
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${
-                                  isAllActive
-                                    ? 'bg-poker-500/20 text-poker-400'
-                                    : 'bg-dark-700/60 text-dark-400'
-                                }`}>
+                                <span className="text-[9px] text-dark-500 font-mono tabular-nums">
                                   {club.subclubes.length}
                                 </span>
                               )}
@@ -404,17 +371,17 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
                             {/* Subclubes */}
                             {hasSubclubes && club.lastSettlementId && (
-                              <div className="ml-5 space-y-0.5 mt-1 pl-3 border-l border-dark-700/40">
+                              <div className="ml-6 mt-0.5 space-y-px pl-3 border-l border-white/[0.06]">
                                 {club.subclubes.map((sub) => {
                                   const subActive = pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`;
                                   return (
                                     <Link
                                       key={sub.id}
                                       href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
-                                      className={`flex items-center gap-2 px-2 py-1 rounded-md transition-all text-[11px] ${
+                                      className={`flex items-center gap-2 px-2 py-[5px] rounded-md transition-all duration-150 text-[11px] ${
                                         subActive
-                                          ? 'text-amber-400 bg-amber-500/5'
-                                          : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/30'
+                                          ? 'text-white bg-white/[0.08] font-medium'
+                                          : 'text-dark-500 hover:text-dark-300 hover:bg-white/[0.03]'
                                       }`}
                                     >
                                       <ClubLogo logoUrl={sub.logoUrl} name={sub.name} size="xxs" />
@@ -434,48 +401,40 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
+          {/* ── Divider ──────────────────────────────────── */}
+          {isAdmin && <div className={`border-t border-white/[0.06] my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />}
+
           {/* ── ADMIN ─────────────────────────────────────── */}
           {isAdmin && (() => {
             const visible = adminItems.filter((item) => !item.permKey || hasPermission(item.permKey));
             if (visible.length === 0) return null;
             return (
-              <div>
-                <p className={`px-3 mb-1.5 text-[10px] text-dark-500 uppercase tracking-wider font-semibold ${collapsed ? 'lg:hidden' : ''}`}>
-                  Admin
-                </p>
-                <div className="space-y-0.5">
-                  {visible.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = isRouteActive(pathname, item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        title={collapsed ? item.label : undefined}
-                        className={`flex items-center gap-3 rounded-lg transition-colors text-sm font-medium ${
-                          collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-2' : 'px-3 py-2'
-                        } ${
-                          isActive
-                            ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30 shadow-glow-green'
-                            : 'text-dark-300 hover:bg-dark-800 hover:text-dark-100'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+              <div className="space-y-0.5">
+                {visible.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isRouteActive(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={navLinkClass(isActive, collapsed)}
+                    >
+                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-white' : 'text-dark-500'}`} />
+                      <span className={collapsed ? 'lg:hidden' : ''}>{item.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
             );
           })()}
         </nav>
 
-        {/* Collapse toggle (desktop only) */}
-        <div className="hidden lg:flex justify-center py-2 border-t border-dark-700">
+        {/* Collapse toggle (desktop) */}
+        <div className={`hidden lg:block border-t border-white/[0.06] ${collapsed ? 'p-2' : 'px-3 py-2'}`}>
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="text-dark-400 hover:text-white p-2 rounded-lg hover:bg-dark-800 transition-colors"
+            className="w-full flex items-center justify-center text-dark-500 hover:text-dark-300 p-1.5 rounded-lg hover:bg-white/[0.04] transition-all duration-150"
             title={collapsed ? 'Expandir menu' : 'Colapsar menu'}
             aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
           >
@@ -484,19 +443,25 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* User */}
-        <div className={`border-t border-dark-700 ${collapsed ? 'lg:p-2 p-4' : 'p-4'}`}>
-          <div className={`flex items-center ${collapsed ? 'lg:justify-center' : 'justify-between'}`}>
-            <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-              <p className="text-sm font-medium text-dark-200 truncate">{user.email}</p>
-              <p className="text-xs text-dark-500">{role}</p>
+        <div className={`border-t border-white/[0.06] ${collapsed ? 'lg:p-2 p-3' : 'p-3'}`}>
+          <div className={`flex items-center gap-3 ${collapsed ? 'lg:justify-center' : ''}`}>
+            {/* Avatar */}
+            <div className="w-8 h-8 rounded-full bg-dark-800 border border-white/[0.08] flex items-center justify-center shrink-0">
+              <span className="text-[11px] font-bold text-dark-400">{userInitials}</span>
             </div>
+            {/* Info */}
+            <div className={`flex-1 min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
+              <p className="text-[12px] font-medium text-dark-300 truncate">{user.email?.split('@')[0]}</p>
+              <p className="text-[10px] text-dark-600 uppercase tracking-wider">{role}</p>
+            </div>
+            {/* Logout */}
             <button
               onClick={logout}
-              className="text-dark-400 hover:text-red-400 transition-colors p-1"
+              className={`text-dark-600 hover:text-red-400 transition-colors p-1 ${collapsed ? 'lg:hidden' : ''}`}
               title="Sair"
               aria-label="Sair da conta"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
