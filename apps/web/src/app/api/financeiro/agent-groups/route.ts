@@ -33,15 +33,26 @@ export async function GET(req: NextRequest) {
         members = mData || [];
       }
 
-      // 3. Resolve parent org names (clubs) for each member
-      const parentIds = [...new Set(members.map((m: any) => m.organizations?.parent_id).filter(Boolean))];
-      const parentMap = new Map<string, string>();
-      if (parentIds.length > 0) {
-        const { data: parents } = await supabaseAdmin
-          .from('organizations')
-          .select('id, name')
-          .in('id', parentIds);
-        for (const p of parents || []) parentMap.set(p.id, p.name);
+      // 3. Load ALL orgs for hierarchy resolution (platform lives on CLUB, not AGENT)
+      const { data: allOrgs } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name, type, parent_id, metadata')
+        .eq('tenant_id', ctx.tenantId);
+
+      const orgById = new Map<string, any>();
+      for (const o of allOrgs || []) orgById.set(o.id, o);
+
+      function findClubAncestor(orgId: string): any | null {
+        const visited = new Set<string>();
+        let current = orgById.get(orgId);
+        while (current) {
+          if (visited.has(current.id)) break;
+          visited.add(current.id);
+          if (current.type === 'CLUB') return current;
+          if (!current.parent_id) break;
+          current = orgById.get(current.parent_id);
+        }
+        return null;
       }
 
       // 4. Assemble result
@@ -50,12 +61,13 @@ export async function GET(req: NextRequest) {
           .filter((m: any) => m.group_id === g.id)
           .map((m: any) => {
             const org = m.organizations || {};
+            const club = findClubAncestor(m.organization_id);
             return {
               id: m.id,
               organization_id: m.organization_id,
               org_name: org.name || '?',
-              platform: (org.metadata?.platform || 'outro').toLowerCase(),
-              club_name: parentMap.get(org.parent_id) || '',
+              platform: (club?.metadata?.platform || 'outro').toLowerCase(),
+              club_name: club?.name || '',
             };
           });
 

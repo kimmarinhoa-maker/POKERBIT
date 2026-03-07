@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
       const { data: members } = await supabaseAdmin
         .from('agent_consolidated_members')
-        .select('id, organization_id, organizations(id, name, metadata, parent_id)')
+        .select('id, organization_id, organizations(id, name, metadata, parent_id, type)')
         .eq('group_id', groupId)
         .eq('tenant_id', ctx.tenantId);
 
@@ -53,50 +53,49 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // 2. For each member org, find settlement + agent metrics
-      const orgIds = members.map((m: any) => m.organization_id);
+      // 2. Load ALL orgs for this tenant to resolve hierarchy
+      const { data: allOrgs } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name, type, parent_id, metadata')
+        .eq('tenant_id', ctx.tenantId);
 
-      // Find parent club IDs for these agent orgs
-      const parentIds = [...new Set(members.map((m: any) => m.organizations?.parent_id).filter(Boolean))];
+      const orgById = new Map<string, any>();
+      for (const o of allOrgs || []) orgById.set(o.id, o);
 
-      // Get parent org names
-      const parentMap = new Map<string, string>();
-      if (parentIds.length > 0) {
-        const { data: parents } = await supabaseAdmin
-          .from('organizations')
-          .select('id, name')
-          .in('id', parentIds);
-        for (const p of parents || []) parentMap.set(p.id, p.name);
+      // Helper: walk up org tree to find CLUB ancestor
+      function findClubAncestor(orgId: string): any | null {
+        const visited = new Set<string>();
+        let current = orgById.get(orgId);
+        while (current) {
+          if (visited.has(current.id)) break;
+          visited.add(current.id);
+          if (current.type === 'CLUB') return current;
+          if (!current.parent_id) break;
+          current = orgById.get(current.parent_id);
+        }
+        return null;
       }
 
-      // Find the club_id for each agent org (the CLUB ancestor)
-      // agent org -> parent (SUBCLUB or CLUB) -> if SUBCLUB, go up one more
+      // Helper: get platform from CLUB ancestor
+      function getPlatform(orgId: string): string {
+        const club = findClubAncestor(orgId);
+        return (club?.metadata?.platform || 'outro').toLowerCase();
+      }
+
+      // Helper: get club name
+      function getClubName(orgId: string): string {
+        const club = findClubAncestor(orgId);
+        return club?.name || '';
+      }
+
+      // 3. For each member, resolve club_id
       const orgToClubId = new Map<string, string>();
       for (const m of members as any[]) {
-        const org = m.organizations;
-        if (!org) continue;
-        // The agent's parent_id points to the SUBCLUB or CLUB
-        // We need the CLUB (top-level) to find the settlement
-        if (org.parent_id) {
-          // Check if parent is CLUB or SUBCLUB
-          const { data: parentOrg } = await supabaseAdmin
-            .from('organizations')
-            .select('id, type, parent_id')
-            .eq('id', org.parent_id)
-            .single();
-
-          if (parentOrg) {
-            if (parentOrg.type === 'CLUB') {
-              orgToClubId.set(m.organization_id, parentOrg.id);
-            } else if (parentOrg.parent_id) {
-              // SUBCLUB -> parent is CLUB
-              orgToClubId.set(m.organization_id, parentOrg.parent_id);
-            }
-          }
-        }
+        const club = findClubAncestor(m.organization_id);
+        if (club) orgToClubId.set(m.organization_id, club.id);
       }
 
-      // 3. Find settlements for this week for these clubs
+      // 4. Find settlements for this week for these clubs
       const clubIds = [...new Set(orgToClubId.values())];
       let settlements: any[] = [];
       if (clubIds.length > 0) {
@@ -113,7 +112,7 @@ export async function GET(req: NextRequest) {
       const clubToSettlement = new Map<string, any>();
       for (const s of settlements) clubToSettlement.set(s.club_id, s);
 
-      // 4. For each member, get agent_week_metrics
+      // 5. For each member, get agent_week_metrics (by agent_id OR agent_name)
       const platforms: any[] = [];
 
       for (const m of members as any[]) {
@@ -126,18 +125,29 @@ export async function GET(req: NextRequest) {
         const settlement = clubToSettlement.get(clubId);
         if (!settlement) continue;
 
-        // Get agent metrics for this agent in this settlement
-        const { data: metrics } = await supabaseAdmin
+        // Try by agent_id (org UUID) first
+        let { data: metrics } = await supabaseAdmin
           .from('agent_week_metrics')
           .select('*')
           .eq('settlement_id', settlement.id)
           .eq('agent_id', m.organization_id)
           .maybeSingle();
 
+        // Fallback: try by agent_name (org name)
+        if (!metrics) {
+          const result = await supabaseAdmin
+            .from('agent_week_metrics')
+            .select('*')
+            .eq('settlement_id', settlement.id)
+            .eq('agent_name', org.name)
+            .maybeSingle();
+          metrics = result.data;
+        }
+
         if (!metrics) continue;
 
-        const platform = (org.metadata?.platform || 'outro').toLowerCase();
-        const clubName = parentMap.get(org.parent_id) || '';
+        const platform = getPlatform(m.organization_id);
+        const clubName = getClubName(m.organization_id);
 
         platforms.push({
           platform,
@@ -152,7 +162,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // 5. Compute totals
+      // 6. Compute totals
       const total = {
         winnings: platforms.reduce((s, p) => s + p.winnings, 0),
         rake: platforms.reduce((s, p) => s + p.rake, 0),
@@ -160,15 +170,15 @@ export async function GET(req: NextRequest) {
         resultado: platforms.reduce((s, p) => s + p.resultado, 0),
       };
 
-      // 6. Build member list for response
+      // 7. Build member list for response
       const groupMembers = (members as any[]).map((m) => {
         const org = m.organizations || {};
         return {
           id: m.id,
           organization_id: m.organization_id,
           org_name: org.name || '?',
-          platform: (org.metadata?.platform || 'outro').toLowerCase(),
-          club_name: parentMap.get(org.parent_id) || '',
+          platform: getPlatform(m.organization_id),
+          club_name: getClubName(m.organization_id),
         };
       });
 

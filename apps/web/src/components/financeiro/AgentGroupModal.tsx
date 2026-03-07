@@ -162,8 +162,8 @@ export default function AgentGroupModal({
             </div>
           </div>
 
-          {/* Save name/phone button (for new groups or edits) */}
-          {(!groupId || (isEdit && (name !== group?.name || phone !== (group?.phone || '')))) && (
+          {/* Save name/phone button */}
+          {(!groupId || isEdit) && (
             <button
               onClick={handleSave}
               disabled={saving || !name.trim()}

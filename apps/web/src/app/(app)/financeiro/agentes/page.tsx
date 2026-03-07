@@ -76,18 +76,27 @@ export default function FechamentoAgentesPage() {
       const orgMap = new Map<string, any>();
       for (const o of allRes.data as any[]) orgMap.set(o.id, o);
 
-      const orgs = (agentRes.data as any[]).map((org: any) => {
-        // Resolve parent chain to find club name
-        const parent = orgMap.get(org.parent_id);
-        const clubName = parent?.type === 'CLUB'
-          ? parent.name
-          : orgMap.get(parent?.parent_id)?.name || '';
+      // Helper: walk up to find CLUB ancestor
+      function findClub(orgId: string): any | null {
+        const visited = new Set<string>();
+        let cur = orgMap.get(orgId);
+        while (cur) {
+          if (visited.has(cur.id)) break;
+          visited.add(cur.id);
+          if (cur.type === 'CLUB') return cur;
+          if (!cur.parent_id) break;
+          cur = orgMap.get(cur.parent_id);
+        }
+        return null;
+      }
 
+      const orgs = (agentRes.data as any[]).map((org: any) => {
+        const club = findClub(org.id);
         return {
           id: org.id,
           name: org.name,
-          platform: (org.metadata?.platform || 'outro').toLowerCase(),
-          club_name: clubName,
+          platform: (club?.metadata?.platform || 'outro').toLowerCase(),
+          club_name: club?.name || '',
         };
       });
       setAllAgentOrgs(orgs);
