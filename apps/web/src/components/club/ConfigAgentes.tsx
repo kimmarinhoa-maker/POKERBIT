@@ -365,13 +365,8 @@ export default function ConfigAgentes({ subclubOrgId, clubId }: Props) {
           >
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-dark-700/50">
               <div>
-                <h3 className="text-lg font-bold text-white">Dados do Agente</h3>
-                <p className="text-dark-500 text-xs mt-0.5">
-                  {editAgent.name}
-                  {editAgent.external_id && (
-                    <> · <span className="font-mono">{editAgent.external_id}</span></>
-                  )}
-                </p>
+                <h3 className="text-lg font-bold text-white">{editAgent.name}</h3>
+                <p className="text-dark-500 text-xs mt-0.5">Dados do agente</p>
               </div>
               <button
                 onClick={() => setEditAgent(null)}
@@ -386,7 +381,7 @@ export default function ConfigAgentes({ subclubOrgId, clubId }: Props) {
               <div className="grid grid-cols-3 gap-3 pb-4 border-b border-dark-700/30">
                 <div>
                   <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1">
-                    <Hash size={10} /> ID Plataforma
+                    <Hash size={10} /> ID Agente
                   </label>
                   <p className="text-sm text-dark-300 font-mono mt-0.5">{editAgent.external_id || '—'}</p>
                 </div>

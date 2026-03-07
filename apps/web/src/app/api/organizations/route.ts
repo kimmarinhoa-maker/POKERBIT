@@ -43,6 +43,32 @@ export async function GET(req: NextRequest) {
       const { data, error } = await query;
       if (error) throw error;
 
+      // Enrich AGENT orgs with external_agent_id from player_week_metrics
+      const agentOrgs = (data || []).filter((o: any) => o.type === 'AGENT' && !o.external_id);
+      if (agentOrgs.length > 0) {
+        const agentNames = agentOrgs.map((o: any) => o.name);
+        const { data: metrics } = await supabaseAdmin
+          .from('player_week_metrics')
+          .select('agent_name, external_agent_id')
+          .eq('tenant_id', ctx.tenantId)
+          .in('agent_name', agentNames)
+          .not('external_agent_id', 'eq', '');
+        if (metrics && metrics.length > 0) {
+          const nameToExtId = new Map<string, string>();
+          for (const row of metrics) {
+            if (row.external_agent_id && !nameToExtId.has(row.agent_name)) {
+              nameToExtId.set(row.agent_name, row.external_agent_id);
+            }
+          }
+          for (const org of data || []) {
+            if ((org as any).type === 'AGENT' && !(org as any).external_id) {
+              const extId = nameToExtId.get((org as any).name);
+              if (extId) (org as any).external_id = extId;
+            }
+          }
+        }
+      }
+
       return NextResponse.json({ success: true, data: data || [] });
     } catch (err: unknown) {
       return NextResponse.json(
