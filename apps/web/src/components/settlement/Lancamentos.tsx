@@ -82,7 +82,20 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
   const overlayParsed = parseFloat(overlayTotal) || 0;
   const overlayPerClub = overlayParsed / n;
 
+  // Check which subclubes have "outros" with value but no obs
+  const obsErrors = editing ? subclubs.filter((sc) => {
+    const f = forms[sc.id];
+    if (!f) return false;
+    const outrosVal = Math.abs(parseFloat(f.outros) || 0);
+    return outrosVal > 0 && !f.obs.trim();
+  }) : [];
+  const hasObsError = obsErrors.length > 0;
+
   async function handleSave() {
+    if (hasObsError) {
+      toast(`Preencha a observacao de "Outros" para: ${obsErrors.map((sc) => sc.name).join(', ')}`, 'error');
+      return;
+    }
     setSaving(true);
     try {
       const perClubOverlay = overlayParsed / n;
@@ -291,17 +304,41 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
               const scOutros = editing && f ? (parseFloat(f.outros) || 0) : sc.adjustments.outros;
               const rowTotal = scOverlay + scCompras + scSecurity + scOutros;
               const isLast = idx === subclubs.length - 1;
+              const rowOutrosHasValue = editing && f && Math.abs(parseFloat(f.outros) || 0) > 0;
+              const rowObsMissing = rowOutrosHasValue && !f.obs.trim();
 
               return (
                 <tr
                   key={sc.id}
-                  className={`transition-colors hover:bg-dark-800/30 ${!isLast ? 'border-b border-dark-800/50' : ''}`}
+                  className={`transition-colors hover:bg-dark-800/30 ${!isLast && !rowOutrosHasValue ? 'border-b border-dark-800/50' : ''}`}
                 >
                   <td className="px-4 py-3">
-                    <span className="text-dark-100 font-medium text-[13px]">{sc.name}</span>
+                    <div>
+                      <span className="text-dark-100 font-medium text-[13px]">{sc.name}</span>
+                      {/* Obs inline when outros has value */}
+                      {rowOutrosHasValue && editing && f && (
+                        <div className="mt-2">
+                          <input
+                            type="text"
+                            value={f.obs}
+                            onChange={(e) => updateField(sc.id, 'obs', e.target.value)}
+                            maxLength={200}
+                            placeholder="Descreva o lancamento de Outros..."
+                            className={`w-full bg-dark-800 border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-dark-600 focus:outline-none transition-colors ${rowObsMissing ? 'border-red-500/40 focus:border-red-500' : 'border-dark-700 focus:border-poker-500'}`}
+                          />
+                          {rowObsMissing && (
+                            <p className="text-[10px] text-red-400 mt-1">Observacao obrigatoria</p>
+                          )}
+                        </div>
+                      )}
+                      {/* Show saved obs when not editing */}
+                      {!editing && sc.adjustments.obs && (
+                        <p className="text-[11px] text-dark-500 mt-0.5">{sc.adjustments.obs}</p>
+                      )}
+                    </div>
                   </td>
                   {TABLE_KEYS.map((k) => (
-                    <td key={k} className="px-4 py-3 text-right">
+                    <td key={k} className="px-4 py-3 text-right align-top">
                       {editing && f ? (
                         <div className="flex items-center justify-end gap-1">
                           {k === 'compras' && <span className="text-red-500/60 text-xs font-mono">-</span>}
@@ -320,12 +357,12 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
                     </td>
                   ))}
                   {/* Overlay column (readonly — calculated) */}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right align-top">
                     <span className={`font-mono text-[13px] ${scOverlay > 0.01 ? 'text-blue-400' : scOverlay < -0.01 ? 'text-blue-400' : 'text-dark-700'}`}>
                       {Math.abs(scOverlay) < 0.01 ? '—' : formatBRL(scOverlay)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right align-top">
                     <span className={`font-mono font-semibold text-[13px] ${rowTotal > 0.01 ? 'text-poker-400' : rowTotal < -0.01 ? 'text-red-400' : 'text-dark-600'}`}>
                       {formatBRL(rowTotal)}
                     </span>
@@ -383,7 +420,7 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
             </button>
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || hasObsError}
               className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium bg-poker-600 text-white hover:bg-poker-500 transition-all disabled:opacity-50"
             >
               <Save size={14} />

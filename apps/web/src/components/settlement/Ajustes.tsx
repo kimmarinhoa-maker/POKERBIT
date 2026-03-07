@@ -56,7 +56,14 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
     setEditing(true);
   }
 
+  const outrosHasValue = editing && Math.abs(parseFloat(form.outros) || 0) > 0;
+  const obsRequired = outrosHasValue && !form.obs.trim();
+
   async function handleSave() {
+    if (obsRequired) {
+      toast('Preencha a observacao para o lancamento "Outros"', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const res = await saveClubAdjustments({
@@ -202,16 +209,23 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
       </div>
 
       {/* ── Observacoes ── */}
-      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-4">
-        <p className="text-[11px] text-dark-500 uppercase tracking-wider font-semibold mb-2">Observacoes</p>
+      <div className={`rounded-2xl p-4 transition-all ${obsRequired ? 'bg-red-500/5 border border-red-500/30' : 'bg-dark-900/50 border border-dark-800'}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-[11px] text-dark-500 uppercase tracking-wider font-semibold">Observacoes</p>
+          {obsRequired && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+              OBRIGATORIO
+            </span>
+          )}
+        </div>
         {editing ? (
           <textarea
             value={form.obs}
             onChange={(e) => setForm((prev) => ({ ...prev, obs: e.target.value }))}
             maxLength={500}
             rows={3}
-            placeholder="Observacoes sobre os lancamentos..."
-            className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:border-poker-500 focus:outline-none resize-none"
+            placeholder={outrosHasValue ? 'Descreva o lancamento de "Outros"...' : 'Observacoes sobre os lancamentos...'}
+            className={`w-full bg-dark-800 border rounded-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:outline-none resize-none transition-colors ${obsRequired ? 'border-red-500/40 focus:border-red-500' : 'border-dark-700 focus:border-poker-500'}`}
           />
         ) : (
           <p className="text-sm text-dark-400">{subclub.adjustments.obs || '—'}</p>
@@ -235,7 +249,7 @@ export default function Ajustes({ subclub, weekStart, settlementStatus, onDataCh
             </button>
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || obsRequired}
               className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium bg-poker-600 text-white hover:bg-poker-500 transition-all disabled:opacity-50"
             >
               <Save size={14} />
