@@ -7,11 +7,9 @@ import { buildLigaMessage } from '@/lib/whatsappMessages';
 import { useToast } from '@/components/Toast';
 import ClubLogo from '@/components/ClubLogo';
 import { SubclubData } from '@/types/settlement';
-import { calcDRE } from './DRE';
 import {
-  TrendingUp, TrendingDown, Equal, Users, Receipt, FileText,
+  TrendingUp, TrendingDown, Equal, Receipt, FileText,
   DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Minus,
-  Wallet, PiggyBank, Percent,
 } from 'lucide-react';
 
 interface Props {
@@ -41,17 +39,6 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {}, weekS
     }),
     [subclubs],
   );
-
-  const dreConsolidado = useMemo(() => {
-    const perClub = subclubs.map((sc) => calcDRE(sc));
-    const receitaBruta = round2(perClub.reduce((s, d) => s + d.receitaBruta, 0));
-    const totalTaxas = round2(perClub.reduce((s, d) => s + d.totalTaxas, 0));
-    const totalCustos = round2(perClub.reduce((s, d) => s + d.totalCustos, 0));
-    const totalRakeback = round2(perClub.reduce((s, d) => s + d.totalRakeback, 0));
-    const lucroLiquido = round2(receitaBruta - totalTaxas - totalCustos - totalRakeback);
-    const margem = receitaBruta > 0.01 ? round2((lucroLiquido / receitaBruta) * 100) : 0;
-    return { receitaBruta, totalTaxas, totalCustos, totalRakeback, lucroLiquido, margem };
-  }, [subclubs]);
 
   // Color helper
   function valColor(v: number, pos = 'text-poker-400', neg = 'text-red-400', zero = 'text-dark-500') {
@@ -402,79 +389,6 @@ export default function Liga({ subclubs, currentSubclubName, logoMap = {}, weekS
         </div>
       )}
 
-      {/* ── DRE Consolidado ── */}
-      <div className={`rounded-2xl border p-5 ${
-        dreConsolidado.lucroLiquido >= 0
-          ? 'border-green-500/30 bg-green-500/5'
-          : 'border-red-500/30 bg-red-500/5'
-      }`}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center">
-            <PiggyBank size={14} className="text-green-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">
-              {isSingle ? 'DRE do Subclube' : 'DRE Consolidado'}
-            </h3>
-            <p className="text-[10px] text-dark-500">Lucro do Operador</p>
-          </div>
-        </div>
-
-        <div className="space-y-2.5 text-sm">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Wallet size={13} className="text-blue-400" />
-              <span className="text-dark-400">Receita Bruta</span>
-            </div>
-            <span className="font-mono text-blue-400 font-semibold">{formatBRL(dreConsolidado.receitaBruta)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Receipt size={13} className="text-red-400" />
-              <span className="text-dark-400">(-) Taxas</span>
-            </div>
-            <span className="font-mono text-red-400">{formatBRL(-dreConsolidado.totalTaxas)}</span>
-          </div>
-          {dreConsolidado.totalCustos > 0.01 && (
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FileText size={13} className="text-orange-400" />
-                <span className="text-dark-400">(-) Custos</span>
-              </div>
-              <span className="font-mono text-orange-400">{formatBRL(-dreConsolidado.totalCustos)}</span>
-            </div>
-          )}
-          {dreConsolidado.totalRakeback > 0.01 && (
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Users size={13} className="text-amber-400" />
-                <span className="text-dark-400">(-) Rakeback</span>
-              </div>
-              <span className="font-mono text-amber-400">{formatBRL(-dreConsolidado.totalRakeback)}</span>
-            </div>
-          )}
-
-          <div className="border-t border-dark-700/50 pt-3 mt-1 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-white">LUCRO LIQUIDO</span>
-              <div className="flex items-center gap-1">
-                <Percent size={11} className={dreConsolidado.margem >= 0 ? 'text-green-400/70' : 'text-red-400/70'} />
-                <span className={`text-xs ${dreConsolidado.margem >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
-                  {dreConsolidado.margem.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-            <span
-              className={`font-mono text-xl font-extrabold ${
-                dreConsolidado.lucroLiquido >= 0 ? 'text-green-400' : 'text-red-400'
-              } explainable`}
-              title={`Lucro = ${formatBRL(dreConsolidado.receitaBruta)} - ${formatBRL(dreConsolidado.totalTaxas)} - ${formatBRL(dreConsolidado.totalCustos)} - ${formatBRL(dreConsolidado.totalRakeback)}`}
-            >
-              {formatBRL(dreConsolidado.lucroLiquido)}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Consolidado WhatsApp Modal ── */}
       {showLigaMsg && (() => {
