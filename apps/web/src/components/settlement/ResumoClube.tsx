@@ -266,10 +266,10 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
                 {/* Taxas Automáticas */}
                 <div className="bg-dark-800/40 rounded-lg px-3 py-2.5 border border-dark-700/50">
                   <div className="text-[9px] text-dark-500 uppercase tracking-wider font-bold mb-1.5">Taxas Automáticas</div>
-                  <StmtDetailRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}%`} value={-feesComputed.taxaApp} />
-                  <StmtDetailRow label="Taxa Liga" sublabel={`${fees.taxaLiga}%`} value={-feesComputed.taxaLiga} />
-                  <StmtDetailRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}%`} value={-feesComputed.taxaRodeoGGR} />
-                  <StmtDetailRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}%`} value={-feesComputed.taxaRodeoApp} isLast />
+                  {fees.taxaApp > 0 && <StmtDetailRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}%`} value={-feesComputed.taxaApp} />}
+                  {fees.taxaLiga > 0 && <StmtDetailRow label="Taxa Liga" sublabel={`${fees.taxaLiga}%`} value={-feesComputed.taxaLiga} />}
+                  {fees.taxaRodeoGGR > 0 && <StmtDetailRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}%`} value={-feesComputed.taxaRodeoGGR} />}
+                  {fees.taxaRodeoApp > 0 && <StmtDetailRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}%`} value={-feesComputed.taxaRodeoApp} />}
                   <div className="border-t border-dark-600 mt-1 pt-1.5 flex justify-between">
                     <span className="text-[10px] font-bold text-dark-200">Total Taxas</span>
                     <span className="font-mono text-[10px] font-bold text-red-400">{formatBRL(feesComputed.totalTaxasSigned)}</span>
@@ -512,19 +512,10 @@ export default function ResumoClube({ subclub, fees, weekStart, weekEnd, logoUrl
           <div className="bg-dark-900 border border-dark-700 rounded-xl p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">Taxas Automáticas</h3>
             <div>
-              <TaxaRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}% do Rake`} value={feesComputed.taxaApp} />
-              <TaxaRow label="Taxa Liga" sublabel={`${fees.taxaLiga}% do Rake`} value={feesComputed.taxaLiga} />
-              <TaxaRow
-                label="Taxa Rodeo GGR"
-                sublabel={`${fees.taxaRodeoGGR}% do GGR`}
-                value={feesComputed.taxaRodeoGGR}
-              />
-              <TaxaRow
-                label="Taxa Rodeo App"
-                sublabel={`${fees.taxaRodeoApp}% do GGR`}
-                value={feesComputed.taxaRodeoApp}
-                isLast
-              />
+              {fees.taxaApp > 0 && <TaxaRow label="Taxa Aplicativo" sublabel={`${fees.taxaApp}% do Rake`} value={feesComputed.taxaApp} />}
+              {fees.taxaLiga > 0 && <TaxaRow label="Taxa Liga" sublabel={`${fees.taxaLiga}% do Rake`} value={feesComputed.taxaLiga} />}
+              {fees.taxaRodeoGGR > 0 && <TaxaRow label="Taxa Rodeo GGR" sublabel={`${fees.taxaRodeoGGR}% do GGR`} value={feesComputed.taxaRodeoGGR} />}
+              {fees.taxaRodeoApp > 0 && <TaxaRow label="Taxa Rodeo App" sublabel={`${fees.taxaRodeoApp}% do GGR`} value={feesComputed.taxaRodeoApp} />}
               {/* Total */}
               <div className="border-t-2 border-danger-500/30 mt-1 pt-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-dark-100">Total Taxas</span>

@@ -314,10 +314,10 @@ export default function LigaGlobalPage() {
               </h3>
               <div className="card p-0 overflow-hidden">
                 <div className="divide-y divide-dark-700/30">
-                  <TaxRow label="Taxa Aplicativo" desc="8% do Rake" value={-globalFees.taxaApp} />
-                  <TaxRow label="Taxa Liga" desc="10% do Rake" value={-globalFees.taxaLiga} />
-                  <TaxRow label="Taxa Rodeo GGR" desc="12% do GGR (por clube se GGR>0)" value={-globalFees.taxaRodeoGGR} />
-                  <TaxRow label="Taxa Rodeo App" desc="8% do GGR (por clube se GGR>0)" value={-globalFees.taxaRodeoApp} />
+                  {globalFees.taxaApp !== 0 && <TaxRow label="Taxa Aplicativo" desc="% do Rake" value={-globalFees.taxaApp} />}
+                  {globalFees.taxaLiga !== 0 && <TaxRow label="Taxa Liga" desc="% do Rake" value={-globalFees.taxaLiga} />}
+                  {globalFees.taxaRodeoGGR !== 0 && <TaxRow label="Taxa Rodeo GGR" desc="% do GGR" value={-globalFees.taxaRodeoGGR} />}
+                  {globalFees.taxaRodeoApp !== 0 && <TaxRow label="Taxa Rodeo App" desc="% do GGR" value={-globalFees.taxaRodeoApp} />}
                   <div className="flex items-center justify-between px-4 py-2.5 bg-dark-800/30">
                     <span className="text-xs font-bold text-red-400">Total Taxas</span>
                     <span className="font-mono text-sm font-bold text-red-400">{formatBRL(globalFees.total)}</span>
