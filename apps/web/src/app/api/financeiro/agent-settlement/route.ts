@@ -120,14 +120,23 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // 6. Fetch ALL agent_week_metrics for these settlements in one query
+      // 6. Fetch ALL agent_week_metrics + player_week_metrics for these settlements
       let allAgentMetrics: any[] = [];
+      let allPlayerMetrics: any[] = [];
       if (relevantSettlementIds.length > 0) {
-        const { data } = await supabaseAdmin
-          .from('agent_week_metrics')
-          .select('*')
-          .in('settlement_id', relevantSettlementIds);
-        allAgentMetrics = data || [];
+        const [agentRes, playerRes] = await Promise.all([
+          supabaseAdmin
+            .from('agent_week_metrics')
+            .select('*')
+            .in('settlement_id', relevantSettlementIds),
+          supabaseAdmin
+            .from('player_week_metrics')
+            .select('nickname, external_player_id, winnings_brl, agent_name, agent_id, settlement_id')
+            .in('settlement_id', relevantSettlementIds)
+            .order('nickname', { ascending: true }),
+        ]);
+        allAgentMetrics = agentRes.data || [];
+        allPlayerMetrics = playerRes.data || [];
       }
 
       // 7. For each member, match metrics by agent_id (UUID) OR agent_name (org name)
@@ -168,6 +177,12 @@ export async function GET(req: NextRequest) {
         const platform = getPlatform(m.organization_id);
         const clubName = getClubName(m.organization_id);
 
+        // Find players for this agent in this settlement
+        const agentPlayers = allPlayerMetrics.filter(
+          (p) => p.settlement_id === settlement.id &&
+            (p.agent_id === m.organization_id || p.agent_name === metrics.agent_name),
+        );
+
         platforms.push({
           platform,
           club_name: clubName,
@@ -178,6 +193,11 @@ export async function GET(req: NextRequest) {
           rb_rate: metrics.rb_rate || 0,
           rb_value: metrics.commission_brl || 0,
           resultado: metrics.resultado_brl || 0,
+          players: agentPlayers.map((p: any) => ({
+            nickname: p.nickname || '—',
+            external_player_id: p.external_player_id || '',
+            winnings_brl: Number(p.winnings_brl) || 0,
+          })),
         });
       }
 
@@ -209,18 +229,6 @@ export async function GET(req: NextRequest) {
           weekEnd: computeWeekEnd(weekStart),
           platforms,
           total,
-          _debug: {
-            memberCount: members.length,
-            clubIds: [...new Set(orgToClubId.values())],
-            settlementCount: relevantSettlementIds.length,
-            metricsCount: allAgentMetrics.length,
-            memberOrgs: (members as any[]).map((m) => ({
-              orgId: m.organization_id,
-              orgName: m.organizations?.name,
-              clubId: orgToClubId.get(m.organization_id),
-              hasSettlement: !!clubToSettlement.get(orgToClubId.get(m.organization_id) || ''),
-            })),
-          },
         },
       });
     } catch (err: unknown) {

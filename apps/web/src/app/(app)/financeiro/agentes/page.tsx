@@ -16,7 +16,7 @@ import {
   invalidateCache,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
-import { buildAgentConsolidadoMessage, openWhatsApp } from '@/lib/whatsappMessages';
+// WhatsApp is handled inside AgentGroupDetail now
 import KpiCard from '@/components/ui/KpiCard';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
@@ -152,7 +152,6 @@ export default function FechamentoAgentesPage() {
     setLoadingDetail(true);
     invalidateCache('/financeiro');
     const res = await getAgentConsolidatedSettlement(group.id, selectedWeek);
-    console.log('[FechAgentes] detail response:', JSON.stringify(res.data, null, 2));
     if (res.success && res.data) {
       setDetailData(res.data);
     } else {
@@ -222,18 +221,6 @@ export default function FechamentoAgentesPage() {
     } else {
       toast(res.error || 'Erro ao excluir', 'error');
     }
-  }
-
-  function handleWhatsApp() {
-    if (!detailData || !detailData.group.phone) return;
-    const msg = buildAgentConsolidadoMessage({
-      agentName: detailData.group.name,
-      weekStart: detailData.weekStart,
-      weekEnd: detailData.weekEnd,
-      platforms: detailData.platforms,
-      total: detailData.total,
-    });
-    openWhatsApp(detailData.group.phone, msg);
   }
 
   // Week navigation
@@ -363,7 +350,7 @@ export default function FechamentoAgentesPage() {
           data={detailData}
           onBack={() => { setSelectedGroup(null); setDetailData(null); }}
           onEdit={() => { setEditingGroup(selectedGroup); setModalOpen(true); }}
-          onWhatsApp={handleWhatsApp}
+          onWhatsApp={() => {}}
         />
       ) : loadingDetail ? (
         <div className="flex items-center justify-center py-16">

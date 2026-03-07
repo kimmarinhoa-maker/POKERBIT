@@ -17,6 +17,12 @@ export interface AgentGroup {
   members: AgentGroupMember[];
 }
 
+export interface AgentPlatformPlayer {
+  nickname: string;
+  external_player_id: string;
+  winnings_brl: number;
+}
+
 export interface AgentPlatformResult {
   platform: string;
   club_name: string;
@@ -27,6 +33,7 @@ export interface AgentPlatformResult {
   rb_rate: number;
   rb_value: number;
   resultado: number;
+  players: AgentPlatformPlayer[];
 }
 
 export interface AgentConsolidatedSettlement {
