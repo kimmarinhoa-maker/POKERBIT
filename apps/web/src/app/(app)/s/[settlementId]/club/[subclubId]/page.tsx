@@ -326,7 +326,18 @@ function SubclubPanelPage() {
       case 'dre':
         return <TabErrorBoundary tabName="DRE"><DRE subclub={subclub} fees={fees} weekStart={settlement.week_start} /></TabErrorBoundary>;
       case 'liga':
-        return <TabErrorBoundary tabName="Liga"><Liga subclubs={subclubs} currentSubclubName={subclub.name} logoMap={logoMap} weekStart={settlement.week_start} weekEnd={weekEnd} /></TabErrorBoundary>;
+        return (
+          <TabErrorBoundary tabName="Liga">
+            <Liga
+              subclubs={isAllMode ? subclubs : [subclub]}
+              currentSubclubName={subclub.name}
+              logoMap={logoMap}
+              weekStart={settlement.week_start}
+              weekEnd={weekEnd}
+              isConsolidated={isAllMode || subclubs.length > 1}
+            />
+          </TabErrorBoundary>
+        );
       case 'caixa':
         return (
           <TabErrorBoundary tabName="Caixa">
