@@ -4,8 +4,8 @@ import { useState, useMemo } from 'react';
 import { saveClubAdjustments, formatBRL } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { useToast } from '@/components/Toast';
-import KpiCard from '@/components/ui/KpiCard';
 import { SubclubData } from '@/types/settlement';
+import { Target, ShoppingCart, Shield, FileText, Pencil, Save, X, TrendingUp, TrendingDown, Equal } from 'lucide-react';
 
 interface Props {
   subclubs: SubclubData[];
@@ -17,11 +17,11 @@ interface Props {
 const FIELD_KEYS = ['overlay', 'compras', 'security', 'outros'] as const;
 type FieldKey = (typeof FIELD_KEYS)[number];
 
-const FIELD_META: Record<FieldKey, { label: string; sublabel: string }> = {
-  overlay: { label: 'Overlay', sublabel: 'Parte do clube' },
-  compras: { label: 'Compras', sublabel: 'Fichas / buy-ins' },
-  security: { label: 'Security', sublabel: 'Seguranca' },
-  outros: { label: 'Outros', sublabel: 'Lancamentos avulsos' },
+const FIELD_META: Record<FieldKey, { label: string; desc: string; icon: typeof Target; color: string; colorBg: string; colorBorder: string }> = {
+  overlay: { label: 'Overlay', desc: 'Dividido entre subclubes', icon: Target, color: 'text-blue-400', colorBg: 'bg-blue-500/8', colorBorder: 'border-blue-500/20' },
+  compras: { label: 'Compras', desc: 'Fichas / buy-ins', icon: ShoppingCart, color: 'text-red-400', colorBg: 'bg-red-500/8', colorBorder: 'border-red-500/20' },
+  security: { label: 'Security', desc: 'Seguranca', icon: Shield, color: 'text-amber-400', colorBg: 'bg-amber-500/8', colorBorder: 'border-amber-500/20' },
+  outros: { label: 'Outros', desc: 'Lancamentos avulsos', icon: FileText, color: 'text-purple-400', colorBg: 'bg-purple-500/8', colorBorder: 'border-purple-500/20' },
 };
 
 type FormRow = Record<FieldKey, string> & { obs: string };
@@ -34,23 +34,16 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // Form state: one row per subclub
   const [forms, setForms] = useState<Record<string, FormRow>>({});
 
-  // KPIs
-  const kpis = useMemo(() => {
-    let totalOverlay = 0, totalCompras = 0, totalSecurity = 0, totalOutros = 0;
+  // Totals
+  const totals = useMemo(() => {
+    const t: Record<FieldKey, number> = { overlay: 0, compras: 0, security: 0, outros: 0 };
     for (const sc of subclubs) {
-      totalOverlay += sc.adjustments.overlay;
-      totalCompras += sc.adjustments.compras;
-      totalSecurity += sc.adjustments.security;
-      totalOutros += sc.adjustments.outros;
+      for (const k of FIELD_KEYS) t[k] += sc.adjustments[k];
     }
-    const total = totalOverlay + totalCompras + totalSecurity + totalOutros;
-    const positive = Math.max(0, totalOverlay) + Math.max(0, totalCompras) + Math.max(0, totalSecurity) + Math.max(0, totalOutros);
-    const negative = Math.min(0, totalOverlay) + Math.min(0, totalCompras) + Math.min(0, totalSecurity) + Math.min(0, totalOutros);
-    return { total, positive, negative };
+    const grand = FIELD_KEYS.reduce((s, k) => s + t[k], 0);
+    return { ...t, grand };
   }, [subclubs]);
 
   function handleStartEdit() {
@@ -66,10 +59,6 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
     }
     setForms(f);
     setEditing(true);
-  }
-
-  function handleCancel() {
-    setEditing(false);
   }
 
   function updateField(scId: string, key: FieldKey | 'obs', value: string) {
@@ -89,7 +78,7 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
           subclub_id: sc.id,
           week_start: weekStart,
           overlay: parseFloat(f.overlay) || 0,
-          compras: parseFloat(f.compras) || 0,
+          compras: -(Math.abs(parseFloat(f.compras) || 0)),
           security: parseFloat(f.security) || 0,
           outros: parseFloat(f.outros) || 0,
           obs: f.obs || undefined,
@@ -111,99 +100,162 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
     }
   }
 
-  // Live totals while editing
+  // Live edit totals
   function getEditTotal(key: FieldKey): number {
     let total = 0;
     for (const sc of subclubs) {
       const f = forms[sc.id];
-      total += f ? (parseFloat(f[key]) || 0) : sc.adjustments[key];
+      if (f) {
+        const v = parseFloat(f[key]) || 0;
+        total += key === 'compras' ? -(Math.abs(v)) : v;
+      } else {
+        total += sc.adjustments[key];
+      }
     }
     return total;
   }
 
   const editGrandTotal = editing
     ? FIELD_KEYS.reduce((s, k) => s + getEditTotal(k), 0)
-    : kpis.total;
+    : totals.grand;
+
+  // For display: get column total
+  function colTotal(key: FieldKey): number {
+    return editing ? getEditTotal(key) : totals[key];
+  }
 
   return (
-    <div className="p-4 lg:p-6 animate-tab-fade">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="animate-tab-fade space-y-6">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Lancamentos</h2>
-          <p className="text-dark-400 text-sm">
-            {subclubs.length > 1
-              ? `Distribuicao para ${subclubs.length} subclubes`
-              : 'Lancamentos do clube'}
+          <h2 className="text-lg font-bold text-white tracking-tight">Lancamentos</h2>
+          <p className="text-dark-500 text-xs mt-0.5">
+            {subclubs.length > 1 ? `${subclubs.length} subclubes` : 'Clube'}
+            {' · '}
+            {weekStart}
           </p>
         </div>
-        {canEdit && !editing && (
-          <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2">
-            Editar
-          </button>
-        )}
-        {!isDraft && <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">FINALIZADO</span>}
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
-        <KpiCard label="Positivos" value={formatBRL(kpis.positive)} accentColor="bg-poker-500" valueColor="text-poker-400" />
-        <KpiCard label="Negativos" value={formatBRL(kpis.negative)} accentColor="bg-red-500" valueColor="text-red-400" />
-        <KpiCard
-          label="Total Lancamentos"
-          value={formatBRL(editing ? editGrandTotal : kpis.total)}
-          accentColor={kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}
-          valueColor={editGrandTotal > 0.01 ? 'text-amber-400' : editGrandTotal < -0.01 ? 'text-red-400' : 'text-dark-500'}
-          ring="ring-1 ring-amber-700/30"
-        />
-      </div>
-
-      {editing && (
-        <div className="mb-4 flex items-center gap-2 text-poker-400 text-xs font-semibold">
-          <span className="w-2 h-2 rounded-full bg-poker-400 animate-pulse" />
-          EDITANDO
+        <div className="flex items-center gap-3">
+          {!isDraft && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              FINALIZADO
+            </span>
+          )}
+          {editing && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-poker-500/10 text-poker-400 border border-poker-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-poker-400 animate-pulse" />
+              EDITANDO
+            </span>
+          )}
+          {canEdit && !editing && (
+            <button
+              onClick={handleStartEdit}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-dark-800 border border-dark-700 text-dark-200 hover:text-white hover:border-dark-500 transition-all"
+            >
+              <Pencil size={12} />
+              Editar
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden p-0">
-        <table className="w-full text-sm data-table">
+      {/* ── Summary pills (compact) ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {FIELD_KEYS.map((k) => {
+          const meta = FIELD_META[k];
+          const Icon = meta.icon;
+          const val = editing ? getEditTotal(k) : totals[k];
+          return (
+            <div
+              key={k}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${meta.colorBg} ${meta.colorBorder} transition-all`}
+            >
+              <Icon size={14} className={meta.color} />
+              <span className="text-[11px] text-dark-400 font-medium">{meta.label}</span>
+              <span className={`text-sm font-mono font-semibold ${val > 0.01 ? 'text-poker-400' : val < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                {formatBRL(val)}
+              </span>
+            </div>
+          );
+        })}
+        <div className="w-px h-6 bg-dark-700 mx-1" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-800/80 border border-dark-700">
+          {editGrandTotal > 0.01 ? <TrendingUp size={14} className="text-poker-400" /> :
+           editGrandTotal < -0.01 ? <TrendingDown size={14} className="text-red-400" /> :
+           <Equal size={14} className="text-dark-500" />}
+          <span className="text-[11px] text-dark-400 font-medium">Total</span>
+          <span className={`text-sm font-mono font-bold ${editGrandTotal > 0.01 ? 'text-poker-400' : editGrandTotal < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+            {formatBRL(editGrandTotal)}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Table ── */}
+      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="bg-dark-800/50 text-dark-400 text-left text-xs uppercase tracking-wider">
-              <th className="p-3">Subclube</th>
-              {FIELD_KEYS.map((k) => (
-                <th key={k} className="p-3 text-right">{FIELD_META[k].label}</th>
-              ))}
-              <th className="p-3 text-right">Total</th>
+            <tr className="border-b border-dark-800">
+              <th className="px-4 py-3 text-left text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                Subclube
+              </th>
+              {FIELD_KEYS.map((k) => {
+                const meta = FIELD_META[k];
+                const Icon = meta.icon;
+                return (
+                  <th key={k} className="px-4 py-3 text-right text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Icon size={11} className={meta.color} />
+                      {meta.label}
+                    </div>
+                  </th>
+                );
+              })}
+              <th className="px-4 py-3 text-right text-[10px] text-dark-500 uppercase tracking-wider font-semibold">
+                Total
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-dark-700/50">
-            {subclubs.map((sc) => {
+          <tbody>
+            {subclubs.map((sc, idx) => {
               const f = forms[sc.id];
               const rowTotal = editing && f
-                ? FIELD_KEYS.reduce((s, k) => s + (parseFloat(f[k]) || 0), 0)
+                ? FIELD_KEYS.reduce((s, k) => {
+                    const v = parseFloat(f[k]) || 0;
+                    return s + (k === 'compras' ? -(Math.abs(v)) : v);
+                  }, 0)
                 : sc.totalLancamentos;
+              const isLast = idx === subclubs.length - 1;
 
               return (
-                <tr key={sc.id}>
-                  <td className="p-3 text-dark-200 font-medium">{sc.name}</td>
+                <tr
+                  key={sc.id}
+                  className={`transition-colors hover:bg-dark-800/30 ${!isLast ? 'border-b border-dark-800/50' : ''}`}
+                >
+                  <td className="px-4 py-3">
+                    <span className="text-dark-100 font-medium text-[13px]">{sc.name}</span>
+                  </td>
                   {FIELD_KEYS.map((k) => (
-                    <td key={k} className="p-3 text-right">
+                    <td key={k} className="px-4 py-3 text-right">
                       {editing && f ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={f[k]}
-                          onChange={(e) => updateField(sc.id, k, e.target.value)}
-                          className="input w-28 text-right font-mono text-sm ml-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          {k === 'compras' && <span className="text-dark-600 text-xs">-</span>}
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={f[k]}
+                            onChange={(e) => updateField(sc.id, k, e.target.value)}
+                            className="w-24 bg-dark-800 border border-dark-700 rounded-lg px-2.5 py-1.5 text-right font-mono text-[13px] text-white focus:border-poker-500 focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
                       ) : (
                         <ValDisplay value={sc.adjustments[k]} />
                       )}
                     </td>
                   ))}
-                  <td className="p-3 text-right">
-                    <span className={`font-mono font-bold ${rowTotal > 0.01 ? 'text-poker-400' : rowTotal < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                  <td className="px-4 py-3 text-right">
+                    <span className={`font-mono font-semibold text-[13px] ${rowTotal > 0.01 ? 'text-poker-400' : rowTotal < -0.01 ? 'text-red-400' : 'text-dark-600'}`}>
                       {formatBRL(rowTotal)}
                     </span>
                   </td>
@@ -212,21 +264,23 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
             })}
           </tbody>
           {subclubs.length > 1 && (
-            <tfoot className="bg-dark-800/30 sticky bottom-0">
-              <tr className="font-bold text-white">
-                <td className="p-3 uppercase text-xs tracking-wider">Total Geral</td>
+            <tfoot>
+              <tr className="border-t border-dark-700 bg-dark-900/80">
+                <td className="px-4 py-3">
+                  <span className="text-[11px] text-dark-400 uppercase tracking-wider font-bold">Total</span>
+                </td>
                 {FIELD_KEYS.map((k) => {
-                  const colTotal = editing ? getEditTotal(k) : subclubs.reduce((s, sc) => s + sc.adjustments[k], 0);
+                  const val = colTotal(k);
                   return (
-                    <td key={k} className="p-3 text-right">
-                      <span className={`font-mono ${colTotal > 0.01 ? 'text-poker-400' : colTotal < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
-                        {formatBRL(colTotal)}
+                    <td key={k} className="px-4 py-3 text-right">
+                      <span className={`font-mono font-bold text-[13px] ${val > 0.01 ? 'text-poker-400' : val < -0.01 ? 'text-red-400' : 'text-dark-600'}`}>
+                        {formatBRL(val)}
                       </span>
                     </td>
                   );
                 })}
-                <td className="p-3 text-right">
-                  <span className={`font-mono text-base ${editGrandTotal > 0.01 ? 'text-amber-400' : editGrandTotal < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                <td className="px-4 py-3 text-right">
+                  <span className={`font-mono font-bold text-sm ${editGrandTotal > 0.01 ? 'text-amber-400' : editGrandTotal < -0.01 ? 'text-red-400' : 'text-dark-600'}`}>
                     {formatBRL(editGrandTotal)}
                   </span>
                 </td>
@@ -236,15 +290,30 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
         </table>
       </div>
 
-      {/* Save/Cancel buttons */}
+      {/* ── Actions ── */}
       {editing && (
-        <div className="flex justify-end gap-3 mt-4">
-          <button onClick={handleCancel} disabled={saving} className="px-4 py-2 text-dark-400 hover:text-white text-sm transition-colors border border-dark-600 rounded-lg hover:border-dark-400">
-            Cancelar
-          </button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-6 py-2">
-            {saving ? 'Salvando...' : 'Salvar Lancamentos'}
-          </button>
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-[11px] text-dark-600">
+            Compras sao salvas como valor negativo automaticamente
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-dark-400 hover:text-white border border-dark-700 hover:border-dark-500 transition-all"
+            >
+              <X size={14} />
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium bg-poker-600 text-white hover:bg-poker-500 transition-all disabled:opacity-50"
+            >
+              <Save size={14} />
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -252,9 +321,9 @@ export default function Lancamentos({ subclubs, weekStart, settlementStatus, onD
 }
 
 function ValDisplay({ value }: { value: number }) {
-  if (!value || Math.abs(value) < 0.01) return <span className="text-dark-600 font-mono">—</span>;
+  if (!value || Math.abs(value) < 0.01) return <span className="text-dark-700 font-mono text-[13px]">—</span>;
   return (
-    <span className={`font-mono font-semibold ${value > 0 ? 'text-poker-400' : 'text-red-400'}`}>
+    <span className={`font-mono font-medium text-[13px] ${value > 0 ? 'text-poker-400' : 'text-red-400'}`}>
       {formatBRL(value)}
     </span>
   );
