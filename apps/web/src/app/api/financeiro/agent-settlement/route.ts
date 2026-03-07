@@ -76,13 +76,11 @@ export async function GET(req: NextRequest) {
         return null;
       }
 
-      // Helper: get platform from CLUB ancestor
       function getPlatform(orgId: string): string {
         const club = findClubAncestor(orgId);
         return (club?.metadata?.platform || 'outro').toLowerCase();
       }
 
-      // Helper: get club name
       function getClubName(orgId: string): string {
         const club = findClubAncestor(orgId);
         return club?.name || '';
@@ -95,24 +93,40 @@ export async function GET(req: NextRequest) {
         if (club) orgToClubId.set(m.organization_id, club.id);
       }
 
-      // 4. Find settlements for this week for these clubs
-      const clubIds = [...new Set(orgToClubId.values())];
-      let settlements: any[] = [];
-      if (clubIds.length > 0) {
-        const { data: sData } = await supabaseAdmin
-          .from('settlements')
-          .select('id, club_id, week_start, week_end, status')
-          .in('club_id', clubIds)
-          .eq('week_start', weekStart)
-          .neq('status', 'VOID');
-
-        settlements = sData || [];
-      }
+      // 4. Find ALL settlements for this week for this tenant
+      const { data: allSettlements } = await supabaseAdmin
+        .from('settlements')
+        .select('id, club_id, week_start, week_end, status')
+        .eq('tenant_id', ctx.tenantId)
+        .eq('week_start', weekStart)
+        .neq('status', 'VOID');
 
       const clubToSettlement = new Map<string, any>();
-      for (const s of settlements) clubToSettlement.set(s.club_id, s);
+      for (const s of allSettlements || []) {
+        if (!clubToSettlement.has(s.club_id)) clubToSettlement.set(s.club_id, s);
+      }
 
-      // 5. For each member, get agent_week_metrics (by agent_id OR agent_name)
+      // 5. Collect all settlement IDs we need
+      const relevantSettlementIds: string[] = [];
+      for (const m of members as any[]) {
+        const clubId = orgToClubId.get(m.organization_id);
+        if (clubId) {
+          const s = clubToSettlement.get(clubId);
+          if (s && !relevantSettlementIds.includes(s.id)) relevantSettlementIds.push(s.id);
+        }
+      }
+
+      // 6. Fetch ALL agent_week_metrics for these settlements in one query
+      let allAgentMetrics: any[] = [];
+      if (relevantSettlementIds.length > 0) {
+        const { data } = await supabaseAdmin
+          .from('agent_week_metrics')
+          .select('*')
+          .in('settlement_id', relevantSettlementIds);
+        allAgentMetrics = data || [];
+      }
+
+      // 7. For each member, match metrics by agent_id (UUID) OR agent_name (org name)
       const platforms: any[] = [];
 
       for (const m of members as any[]) {
@@ -125,23 +139,24 @@ export async function GET(req: NextRequest) {
         const settlement = clubToSettlement.get(clubId);
         if (!settlement) continue;
 
-        // Try by agent_id (org UUID) first
-        let { data: metrics } = await supabaseAdmin
-          .from('agent_week_metrics')
-          .select('*')
-          .eq('settlement_id', settlement.id)
-          .eq('agent_id', m.organization_id)
-          .maybeSingle();
+        // Filter metrics for this settlement
+        const settlementMetrics = allAgentMetrics.filter((am) => am.settlement_id === settlement.id);
 
-        // Fallback: try by agent_name (org name)
+        // Match: by agent_id (org UUID) first, then by agent_name
+        let metrics = settlementMetrics.find((am) => am.agent_id === m.organization_id);
         if (!metrics) {
-          const result = await supabaseAdmin
-            .from('agent_week_metrics')
-            .select('*')
-            .eq('settlement_id', settlement.id)
-            .eq('agent_name', org.name)
-            .maybeSingle();
-          metrics = result.data;
+          metrics = settlementMetrics.find((am) => am.agent_name === org.name);
+        }
+
+        // If still no match, also try: agent orgs often have names like "AG AMS - Andre Tak"
+        // but agent_week_metrics.agent_name might be just "Andre Tak" or vice versa
+        // Try substring match as last resort
+        if (!metrics) {
+          metrics = settlementMetrics.find(
+            (am) =>
+              am.agent_name && org.name &&
+              (am.agent_name.includes(org.name) || org.name.includes(am.agent_name)),
+          );
         }
 
         if (!metrics) continue;
@@ -153,7 +168,7 @@ export async function GET(req: NextRequest) {
           platform,
           club_name: clubName,
           settlement_id: settlement.id,
-          agent_name: org.name,
+          agent_name: metrics.agent_name || org.name,
           winnings: metrics.ganhos_total_brl || 0,
           rake: metrics.rake_total_brl || 0,
           rb_rate: metrics.rb_rate || 0,
@@ -162,7 +177,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // 6. Compute totals
+      // 8. Compute totals
       const total = {
         winnings: platforms.reduce((s, p) => s + p.winnings, 0),
         rake: platforms.reduce((s, p) => s + p.rake, 0),
@@ -170,7 +185,7 @@ export async function GET(req: NextRequest) {
         resultado: platforms.reduce((s, p) => s + p.resultado, 0),
       };
 
-      // 7. Build member list for response
+      // 9. Build member list for response
       const groupMembers = (members as any[]).map((m) => {
         const org = m.organizations || {};
         return {
@@ -190,6 +205,18 @@ export async function GET(req: NextRequest) {
           weekEnd: computeWeekEnd(weekStart),
           platforms,
           total,
+          _debug: {
+            memberCount: members.length,
+            clubIds: [...new Set(orgToClubId.values())],
+            settlementCount: relevantSettlementIds.length,
+            metricsCount: allAgentMetrics.length,
+            memberOrgs: (members as any[]).map((m) => ({
+              orgId: m.organization_id,
+              orgName: m.organizations?.name,
+              clubId: orgToClubId.get(m.organization_id),
+              hasSettlement: !!clubToSettlement.get(orgToClubId.get(m.organization_id) || ''),
+            })),
+          },
         },
       });
     } catch (err: unknown) {

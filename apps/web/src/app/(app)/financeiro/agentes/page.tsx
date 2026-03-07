@@ -152,6 +152,7 @@ export default function FechamentoAgentesPage() {
     setLoadingDetail(true);
     invalidateCache('/financeiro');
     const res = await getAgentConsolidatedSettlement(group.id, selectedWeek);
+    console.log('[FechAgentes] detail response:', JSON.stringify(res.data, null, 2));
     if (res.success && res.data) {
       setDetailData(res.data);
     } else {
