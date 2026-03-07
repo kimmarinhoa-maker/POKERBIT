@@ -213,8 +213,8 @@ class ImportPreviewService {
     // 3) Carregar config do tenant (prefix_map, overrides, player_links, etc)
     const config = await this.loadTenantConfig(tenantId);
 
-    // 4) Carregar subclubes existentes (para saber quais existem)
-    const existingSubclubs = await this.loadSubclubs(tenantId);
+    // 4) Carregar subclubes existentes DESTE CLUBE (para saber quais existem)
+    const existingSubclubs = await this.loadSubclubs(tenantId, clubId);
 
     // 5) Parse do XLSX (em memória, nada no banco) — dispatch by platform
     if (pppokerSubclube) config.pppokerSubclube = pppokerSubclube;
@@ -247,11 +247,11 @@ class ImportPreviewService {
     const allPlayers: any[] = parseResult.all || [];
     const warnings: string[] = [];
 
-    // 6.1) Single-club mode OR no subclubes: override p.clube and resolve blockers
+    // 6.1) Single-club mode OR no subclubes for THIS club: override p.clube
     if (!config.hasSubclubs || existingSubclubs.length === 0) {
-      const { data: clubOrg } = await supabaseAdmin
-        .from('organizations').select('name')
-        .eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
+      const { data: clubOrg } = clubId
+        ? await supabaseAdmin.from('organizations').select('name').eq('id', clubId).maybeSingle()
+        : await supabaseAdmin.from('organizations').select('name').eq('tenant_id', tenantId).eq('type', 'CLUB').limit(1).maybeSingle();
       const singleName = clubOrg?.name || config.tenantName || 'CLUBE';
       for (const p of allPlayers) {
         if (p._status === 'missing_agency' || p._status === 'unknown_subclub' || p._status === 'sem_vinculo') {
@@ -484,15 +484,17 @@ class ImportPreviewService {
 
   // ─── Config do Tenant (reutilizado do import.service) ────────────
 
-  private async loadSubclubs(tenantId: string): Promise<Array<{ id: string; name: string }>> {
-    const { data } = await supabaseAdmin
+  private async loadSubclubs(tenantId: string, clubId?: string): Promise<Array<{ id: string; name: string }>> {
+    let query = supabaseAdmin
       .from('organizations')
       .select('id, name')
       .eq('tenant_id', tenantId)
       .eq('type', 'SUBCLUB')
-      .eq('is_active', true)
-      .order('name');
+      .eq('is_active', true);
 
+    if (clubId) query = query.eq('parent_id', clubId);
+
+    const { data } = await query.order('name');
     return data || [];
   }
 
