@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
       // 4. Find ALL settlements for this week for this tenant
       const { data: allSettlements } = await supabaseAdmin
         .from('settlements')
-        .select('id, club_id, week_start, week_end, status')
+        .select('id, club_id, week_start, status')
         .eq('tenant_id', ctx.tenantId)
         .eq('week_start', weekStart)
         .neq('status', 'VOID');
