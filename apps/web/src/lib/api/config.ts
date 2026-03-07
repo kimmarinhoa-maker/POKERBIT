@@ -11,7 +11,7 @@ export async function getFeeConfig(clubId?: string) {
   return apiFetch(`/config/fees${params}`);
 }
 
-export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string }>, clubId: string) {
+export async function updateFeeConfig(fees: Array<{ name: string; rate: number; base: string; is_active?: boolean }>, clubId: string) {
   return apiFetch('/config/fees', {
     method: 'PUT',
     body: JSON.stringify({ fees, club_id: clubId }),
