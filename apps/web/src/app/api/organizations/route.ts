@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {
     try {
       const type = req.nextUrl.searchParams.get('type');
+      const parentId = req.nextUrl.searchParams.get('parent_id');
 
       let query = supabaseAdmin
         .from('organizations')
@@ -33,6 +34,10 @@ export async function GET(req: NextRequest) {
           );
         }
         query = query.eq('type', normalizedType);
+      }
+
+      if (parentId) {
+        query = query.eq('parent_id', parentId);
       }
 
       const { data, error } = await query;

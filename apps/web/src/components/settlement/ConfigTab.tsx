@@ -4,6 +4,7 @@ import { useState } from 'react';
 import ClubDadosClube from '@/components/club/ClubDadosClube';
 import ClubSubclubes from '@/components/club/ClubSubclubes';
 import ClubTaxas from '@/components/club/ClubTaxas';
+import ConfigAgentes from '@/components/club/ConfigAgentes';
 
 interface Props {
   clubId: string;
@@ -11,7 +12,7 @@ interface Props {
   isSubclub?: boolean;
 }
 
-type ConfigSection = 'geral' | 'taxas' | 'subclubes';
+type ConfigSection = 'geral' | 'taxas' | 'subclubes' | 'agentes';
 
 const mainTabs: { key: ConfigSection; label: string }[] = [
   { key: 'geral', label: 'Geral' },
@@ -20,7 +21,8 @@ const mainTabs: { key: ConfigSection; label: string }[] = [
 ];
 
 const subclubTabs: { key: ConfigSection; label: string }[] = [
-  { key: 'geral', label: 'Geral' },
+  { key: 'geral', label: 'Configuracoes Subclube' },
+  { key: 'agentes', label: 'Agentes' },
 ];
 
 export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
@@ -36,7 +38,7 @@ export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
           {isSubclub ? 'Configuracoes do Subclube' : 'Configuracoes do Clube'}
         </h3>
         <p className="text-dark-500 text-xs mt-0.5">
-          {isSubclub ? 'Dados do subclube' : 'Dados, taxas e subclubes'}
+          {isSubclub ? 'Dados e agentes do subclube' : 'Dados, taxas e subclubes'}
         </p>
       </div>
 
@@ -66,6 +68,9 @@ export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
       {activeSection === 'geral' && <ClubDadosClube orgId={orgIdForDados} />}
       {activeSection === 'taxas' && !isSubclub && <ClubTaxas clubId={clubId} />}
       {activeSection === 'subclubes' && !isSubclub && <ClubSubclubes clubId={clubId} />}
+      {activeSection === 'agentes' && isSubclub && subclubOrgId && (
+        <ConfigAgentes subclubOrgId={subclubOrgId} />
+      )}
     </div>
   );
 }

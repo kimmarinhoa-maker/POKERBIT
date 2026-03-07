@@ -387,15 +387,18 @@ function SubclubPanelPage() {
         );
       case 'config':
         {
-          // subclub.id is a real UUID only when it doesn't start with 'name:' and is not empty
+          // Determine the org ID to use for the config panel:
+          // - Consolidated (_all) view → main club config
+          // - Individual subclub with real UUID → subclub config (with Agentes tab)
+          // - Single subclub (no extras) → use its real UUID if available, else main club
           const isRealSubclubId = subclub.id && !subclub.id.startsWith('name:') && subclub.id !== IS_ALL;
-          const isViewingSubclub = !isAllMode && subclubs.length > 1 && isRealSubclubId;
+          const showAsSubclub = !isAllMode && isRealSubclubId;
           return (
             <TabErrorBoundary tabName="Config">
               <ConfigTab
                 clubId={settlement.club_id}
-                subclubOrgId={isViewingSubclub ? subclub.id : undefined}
-                isSubclub={!!isViewingSubclub}
+                subclubOrgId={showAsSubclub ? subclub.id : undefined}
+                isSubclub={!!showAsSubclub}
               />
             </TabErrorBoundary>
           );

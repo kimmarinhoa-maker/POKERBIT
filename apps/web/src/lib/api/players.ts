@@ -17,9 +17,12 @@ export async function listPlayers(search?: string, page?: number, subclubId?: st
 
 // ─── Organizations ─────────────────────────────────────────────────
 
-export async function listOrganizations(type?: string) {
-  const params = type ? `?type=${type}` : '';
-  return apiFetch(`/organizations${params}`);
+export async function listOrganizations(type?: string, parentId?: string) {
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (parentId) params.set('parent_id', parentId);
+  const qs = params.toString();
+  return apiFetch(`/organizations${qs ? `?${qs}` : ''}`);
 }
 
 export async function getOrgTree() {
