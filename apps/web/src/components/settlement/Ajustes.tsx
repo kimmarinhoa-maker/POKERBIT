@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react';
 import { saveClubAdjustments, formatBRL } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
-import KpiCard from '@/components/ui/KpiCard';
+import { useToast } from '@/components/Toast';
 import { SubclubData } from '@/types/settlement';
+import { Target, ShoppingCart, Shield, FileText, Pencil, Save, X, TrendingUp, TrendingDown, Equal } from 'lucide-react';
 
 interface Props {
   subclub: Pick<SubclubData, 'id' | 'name' | 'adjustments' | 'totalLancamentos'>;
@@ -13,240 +14,236 @@ interface Props {
   onDataChange: () => void;
 }
 
-const fields: { key: 'overlay' | 'compras' | 'security' | 'outros'; label: string; sublabel: string; icon: string }[] =
-  [
-    { key: 'overlay', label: 'Overlay', sublabel: 'Parte do clube', icon: 'target' },
-    { key: 'compras', label: 'Compras', sublabel: 'Fichas / buy-ins', icon: 'money' },
-    { key: 'security', label: 'Security', sublabel: 'Seguranca', icon: 'shield' },
-    { key: 'outros', label: 'Outros', sublabel: 'Lancamentos avulsos', icon: 'note' },
-  ];
+const FIELD_KEYS = ['overlay', 'compras', 'security', 'outros'] as const;
+type FieldKey = (typeof FIELD_KEYS)[number];
+
+const FIELD_META: Record<FieldKey, { label: string; desc: string; icon: typeof Target; color: string; colorBg: string; colorBorder: string; iconBg: string }> = {
+  overlay: { label: 'Overlay', desc: 'Parte do clube', icon: Target, color: 'text-blue-400', colorBg: 'bg-blue-500/8', colorBorder: 'border-blue-500/20', iconBg: 'bg-blue-500/15 border-blue-500/20' },
+  compras: { label: 'Compras', desc: 'Fichas / buy-ins', icon: ShoppingCart, color: 'text-red-400', colorBg: 'bg-red-500/8', colorBorder: 'border-red-500/20', iconBg: 'bg-red-500/15 border-red-500/20' },
+  security: { label: 'Security', desc: 'Seguranca', icon: Shield, color: 'text-amber-400', colorBg: 'bg-amber-500/8', colorBorder: 'border-amber-500/20', iconBg: 'bg-amber-500/15 border-amber-500/20' },
+  outros: { label: 'Outros', desc: 'Lancamentos avulsos', icon: FileText, color: 'text-purple-400', colorBg: 'bg-purple-500/8', colorBorder: 'border-purple-500/20', iconBg: 'bg-purple-500/15 border-purple-500/20' },
+};
 
 export default function Ajustes({ subclub, weekStart, settlementStatus, onDataChange }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const { canAccess } = useAuth();
-  const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const { toast } = useToast();
+  const canEdit = isDraft && canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    overlay: String(subclub.adjustments.overlay || 0),
-    compras: String(subclub.adjustments.compras || 0),
-    security: String(subclub.adjustments.security || 0),
-    outros: String(subclub.adjustments.outros || 0),
-    obs: subclub.adjustments.obs || '',
-  });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<Record<FieldKey, string> & { obs: string }>({
+    overlay: '0', compras: '0', security: '0', outros: '0', obs: '',
+  });
 
-  // KPIs
-  const kpis = useMemo(() => {
-    const adj = subclub.adjustments;
-    const nonZero = fields.filter((f) => Math.abs(adj[f.key] || 0) > 0.01).length;
-    const positive = fields.reduce((s, f) => s + Math.max(0, adj[f.key] || 0), 0);
-    const negative = fields.reduce((s, f) => s + Math.min(0, adj[f.key] || 0), 0);
-    return { nonZero, positive, negative, total: subclub.totalLancamentos };
+  // Totals for pills
+  const savedTotals = useMemo(() => {
+    const a = subclub.adjustments;
+    return {
+      overlay: a.overlay, compras: a.compras, security: a.security, outros: a.outros,
+      grand: a.overlay + a.compras + a.security + a.outros,
+    };
   }, [subclub]);
 
   function handleStartEdit() {
     setForm({
       overlay: String(subclub.adjustments.overlay || 0),
-      compras: String(subclub.adjustments.compras || 0),
+      compras: String(Math.abs(subclub.adjustments.compras) || 0),
       security: String(subclub.adjustments.security || 0),
       outros: String(subclub.adjustments.outros || 0),
       obs: subclub.adjustments.obs || '',
     });
-    setError(null);
     setEditing(true);
-  }
-
-  function handleCancel() {
-    setEditing(false);
-    setError(null);
   }
 
   async function handleSave() {
     setSaving(true);
-    setError(null);
     try {
       const res = await saveClubAdjustments({
         subclub_id: subclub.id,
         week_start: weekStart,
         overlay: parseFloat(form.overlay) || 0,
-        compras: parseFloat(form.compras) || 0,
+        compras: -(Math.abs(parseFloat(form.compras) || 0)),
         security: parseFloat(form.security) || 0,
         outros: parseFloat(form.outros) || 0,
         obs: form.obs || undefined,
       });
       if (res.success) {
+        toast('Lancamentos salvos', 'success');
         setEditing(false);
         onDataChange();
       } else {
-        setError(res.error || 'Erro ao salvar');
+        toast(res.error || 'Erro ao salvar', 'error');
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro de conexao');
+    } catch {
+      toast('Erro de conexao', 'error');
     } finally {
       setSaving(false);
     }
   }
 
-  // Live total while editing
-  const editTotal = editing
-    ? (parseFloat(form.overlay) || 0) +
-      (parseFloat(form.compras) || 0) +
-      (parseFloat(form.security) || 0) +
-      (parseFloat(form.outros) || 0)
-    : subclub.totalLancamentos;
+  // Live values
+  function editVal(key: FieldKey): number {
+    const v = parseFloat(form[key]) || 0;
+    return key === 'compras' ? -(Math.abs(v)) : v;
+  }
+  const editGrand = editing
+    ? FIELD_KEYS.reduce((s, k) => s + editVal(k), 0)
+    : savedTotals.grand;
+
+  const pillData = FIELD_KEYS.map((k) => ({
+    key: k,
+    val: editing ? editVal(k) : savedTotals[k],
+  }));
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="animate-tab-fade space-y-6">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Ajustes — {subclub.name}</h2>
-          <p className="text-dark-400 text-sm">Lancamentos manuais do subclube</p>
+          <h2 className="text-lg font-bold text-white tracking-tight">Lancamentos</h2>
+          <p className="text-dark-500 text-xs mt-0.5">{subclub.name} · {weekStart}</p>
         </div>
-
-        {isDraft && !editing && canEdit && (
-          <button onClick={handleStartEdit} className="btn-secondary text-sm px-4 py-2">
-            Editar
-          </button>
-        )}
-        {!isDraft && <span className="badge-final text-xs">FINALIZADO — somente leitura</span>}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <KpiCard
-          label="Lancamentos"
-          value={kpis.nonZero}
-          accentColor="bg-blue-500"
-          valueColor="text-blue-400"
-          subtitle={`de ${fields.length} campos`}
-        />
-        <KpiCard
-          label="Positivos"
-          value={formatBRL(kpis.positive)}
-          accentColor="bg-poker-500"
-          valueColor="text-poker-400"
-        />
-        <KpiCard
-          label="Negativos"
-          value={formatBRL(kpis.negative)}
-          accentColor="bg-red-500"
-          valueColor="text-red-400"
-        />
-        <KpiCard
-          label="Total"
-          value={formatBRL(kpis.total)}
-          accentColor={kpis.total >= 0 ? 'bg-amber-500' : 'bg-red-500'}
-          valueColor={kpis.total > 0 ? 'text-amber-400' : kpis.total < 0 ? 'text-red-400' : 'text-dark-500'}
-          ring="ring-1 ring-amber-700/30"
-        />
-      </div>
-
-      {error && (
-        <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg p-3 text-red-300 text-sm">{error}</div>
-      )}
-
-      <div className="card max-w-xl">
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-700/60">
-          <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wider">Lancamentos</h3>
-          {editing && <span className="text-[10px] text-poker-400 ml-auto font-semibold">EDITANDO</span>}
-        </div>
-
-        <div className="space-y-3">
-          {fields.map(({ key, label, sublabel, icon: _icon }) => (
-            <div
-              key={key}
-              className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors ${
-                editing ? 'bg-dark-800/30' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div>
-                  <span className={`text-sm ${editing ? 'text-dark-200 font-medium' : 'text-dark-300'}`}>{label}</span>
-                  <span className="text-[11px] text-dark-500 ml-2">{sublabel}</span>
-                </div>
-              </div>
-
-              {editing ? (
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form[key]}
-                  onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
-                  aria-label={`Valor do ajuste ${label}`}
-                  className="input w-40 text-right font-mono text-sm"
-                />
-              ) : (
-                <ValueDisplay value={subclub.adjustments[key]} />
-              )}
-            </div>
-          ))}
-
-          {/* Total */}
-          <div className="pt-3 mt-1 border-t-2 border-dark-600 flex items-center justify-between px-3">
-            <span className="text-sm font-bold text-white uppercase tracking-wide">Total Lancamentos</span>
-            <span
-              className={`font-mono text-lg font-bold ${
-                editTotal > 0.01 ? 'text-poker-400' : editTotal < -0.01 ? 'text-red-400' : 'text-dark-500'
-              }`}
-            >
-              {formatBRL(editTotal)}
+        <div className="flex items-center gap-3">
+          {!isDraft && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              FINALIZADO
             </span>
-          </div>
-        </div>
-
-        {/* Obs */}
-        <div className="mt-4 pt-3 border-t border-dark-700/50">
-          <p className="text-xs text-dark-500 mb-1.5">Observacoes</p>
-          {editing ? (
-            <textarea
-              value={form.obs}
-              onChange={(e) => setForm((prev) => ({ ...prev, obs: e.target.value }))}
-              maxLength={500}
-              rows={3}
-              placeholder="Observacoes sobre os lancamentos..."
-              aria-label="Observacoes dos ajustes"
-              className="input w-full text-sm resize-none"
-            />
-          ) : (
-            <p className="text-sm text-dark-400">{subclub.adjustments.obs || '—'}</p>
+          )}
+          {editing && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-poker-500/10 text-poker-400 border border-poker-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-poker-400 animate-pulse" />
+              EDITANDO
+            </span>
+          )}
+          {canEdit && !editing && (
+            <button
+              onClick={handleStartEdit}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-dark-800 border border-dark-700 text-dark-200 hover:text-white hover:border-dark-500 transition-all"
+            >
+              <Pencil size={12} />
+              Editar
+            </button>
           )}
         </div>
+      </div>
 
-        {/* Edit actions */}
-        {editing && (
-          <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-dark-700/50">
-            <button
-              onClick={handleCancel}
-              disabled={saving}
-              className="px-4 py-2 text-dark-400 hover:text-white text-sm transition-colors border border-dark-600 rounded-lg hover:border-dark-400"
+      {/* ── Summary pills ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {pillData.map(({ key, val }) => {
+          const meta = FIELD_META[key];
+          const Icon = meta.icon;
+          return (
+            <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${meta.colorBg} ${meta.colorBorder}`}>
+              <Icon size={14} className={meta.color} />
+              <span className="text-[11px] text-dark-400 font-medium">{meta.label}</span>
+              <span className={`text-sm font-mono font-semibold ${val > 0.01 ? 'text-poker-400' : val < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+                {formatBRL(val)}
+              </span>
+            </div>
+          );
+        })}
+        <div className="w-px h-6 bg-dark-700 mx-1" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-800/80 border border-dark-700">
+          {editGrand > 0.01 ? <TrendingUp size={14} className="text-poker-400" /> :
+           editGrand < -0.01 ? <TrendingDown size={14} className="text-red-400" /> :
+           <Equal size={14} className="text-dark-500" />}
+          <span className="text-[11px] text-dark-400 font-medium">Total</span>
+          <span className={`text-sm font-mono font-bold ${editGrand > 0.01 ? 'text-poker-400' : editGrand < -0.01 ? 'text-red-400' : 'text-dark-500'}`}>
+            {formatBRL(editGrand)}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Field cards ── */}
+      <div className="space-y-3">
+        {FIELD_KEYS.map((key) => {
+          const meta = FIELD_META[key];
+          const Icon = meta.icon;
+          const savedVal = subclub.adjustments[key];
+
+          return (
+            <div
+              key={key}
+              className={`rounded-2xl border p-4 transition-all ${meta.colorBg} ${meta.colorBorder}`}
             >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${meta.iconBg}`}>
+                    <Icon size={18} className={meta.color} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{meta.label}</p>
+                    <p className="text-[11px] text-dark-500">{meta.desc}</p>
+                  </div>
+                </div>
+
+                {editing ? (
+                  <div className="flex items-center gap-1">
+                    {key === 'compras' && <span className="text-red-500/60 text-sm font-mono">-</span>}
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form[key]}
+                      onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                      className={`w-32 bg-dark-800 border rounded-lg px-3 py-2 text-right font-mono text-sm text-white focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${meta.colorBorder} focus:border-opacity-60`}
+                    />
+                  </div>
+                ) : (
+                  <span className={`text-lg font-mono font-bold ${savedVal > 0.01 ? meta.color : savedVal < -0.01 ? 'text-red-400' : 'text-dark-600'}`}>
+                    {Math.abs(savedVal) < 0.01 ? '—' : formatBRL(savedVal)}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Observacoes ── */}
+      <div className="bg-dark-900/50 border border-dark-800 rounded-2xl p-4">
+        <p className="text-[11px] text-dark-500 uppercase tracking-wider font-semibold mb-2">Observacoes</p>
+        {editing ? (
+          <textarea
+            value={form.obs}
+            onChange={(e) => setForm((prev) => ({ ...prev, obs: e.target.value }))}
+            maxLength={500}
+            rows={3}
+            placeholder="Observacoes sobre os lancamentos..."
+            className="w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:border-poker-500 focus:outline-none resize-none"
+          />
+        ) : (
+          <p className="text-sm text-dark-400">{subclub.adjustments.obs || '—'}</p>
+        )}
+      </div>
+
+      {/* ── Actions ── */}
+      {editing && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-[11px] text-dark-600">
+            Compras salvas como valor negativo automaticamente
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-dark-400 hover:text-white border border-dark-700 hover:border-dark-500 transition-all"
+            >
+              <X size={14} />
               Cancelar
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              aria-label="Salvar ajustes"
-              className="btn-primary text-sm px-6 py-2"
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-medium bg-poker-600 text-white hover:bg-poker-500 transition-all disabled:opacity-50"
             >
+              <Save size={14} />
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function ValueDisplay({ value }: { value: number }) {
-  if (value === undefined || value === null || value === 0) {
-    return <span className="text-dark-600 text-sm font-mono">R$ 0,00</span>;
-  }
-  return (
-    <span className={`font-mono text-sm font-semibold ${value > 0 ? 'text-poker-400' : 'text-red-400'}`}>
-      {formatBRL(value)}
-    </span>
   );
 }
