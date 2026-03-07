@@ -1,7 +1,11 @@
 // ══════════════════════════════════════════════════════════════════════
 //  GET /api/financeiro/agent-settlement?groupId=X&weekStart=Y
 //  Returns consolidated agent data across platforms for a given week
+//  v2 — batch query + substring match
 // ══════════════════════════════════════════════════════════════════════
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/server/auth';

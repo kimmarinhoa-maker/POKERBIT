@@ -3,6 +3,8 @@
 //  POST /api/financeiro/agent-groups — Create group
 // ══════════════════════════════════════════════════════════════════════
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/server/auth';
 import { safeErrorMessage } from '@/lib/server/apiError';
