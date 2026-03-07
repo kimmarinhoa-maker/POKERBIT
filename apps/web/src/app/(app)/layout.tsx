@@ -81,8 +81,8 @@ function navLinkClass(isActive: boolean, collapsed: boolean): string {
     collapsed ? 'lg:justify-center lg:px-0 lg:py-2 px-3 py-[7px]' : 'px-3 py-[7px]'
   } ${
     isActive
-      ? 'bg-white/[0.08] text-white'
-      : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
+      ? 'bg-dark-800 text-white'
+      : 'text-dark-400 hover:bg-dark-800/50 hover:text-dark-200'
   }`;
 }
 
@@ -211,7 +211,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
       {/* Mobile top bar */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-dark-900/95 backdrop-blur-md border-b border-white/[0.06] flex items-center px-4 h-14 lg:hidden">
+      <div className="fixed top-0 left-0 right-0 z-40 bg-dark-900/95 backdrop-blur-md border-b border-dark-700/60 flex items-center px-4 h-14 lg:hidden">
         <button
           onClick={() => setSidebarOpen(true)}
           className="text-dark-400 hover:text-white p-1.5 -ml-1 transition-colors"
@@ -240,7 +240,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         role="navigation"
         className={`
-        fixed inset-y-0 left-0 z-50 bg-dark-950 border-r border-white/[0.06] flex flex-col
+        fixed inset-y-0 left-0 z-50 bg-dark-900 border-r border-dark-700/60 flex flex-col
         transform transition-all duration-200 ease-in-out
         lg:relative lg:translate-x-0 lg:shrink-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -248,7 +248,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
       `}
       >
         {/* Logo + Tenant */}
-        <div className={`border-b border-white/[0.06] ${collapsed ? 'lg:p-3 p-5' : 'px-4 pt-5 pb-4'}`}>
+        <div className={`border-b border-dark-700/60 ${collapsed ? 'lg:p-3 p-5' : 'px-4 pt-5 pb-4'}`}>
           <Link href="/dashboard" className="flex items-center gap-3" title={collapsed ? 'POKERBIT' : undefined}>
             <div className="w-9 h-9 rounded-xl bg-poker-600 flex items-center justify-center shrink-0">
               <Spade className="w-[18px] h-[18px] text-white" />
@@ -288,7 +288,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           })()}
 
           {/* ── Divider ──────────────────────────────────── */}
-          <div className={`border-t border-white/[0.06] my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />
+          <div className={`border-t border-dark-700/60 my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />
 
           {/* ── MEUS CLUBES ─────────────────────────────── */}
           <div className={collapsed ? 'lg:hidden' : ''}>
@@ -303,8 +303,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
               }}
               className={`w-full flex items-center gap-3 px-3 py-[7px] rounded-lg transition-all duration-150 text-[13px] font-medium ${
                 pathname === '/clubs'
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
+                  ? 'bg-dark-800 text-white'
+                  : 'text-dark-400 hover:bg-dark-800/50 hover:text-dark-200'
               }`}
             >
               <Spade className={`w-[18px] h-[18px] flex-shrink-0 ${pathname === '/clubs' ? 'text-white' : 'text-dark-500'}`} />
@@ -349,10 +349,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                               href={clubHref}
                               className={`flex items-center gap-2.5 px-3 py-[6px] ml-1 rounded-lg transition-all duration-150 text-[12px] ${
                                 (hasSubclubes ? isAllActive : clubActive)
-                                  ? 'bg-white/[0.08] text-white font-semibold'
+                                  ? 'bg-dark-800 text-white font-semibold'
                                   : clubActive && hasSubclubes
                                     ? 'text-dark-200 font-semibold'
-                                    : 'text-dark-400 hover:bg-white/[0.04] hover:text-dark-200'
+                                    : 'text-dark-400 hover:bg-dark-800/50 hover:text-dark-200'
                               }`}
                             >
                               <ClubLogo logoUrl={club.logoUrl} name={club.name} size="xs" />
@@ -371,7 +371,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
 
                             {/* Subclubes */}
                             {hasSubclubes && club.lastSettlementId && (
-                              <div className="ml-6 mt-0.5 space-y-px pl-3 border-l border-white/[0.06]">
+                              <div className="ml-6 mt-0.5 space-y-px pl-3 border-l border-dark-700/60">
                                 {club.subclubes.map((sub) => {
                                   const subActive = pathname === `/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`;
                                   return (
@@ -380,8 +380,8 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
                                       href={`/s/${club.lastSettlementId}/club/${encodeURIComponent(sub.name)}`}
                                       className={`flex items-center gap-2 px-2 py-[5px] rounded-md transition-all duration-150 text-[11px] ${
                                         subActive
-                                          ? 'text-white bg-white/[0.08] font-medium'
-                                          : 'text-dark-500 hover:text-dark-300 hover:bg-white/[0.03]'
+                                          ? 'text-white bg-dark-800 font-medium'
+                                          : 'text-dark-500 hover:text-dark-300 hover:bg-dark-800/30'
                                       }`}
                                     >
                                       <ClubLogo logoUrl={sub.logoUrl} name={sub.name} size="xxs" />
@@ -402,7 +402,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* ── Divider ──────────────────────────────────── */}
-          {isAdmin && <div className={`border-t border-white/[0.06] my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />}
+          {isAdmin && <div className={`border-t border-dark-700/60 my-2 ${collapsed ? 'lg:mx-1' : 'mx-1'}`} />}
 
           {/* ── ADMIN ─────────────────────────────────────── */}
           {isAdmin && (() => {
@@ -431,10 +431,10 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Collapse toggle (desktop) */}
-        <div className={`hidden lg:block border-t border-white/[0.06] ${collapsed ? 'p-2' : 'px-3 py-2'}`}>
+        <div className={`hidden lg:block border-t border-dark-700/60 ${collapsed ? 'p-2' : 'px-3 py-2'}`}>
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="w-full flex items-center justify-center text-dark-500 hover:text-dark-300 p-1.5 rounded-lg hover:bg-white/[0.04] transition-all duration-150"
+            className="w-full flex items-center justify-center text-dark-500 hover:text-dark-300 p-1.5 rounded-lg hover:bg-dark-800/50 transition-all duration-150"
             title={collapsed ? 'Expandir menu' : 'Colapsar menu'}
             aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
           >
@@ -443,7 +443,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* User */}
-        <div className={`border-t border-white/[0.06] ${collapsed ? 'lg:p-2 p-3' : 'p-3'}`}>
+        <div className={`border-t border-dark-700/60 ${collapsed ? 'lg:p-2 p-3' : 'p-3'}`}>
           <div className={`flex items-center gap-3 ${collapsed ? 'lg:justify-center' : ''}`}>
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full bg-dark-800 border border-white/[0.08] flex items-center justify-center shrink-0">
