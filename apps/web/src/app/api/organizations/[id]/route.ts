@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
         const { data: existing } = await supabaseAdmin
           .from('organizations')
-          .select('id, type')
+          .select('id, type, name')
           .eq('id', orgId)
           .eq('tenant_id', ctx.tenantId)
           .single();
@@ -65,16 +65,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         if (parsed.data.chippix_manager_id !== undefined)
           updates.chippix_manager_id = parsed.data.chippix_manager_id || null;
 
-        // Fetch old name before update (for cascade rename)
-        let oldName: string | null = null;
-        if (updates.name) {
-          const { data: old } = await supabaseAdmin
-            .from('organizations')
-            .select('name')
-            .eq('id', orgId)
-            .single();
-          oldName = old?.name || null;
-        }
+        const oldName = existing.name;
 
         const { data, error } = await supabaseAdmin
           .from('organizations')

@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/lib/usePageTitle';
 import dynamic from 'next/dynamic';
-import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates, listSettlements } from '@/lib/api';
+import { getSettlementFull, getOrgTree, syncSettlementAgents, syncSettlementRates } from '@/lib/api';
 import { normalizeKey } from '@/lib/formatters';
 import { useAuth } from '@/lib/useAuth';
 import { getVisibleTabKeys, getVisibleTabList } from '@/components/settlement/SubNavTabs';
@@ -107,7 +107,6 @@ function SubclubPanelPage() {
   const [error, setError] = useState<string | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
 
-  const [weekNotFound, setWeekNotFound] = useState(false);
   const [logoMap, setLogoMap] = useState<Record<string, string | null>>({});
   const [whatsappLinkMap, setWhatsappLinkMap] = useState<Record<string, string | null>>({});
   const [chippixManagerMap, setChippixManagerMap] = useState<Record<string, string>>({});
@@ -119,7 +118,7 @@ function SubclubPanelPage() {
     setError(null);
     try {
       // Sync agents & rates (DRAFT only, fire-and-forget — don't block initial load)
-      Promise.all([
+      void Promise.all([
         syncSettlementAgents(settlementId).catch(() => {}),
         syncSettlementRates(settlementId).catch(() => {}),
       ]);
@@ -146,49 +145,17 @@ function SubclubPanelPage() {
       if (res.success && res.data) {
         setData(res.data);
 
-        // Build club groups for dropdown (current + siblings)
+        // Build club groups for dropdown (current club only — no N+1 sibling fetching)
         const currentOrg = res.data.settlement?.organizations;
         const currentClubName = currentOrg?.name || 'Clube';
         const currentPlatform = currentOrg?.metadata?.platform || undefined;
-        const groups: typeof clubGroups = [{
+        setClubGroups([{
           clubId: res.data.settlement?.club_id,
           label: currentClubName,
           platform: currentPlatform,
           settlementId,
           subclubs: (res.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
-        }];
-
-        // Load sibling settlements from same week (different clubs)
-        const weekStart = res.data.settlement?.week_start;
-        if (weekStart) {
-          try {
-            const siblingsRes = await listSettlements(undefined, weekStart, weekStart);
-            if (siblingsRes.success && siblingsRes.data) {
-              const siblings = (siblingsRes.data || []).filter(
-                (s: any) => s.id !== settlementId && s.status !== 'VOID'
-              );
-              for (const sib of siblings) {
-                try {
-                  const sibRes = await getSettlementFull(sib.id);
-                  if (sibRes.success && sibRes.data) {
-                    const sibOrg = sibRes.data.settlement?.organizations;
-                    const sibClubName = sibOrg?.name || 'Clube';
-                    groups.push({
-                      clubId: sibRes.data.settlement?.club_id,
-                      label: sibClubName,
-                      platform: sibOrg?.metadata?.platform || undefined,
-                      settlementId: sib.id,
-                      subclubs: (sibRes.data.subclubs || []).map((sc: any) => ({ name: sc.name })),
-                    });
-                  }
-                } catch { /* skip */ }
-              }
-            }
-          } catch { /* optional */ }
-        }
-
-        groups.sort((a, b) => a.label.localeCompare(b.label));
-        setClubGroups(groups);
+        }]);
       } else {
         setError(res.error || 'Erro ao carregar settlement');
       }
@@ -202,10 +169,6 @@ function SubclubPanelPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  useEffect(() => {
-    setWeekNotFound(false);
-  }, [settlementId]);
 
   // Keyboard shortcuts: 1-9 for tab navigation
   const tabList = getVisibleTabList(hasPermission);
@@ -475,7 +438,7 @@ function SubclubPanelPage() {
               weekStart={settlement.week_start}
               weekEnd={weekEnd || ''}
               status={settlement.status}
-              onNotFound={() => setWeekNotFound(true)}
+              onNotFound={() => {}}
             />
             {settlement.version > 1 && <span className="text-dark-500 text-xs">v{settlement.version}</span>}
           </div>
@@ -564,41 +527,34 @@ function SubclubPanelPage() {
       )}
 
       {/* 2-column layout */}
-      {weekNotFound ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center bg-dark-950/30">
-          <h2 className="text-xl font-bold text-white mb-2">Nenhum fechamento encontrado</h2>
-          <p className="text-dark-400">Nao existe fechamento importado para o periodo selecionado.</p>
-        </div>
-      ) : (
-        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-          {/* Mobile horizontal tab bar */}
-          <div className="lg:hidden overflow-x-auto border-b border-dark-700/50 bg-dark-900/50 shrink-0">
-            <div className="flex gap-1 px-3 py-2 min-w-max">
-              {tabList.map((tabKey) => (
-                <button
-                  key={tabKey}
-                  onClick={() => handleTabChange(tabKey)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                    activeTab === tabKey
-                      ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
-                      : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
-                  }`}
-                >
-                  {tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
-                </button>
-              ))}
-            </div>
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* Mobile horizontal tab bar */}
+        <div className="lg:hidden overflow-x-auto border-b border-dark-700/50 bg-dark-900/50 shrink-0">
+          <div className="flex gap-1 px-3 py-2 min-w-max">
+            {tabList.map((tabKey) => (
+              <button
+                key={tabKey}
+                onClick={() => handleTabChange(tabKey)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tabKey
+                    ? 'bg-poker-600/20 text-poker-400 border border-poker-700/30'
+                    : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800'
+                }`}
+              >
+                {tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
+              </button>
+            ))}
           </div>
-
-          {/* Desktop sidebar tabs */}
-          <div className="hidden lg:block">
-            <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
-          </div>
-
-          {/* Content area — fade on tab switch */}
-          <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30 animate-tab-fade">{renderContent()}</div>
         </div>
-      )}
+
+        {/* Desktop sidebar tabs */}
+        <div className="hidden lg:block">
+          <SubNavTabs activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
+
+        {/* Content area — fade on tab switch */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-dark-950/30 animate-tab-fade">{renderContent()}</div>
+      </div>
     </div>
   );
 }

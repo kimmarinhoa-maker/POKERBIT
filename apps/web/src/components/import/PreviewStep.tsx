@@ -87,7 +87,6 @@ export default function PreviewStep({
   const [newSigla, setNewSigla] = useState('');
   const [newNome, setNewNome] = useState('');
   const [linkingSubclubes, setLinkingSubclubes] = useState(false);
-  const [subclubesLinked, setSubclubesLinked] = useState(false);
 
   // Local link overrides (optimistic UI — avoid full reprocess)
   const [localLinks, setLocalLinks] = useState<Record<string, string>>({});
@@ -509,28 +508,20 @@ export default function PreviewStep({
                 {/* Vincular Subclubes button */}
                 {newSubclubes && newSubclubes.length > 0 && onCreateAndLinkSubclubes && (
                   <div className="pt-3 mt-2 border-t border-dark-700/50">
-                    {subclubesLinked ? (
-                      <div className="flex items-center gap-2 text-green-400 text-xs">
-                        <span className="font-bold">{'\u2713'}</span>
-                        <span>{newSubclubes.length} subclube{newSubclubes.length !== 1 ? 's' : ''} criado{newSubclubes.length !== 1 ? 's' : ''} e vinculado{newSubclubes.length !== 1 ? 's' : ''}. Confira na tabela abaixo.</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={async () => {
-                          setLinkingSubclubes(true);
-                          try {
-                            await onCreateAndLinkSubclubes();
-                            setSubclubesLinked(true);
-                          } finally {
-                            setLinkingSubclubes(false);
-                          }
-                        }}
-                        disabled={linkingSubclubes}
-                        className="w-full py-2 rounded-lg text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 hover:bg-blue-600/25 disabled:opacity-50 transition-all"
-                      >
-                        {linkingSubclubes ? 'Criando e vinculando...' : 'Vincular Subclubes'}
-                      </button>
-                    )}
+                    <button
+                      onClick={async () => {
+                        setLinkingSubclubes(true);
+                        try {
+                          await onCreateAndLinkSubclubes();
+                        } finally {
+                          setLinkingSubclubes(false);
+                        }
+                      }}
+                      disabled={linkingSubclubes}
+                      className="w-full py-2 rounded-lg text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 hover:bg-blue-600/25 disabled:opacity-50 transition-all"
+                    >
+                      {linkingSubclubes ? 'Criando e vinculando...' : 'Vincular Subclubes'}
+                    </button>
                   </div>
                 )}
               </div>
@@ -804,7 +795,7 @@ export default function PreviewStep({
                                     }}
                                   >
                                     <option value="" disabled>Selecione...</option>
-                                    {availableSubclubs!.map((sc) => (
+                                    {(availableSubclubs || []).map((sc) => (
                                       <option key={sc.id} value={sc.id}>{sc.name}</option>
                                     ))}
                                   </select>

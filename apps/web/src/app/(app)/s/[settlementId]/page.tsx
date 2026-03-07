@@ -73,6 +73,13 @@ export default function SettlementOverviewPage() {
     loadData();
   }, [loadData]);
 
+  // Auto-redirect to consolidated panel when there are subclubes
+  useEffect(() => {
+    if (data?.subclubs && data.subclubs.length > 0) {
+      router.replace(`/s/${settlementId}/club/_all`);
+    }
+  }, [data, settlementId, router]);
+
   useEffect(() => {
     setWeekNotFound(false);
   }, [settlementId]);
@@ -147,13 +154,6 @@ export default function SettlementOverviewPage() {
   }
 
   const { settlement, subclubs } = data;
-
-  // Auto-redirect to consolidated panel when there are subclubes
-  useEffect(() => {
-    if (subclubs && subclubs.length > 0) {
-      router.replace(`/s/${settlementId}/club/_all`);
-    }
-  }, [subclubs, settlementId, router]);
 
   const currentOrg = settlement.organizations;
   const currentClubName = currentOrg?.name || 'Clube';
