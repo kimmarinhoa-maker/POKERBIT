@@ -35,12 +35,16 @@ export default memo(function KpiCard({
     >
       <div className={`h-0.5 ${accentColor || 'bg-dark-700'}`} />
       <div className="p-4">
-        <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-0.5">
-          {label}
-          {subtitle && <span className="text-dark-600 font-medium tracking-wider ml-1">· {subtitle}</span>}
-        </p>
+        <div className="h-8 flex flex-col justify-start">
+          <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold leading-tight">
+            {label}
+          </p>
+          {subtitle && (
+            <p className="text-[8px] text-dark-600 uppercase tracking-wider leading-tight mt-0.5 truncate">{subtitle}</p>
+          )}
+        </div>
         <p
-          className={`text-xl font-bold mt-2 font-mono ${valueColor || 'text-white'} ${tooltip ? 'explainable inline-block' : ''}`}
+          className={`text-xl font-bold font-mono ${valueColor || 'text-white'} ${tooltip ? 'explainable inline-block' : ''}`}
           title={tooltip}
         >
           {value}
