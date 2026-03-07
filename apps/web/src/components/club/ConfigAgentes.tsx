@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { listOrganizations, getAgentRates, updateAgentRate, toggleAgentDirect, updateOrgMetadata } from '@/lib/api';
+import { listOrganizations, getAgentRates, getOrgTree, updateAgentRate, toggleAgentDirect, updateOrgMetadata } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import KpiCard from '@/components/ui/KpiCard';
 import EmptyState from '@/components/ui/EmptyState';
-import EntityDataModal from '@/components/players/EntityDataModal';
 import Spinner from '@/components/Spinner';
-import { Users, Search, User, Check, X, Percent, UserCheck } from 'lucide-react';
+import { Users, Search, User, Check, X, Percent, UserCheck, Phone, Mail, Save, Hash, Building2, Trophy } from 'lucide-react';
 
 interface Agent {
   id: string;
@@ -18,14 +17,21 @@ interface Agent {
   is_direct?: boolean;
 }
 
-interface Props {
-  subclubOrgId: string;
+interface ClubInfo {
+  external_id?: string | null;
+  league_id?: string | null;
 }
 
-export default function ConfigAgentes({ subclubOrgId }: Props) {
+interface Props {
+  subclubOrgId: string;
+  clubId: string;
+}
+
+export default function ConfigAgentes({ subclubOrgId, clubId }: Props) {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [rates, setRates] = useState<any[]>([]);
+  const [clubInfo, setClubInfo] = useState<ClubInfo>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -46,9 +52,10 @@ export default function ConfigAgentes({ subclubOrgId }: Props) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [orgsRes, ratesRes] = await Promise.all([
+      const [orgsRes, ratesRes, treeRes] = await Promise.all([
         listOrganizations('AGENT', subclubOrgId),
         getAgentRates(),
+        getOrgTree(),
       ]);
       if (orgsRes.success) {
         setAgents(
@@ -64,12 +71,21 @@ export default function ConfigAgentes({ subclubOrgId }: Props) {
         toast(orgsRes.error || 'Erro ao carregar agentes', 'error');
       }
       if (ratesRes.success) setRates(ratesRes.data || []);
+      // Extract club info (external_id + league_id)
+      if (treeRes.success && treeRes.data) {
+        for (const club of treeRes.data) {
+          if (club.id === clubId) {
+            setClubInfo({ external_id: club.external_id, league_id: club.league_id });
+            break;
+          }
+        }
+      }
     } catch {
       toast('Erro de conexao', 'error');
     } finally {
       setLoading(false);
     }
-  }, [subclubOrgId, toast]);
+  }, [subclubOrgId, clubId, toast]);
 
   useEffect(() => {
     loadData();
@@ -337,22 +353,124 @@ export default function ConfigAgentes({ subclubOrgId }: Props) {
         </div>
       )}
 
-      {/* Modal: Dados do Agente */}
+      {/* ── Modal: Dados do Agente (expandido com IDs) ── */}
       {editAgent && (
-        <EntityDataModal
-          title="Dados do Agente"
-          entityName={editAgent.name}
-          entityExternalId={editAgent.external_id || undefined}
-          firstLabel="Nome"
-          firstValue={editAgent.name}
-          namePlaceholder="Nome completo do agente"
-          emailPlaceholder="agente@email.com"
-          editForm={editForm}
-          setEditForm={setEditForm}
-          saving={savingDados}
-          onClose={() => setEditAgent(null)}
-          onSave={handleSaveDados}
-        />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setEditAgent(null)}
+        >
+          <div
+            className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-dark-700/50">
+              <div>
+                <h3 className="text-lg font-bold text-white">Dados do Agente</h3>
+                <p className="text-dark-500 text-xs mt-0.5">
+                  {editAgent.name}
+                  {editAgent.external_id && (
+                    <> · <span className="font-mono">{editAgent.external_id}</span></>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditAgent(null)}
+                className="text-dark-500 hover:text-dark-300 transition-colors p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* IDs — readonly info grid */}
+              <div className="grid grid-cols-3 gap-3 pb-4 border-b border-dark-700/30">
+                <div>
+                  <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1">
+                    <Hash size={10} /> ID Plataforma
+                  </label>
+                  <p className="text-sm text-dark-300 font-mono mt-0.5">{editAgent.external_id || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1">
+                    <Building2 size={10} /> ID Clube
+                  </label>
+                  <p className="text-sm text-dark-300 font-mono mt-0.5">{clubInfo.external_id || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1">
+                    <Trophy size={10} /> ID Liga
+                  </label>
+                  <p className="text-sm text-dark-300 font-mono mt-0.5">{clubInfo.league_id || '—'}</p>
+                </div>
+              </div>
+
+              {/* Editable fields */}
+              <div>
+                <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1.5 mb-1.5">
+                  <User size={12} /> Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                  placeholder="Nome completo do agente"
+                  className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:border-poker-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1.5 mb-1.5">
+                  <Phone size={12} /> Celular
+                </label>
+                <div className="flex items-center gap-0">
+                  <span className="bg-dark-700 border border-dark-700/50 border-r-0 rounded-l-lg px-3 py-2 text-sm text-dark-300 font-mono font-bold select-none">
+                    +55
+                  </span>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setEditForm((f) => ({ ...f, phone: digits }));
+                    }}
+                    placeholder="11999999999"
+                    className="flex-1 bg-dark-800 border border-dark-700/50 rounded-r-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:border-poker-500 focus:outline-none font-mono"
+                    maxLength={11}
+                  />
+                </div>
+                <p className="text-[10px] text-dark-600 mt-1">DDD + numero (ex: 11999999999)</p>
+              </div>
+              <div>
+                <label className="text-[10px] text-dark-500 uppercase tracking-wider font-bold flex items-center gap-1.5 mb-1.5">
+                  <Mail size={12} /> E-mail
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="agente@email.com"
+                  className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-600 focus:border-poker-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 pb-5 flex justify-end gap-2">
+              <button
+                onClick={() => setEditAgent(null)}
+                className="px-4 py-2 rounded-lg text-sm text-dark-400 hover:bg-dark-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveDados}
+                disabled={savingDados}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-poker-600 text-white hover:bg-poker-500 transition-colors disabled:opacity-50"
+              >
+                {savingDados ? <Spinner size="sm" /> : <Save size={14} />}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

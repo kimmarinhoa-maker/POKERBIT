@@ -5,6 +5,7 @@ import ClubDadosClube from '@/components/club/ClubDadosClube';
 import ClubSubclubes from '@/components/club/ClubSubclubes';
 import ClubTaxas from '@/components/club/ClubTaxas';
 import ConfigAgentes from '@/components/club/ConfigAgentes';
+import ConfigJogadores from '@/components/club/ConfigJogadores';
 
 interface Props {
   clubId: string;
@@ -12,7 +13,7 @@ interface Props {
   isSubclub?: boolean;
 }
 
-type ConfigSection = 'geral' | 'taxas' | 'subclubes' | 'agentes';
+type ConfigSection = 'geral' | 'taxas' | 'subclubes' | 'agentes' | 'jogadores';
 
 const mainTabs: { key: ConfigSection; label: string }[] = [
   { key: 'geral', label: 'Geral' },
@@ -21,8 +22,9 @@ const mainTabs: { key: ConfigSection; label: string }[] = [
 ];
 
 const subclubTabs: { key: ConfigSection; label: string }[] = [
-  { key: 'geral', label: 'Configuracoes Subclube' },
+  { key: 'geral', label: 'Configuracoes' },
   { key: 'agentes', label: 'Agentes' },
+  { key: 'jogadores', label: 'Jogadores' },
 ];
 
 export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
@@ -38,7 +40,7 @@ export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
           {isSubclub ? 'Configuracoes do Subclube' : 'Configuracoes do Clube'}
         </h3>
         <p className="text-dark-500 text-xs mt-0.5">
-          {isSubclub ? 'Dados e agentes do subclube' : 'Dados, taxas e subclubes'}
+          {isSubclub ? 'Dados, agentes e jogadores do subclube' : 'Dados, taxas e subclubes'}
         </p>
       </div>
 
@@ -69,7 +71,10 @@ export default function ConfigTab({ clubId, subclubOrgId, isSubclub }: Props) {
       {activeSection === 'taxas' && !isSubclub && <ClubTaxas clubId={clubId} />}
       {activeSection === 'subclubes' && !isSubclub && <ClubSubclubes clubId={clubId} />}
       {activeSection === 'agentes' && isSubclub && subclubOrgId && (
-        <ConfigAgentes subclubOrgId={subclubOrgId} />
+        <ConfigAgentes subclubOrgId={subclubOrgId} clubId={clubId} />
+      )}
+      {activeSection === 'jogadores' && isSubclub && subclubOrgId && (
+        <ConfigJogadores subclubOrgId={subclubOrgId} />
       )}
     </div>
   );
