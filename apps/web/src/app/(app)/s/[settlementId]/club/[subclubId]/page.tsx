@@ -129,6 +129,9 @@ function SubclubPanelPage() {
         const waMap: Record<string, string | null> = {};
         const cpMap: Record<string, string> = {};
         for (const club of treeRes.data) {
+          // Add club itself (for _all mode and single-club views)
+          map[normalizeKey(club.name)] = club.logo_url || club.metadata?.logo_url || null;
+          waMap[normalizeKey(club.name)] = club.whatsapp_group_link || null;
           for (const sub of club.subclubes || []) {
             map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
             waMap[normalizeKey(sub.name)] = sub.whatsapp_group_link || null;

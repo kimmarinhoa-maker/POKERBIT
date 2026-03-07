@@ -51,6 +51,7 @@ export default function SettlementOverviewPage() {
       if (treeRes.success && treeRes.data) {
         const map: Record<string, string | null> = {};
         for (const club of treeRes.data) {
+          map[normalizeKey(club.name)] = club.logo_url || club.metadata?.logo_url || null;
           for (const sub of club.subclubes || []) {
             map[normalizeKey(sub.name)] = sub.logo_url || sub.metadata?.logo_url || null;
           }
