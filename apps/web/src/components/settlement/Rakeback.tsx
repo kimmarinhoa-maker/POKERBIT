@@ -109,6 +109,7 @@ export default function Rakeback({ subclub, weekStart, fees, settlementId, settl
     }
     set.add('sem agente');
     set.add('(sem agente)');
+    set.add('none');
     return set;
   }, [agents, players]);
 

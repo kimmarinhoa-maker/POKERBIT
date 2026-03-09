@@ -152,6 +152,9 @@ export async function POST(
           // Skip agents with SEM VÍNCULO — they must be linked manually
           if (subclubName === 'SEM V\u00cdNCULO') continue;
 
+          // Skip unagented players (None, SEM AGENTE) — they are direct players, not agents
+          if (/^(none|sem agente|\(sem agente\))$/i.test(agentName)) continue;
+
           const correctParentId = hasSubclubs
             ? ((subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id)
             : settlement.club_id;

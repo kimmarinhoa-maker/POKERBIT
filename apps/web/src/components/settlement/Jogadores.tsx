@@ -103,13 +103,15 @@ export default function Jogadores({ subclub }: Props) {
   // ── Split: agency groups vs direct players ──
   // Agências = agent exists AND not marked as direct
   // Jogadores = no agent (SEM AGENTE) OR agent marked as is_direct
+  const isUnagented = (name: string) => /^(sem agente|\(sem agente\)|none)$/i.test(name);
+
   const agencyGroups = useMemo(
-    () => allGroups.filter((g) => g.agentName !== 'SEM AGENTE' && !directAgents.has(g.agentName.toLowerCase())),
+    () => allGroups.filter((g) => !isUnagented(g.agentName) && !directAgents.has(g.agentName.toLowerCase())),
     [allGroups, directAgents],
   );
 
   const directGroups = useMemo(
-    () => allGroups.filter((g) => g.agentName === 'SEM AGENTE' || directAgents.has(g.agentName.toLowerCase())),
+    () => allGroups.filter((g) => isUnagented(g.agentName) || directAgents.has(g.agentName.toLowerCase())),
     [allGroups, directAgents],
   );
 

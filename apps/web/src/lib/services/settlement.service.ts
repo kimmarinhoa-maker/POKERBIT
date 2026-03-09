@@ -208,14 +208,19 @@ export class SettlementService {
         directByName.set(normName(org.name), true);
       }
     }
+    // Helper: check if agent name represents unagented/direct players
+    const isUnagentedName = (name: string) => /^(none|sem agente|\(sem agente\))$/i.test(name || '');
+
     // Annotate each agent metric with is_direct
     for (const a of agents) {
       (a as any).is_direct =
+        isUnagentedName(a.agent_name) ||
         (a.agent_id && directByOrgId.has(a.agent_id)) || directByName.has(normName(a.agent_name || '')) || false;
     }
     // Annotate each player with agent's is_direct
     for (const p of players) {
       (p as any).agent_is_direct =
+        isUnagentedName(p.agent_name) ||
         (p.agent_id && directByOrgId.has(p.agent_id)) || directByName.has(normName(p.agent_name || '')) || false;
     }
 

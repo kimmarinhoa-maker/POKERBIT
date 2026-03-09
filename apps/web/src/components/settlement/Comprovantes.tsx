@@ -213,6 +213,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
     }
     set.add('sem agente');
     set.add('(sem agente)');
+    set.add('none');
     return set;
   }, [agents, players]);
 
