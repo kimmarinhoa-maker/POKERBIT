@@ -23,6 +23,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import AgentGroupList from '@/components/financeiro/AgentGroupList';
 import AgentGroupDetail from '@/components/financeiro/AgentGroupDetail';
 import AgentGroupModal from '@/components/financeiro/AgentGroupModal';
+import { useAuth } from '@/lib/useAuth';
 import { UserCheck, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AgentGroup, AgentConsolidatedSettlement } from '@/types/financeiro';
 
@@ -35,6 +36,8 @@ interface WeekOption {
 export default function FechamentoAgentesPage() {
   usePageTitle('Fechamento Agentes');
   const { toast } = useToast();
+  const { tenantId, tenants } = useAuth();
+  const tenantLogoUrl = tenants.find((t) => t.id === tenantId)?.logo_url || null;
 
   // Data
   const [groups, setGroups] = useState<AgentGroup[]>([]);
@@ -374,6 +377,7 @@ export default function FechamentoAgentesPage() {
       ) : selectedGroup && detailData ? (
         <AgentGroupDetail
           data={detailData}
+          logoUrl={tenantLogoUrl}
           onBack={() => { setSelectedGroup(null); setDetailData(null); }}
           onEdit={() => openModal(selectedGroup)}
           onDelete={() => handleDeleteGroup(selectedGroup)}

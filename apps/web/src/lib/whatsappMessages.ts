@@ -197,7 +197,7 @@ export function buildAgentConsolidadoMessage(opts: {
     lines.push(`*${label}*${p.club_name ? ` (${p.club_name})` : ''}`);
     lines.push(`P/L: ${formatBRL(p.winnings)}`);
     lines.push(`Rake: ${formatBRL(p.rake)}`);
-    lines.push(`RB (${(p.rb_rate * 100).toFixed(0)}%): ${formatBRL(p.rb_value)}`);
+    lines.push(`RB (${Number(p.rb_rate).toFixed(0)}%): ${formatBRL(p.rb_value)}`);
     lines.push(`Resultado: ${formatBRL(p.resultado)}`);
     lines.push('');
   }

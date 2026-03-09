@@ -40,13 +40,14 @@ interface ClubGroup {
 
 interface AgentGroupDetailProps {
   data: AgentConsolidatedSettlement;
+  logoUrl?: string | null;
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onWhatsApp: () => void;
 }
 
-export default function AgentGroupDetail({ data, onBack, onEdit, onDelete }: AgentGroupDetailProps) {
+export default function AgentGroupDetail({ data, logoUrl, onBack, onEdit, onDelete }: AgentGroupDetailProps) {
   const statementRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [hidePlayers, setHidePlayers] = useState(false);
@@ -271,10 +272,14 @@ export default function AgentGroupDetail({ data, onBack, onEdit, onDelete }: Age
       >
         {/* Header */}
         <div className="flex items-center gap-5 mb-5">
-          <div className="w-16 h-16 rounded-xl bg-dark-800 flex items-center justify-center shrink-0">
-            <span className="text-xl font-bold text-dark-500">
-              {(data.group.name || '?').charAt(0).toUpperCase()}
-            </span>
+          <div className="w-16 h-16 rounded-xl bg-dark-800 flex items-center justify-center shrink-0 overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+            ) : (
+              <span className="text-xl font-bold text-dark-500">
+                {(data.group.name || '?').charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-bold">
@@ -353,7 +358,7 @@ export default function AgentGroupDetail({ data, onBack, onEdit, onDelete }: Age
                         <span className="font-mono text-dark-300">{formatBRL(agent.rake)}</span>
                       </div>
                       <div>
-                        <span className="text-dark-500 block">RB ({(agent.rb_rate * 100).toFixed(0)}%)</span>
+                        <span className="text-dark-500 block">RB ({Number(agent.rb_rate).toFixed(0)}%)</span>
                         <span className="font-mono font-bold text-purple-400">{formatBRL(agent.rb_value)}</span>
                       </div>
                       <div>
