@@ -8,11 +8,23 @@ import { buildAgentConsolidadoMessage, openWhatsApp } from '@/lib/whatsappMessag
 import { useToast } from '@/components/Toast';
 import type { AgentConsolidatedSettlement, AgentPlatformResult } from '@/types/financeiro';
 
-const PLATFORM_COLORS: Record<string, { border: string; badge: string }> = {
-  suprema: { border: 'border-emerald-500', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-  pppoker: { border: 'border-violet-500', badge: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
-  clubgg: { border: 'border-blue-500', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+// Inline styles for html2canvas compatibility (Tailwind opacity modifiers don't export well)
+const PLATFORM_COLORS: Record<string, { border: string; badgeStyle: React.CSSProperties }> = {
+  suprema: {
+    border: 'border-emerald-500',
+    badgeStyle: { background: 'rgba(16,185,129,0.2)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+  },
+  pppoker: {
+    border: 'border-violet-500',
+    badgeStyle: { background: 'rgba(139,92,246,0.2)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+  },
+  clubgg: {
+    border: 'border-blue-500',
+    badgeStyle: { background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+  },
 };
+
+const DEFAULT_BADGE_STYLE: React.CSSProperties = { background: 'rgba(55,65,81,1)', color: '#9ca3af', border: '1px solid rgba(75,85,99,1)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const };
 
 const PLATFORM_LABELS: Record<string, string> = {
   suprema: 'Suprema Poker',
@@ -298,7 +310,7 @@ export default function AgentGroupDetail({ data, logoUrl, onBack, onEdit, onDele
 
         {/* Per-club sections */}
         {clubGroups.map((club, ci) => {
-          const pColors = PLATFORM_COLORS[club.platform] || { border: 'border-dark-600', badge: 'bg-dark-700 text-dark-400 border-dark-600' };
+          const pColors = PLATFORM_COLORS[club.platform] || { border: 'border-dark-600', badgeStyle: DEFAULT_BADGE_STYLE };
           return (
             <div key={ci} className="mb-5">
               {/* Club header */}
@@ -306,7 +318,7 @@ export default function AgentGroupDetail({ data, logoUrl, onBack, onEdit, onDele
                 <h3 className="text-sm font-bold text-white">
                   {club.clubName}
                 </h3>
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${pColors.badge}`}>
+                <span style={pColors.badgeStyle}>
                   {PLATFORM_LABELS[club.platform] || club.platform}
                 </span>
               </div>

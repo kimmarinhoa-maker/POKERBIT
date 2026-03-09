@@ -183,16 +183,23 @@ export async function GET(req: NextRequest) {
             (p.agent_id === m.organization_id || p.agent_name === metrics.agent_name),
         );
 
+        const winnings = Number(metrics.ganhos_total_brl) || 0;
+        const rake = Number(metrics.rake_total_brl) || 0;
+        const rbRate = Number(metrics.rb_rate) || 0;
+        const rbValue = Number(metrics.commission_brl) || 0;
+        // Resultado = P/L + RB (what agent nets after commission)
+        const resultado = Math.round(((winnings + rbValue) + Number.EPSILON) * 100) / 100;
+
         platforms.push({
           platform,
           club_name: clubName,
           settlement_id: settlement.id,
           agent_name: metrics.agent_name || org.name,
-          winnings: metrics.ganhos_total_brl || 0,
-          rake: metrics.rake_total_brl || 0,
-          rb_rate: metrics.rb_rate || 0,
-          rb_value: metrics.commission_brl || 0,
-          resultado: metrics.resultado_brl || 0,
+          winnings,
+          rake,
+          rb_rate: rbRate,
+          rb_value: rbValue,
+          resultado,
           players: agentPlayers.map((p: any) => ({
             nickname: p.nickname || '—',
             external_player_id: p.external_player_id || '',
