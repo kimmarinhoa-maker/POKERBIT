@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { formatBRL, sendWhatsApp } from '@/lib/api';
 import { captureElement } from '@/lib/captureElement';
 import { buildAgentConsolidadoMessage, openWhatsApp } from '@/lib/whatsappMessages';
@@ -42,10 +42,11 @@ interface AgentGroupDetailProps {
   data: AgentConsolidatedSettlement;
   onBack: () => void;
   onEdit: () => void;
+  onDelete: () => void;
   onWhatsApp: () => void;
 }
 
-export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDetailProps) {
+export default function AgentGroupDetail({ data, onBack, onEdit, onDelete }: AgentGroupDetailProps) {
   const statementRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [hidePlayers, setHidePlayers] = useState(false);
@@ -186,6 +187,13 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
         >
           <Pencil className="w-3 h-3" />
           Editar
+        </button>
+        <button
+          onClick={onDelete}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 bg-dark-800 hover:bg-dark-700 border border-dark-700 rounded-lg transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+          Apagar
         </button>
       </div>
 

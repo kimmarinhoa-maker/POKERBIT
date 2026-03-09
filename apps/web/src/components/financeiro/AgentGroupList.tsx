@@ -1,7 +1,7 @@
 'use client';
 
 import { formatBRL } from '@/lib/api';
-import { ChevronRight, Users } from 'lucide-react';
+import { ChevronRight, Users, Trash2 } from 'lucide-react';
 import type { AgentGroup } from '@/types/financeiro';
 
 const PLATFORM_DOTS: Record<string, string> = {
@@ -14,9 +14,10 @@ interface AgentGroupListProps {
   groups: AgentGroup[];
   weekTotals: Map<string, number>; // group_id -> resultado
   onSelect: (group: AgentGroup) => void;
+  onDelete: (group: AgentGroup) => void;
 }
 
-export default function AgentGroupList({ groups, weekTotals, onSelect }: AgentGroupListProps) {
+export default function AgentGroupList({ groups, weekTotals, onSelect, onDelete }: AgentGroupListProps) {
   return (
     <div className="space-y-2">
       {groups.map((group) => {
@@ -61,6 +62,14 @@ export default function AgentGroupList({ groups, weekTotals, onSelect }: AgentGr
                 </p>
               </div>
             )}
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(group); }}
+              className="text-dark-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-dark-800 shrink-0"
+              title="Apagar grupo"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
 
             <ChevronRight className="w-4 h-4 text-dark-600 group-hover:text-dark-400 transition-colors shrink-0" />
           </button>

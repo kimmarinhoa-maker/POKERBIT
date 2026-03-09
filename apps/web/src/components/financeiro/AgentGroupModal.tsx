@@ -19,6 +19,7 @@ interface AgentGroupModalProps {
   onSave: (name: string, phone: string) => Promise<string | null>; // returns group id or null on error
   onAddMember: (groupId: string, orgId: string) => Promise<boolean>;
   onRemoveMember: (groupId: string, memberId: string) => Promise<boolean>;
+  onDelete?: () => void;
 }
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -34,6 +35,7 @@ export default function AgentGroupModal({
   onSave,
   onAddMember,
   onRemoveMember,
+  onDelete,
 }: AgentGroupModalProps) {
   const [name, setName] = useState(group?.name || '');
   const [phone, setPhone] = useState(group?.phone || '');
@@ -265,7 +267,17 @@ export default function AgentGroupModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-dark-700 flex justify-end">
+        <div className="px-6 py-3 border-t border-dark-700 flex items-center justify-between">
+          {onDelete ? (
+            <button
+              onClick={onDelete}
+              className="px-3 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+            >
+              Apagar Grupo
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm text-dark-400 hover:text-white transition-colors"

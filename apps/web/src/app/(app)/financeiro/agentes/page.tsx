@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import {
   listAgentGroups,
@@ -12,11 +12,11 @@ import {
   getAgentConsolidatedSettlement,
   listOrganizations,
   listSettlements,
+  syncSettlementAgents,
   formatBRL,
   invalidateCache,
 } from '@/lib/api';
 import { useToast } from '@/components/Toast';
-// WhatsApp is handled inside AgentGroupDetail now
 import KpiCard from '@/components/ui/KpiCard';
 import KpiSkeleton from '@/components/ui/KpiSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
@@ -29,6 +29,7 @@ import type { AgentGroup, AgentConsolidatedSettlement } from '@/types/financeiro
 interface WeekOption {
   week_start: string;
   label: string;
+  settlement_ids: string[];
 }
 
 export default function FechamentoAgentesPage() {
@@ -50,10 +51,12 @@ export default function FechamentoAgentesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AgentGroup | null>(null);
 
+  // Track synced weeks to avoid re-syncing
+  const syncedWeeks = useRef(new Set<string>());
+
   // Load initial data
   useEffect(() => {
     loadGroups();
-    loadAgentOrgs();
     loadWeeks();
   }, []);
 
@@ -67,7 +70,7 @@ export default function FechamentoAgentesPage() {
   }
 
   async function loadAgentOrgs() {
-    // Load agents + all orgs to resolve parent names
+    invalidateCache('/organizations');
     const [agentRes, allRes] = await Promise.all([
       listOrganizations('AGENT'),
       listOrganizations(),
@@ -76,7 +79,6 @@ export default function FechamentoAgentesPage() {
       const orgMap = new Map<string, any>();
       for (const o of allRes.data as any[]) orgMap.set(o.id, o);
 
-      // Helper: walk up to find CLUB ancestor
       function findClub(orgId: string): any | null {
         const visited = new Set<string>();
         let cur = orgMap.get(orgId);
@@ -108,17 +110,18 @@ export default function FechamentoAgentesPage() {
   async function loadWeeks() {
     const res = await listSettlements();
     if (res.success && res.data) {
-      const seen = new Set<string>();
-      const weekList: WeekOption[] = [];
+      // Group settlement IDs by week_start
+      const weekMap = new Map<string, string[]>();
       for (const s of res.data as any[]) {
         if (s.status === 'VOID') continue;
-        if (seen.has(s.week_start)) continue;
-        seen.add(s.week_start);
-        const [y, m, d] = s.week_start.split('-');
-        weekList.push({
-          week_start: s.week_start,
-          label: `${d}/${m}/${y}`,
-        });
+        if (!weekMap.has(s.week_start)) weekMap.set(s.week_start, []);
+        weekMap.get(s.week_start)!.push(s.id);
+      }
+
+      const weekList: WeekOption[] = [];
+      for (const [ws, ids] of weekMap) {
+        const [y, m, d] = ws.split('-');
+        weekList.push({ week_start: ws, label: `${d}/${m}/${y}`, settlement_ids: ids });
       }
       weekList.sort((a, b) => b.week_start.localeCompare(a.week_start));
       setWeeks(weekList);
@@ -128,6 +131,28 @@ export default function FechamentoAgentesPage() {
     }
     setLoading(false);
   }
+
+  // Auto-sync settlements when week changes — creates AGENT orgs for new imports
+  useEffect(() => {
+    if (!selectedWeek) return;
+    const week = weeks.find((w) => w.week_start === selectedWeek);
+    if (!week || syncedWeeks.current.has(selectedWeek)) {
+      // Already synced this week, just load orgs
+      loadAgentOrgs();
+      return;
+    }
+
+    async function syncAndLoad() {
+      syncedWeeks.current.add(selectedWeek);
+      // Sync all settlements for this week (creates AGENT orgs)
+      await Promise.all(
+        week!.settlement_ids.map((id) => syncSettlementAgents(id).catch(() => {})),
+      );
+      // Now reload agent orgs (will include newly created ones)
+      await loadAgentOrgs();
+    }
+    syncAndLoad();
+  }, [selectedWeek, weeks]);
 
   // Load week totals when week or groups change
   useEffect(() => {
@@ -225,6 +250,12 @@ export default function FechamentoAgentesPage() {
     }
   }
 
+  function openModal(group?: AgentGroup | null) {
+    setEditingGroup(group || null);
+    setModalOpen(true);
+    loadAgentOrgs();
+  }
+
   // Week navigation
   const currentWeekIdx = weeks.findIndex((w) => w.week_start === selectedWeek);
   function prevWeek() {
@@ -245,7 +276,6 @@ export default function FechamentoAgentesPage() {
   // KPIs
   const totalGroups = groups.length;
   const totalMembers = groups.reduce((s, g) => s + g.members.length, 0);
-  const totalResultado = [...weekTotals.values()].reduce((s, v) => s + v, 0);
   const aReceber = [...weekTotals.values()].filter((v) => v >= 0).reduce((s, v) => s + v, 0);
   const aPagar = [...weekTotals.values()].filter((v) => v < 0).reduce((s, v) => s + v, 0);
 
@@ -322,7 +352,7 @@ export default function FechamentoAgentesPage() {
 
           {/* New group */}
           <button
-            onClick={() => { setEditingGroup(null); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); }}
+            onClick={() => openModal()}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-poker-600 hover:bg-poker-500 text-white rounded-lg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -345,13 +375,14 @@ export default function FechamentoAgentesPage() {
           icon={UserCheck}
           title="Nenhum grupo de agente"
           description="Crie grupos para consolidar agentes de diferentes plataformas em uma unica visao."
-          action={{ label: 'Criar Primeiro Grupo', onClick: () => { setEditingGroup(null); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); } }}
+          action={{ label: 'Criar Primeiro Grupo', onClick: () => openModal() }}
         />
       ) : selectedGroup && detailData ? (
         <AgentGroupDetail
           data={detailData}
           onBack={() => { setSelectedGroup(null); setDetailData(null); }}
-          onEdit={() => { setEditingGroup(selectedGroup); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); }}
+          onEdit={() => openModal(selectedGroup)}
+          onDelete={() => handleDeleteGroup(selectedGroup)}
           onWhatsApp={() => {}}
         />
       ) : loadingDetail ? (
@@ -366,6 +397,7 @@ export default function FechamentoAgentesPage() {
           groups={groups}
           weekTotals={weekTotals}
           onSelect={handleSelectGroup}
+          onDelete={handleDeleteGroup}
         />
       )}
 
@@ -378,6 +410,7 @@ export default function FechamentoAgentesPage() {
           onSave={handleSaveGroup}
           onAddMember={handleAddMember}
           onRemoveMember={handleRemoveMember}
+          onDelete={editingGroup ? () => { handleDeleteGroup(editingGroup); setModalOpen(false); } : undefined}
         />
       )}
     </div>
