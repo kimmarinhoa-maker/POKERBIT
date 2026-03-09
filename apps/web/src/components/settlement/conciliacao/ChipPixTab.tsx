@@ -29,6 +29,7 @@ type ChipPixFilter = 'all' | 'pending' | 'linked' | 'locked' | 'applied' | 'igno
 export interface ChipPixTabProps {
   weekStart: string;
   clubId: string;
+  settlementId: string;
   chippixManagerId?: string | null;
   isDraft: boolean;
   canEdit: boolean;
@@ -43,6 +44,7 @@ export interface ChipPixTabProps {
 export default function ChipPixTab({
   weekStart,
   clubId,
+  settlementId,
   chippixManagerId,
   isDraft,
   canEdit,
@@ -76,7 +78,7 @@ export default function ChipPixTab({
     setLoading(true);
     try {
       const [txnRes, importRes, catRes] = await Promise.all([
-        listChipPixTransactions(weekStart),
+        listChipPixTransactions(weekStart, undefined, settlementId),
         getChipPixImportSummary(weekStart),
         listTransactionCategories(),
       ]);
@@ -98,7 +100,7 @@ export default function ChipPixTab({
     } finally {
       setLoading(false);
     }
-  }, [weekStart, toast]);
+  }, [weekStart, settlementId, toast]);
 
   useEffect(() => {
     loadTxns();

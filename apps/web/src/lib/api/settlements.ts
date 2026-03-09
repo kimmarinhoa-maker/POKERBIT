@@ -264,10 +264,11 @@ export async function uploadChipPix(file: File, weekStart?: string, clubId?: str
   return apiFetch('/chippix/upload', { method: 'POST', body: form });
 }
 
-export async function listChipPixTransactions(weekStart?: string, status?: string) {
+export async function listChipPixTransactions(weekStart?: string, status?: string, settlementId?: string) {
   const params = new URLSearchParams();
   if (weekStart) params.set('week_start', weekStart);
   if (status) params.set('status', status);
+  if (settlementId) params.set('settlement_id', settlementId);
   return apiFetch(`/chippix?${params}`);
 }
 

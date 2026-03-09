@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     try {
       const url = new URL(req.url);
       const weekStart = url.searchParams.get('week_start') || undefined;
+      const settlementId = url.searchParams.get('settlement_id') || undefined;
       const status = url.searchParams.get('status') || undefined;
       const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
       const limit = Math.min(5000, Math.max(1, Number(url.searchParams.get('limit')) || 5000));
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
         status,
         page,
         limit,
+        settlementId,
       );
 
       return NextResponse.json({

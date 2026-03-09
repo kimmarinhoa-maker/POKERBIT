@@ -385,6 +385,7 @@ export class ChipPixService {
     status?: string,
     page: number = 1,
     limit: number = 100,
+    settlementId?: string,
   ): Promise<{ data: ChipPixRow[]; total: number }> {
     // When status filter is used, we need JS filtering because status is virtual.
     // Otherwise, push pagination to database.
@@ -398,6 +399,7 @@ export class ChipPixService {
         .order('amount', { ascending: false });
 
       if (weekStart) query = query.eq('week_start', weekStart);
+      if (settlementId) query = query.eq('settlement_id', settlementId);
 
       const { data, error } = await query;
       if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
@@ -416,6 +418,7 @@ export class ChipPixService {
       .in('source', ['chippix', 'chippix_ignored', 'chippix_fee']);
 
     if (weekStart) countQuery = countQuery.eq('week_start', weekStart);
+    if (settlementId) countQuery = countQuery.eq('settlement_id', settlementId);
 
     const { count: total } = await countQuery;
 
@@ -429,6 +432,7 @@ export class ChipPixService {
       .range(offset, offset + limit - 1);
 
     if (weekStart) query = query.eq('week_start', weekStart);
+    if (settlementId) query = query.eq('settlement_id', settlementId);
 
     const { data, error } = await query;
     if (error) throw new Error(`Erro ao listar ChipPix: ${error.message}`);
