@@ -178,6 +178,7 @@ export default function SettlementOverviewPage() {
             weekStart={settlement.week_start}
             weekEnd={weekEnd}
             status={settlement.status}
+            clubId={settlement.club_id}
             onNotFound={() => setWeekNotFound(true)}
           />
           {settlement.version > 1 && <span className="text-dark-500 text-xs">v{settlement.version}</span>}

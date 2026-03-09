@@ -230,6 +230,7 @@ export default function CrossClubPage() {
             weekStart={settlement.week_start}
             weekEnd={weekEnd}
             status={settlement.status}
+            clubId={settlement.club_id}
             onNotFound={() => setWeekNotFound(true)}
           />
         </div>
