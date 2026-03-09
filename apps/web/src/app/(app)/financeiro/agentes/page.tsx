@@ -90,15 +90,17 @@ export default function FechamentoAgentesPage() {
         return null;
       }
 
-      const orgs = (agentRes.data as any[]).map((org: any) => {
-        const club = findClub(org.id);
-        return {
-          id: org.id,
-          name: org.name,
-          platform: (club?.metadata?.platform || 'outro').toLowerCase(),
-          club_name: club?.name || '',
-        };
-      });
+      const orgs = (agentRes.data as any[])
+        .filter((org: any) => !/^(none|sem agente|\(sem agente\))$/i.test(org.name))
+        .map((org: any) => {
+          const club = findClub(org.id);
+          return {
+            id: org.id,
+            name: org.name,
+            platform: (club?.metadata?.platform || 'outro').toLowerCase(),
+            club_name: club?.name || '',
+          };
+        });
       setAllAgentOrgs(orgs);
     }
   }
@@ -320,7 +322,7 @@ export default function FechamentoAgentesPage() {
 
           {/* New group */}
           <button
-            onClick={() => { setEditingGroup(null); setModalOpen(true); }}
+            onClick={() => { setEditingGroup(null); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); }}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-poker-600 hover:bg-poker-500 text-white rounded-lg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -343,13 +345,13 @@ export default function FechamentoAgentesPage() {
           icon={UserCheck}
           title="Nenhum grupo de agente"
           description="Crie grupos para consolidar agentes de diferentes plataformas em uma unica visao."
-          action={{ label: 'Criar Primeiro Grupo', onClick: () => { setEditingGroup(null); setModalOpen(true); } }}
+          action={{ label: 'Criar Primeiro Grupo', onClick: () => { setEditingGroup(null); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); } }}
         />
       ) : selectedGroup && detailData ? (
         <AgentGroupDetail
           data={detailData}
           onBack={() => { setSelectedGroup(null); setDetailData(null); }}
-          onEdit={() => { setEditingGroup(selectedGroup); setModalOpen(true); }}
+          onEdit={() => { setEditingGroup(selectedGroup); setModalOpen(true); invalidateCache('/organizations'); loadAgentOrgs(); }}
           onWhatsApp={() => {}}
         />
       ) : loadingDetail ? (

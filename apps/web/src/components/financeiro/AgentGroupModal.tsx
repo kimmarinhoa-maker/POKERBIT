@@ -48,7 +48,7 @@ export default function AgentGroupModal({
   const memberOrgIds = new Set(members.map((m) => m.organization_id));
   const filteredOrgs = useMemo(() => {
     const q = search.toLowerCase();
-    return allAgentOrgs.filter((org) => {
+    const filtered = allAgentOrgs.filter((org) => {
       if (memberOrgIds.has(org.id)) return false;
       if (!q) return true;
       return (
@@ -57,6 +57,13 @@ export default function AgentGroupModal({
         org.club_name.toLowerCase().includes(q)
       );
     });
+    // Sort by club name, then agent name for better organization
+    filtered.sort((a, b) => {
+      const cmp = (a.club_name || '').localeCompare(b.club_name || '');
+      if (cmp !== 0) return cmp;
+      return a.name.localeCompare(b.name);
+    });
+    return filtered;
   }, [allAgentOrgs, memberOrgIds, search]);
 
   async function handleSave() {

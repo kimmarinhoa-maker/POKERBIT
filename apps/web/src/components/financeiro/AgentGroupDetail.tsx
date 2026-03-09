@@ -1,17 +1,17 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { formatBRL, sendWhatsApp } from '@/lib/api';
 import { captureElement } from '@/lib/captureElement';
 import { buildAgentConsolidadoMessage, openWhatsApp } from '@/lib/whatsappMessages';
 import { useToast } from '@/components/Toast';
-import type { AgentConsolidatedSettlement } from '@/types/financeiro';
+import type { AgentConsolidatedSettlement, AgentPlatformResult } from '@/types/financeiro';
 
-const PLATFORM_COLORS: Record<string, string> = {
-  suprema: 'border-emerald-500',
-  pppoker: 'border-violet-500',
-  clubgg: 'border-blue-500',
+const PLATFORM_COLORS: Record<string, { border: string; badge: string }> = {
+  suprema: { border: 'border-emerald-500', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  pppoker: { border: 'border-violet-500', badge: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
+  clubgg: { border: 'border-blue-500', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -31,6 +31,13 @@ function clrVal(v: number) {
   return 'text-dark-400';
 }
 
+interface ClubGroup {
+  clubName: string;
+  platform: string;
+  agents: AgentPlatformResult[];
+  totals: { winnings: number; rake: number; rb_value: number; resultado: number; players: number };
+}
+
 interface AgentGroupDetailProps {
   data: AgentConsolidatedSettlement;
   onBack: () => void;
@@ -46,6 +53,33 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
 
   const isPositive = data.total.resultado >= 0;
   const totalPlayers = data.platforms.reduce((s, p) => s + (p.players?.length || 0), 0);
+
+  // Group platforms by club
+  const clubGroups: ClubGroup[] = useMemo(() => {
+    const map = new Map<string, AgentPlatformResult[]>();
+    for (const p of data.platforms) {
+      const key = p.club_name || p.platform;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    const groups: ClubGroup[] = [];
+    for (const [clubName, agents] of map) {
+      const platform = agents[0]?.platform || 'outro';
+      groups.push({
+        clubName,
+        platform,
+        agents,
+        totals: {
+          winnings: agents.reduce((s, a) => s + a.winnings, 0),
+          rake: agents.reduce((s, a) => s + a.rake, 0),
+          rb_value: agents.reduce((s, a) => s + a.rb_value, 0),
+          resultado: agents.reduce((s, a) => s + a.resultado, 0),
+          players: agents.reduce((s, a) => s + (a.players?.length || 0), 0),
+        },
+      });
+    }
+    return groups;
+  }, [data.platforms]);
 
   async function handleExportJpg() {
     try {
@@ -104,7 +138,6 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
       if (res.success) {
         toast('Comprovante enviado via WhatsApp!', 'success');
       } else {
-        // Fallback: copy + open wa.me
         const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         if (blob) {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -158,7 +191,6 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
 
       {/* Toolbar */}
       <div className="flex items-center justify-center gap-2 flex-wrap bg-dark-900 border border-dark-700 rounded-xl px-4 py-3">
-        {/* Esconder Jogadores */}
         <label className="flex items-center gap-1.5 bg-dark-800/90 px-3 py-1.5 rounded-lg border border-dark-700 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -171,7 +203,6 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
 
         <div className="w-px h-6 bg-dark-700" />
 
-        {/* Action buttons */}
         <button
           onClick={handleExportJpg}
           className="text-[11px] px-3 py-1.5 rounded-lg font-medium bg-dark-800/90 border border-dark-700 text-dark-300 hover:text-white hover:border-dark-500 transition-colors"
@@ -232,117 +263,129 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
       >
         {/* Header */}
         <div className="flex items-center gap-5 mb-5">
-          <div className="w-20 h-20 rounded-xl bg-dark-800 flex items-center justify-center shrink-0">
-            <span className="text-2xl font-bold text-dark-500">
+          <div className="w-16 h-16 rounded-xl bg-dark-800 flex items-center justify-center shrink-0">
+            <span className="text-xl font-bold text-dark-500">
               {(data.group.name || '?').charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0">
             <p className="text-[10px] text-dark-500 uppercase tracking-wider font-bold">
-              Fechamento Consolidado
+              Fechamento Semanal Consolidado
             </p>
-            <h2 className="text-lg font-bold text-poker-400 mt-0.5 flex items-center flex-wrap gap-1">
-              <span>{data.group.name}</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold border bg-poker-500/10 text-poker-400 border-poker-500/30 inline-flex items-center">
-                {data.platforms.length} plataforma{data.platforms.length !== 1 ? 's' : ''}
-              </span>
+            <h2 className="text-lg font-bold text-poker-400 mt-0.5">
+              {data.group.name}
             </h2>
             <p className="text-dark-400 text-xs mt-0.5">
-              {fmtDate(data.weekStart)} a {fmtDate(data.weekEnd)} · {totalPlayers} jogador{totalPlayers !== 1 ? 'es' : ''} · {data.platforms.map((p) => PLATFORM_LABELS[p.platform] || p.platform).join(' + ')}
+              Semana {fmtDate(data.weekStart)} a {fmtDate(data.weekEnd)} · {clubGroups.length} clube{clubGroups.length !== 1 ? 's' : ''} · {totalPlayers} jogador{totalPlayers !== 1 ? 'es' : ''}
             </p>
           </div>
         </div>
 
-        <div className="border-t border-dark-700/50 mb-4" />
+        <div className="border-t border-dark-700/50 mb-5" />
 
-        {/* Per-platform sections */}
-        {data.platforms.map((p, i) => (
-          <div key={i} className="mb-4">
-            {/* Platform header */}
-            <div className={`border-l-4 ${PLATFORM_COLORS[p.platform] || 'border-dark-600'} pl-3 mb-3`}>
-              <h3 className="text-xs font-bold text-dark-200 uppercase tracking-wider">
-                {PLATFORM_LABELS[p.platform] || p.platform}
-                {p.club_name && <span className="text-dark-500 font-normal ml-1">({p.club_name})</span>}
-              </h3>
-            </div>
+        {/* Per-club sections */}
+        {clubGroups.map((club, ci) => {
+          const pColors = PLATFORM_COLORS[club.platform] || { border: 'border-dark-600', badge: 'bg-dark-700 text-dark-400 border-dark-600' };
+          return (
+            <div key={ci} className="mb-5">
+              {/* Club header */}
+              <div className={`border-l-4 ${pColors.border} pl-3 mb-3 flex items-center gap-2`}>
+                <h3 className="text-sm font-bold text-white">
+                  {club.clubName}
+                </h3>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${pColors.badge}`}>
+                  {PLATFORM_LABELS[club.platform] || club.platform}
+                </span>
+              </div>
 
-            {/* Player table */}
-            {!hidePlayers && p.players && p.players.length > 0 && (
-              <table className="w-full text-sm mb-3">
-                <thead>
-                  <tr className="border-b border-dark-700/50">
-                    <th className="py-1.5 text-left text-[10px] text-dark-500 uppercase font-bold tracking-wider">Jogador</th>
-                    <th className="py-1.5 text-center text-[10px] text-dark-500 uppercase font-bold tracking-wider">ID</th>
-                    <th className="py-1.5 text-right text-[10px] text-dark-500 uppercase font-bold tracking-wider">Profit/Loss</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-800/30">
-                  {p.players.map((pl, j) => (
-                    <tr key={j}>
-                      <td className="py-1.5 text-dark-200 text-sm">{pl.nickname}</td>
-                      <td className="py-1.5 text-center text-dark-400 font-mono text-xs">{pl.external_player_id || '—'}</td>
-                      <td className={`py-1.5 text-right font-mono font-bold text-sm ${clrVal(pl.winnings_brl)}`}>
-                        {formatBRL(pl.winnings_brl)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {/* Platform financial summary */}
-            <div className="bg-dark-800/40 rounded-lg p-3 mb-1">
-              <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-dark-300 text-xs">Ganhos (P/L)</span>
-                  <span className={`font-mono text-xs font-bold ${clrVal(p.winnings)}`}>
-                    {formatBRL(p.winnings)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-400 text-xs">Rake Gerado <span className="text-dark-600">(informativo)</span></span>
-                  <span className="font-mono text-dark-400 text-xs">{formatBRL(p.rake)}</span>
-                </div>
-                {p.rb_value > 0.01 && (
-                  <div className="flex justify-between">
-                    <span className="text-dark-300 text-xs">RB Agente ({(p.rb_rate * 100).toFixed(0)}% do Rake)</span>
-                    <span className="font-mono text-xs font-bold text-purple-400">{formatBRL(p.rb_value)}</span>
-                  </div>
-                )}
-                <div className="border-t border-dark-700/30 pt-2 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-dark-200 font-bold text-xs">Resultado</span>
-                    <span className={`font-mono font-extrabold text-sm ${clrVal(p.resultado)}`}>
-                      {formatBRL(p.resultado)}
+              {/* Agents within this club */}
+              {club.agents.map((agent, ai) => (
+                <div key={ai} className="mb-3 ml-4">
+                  {/* Agent name */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold text-dark-300">{agent.agent_name}</span>
+                    <span className="text-[10px] text-dark-600">
+                      {agent.players?.length || 0} jogador{(agent.players?.length || 0) !== 1 ? 'es' : ''}
                     </span>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Separator between platforms */}
-            {i < data.platforms.length - 1 && (
-              <div className="border-t border-dark-700/30 my-4" />
-            )}
-          </div>
-        ))}
+                  {/* Player table */}
+                  {!hidePlayers && agent.players && agent.players.length > 0 && (
+                    <table className="w-full text-sm mb-2">
+                      <thead>
+                        <tr className="border-b border-dark-700/50">
+                          <th className="py-1 text-left text-[10px] text-dark-500 uppercase font-bold tracking-wider">Jogador</th>
+                          <th className="py-1 text-center text-[10px] text-dark-500 uppercase font-bold tracking-wider">ID</th>
+                          <th className="py-1 text-right text-[10px] text-dark-500 uppercase font-bold tracking-wider">Profit/Loss</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dark-800/30">
+                        {agent.players.map((pl, j) => (
+                          <tr key={j}>
+                            <td className="py-1 text-dark-200 text-xs">{pl.nickname}</td>
+                            <td className="py-1 text-center text-dark-500 font-mono text-[10px]">{pl.external_player_id || '—'}</td>
+                            <td className={`py-1 text-right font-mono font-bold text-xs ${clrVal(pl.winnings_brl)}`}>
+                              {formatBRL(pl.winnings_brl)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {/* Agent financial summary */}
+                  <div className="bg-dark-800/40 rounded-lg p-2.5">
+                    <div className="grid grid-cols-4 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-dark-500 block">P/L</span>
+                        <span className={`font-mono font-bold ${clrVal(agent.winnings)}`}>{formatBRL(agent.winnings)}</span>
+                      </div>
+                      <div>
+                        <span className="text-dark-500 block">Rake</span>
+                        <span className="font-mono text-dark-300">{formatBRL(agent.rake)}</span>
+                      </div>
+                      <div>
+                        <span className="text-dark-500 block">RB ({(agent.rb_rate * 100).toFixed(0)}%)</span>
+                        <span className="font-mono font-bold text-purple-400">{formatBRL(agent.rb_value)}</span>
+                      </div>
+                      <div>
+                        <span className="text-dark-500 block">Resultado</span>
+                        <span className={`font-mono font-bold ${clrVal(agent.resultado)}`}>{formatBRL(agent.resultado)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Club subtotal (if multiple agents in same club) */}
+              {club.agents.length > 1 && (
+                <div className="ml-4 mt-2 flex items-center justify-between text-xs bg-dark-800/20 rounded-lg px-3 py-2 border border-dark-700/30">
+                  <span className="text-dark-400 font-bold uppercase text-[10px]">Subtotal {club.clubName}</span>
+                  <span className={`font-mono font-bold ${clrVal(club.totals.resultado)}`}>{formatBRL(club.totals.resultado)}</span>
+                </div>
+              )}
+
+              {/* Separator between clubs */}
+              {ci < clubGroups.length - 1 && (
+                <div className="border-t border-dark-700/30 my-4" />
+              )}
+            </div>
+          );
+        })}
 
         {data.platforms.length === 0 && (
           <div className="text-center py-8">
             <p className="text-xs text-dark-500">Sem dados para esta semana</p>
+            <p className="text-[10px] text-dark-600 mt-1">Verifique se os agentes estao vinculados e se ha settlement para esta semana.</p>
           </div>
         )}
 
         {/* Grand Total */}
         {data.platforms.length > 0 && (
-          <div className={`rounded-lg p-3 border mt-4 ${
-            isPositive
-              ? 'bg-dark-800/30 border-dark-700/50'
-              : 'bg-dark-800/30 border-dark-700/50'
-          }`}>
+          <div className="rounded-lg p-4 border border-dark-600 bg-dark-800/50 mt-4">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-dark-300 text-sm font-bold uppercase tracking-wider">Resultado Final</span>
+                <span className="text-dark-200 text-sm font-bold uppercase tracking-wider">Resultado Final</span>
                 <div className="flex gap-4 mt-1 text-[11px] text-dark-500">
                   <span>P/L: {formatBRL(data.total.winnings)}</span>
                   <span>Rake: {formatBRL(data.total.rake)}</span>
@@ -350,7 +393,7 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
                 </div>
               </div>
               <div className="text-right">
-                <span className={`font-mono font-extrabold text-lg ${clrVal(data.total.resultado)}`}>
+                <span className={`font-mono font-extrabold text-xl ${clrVal(data.total.resultado)}`}>
                   {formatBRL(Math.abs(data.total.resultado))}
                 </span>
                 {Math.abs(data.total.resultado) > 0.01 && (
@@ -366,7 +409,7 @@ export default function AgentGroupDetail({ data, onBack, onEdit }: AgentGroupDet
         {/* Footer */}
         <div className="text-center mt-5 pt-3 border-t border-dark-800/50">
           <p className="text-[10px] text-dark-600">
-            {data.group.name} · Consolidado {data.platforms.map((p) => PLATFORM_LABELS[p.platform] || p.platform).join(' + ')} · Gerado em {new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {data.group.name} · Semana {fmtDate(data.weekStart)} a {fmtDate(data.weekEnd)} · Gerado em {new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
       </div>
