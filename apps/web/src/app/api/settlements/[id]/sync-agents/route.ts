@@ -117,14 +117,9 @@ export async function POST(
 
         // Key: normName(name) + '|' + parent_id -> org.id (scoped to subclub)
         const orgNameParentMap = new Map<string, string>();
-        // Fallback: normName(name) -> org.id (first found)
-        const orgNameMap = new Map<string, string>();
         const orgParentMap = new Map<string, string>(); // orgId -> current parent_id
         for (const org of existingOrgs || []) {
           orgNameParentMap.set(normName(org.name) + '|' + org.parent_id, org.id);
-          if (!orgNameMap.has(normName(org.name))) {
-            orgNameMap.set(normName(org.name), org.id);
-          }
           orgParentMap.set(org.id, org.parent_id);
         }
 
@@ -159,9 +154,13 @@ export async function POST(
             ? ((subclubName && subclubNameMap.get(normName(subclubName))) || settlement.club_id)
             : settlement.club_id;
 
+          // Match by name+parent (exact subclub), then fallback to name+club (direct child)
+          // Do NOT fall back to name-only — that would reuse agents from OTHER clubs
           const orgId =
             orgNameParentMap.get(normName(agentName) + '|' + correctParentId) ||
-            orgNameMap.get(normName(agentName));
+            (correctParentId !== settlement.club_id
+              ? orgNameParentMap.get(normName(agentName) + '|' + settlement.club_id)
+              : undefined);
 
           if (orgId) {
             resolvedOrgMap.set(agentName, orgId);

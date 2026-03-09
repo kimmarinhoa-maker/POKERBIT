@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 import {
   listAgentGroups,
@@ -50,9 +50,6 @@ export default function FechamentoAgentesPage() {
   const [detailData, setDetailData] = useState<AgentConsolidatedSettlement | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AgentGroup | null>(null);
-
-  // Track synced weeks to avoid re-syncing
-  const syncedWeeks = useRef(new Set<string>());
 
   // Load initial data
   useEffect(() => {
@@ -136,15 +133,10 @@ export default function FechamentoAgentesPage() {
   useEffect(() => {
     if (!selectedWeek) return;
     const week = weeks.find((w) => w.week_start === selectedWeek);
-    if (!week || syncedWeeks.current.has(selectedWeek)) {
-      // Already synced this week, just load orgs
-      loadAgentOrgs();
-      return;
-    }
+    if (!week) return;
 
     async function syncAndLoad() {
-      syncedWeeks.current.add(selectedWeek);
-      // Sync all settlements for this week (creates AGENT orgs)
+      // Sync all settlements for this week (creates AGENT orgs per club)
       await Promise.all(
         week!.settlement_ids.map((id) => syncSettlementAgents(id).catch(() => {})),
       );
