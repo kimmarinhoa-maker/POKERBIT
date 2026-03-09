@@ -413,7 +413,6 @@ export default function AgentGroupDetail({ data, logoUrl, onBack, onEdit, onDele
                 <span className="text-dark-200 text-sm font-bold uppercase tracking-wider">Resultado Final</span>
                 <div className="flex gap-4 mt-1 text-[11px] text-dark-500">
                   <span>P/L: {formatBRL(data.total.winnings)}</span>
-                  <span>Rake: {formatBRL(data.total.rake)}</span>
                   <span>RB: {formatBRL(data.total.rb_value)}</span>
                 </div>
               </div>
