@@ -195,18 +195,23 @@ export async function POST(
             // Batch insert falhou — fallback individual
             const { data: refreshedOrgs } = await supabaseAdmin
               .from('organizations')
-              .select('id, name')
+              .select('id, name, parent_id')
               .eq('tenant_id', ctx.tenantId)
               .eq('type', 'AGENT')
               .eq('is_active', true);
 
+            // Scoped by name+parent to avoid cross-club reuse
             const refreshedMap = new Map<string, string>();
             for (const org of refreshedOrgs || []) {
-              refreshedMap.set(normName(org.name), org.id);
+              refreshedMap.set(normName(org.name) + '|' + org.parent_id, org.id);
             }
 
             for (const { agentName, correctParentId } of toCreate) {
-              let orgId = refreshedMap.get(normName(agentName));
+              let orgId =
+                refreshedMap.get(normName(agentName) + '|' + correctParentId) ||
+                (correctParentId !== settlement.club_id
+                  ? refreshedMap.get(normName(agentName) + '|' + settlement.club_id)
+                  : undefined);
               if (orgId) {
                 resolvedOrgMap.set(agentName, orgId);
                 continue;
@@ -223,11 +228,13 @@ export async function POST(
                 .single();
 
               if (cErr) {
+                // Find by name + parent (same club scope only)
                 const { data: found } = await supabaseAdmin
                   .from('organizations')
                   .select('id')
                   .eq('tenant_id', ctx.tenantId)
                   .eq('name', agentName)
+                  .eq('parent_id', correctParentId)
                   .eq('type', 'AGENT')
                   .maybeSingle();
                 orgId = found?.id;
