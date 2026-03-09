@@ -9,22 +9,24 @@ import { useToast } from '@/components/Toast';
 import type { AgentConsolidatedSettlement, AgentPlatformResult } from '@/types/financeiro';
 
 // Inline styles for html2canvas compatibility (Tailwind opacity modifiers don't export well)
+const badgeBase: React.CSSProperties = { borderRadius: '4px', padding: '1px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const, lineHeight: '16px', display: 'inline-block', verticalAlign: 'middle' };
+
 const PLATFORM_COLORS: Record<string, { border: string; badgeStyle: React.CSSProperties }> = {
   suprema: {
     border: 'border-emerald-500',
-    badgeStyle: { background: 'rgba(16,185,129,0.2)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+    badgeStyle: { ...badgeBase, background: 'rgba(16,185,129,0.2)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)' },
   },
   pppoker: {
     border: 'border-violet-500',
-    badgeStyle: { background: 'rgba(139,92,246,0.2)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+    badgeStyle: { ...badgeBase, background: 'rgba(139,92,246,0.2)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' },
   },
   clubgg: {
     border: 'border-blue-500',
-    badgeStyle: { background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const },
+    badgeStyle: { ...badgeBase, background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' },
   },
 };
 
-const DEFAULT_BADGE_STYLE: React.CSSProperties = { background: 'rgba(55,65,81,1)', color: '#9ca3af', border: '1px solid rgba(75,85,99,1)', borderRadius: '4px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' as const };
+const DEFAULT_BADGE_STYLE: React.CSSProperties = { ...badgeBase, background: 'rgba(55,65,81,1)', color: '#9ca3af', border: '1px solid rgba(75,85,99,1)' };
 
 const PLATFORM_LABELS: Record<string, string> = {
   suprema: 'Suprema Poker',
