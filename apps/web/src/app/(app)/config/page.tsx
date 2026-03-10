@@ -7,8 +7,10 @@ import ConfigPagamentos from '@/components/config/ConfigPagamentos';
 import ConfigTaxas from '@/components/config/ConfigTaxas';
 import ConfigWhatsApp from '@/components/config/ConfigWhatsApp';
 import ConfigCategorias from '@/components/config/ConfigCategorias';
+import ConfigMembros from '@/components/config/ConfigMembros';
+import ConfigPermissoes from '@/components/config/ConfigPermissoes';
 
-type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'categorias' | 'whatsapp';
+type ConfigTab = 'estrutura' | 'pagamentos' | 'taxas' | 'categorias' | 'whatsapp' | 'equipe' | 'permissoes';
 
 const tabs: { key: ConfigTab; label: string }[] = [
   { key: 'estrutura', label: 'Estrutura' },
@@ -16,6 +18,8 @@ const tabs: { key: ConfigTab; label: string }[] = [
   { key: 'taxas', label: 'Taxas' },
   { key: 'categorias', label: 'Categorias' },
   { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'equipe', label: 'Equipe' },
+  { key: 'permissoes', label: 'Permissoes' },
 ];
 
 export default function ConfigPage() {
@@ -27,7 +31,7 @@ export default function ConfigPage() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl lg:text-2xl font-bold text-white">Configuracao</h2>
-        <p className="text-dark-400 text-sm">Estrutura, pagamentos, taxas e integracoes</p>
+        <p className="text-dark-400 text-sm">Estrutura, pagamentos, taxas, equipe e integracoes</p>
       </div>
 
       {/* Main tabs — underline style */}
@@ -54,6 +58,8 @@ export default function ConfigPage() {
       {activeTab === 'taxas' && <ConfigTaxas />}
       {activeTab === 'categorias' && <ConfigCategorias />}
       {activeTab === 'whatsapp' && <ConfigWhatsApp />}
+      {activeTab === 'equipe' && <ConfigMembros />}
+      {activeTab === 'permissoes' && <ConfigPermissoes />}
     </div>
   );
 }

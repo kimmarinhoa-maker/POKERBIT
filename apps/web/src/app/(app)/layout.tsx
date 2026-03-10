@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   Upload,
   Wallet,
-  Users,
   Spade,
   Menu,
   LogOut,
@@ -50,7 +49,6 @@ const financeiroItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { href: '/config', label: 'Configuracao', icon: Settings },
-  { href: '/config/equipe', label: 'Equipe', icon: Users },
 ];
 
 // ─── Club tree types ─────────────────────────────────────────────────
@@ -79,8 +77,7 @@ function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/import') return pathname === '/import' || pathname.startsWith('/import/');
   if (href === '/financeiro/caixa') return pathname === '/financeiro/caixa' || pathname === '/caixa-geral';
   if (href === '/financeiro/agentes') return pathname === '/financeiro/agentes';
-  if (href === '/config') return pathname === '/config';
-  if (href === '/config/equipe') return pathname === '/config/equipe';
+  if (href === '/config') return pathname === '/config' || pathname.startsWith('/config/');
   return pathname === href || pathname.startsWith(href + '/');
 }
 
