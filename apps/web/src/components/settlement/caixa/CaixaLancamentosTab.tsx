@@ -22,38 +22,27 @@ interface Props {
   onDataChange: () => void;
 }
 
-// ─── Channel config (sem icones) ────────────────────────────────────
+// ─── Channel config ─────────────────────────────────────────────────
 
 const CANAIS: Record<string, { label: string; color: string; bg: string; border: string }> = {
   pix:               { label: 'PIX',               color: '#06b6d4', bg: 'rgba(6,182,212,0.08)',  border: 'rgba(6,182,212,0.25)' },
   chippix:           { label: 'ChipPix',           color: '#a855f7', bg: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.25)' },
-  rakeback_deduzido: { label: 'Rakeback Deduzido', color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.25)' },
+  rakeback_deduzido: { label: 'Rakeback',          color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.25)' },
   saldo_anterior:    { label: 'Saldo Anterior',    color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)' },
 };
 
 type FilterVia = 'all' | 'pix' | 'chippix' | 'rakeback' | 'saldo_anterior';
 
-// ─── Helpers ────────────────────────────────────────────────────────
-
-function fmtDate(d?: string) {
-  if (!d) return '';
-  try {
-    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  } catch {
-    return '';
-  }
-}
-
-// Unified row for the movimentações table
+// Row consolidada: 1 linha por agente por canal, valor = líquido
 interface MovRow {
   id: string;
-  date: string;
-  tipo: 'entrada' | 'saida';
-  via: string; // pix | chippix | rakeback | saldo_anterior
+  via: string;
   agenteName: string;
   descricao: string;
-  valor: number;
-  source: string;
+  valorLiquido: number; // signed: positivo = entrada, negativo = saída
+  entradas: number;     // gross IN
+  saidas: number;       // gross OUT
+  txCount: number;      // qtd transações originais
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -117,7 +106,7 @@ export default function CaixaLancamentosTab({
     return map;
   }, [entries]);
 
-  // ─── Build unified movimentações from real data ─────────────────
+  // ─── Build consolidated rows: 1 per agent per channel (LÍQUIDO) ──
   const { rows, channelTotals, plTotal, agentCount } = useMemo(() => {
     const allRows: MovRow[] = [];
     let totalPix = 0;
@@ -149,26 +138,53 @@ export default function CaixaLancamentosTab({
         }
       }
 
-      // Process ledger entries → PIX or ChipPix rows
+      // Consolidar por canal: PIX líquido e ChipPix líquido
+      let pixIn = 0, pixOut = 0, pixCount = 0;
+      let cpIn = 0, cpOut = 0, cpCount = 0;
+
       for (const e of agEntries) {
         const amt = Number(e.amount);
         const src = (e.source || '').toLowerCase();
         const isChippix = src === 'chippix';
-        const via = isChippix ? 'chippix' : 'pix';
-        const signed = e.dir === 'IN' ? amt : -amt;
 
-        if (isChippix) totalChippix += signed;
-        else totalPix += signed;
+        if (isChippix) {
+          if (e.dir === 'IN') cpIn += amt; else cpOut += amt;
+          cpCount++;
+        } else {
+          if (e.dir === 'IN') pixIn += amt; else pixOut += amt;
+          pixCount++;
+        }
+      }
 
+      // Linha ChipPix líquido (se houver transações)
+      const cpLiquido = round2(cpIn - cpOut);
+      if (cpCount > 0) {
+        totalChippix += cpLiquido;
         allRows.push({
-          id: e.id,
-          date: e.created_at || '',
-          tipo: e.dir === 'IN' ? 'entrada' : 'saida',
-          via,
+          id: `cp_${agent.id}`,
+          via: 'chippix',
           agenteName: agent.agent_name,
-          descricao: e.description || e.entity_name || (isChippix ? 'ChipPix' : e.method || 'PIX'),
-          valor: amt,
-          source: e.source || 'manual',
+          descricao: cpCount === 1 ? '1 transacao' : `${cpCount} transacoes`,
+          valorLiquido: cpLiquido,
+          entradas: round2(cpIn),
+          saidas: round2(cpOut),
+          txCount: cpCount,
+        });
+      }
+
+      // Linha PIX líquido (se houver transações)
+      const pixLiquido = round2(pixIn - pixOut);
+      if (pixCount > 0) {
+        totalPix += pixLiquido;
+        allRows.push({
+          id: `pix_${agent.id}`,
+          via: 'pix',
+          agenteName: agent.agent_name,
+          descricao: pixCount === 1 ? '1 transacao' : `${pixCount} transacoes`,
+          valorLiquido: pixLiquido,
+          entradas: round2(pixIn),
+          saidas: round2(pixOut),
+          txCount: pixCount,
         });
       }
 
@@ -178,13 +194,13 @@ export default function CaixaLancamentosTab({
         totalRakeback += rbTotal;
         allRows.push({
           id: `rb_${agent.id}`,
-          date: '',
-          tipo: 'saida',
           via: 'rakeback',
           agenteName: agent.agent_name,
-          descricao: `Rakeback ${agPlayers.length} jogador(es)`,
-          valor: rbTotal,
-          source: 'rakeback',
+          descricao: `${agPlayers.length} jogador(es)`,
+          valorLiquido: -rbTotal, // rakeback é dedução (saída)
+          entradas: 0,
+          saidas: rbTotal,
+          txCount: agPlayers.length,
         });
       }
 
@@ -192,19 +208,16 @@ export default function CaixaLancamentosTab({
       const carryKey = agent.agent_id || agent.id;
       const carry = carryMap[carryKey] || 0;
       if (Math.abs(carry) > 0.01) {
-        // carry > 0 means club is owed (entrada), carry < 0 means club owes (saida)
-        const isEntrada = carry > 0;
-        if (isEntrada) totalSaldoAnterior += carry;
-        else totalSaldoAnterior += carry; // negative
+        totalSaldoAnterior += carry;
         allRows.push({
           id: `carry_${agent.id}`,
-          date: '',
-          tipo: isEntrada ? 'entrada' : 'saida',
           via: 'saldo_anterior',
           agenteName: agent.agent_name,
           descricao: 'Saldo Anterior',
-          valor: Math.abs(carry),
-          source: 'carry_forward',
+          valorLiquido: carry, // positivo = a receber, negativo = a pagar
+          entradas: carry > 0 ? carry : 0,
+          saidas: carry < 0 ? Math.abs(carry) : 0,
+          txCount: 1,
         });
       }
     }
@@ -246,21 +259,23 @@ export default function CaixaLancamentosTab({
   }, [rows, filterVia, search]);
 
   // ─── Sort ──────────────────────────────────────────────────────
-  type SortKey = 'date' | 'agente' | 'via' | 'valor';
+  type SortKey = 'agente' | 'via' | 'valor';
   const getSortValue = useCallback((r: MovRow, key: SortKey): string | number => {
     switch (key) {
-      case 'date': return r.date;
       case 'agente': return r.agenteName;
       case 'via': return r.via;
-      case 'valor': return r.valor * (r.tipo === 'saida' ? -1 : 1);
+      case 'valor': return r.valorLiquido;
     }
   }, []);
 
   const { sorted, handleSort, sortIcon, ariaSort } = useSortable<MovRow, SortKey>({
     data: filtered,
-    defaultKey: 'date',
+    defaultKey: 'valor',
     getValue: getSortValue,
   });
+
+  // Footer totals
+  const footerLiquido = round2(filtered.reduce((s, r) => s + r.valorLiquido, 0));
 
   if (loading) return <SettlementSkeleton kpis={3} />;
 
@@ -271,7 +286,7 @@ export default function CaixaLancamentosTab({
       <div className="mb-5">
         <h3 className="text-lg font-bold text-white">Fluxo de Caixa</h3>
         <p className="text-dark-500 text-xs">
-          Rastreamento de recebimentos e pagamentos por canal
+          Valores liquidos por agente e canal (IN - OUT)
         </p>
       </div>
 
@@ -314,13 +329,19 @@ export default function CaixaLancamentosTab({
         </div>
       </div>
 
-      {/* ─── Canal Cards (sem icones) ─────────────────────────────── */}
+      {/* ─── Canal Cards (líquido + breakdown IN/OUT) ─────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {(['pix', 'chippix', 'rakeback_deduzido', 'saldo_anterior'] as const).map((via) => {
           const cfg = CANAIS[via];
-          const total = channelTotals[via];
-          const absTotal = Math.abs(total);
-          const pct = plTotal > 0 ? round2((absTotal / plTotal) * 100) : 0;
+          const liquido = channelTotals[via];
+          const absLiquido = Math.abs(liquido);
+          const pct = plTotal > 0 ? round2((absLiquido / plTotal) * 100) : 0;
+
+          // Calcular IN/OUT brutos para o card
+          const viaKey = via === 'rakeback_deduzido' ? 'rakeback' : via;
+          const viaRows = rows.filter(r => r.via === viaKey);
+          const grossIn = round2(viaRows.reduce((s, r) => s + r.entradas, 0));
+          const grossOut = round2(viaRows.reduce((s, r) => s + r.saidas, 0));
 
           return (
             <div key={via} className="bg-dark-900 border border-dark-700 rounded-xl p-3 hover:border-dark-600 transition-colors">
@@ -328,9 +349,16 @@ export default function CaixaLancamentosTab({
                 <span className="text-xs font-medium text-white">{cfg.label}</span>
                 <span className="text-[10px] text-dark-500 font-mono">{pct}%</span>
               </div>
-              <p className={`text-sm font-bold font-mono mb-1 ${total >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-                {formatBRL(absTotal)}
+              <p className={`text-sm font-bold font-mono mb-1 ${liquido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                {liquido < 0 ? '\u2212' : ''}{formatBRL(absLiquido)}
               </p>
+              {(grossIn > 0 || grossOut > 0) && (
+                <div className="text-[10px] text-dark-500 flex items-center gap-1 flex-wrap">
+                  {grossIn > 0 && <span className="text-poker-400/70">IN {formatBRL(grossIn)}</span>}
+                  {grossIn > 0 && grossOut > 0 && <span className="text-dark-600">•</span>}
+                  {grossOut > 0 && <span className="text-red-400/70">OUT {formatBRL(grossOut)}</span>}
+                </div>
+              )}
               <div className="w-full bg-dark-800 rounded-full h-1 mt-2">
                 <div
                   className="h-1 rounded-full transition-all duration-500"
@@ -376,36 +404,24 @@ export default function CaixaLancamentosTab({
                 <table className="w-full text-sm data-table">
                   <thead>
                     <tr className="bg-dark-800/50">
-                      <th className="px-3 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('date')} aria-sort={ariaSort('date')}>Data{sortIcon('date')}</th>
-                      <th className="px-2 py-2.5 text-center font-medium text-[10px] text-dark-400 uppercase">Tipo</th>
                       <th className="px-3 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('agente')} aria-sort={ariaSort('agente')}>Agente{sortIcon('agente')}</th>
-                      <th className="px-2 py-2.5 text-center font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('via')} aria-sort={ariaSort('via')}>Via{sortIcon('via')}</th>
-                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('valor')} aria-sort={ariaSort('valor')}>Valor{sortIcon('valor')}</th>
+                      <th className="px-2 py-2.5 text-center font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('via')} aria-sort={ariaSort('via')}>Canal{sortIcon('via')}</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase">Entradas</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase">Saidas</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('valor')} aria-sort={ariaSort('valor')}>Liquido{sortIcon('valor')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-800/50">
                     {sorted.map((r) => {
-                      const isEntrada = r.tipo === 'entrada';
                       const viaCfg = CANAIS[r.via] || CANAIS[r.via === 'rakeback' ? 'rakeback_deduzido' : r.via];
+                      const isPositive = r.valorLiquido >= 0;
 
                       return (
                         <tr key={r.id} className="hover:bg-dark-800/30">
-                          <td className="px-3 py-2 text-dark-300 text-xs font-mono">{fmtDate(r.date) || '\u2014'}</td>
-                          <td className="px-2 py-2 text-center">
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
-                              isEntrada
-                                ? 'bg-poker-900/20 text-poker-400 border-poker-700/30'
-                                : 'bg-red-900/20 text-red-400 border-red-700/30'
-                            }`}>
-                              {isEntrada ? '▲' : '▼'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-white text-xs truncate max-w-[180px]">
+                          <td className="px-3 py-2 text-white text-xs">
                             <div>
                               <Highlight text={r.agenteName} query={search} />
-                              <p className="text-[10px] text-dark-500 truncate">
-                                <Highlight text={r.descricao} query={search} />
-                              </p>
+                              <p className="text-[10px] text-dark-500">{r.descricao}</p>
                             </div>
                           </td>
                           <td className="px-2 py-2 text-center">
@@ -415,25 +431,37 @@ export default function CaixaLancamentosTab({
                               </span>
                             ) : <span className="text-dark-600 text-[10px]">{r.via}</span>}
                           </td>
-                          <td className={`px-3 py-2 text-right font-mono font-medium text-xs ${
-                            isEntrada ? 'text-poker-400' : 'text-red-400'
+                          <td className="px-3 py-2 text-right font-mono text-xs text-poker-400/70">
+                            {r.entradas > 0 ? formatBRL(r.entradas) : '\u2014'}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono text-xs text-red-400/70">
+                            {r.saidas > 0 ? formatBRL(r.saidas) : '\u2014'}
+                          </td>
+                          <td className={`px-3 py-2 text-right font-mono font-bold text-xs ${
+                            isPositive ? 'text-poker-400' : 'text-red-400'
                           }`}>
-                            {isEntrada ? '+' : '\u2212'}{formatBRL(r.valor)}
+                            {isPositive ? '+' : '\u2212'}{formatBRL(Math.abs(r.valorLiquido))}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-dark-800/40 border-t-2 border-dark-600">
+                      <td className="px-3 py-2.5 text-white text-xs font-bold">TOTAL</td>
+                      <td className="px-2 py-2.5 text-center text-[10px] text-dark-400">{filtered.length} linhas</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-xs text-poker-400 font-bold">
+                        {formatBRL(round2(filtered.reduce((s, r) => s + r.entradas, 0)))}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono text-xs text-red-400 font-bold">
+                        {formatBRL(round2(filtered.reduce((s, r) => s + r.saidas, 0)))}
+                      </td>
+                      <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold ${footerLiquido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                        {footerLiquido >= 0 ? '+' : '\u2212'}{formatBRL(Math.abs(footerLiquido))}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
-              </div>
-
-              {/* Footer */}
-              <div className="px-3 py-2 bg-dark-800/30 flex items-center justify-between border-t border-dark-800/50">
-                <span className="text-[10px] text-dark-400">{filtered.length} movimentacao{filtered.length !== 1 ? 'es' : ''}</span>
-                <div className="flex items-center gap-4 text-[10px] font-mono">
-                  <span className="text-poker-400">IN: {formatBRL(filtered.filter(r => r.tipo === 'entrada').reduce((s, r) => s + r.valor, 0))}</span>
-                  <span className="text-red-400">OUT: {formatBRL(filtered.filter(r => r.tipo === 'saida').reduce((s, r) => s + r.valor, 0))}</span>
-                </div>
               </div>
             </div>
           )}
@@ -447,13 +475,16 @@ export default function CaixaLancamentosTab({
             <h4 className="text-[10px] font-bold text-dark-400 uppercase tracking-wider mb-3">Fluxo do Dinheiro</h4>
             {(['pix', 'chippix', 'rakeback_deduzido', 'saldo_anterior'] as const).map((via) => {
               const cfg = CANAIS[via];
-              const total = Math.abs(channelTotals[via]);
-              const pct = plTotal > 0 ? round2((total / plTotal) * 100) : 0;
+              const liquido = channelTotals[via];
+              const absVal = Math.abs(liquido);
+              const pct = plTotal > 0 ? round2((absVal / plTotal) * 100) : 0;
               return (
                 <div key={via} className="mb-2.5">
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-[10px] text-dark-400">{cfg.label}</span>
-                    <span className="text-[10px] font-mono text-dark-300">{formatBRL(total)}</span>
+                    <span className={`text-[10px] font-mono ${liquido >= 0 ? 'text-dark-300' : 'text-red-400'}`}>
+                      {liquido < 0 ? '\u2212' : ''}{formatBRL(absVal)}
+                    </span>
                   </div>
                   <div className="w-full bg-dark-800 rounded-full h-1.5">
                     <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: cfg.color }} />
@@ -475,12 +506,16 @@ export default function CaixaLancamentosTab({
             <h4 className="text-[10px] font-bold text-dark-400 uppercase tracking-wider mb-2">Resultado</h4>
             <div className="space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-dark-400">PIX</span>
-                <span className="font-mono text-poker-400">{formatBRL(Math.abs(channelTotals.pix))}</span>
+                <span className="text-dark-400">PIX (liquido)</span>
+                <span className={`font-mono ${channelTotals.pix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                  {channelTotals.pix < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.pix))}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-dark-400">ChipPix</span>
-                <span className="font-mono text-poker-400">{formatBRL(Math.abs(channelTotals.chippix))}</span>
+                <span className="text-dark-400">ChipPix (liquido)</span>
+                <span className={`font-mono ${channelTotals.chippix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                  {channelTotals.chippix < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.chippix))}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-dark-400">(-) Rakeback</span>
@@ -489,7 +524,7 @@ export default function CaixaLancamentosTab({
               <div className="flex items-center justify-between">
                 <span className="text-dark-400">Saldo Anterior</span>
                 <span className={`font-mono ${channelTotals.saldo_anterior >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-                  {formatBRL(Math.abs(channelTotals.saldo_anterior))}
+                  {channelTotals.saldo_anterior < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.saldo_anterior))}
                 </span>
               </div>
             </div>
