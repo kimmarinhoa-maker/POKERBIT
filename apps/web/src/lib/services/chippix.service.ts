@@ -196,7 +196,7 @@ export class ChipPixService {
   }
 
   // ─── Upload: parse + auto-match + insert ledger_entries ──────────
-  async uploadChipPix(tenantId: string, buffer: Buffer, fileName: string, weekStart: string, clubId?: string) {
+  async uploadChipPix(tenantId: string, buffer: Buffer, fileName: string, weekStart: string, clubId?: string, settlementIdParam?: string) {
     const parsed = this.parseChipPix(buffer);
 
     if (parsed.length === 0) {
@@ -254,20 +254,21 @@ export class ChipPixService {
       players = (data || []).filter((p) => p.external_player_id);
     }
 
-    // ── Fix 1: Look up active DRAFT settlement for this week ──────
-    let settlementId: string | null = null;
-    if (weekStart) {
-      const { data: stl } = await supabaseAdmin
+    // ── Fix 1: Use provided settlementId or look up DRAFT settlement ──
+    let settlementId: string | null = settlementIdParam || null;
+    if (!settlementId && weekStart) {
+      let stlQuery = supabaseAdmin
         .from('settlements')
         .select('id')
         .eq('tenant_id', tenantId)
         .eq('week_start', weekStart)
-        .eq('status', 'DRAFT')
-        .maybeSingle();
+        .eq('status', 'DRAFT');
+      if (clubId) stlQuery = stlQuery.eq('club_id', clubId);
+      const { data: stl } = await stlQuery.maybeSingle();
       settlementId = stl?.id || null;
     }
 
-    // Check existing external_refs to avoid duplicates (scoped to this week)
+    // Check existing external_refs to avoid duplicates (scoped to settlement or week)
     const refs = parsed.map((p) => `cp_${p.idJog}`);
     let dedupQuery = supabaseAdmin
       .from('ledger_entries')
@@ -275,7 +276,8 @@ export class ChipPixService {
       .eq('tenant_id', tenantId)
       .eq('source', 'chippix')
       .in('external_ref', refs);
-    if (weekStart) dedupQuery = dedupQuery.eq('week_start', weekStart);
+    if (settlementId) dedupQuery = dedupQuery.eq('settlement_id', settlementId);
+    else if (weekStart) dedupQuery = dedupQuery.eq('week_start', weekStart);
     const { data: existing } = await dedupQuery;
 
     const existingSet = new Set((existing || []).map((e) => e.external_ref));

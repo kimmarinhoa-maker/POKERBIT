@@ -256,11 +256,12 @@ export async function ofxAutoMatch(weekStart: string): Promise<ApiResponse<AutoM
 
 // ─── ChipPix / Bank Transactions ─────────────────────────────────
 
-export async function uploadChipPix(file: File, weekStart?: string, clubId?: string) {
+export async function uploadChipPix(file: File, weekStart?: string, clubId?: string, settlementId?: string) {
   const form = new FormData();
   form.append('file', file);
   if (weekStart) form.append('week_start', weekStart);
   if (clubId) form.append('club_id', clubId);
+  if (settlementId) form.append('settlement_id', settlementId);
   return apiFetch('/chippix/upload', { method: 'POST', body: form });
 }
 

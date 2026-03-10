@@ -196,7 +196,7 @@ export default function ChipPixTab({
     if (!file) return;
     setUploading(true);
     try {
-      const res = await uploadChipPix(file, weekStart, clubId);
+      const res = await uploadChipPix(file, weekStart, clubId, settlementId);
       if (res.success) {
         const d = res.data;
         toast(`${d?.imported || 0} jogadores importados (${d?.matched || 0} auto-vinculados)`, 'success');

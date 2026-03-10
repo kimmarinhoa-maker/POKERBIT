@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
 
         const weekStart = fields.week_start || '';
         const clubId = fields.club_id || undefined;
+        const settlementId = fields.settlement_id || undefined;
 
         const result = await chipPixService.uploadChipPix(
           ctx.tenantId,
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
           file.originalname,
           weekStart,
           clubId,
+          settlementId,
         );
 
         return NextResponse.json({ success: true, data: result });
