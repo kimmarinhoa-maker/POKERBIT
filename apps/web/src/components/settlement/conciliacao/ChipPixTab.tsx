@@ -79,7 +79,7 @@ export default function ChipPixTab({
     try {
       const [txnRes, importRes, catRes] = await Promise.all([
         listChipPixTransactions(weekStart, undefined, settlementId),
-        getChipPixImportSummary(weekStart),
+        getChipPixImportSummary(weekStart, settlementId),
         listTransactionCategories(),
       ]);
       if (!txnRes.success) {

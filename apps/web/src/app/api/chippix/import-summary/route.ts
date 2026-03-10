@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
       let query = supabaseAdmin
         .from('settlements')
-        .select('id, week_start, chippix_import_data')
+        .select('id, club_id, week_start, chippix_import_data')
         .eq('tenant_id', ctx.tenantId);
 
       if (settlementId) {
@@ -44,13 +44,21 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      // Fetch org → chippix_manager_id mapping for subclubs
+      // Fetch org → chippix_manager_id mapping for subclubs of this settlement's club
       // Use select('*') to avoid PostgREST schema cache issues with new columns
-      const { data: orgs, error: orgError } = await supabaseAdmin
+      let orgQuery = supabaseAdmin
         .from('organizations')
         .select('*')
-        .eq('tenant_id', ctx.tenantId)
-        .eq('type', 'SUBCLUB');
+        .eq('tenant_id', ctx.tenantId);
+
+      // Filter by parent club if we know it, also include the club itself
+      if (data?.club_id) {
+        orgQuery = orgQuery.or(`id.eq.${data.club_id},parent_id.eq.${data.club_id}`);
+      } else {
+        orgQuery = orgQuery.in('type', ['SUBCLUB', 'CLUB']);
+      }
+
+      const { data: orgs, error: orgError } = await orgQuery;
 
       if (orgError) {
         console.error('[import-summary] org query error:', orgError);

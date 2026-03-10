@@ -313,8 +313,10 @@ export async function getChipPixLedgerSummary(weekStart: string) {
   return apiFetch(`/chippix/summary?week_start=${weekStart}`);
 }
 
-export async function getChipPixImportSummary(weekStart: string) {
-  return apiFetch(`/chippix/import-summary?week_start=${weekStart}`);
+export async function getChipPixImportSummary(weekStart: string, settlementId?: string) {
+  const params = new URLSearchParams({ week_start: weekStart });
+  if (settlementId) params.set('settlement_id', settlementId);
+  return apiFetch(`/chippix/import-summary?${params}`);
 }
 
 // ─── Dashboard Modalities ─────────────────────────────────────────
