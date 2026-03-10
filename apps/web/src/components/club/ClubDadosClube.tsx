@@ -71,9 +71,7 @@ export default function ClubDadosClube({ orgId }: Props) {
     setSaving(true);
     try {
       const payload: Record<string, any> = { name };
-      if (org.type === 'SUBCLUB') {
-        payload.chippix_manager_id = chippixManagerId.trim() || null;
-      }
+      payload.chippix_manager_id = chippixManagerId.trim() || null;
       const res = await updateOrganization(org.id, payload);
       if (res.success) {
         toast('Dados atualizados', 'success');
@@ -176,9 +174,8 @@ export default function ClubDadosClube({ orgId }: Props) {
               )}
             </div>
 
-            {/* ChipPix Manager ID — only for subclubes */}
-            {isSubclub && (
-              <div>
+            {/* ChipPix Manager ID */}
+            <div>
                 <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">ChipPix Manager ID</label>
                 <div className="flex items-stretch">
                   <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-dark-600 bg-dark-800 text-dark-400 text-sm font-mono select-none">Chippix_</span>
@@ -196,7 +193,6 @@ export default function ClubDadosClube({ orgId }: Props) {
                 </div>
                 <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha (coluna Manager Remark)</p>
               </div>
-            )}
 
             {/* Save — right aligned, compact */}
             <div className="flex justify-end pt-1">
