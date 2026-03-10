@@ -97,7 +97,17 @@ export class ChipPixService {
 
       const parseNum = (val: any): number => {
         if (val === '' || val === null || val === undefined) return 0;
-        return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+        // If Excel already parsed as number, use directly
+        if (typeof val === 'number') return val;
+        const s = String(val).trim();
+        // Brazilian format: "20.999,50" → dots are thousands, comma is decimal
+        // International format: "20999.50" → dot is decimal
+        if (s.includes(',')) {
+          // Has comma → Brazilian format: remove dots (thousands), replace comma with dot (decimal)
+          return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+        // No comma → international format or integer, parse directly
+        return parseFloat(s) || 0;
       };
 
       const entrada = iEnt >= 0 ? parseNum(row[iEnt]) : 0;
