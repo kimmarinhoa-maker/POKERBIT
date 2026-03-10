@@ -92,8 +92,7 @@ export default function Caixa({
           settlementId={settlementId}
           clubId={clubId}
           weekStart={weekStart}
-          plTotal={plTotal}
-          agentCount={agentCount}
+          subclub={subclub}
           settlementStatus={settlementStatus}
           onDataChange={onDataChange}
         />
