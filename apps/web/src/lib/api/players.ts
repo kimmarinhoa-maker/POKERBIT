@@ -41,6 +41,7 @@ export async function createOrganization(data: {
   parent_id: string;
   type: 'SUBCLUB';
   external_id?: string;
+  chippix_manager_id?: string;
 }) {
   return apiFetch('/organizations', { method: 'POST', body: JSON.stringify(data) });
 }

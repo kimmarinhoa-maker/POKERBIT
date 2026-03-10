@@ -85,6 +85,7 @@ const createOrgSchema = z.object({
   parent_id: z.string().uuid(),
   type: z.literal('SUBCLUB'),
   external_id: z.string().optional(),
+  chippix_manager_id: z.string().max(50).nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -124,6 +125,7 @@ export async function POST(req: NextRequest) {
             type: 'SUBCLUB',
             name: parsed.data.name.trim(),
             external_id: parsed.data.external_id?.trim() || null,
+            chippix_manager_id: parsed.data.chippix_manager_id?.trim() || null,
           })
           .select()
           .single();

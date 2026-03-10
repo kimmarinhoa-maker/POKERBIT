@@ -155,6 +155,7 @@ export default function ConfigEstrutura() {
           parent_id: club.id,
           type: 'SUBCLUB',
           external_id: subForm.externalId.trim() || undefined,
+          chippix_manager_id: subForm.chippixManagerId.trim() || undefined,
         });
       }
       if (res.success) {
@@ -514,37 +515,35 @@ export default function ConfigEstrutura() {
                     />
                   </div>
                 </div>
+                <div className="mt-3">
+                  <label className="text-xs text-dark-400 mb-1 block">ChipPix Manager ID</label>
+                  <div className="flex items-stretch">
+                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-dark-600 bg-dark-800 text-dark-400 text-sm font-mono select-none">Chippix_</span>
+                    <input
+                      type="text"
+                      value={subForm.chippixManagerId.replace(/^[Cc]hippix_/i, '')}
+                      onChange={(e) => {
+                        const num = e.target.value.replace(/^[Cc]hippix_/i, '').trim();
+                        setSubForm((p) => ({ ...p, chippixManagerId: num ? `Chippix_${num}` : '' }));
+                      }}
+                      className="input w-full text-sm font-mono rounded-l-none"
+                      placeholder="143"
+                    />
+                  </div>
+                  <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha Suprema (coluna Manager Remark)</p>
+                </div>
                 {subForm.editingId && (
-                  <>
-                    <div className="mt-3">
-                      <label className="text-xs text-dark-400 mb-1 block">ChipPix Manager ID</label>
-                      <div className="flex items-stretch">
-                        <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-dark-600 bg-dark-800 text-dark-400 text-sm font-mono select-none">Chippix_</span>
-                        <input
-                          type="text"
-                          value={subForm.chippixManagerId.replace(/^[Cc]hippix_/i, '')}
-                          onChange={(e) => {
-                            const num = e.target.value.replace(/^[Cc]hippix_/i, '').trim();
-                            setSubForm((p) => ({ ...p, chippixManagerId: num ? `Chippix_${num}` : '' }));
-                          }}
-                          className="input w-full text-sm font-mono rounded-l-none"
-                          placeholder="143"
-                        />
-                      </div>
-                      <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha Suprema (coluna Manager Remark)</p>
-                    </div>
-                    <div className="mt-3">
-                      <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>
-                      <input
-                        type="url"
-                        value={subForm.whatsappGroupLink}
-                        onChange={(e) => setSubForm((p) => ({ ...p, whatsappGroupLink: e.target.value }))}
-                        className="input w-full text-sm"
-                        placeholder="https://chat.whatsapp.com/ABC123..."
-                      />
-                      <p className="text-[10px] text-dark-600 mt-1">Cole o link de convite do grupo aqui</p>
-                    </div>
-                  </>
+                  <div className="mt-3">
+                    <label className="text-xs text-dark-400 mb-1 block">Link do Grupo WhatsApp</label>
+                    <input
+                      type="url"
+                      value={subForm.whatsappGroupLink}
+                      onChange={(e) => setSubForm((p) => ({ ...p, whatsappGroupLink: e.target.value }))}
+                      className="input w-full text-sm"
+                      placeholder="https://chat.whatsapp.com/ABC123..."
+                    />
+                    <p className="text-[10px] text-dark-600 mt-1">Cole o link de convite do grupo aqui</p>
+                  </div>
                 )}
                 <div className="flex justify-end gap-2 mt-3">
                   <button
@@ -580,6 +579,7 @@ export default function ConfigEstrutura() {
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium w-16">Logo</th>
                       <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">Nome</th>
                       <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">External ID</th>
+                      <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">ChipPix</th>
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium">Agentes</th>
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium">Status</th>
                       <th className="text-right py-2 px-2 text-xs text-dark-500 font-medium">Acoes</th>
@@ -617,6 +617,15 @@ export default function ConfigEstrutura() {
                         </td>
                         <td className="py-2.5 px-2 text-white font-medium">{sub.name}</td>
                         <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">{sub.external_id || '—'}</td>
+                        <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">
+                          {(sub as any).chippix_manager_id ? (
+                            <span className="bg-poker-900/20 text-poker-400 border border-poker-500/30 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                              {(sub as any).chippix_manager_id}
+                            </span>
+                          ) : (
+                            <span className="text-dark-600">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-2 text-center text-dark-300">{sub.agents?.length || 0}</td>
                         <td className="py-2.5 px-2 text-center">
                           <span
