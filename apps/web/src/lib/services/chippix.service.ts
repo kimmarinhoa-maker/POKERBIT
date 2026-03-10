@@ -285,12 +285,14 @@ export class ChipPixService {
     let matched = 0;
     const toInsert = parsed
       .filter((p) => !existingSet.has(`cp_${p.idJog}`))
+      .filter((p) => Math.abs(p.entrada - p.saida) > 0 || p.taxa > 0) // skip zero-amount entries
       .map((p) => {
         // Auto-match
         const matchResult = this.matchPlayerId(p.idJog, players);
         if (matchResult) matched++;
 
         const saldoLiq = p.entrada - p.saida;
+        const absAmount = Math.abs(saldoLiq);
 
         // Auto-categorize _noid_ entries by finalidade
         const isServico = p.finalidade?.toLowerCase() === 'serviço' || p.finalidade?.toLowerCase() === 'servico';
@@ -308,7 +310,7 @@ export class ChipPixService {
           tenant_id: tenantId,
           source,
           external_ref: `cp_${p.idJog}`,
-          amount: Math.abs(saldoLiq),
+          amount: absAmount > 0 ? absAmount : round2(p.taxa) || 0.01, // ensure positive
           fee: round2(p.taxa),  // Fix 3: taxa da operação
           description: `${descPrefix} · ${p.nome || p.idJog} · ent ${p.entrada.toFixed(2)} − saí ${p.saida.toFixed(2)}${p.taxa > 0 ? ` · taxa ${p.taxa.toFixed(2)}` : ''} · ${p.txns} txns`,
           dir: saldoLiq >= 0 ? 'IN' : 'OUT',
