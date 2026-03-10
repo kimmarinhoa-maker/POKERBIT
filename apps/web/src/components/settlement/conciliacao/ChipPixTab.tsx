@@ -31,6 +31,7 @@ export interface ChipPixTabProps {
   clubId: string;
   settlementId: string;
   chippixManagerId?: string | null;
+  platform?: string;
   isDraft: boolean;
   canEdit: boolean;
   onDataChange: () => void;
@@ -46,6 +47,7 @@ export default function ChipPixTab({
   clubId,
   settlementId,
   chippixManagerId,
+  platform,
   isDraft,
   canEdit,
   onDataChange,
@@ -68,7 +70,8 @@ export default function ChipPixTab({
   const fileRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<TransactionCategory[]>([]);
 
-  // Import summary (Manager Trade Record from Suprema)
+  // Import summary (Manager Trade Record from platform import)
+  const platformLabel = platform || 'Plataforma';
   const [importSummary, setImportSummary] = useState<Record<string, any> | null>(null);
   const [managerToClub, setManagerToClub] = useState<Record<string, { org_id: string; org_name: string }>>({});
   const [comparisonOpen, setComparisonOpen] = useState(true);
@@ -466,7 +469,7 @@ export default function ChipPixTab({
               className="w-full flex items-center justify-between py-1 text-left"
             >
               <h3 className="text-sm font-semibold text-dark-300">
-                Cruzamento: Extrato ChipPix vs Suprema
+                Cruzamento: Extrato ChipPix vs {platformLabel}
               </h3>
               <span className="text-dark-500 text-xs">{comparisonOpen ? '\u25B2 Recolher' : '\u25BC Expandir'}</span>
             </button>
@@ -509,7 +512,7 @@ export default function ChipPixTab({
                       </tbody>
                     </table>
                     <div className="mt-2 text-[10px] text-dark-500">
-                      Dados Suprema Trade Record nao encontrados para esta semana. Reimporte a planilha para cruzar.
+                      Dados {platformLabel} Trade Record nao encontrados para esta semana. Reimporte a planilha para cruzar.
                     </div>
                   </div>
                 )}
@@ -529,7 +532,7 @@ export default function ChipPixTab({
                         <tr className="text-dark-500">
                           <th className="text-left py-1 pr-3"></th>
                           <th className="text-right py-1 px-3">Extrato ChipPix</th>
-                          <th className="text-right py-1 px-3">Suprema Trade</th>
+                          <th className="text-right py-1 px-3">{platformLabel} Trade</th>
                           <th className="text-right py-1 pl-3">Diferenca</th>
                         </tr>
                       </thead>
@@ -588,11 +591,11 @@ export default function ChipPixTab({
                       const okOUT = Math.abs(kpis.totalSaida - op.totalOUT) < 1;
                       return okIN && okOUT ? (
                         <div className="mt-2 text-[10px] text-green-400">
-                          Valores brutos cruzam com a planilha Suprema
+                          Valores brutos cruzam com a planilha {platformLabel}
                         </div>
                       ) : (
                         <div className="mt-2 text-[10px] text-amber-400">
-                          Diferenca detectada entre Extrato e Suprema (pode ser taxas)
+                          Diferenca detectada entre Extrato e {platformLabel} (pode ser taxas)
                         </div>
                       );
                     })()}

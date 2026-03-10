@@ -55,6 +55,7 @@ interface Props {
   weekStart: string;
   clubId: string;
   clubName?: string;
+  platform?: string;
   settlementId: string;
   chippixManagerId?: string | null;
   settlementStatus: string;
@@ -68,7 +69,7 @@ type SubTab = 'chippix' | 'ofx' | 'ledger';
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function Conciliacao({ weekStart, clubId, clubName, settlementId, chippixManagerId, settlementStatus, onDataChange, agents, players, subclubEntityIds }: Props) {
+export default function Conciliacao({ weekStart, clubId, clubName, platform, settlementId, chippixManagerId, settlementStatus, onDataChange, agents, players, subclubEntityIds }: Props) {
   const isDraft = settlementStatus === 'DRAFT';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('chippix');
   const { toast } = useToast();
@@ -240,6 +241,7 @@ export default function Conciliacao({ weekStart, clubId, clubName, settlementId,
           clubId={clubId}
           settlementId={settlementId}
           chippixManagerId={chippixManagerId || null}
+          platform={platform}
           isDraft={isDraft}
           canEdit={canEdit}
           onDataChange={() => { onDataChange(); loadEntries(); loadBackendSummary(); }}

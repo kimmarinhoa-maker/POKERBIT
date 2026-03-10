@@ -358,6 +358,7 @@ function SubclubPanelPage() {
               weekStart={settlement.week_start}
               clubId={subclub.id}
               clubName={subclub.name}
+              platform={clubGroups[0]?.platform}
               settlementId={settlement.id}
               chippixManagerId={chippixManagerMap[subclub.id] || chippixManagerMap[normalizeKey(subclub.name)] || null}
               settlementStatus={settlement.status}
