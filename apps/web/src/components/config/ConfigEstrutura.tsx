@@ -63,10 +63,11 @@ export default function ConfigEstrutura() {
   const { confirm, ConfirmDialogElement } = useConfirmDialog();
 
   // Subclub form
-  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; name: string; externalId: string; whatsappGroupLink: string; chippixManagerId: string }>(
+  const [subForm, setSubForm] = useState<{ show: boolean; editingId: string | null; clubId: string; name: string; externalId: string; whatsappGroupLink: string; chippixManagerId: string }>(
     {
       show: false,
       editingId: null,
+      clubId: '',
       name: '',
       externalId: '',
       whatsappGroupLink: '',
@@ -110,24 +111,32 @@ export default function ConfigEstrutura() {
     loadData();
   }, [loadData]);
 
-  // Derived
-  const club = tree[0] || null;
-  const subclubes = useMemo(() => club?.subclubes || [], [club?.subclubes]);
+  // Derived — all subclubes across all clubs
+  const allSubclubes = useMemo(() => {
+    const list: (Org & { agents: Org[]; clubId: string; clubName: string; platform: string })[] = [];
+    for (const club of tree) {
+      for (const sub of club.subclubes || []) {
+        list.push({ ...sub, clubId: club.id, clubName: club.name, platform: (club as any).metadata?.platform || '' });
+      }
+    }
+    return list;
+  }, [tree]);
+  const subclubes = allSubclubes;
 
   // ── Subclub handlers ────────────────────────────────────────────
 
   function openSubCreate() {
-    setSubForm({ show: true, editingId: null, name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
+    setSubForm({ show: true, editingId: null, clubId: tree[0]?.id || '', name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
     setSubError(null);
   }
 
-  function openSubEdit(sub: Org) {
-    setSubForm({ show: true, editingId: sub.id, name: sub.name, externalId: sub.external_id || '', whatsappGroupLink: (sub as any).whatsapp_group_link || '', chippixManagerId: (sub as any).chippix_manager_id || '' });
+  function openSubEdit(sub: Org & { clubId?: string }) {
+    setSubForm({ show: true, editingId: sub.id, clubId: (sub as any).clubId || '', name: sub.name, externalId: sub.external_id || '', whatsappGroupLink: (sub as any).whatsapp_group_link || '', chippixManagerId: (sub as any).chippix_manager_id || '' });
     setSubError(null);
   }
 
   function closeSubForm() {
-    setSubForm({ show: false, editingId: null, name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
+    setSubForm({ show: false, editingId: null, clubId: '', name: '', externalId: '', whatsappGroupLink: '', chippixManagerId: '' });
     setSubError(null);
   }
 
@@ -136,7 +145,10 @@ export default function ConfigEstrutura() {
       setSubError('Nome obrigatorio');
       return;
     }
-    if (!club) return;
+    if (!subForm.editingId && !subForm.clubId) {
+      setSubError('Selecione um clube');
+      return;
+    }
 
     setSubSaving(true);
     setSubError(null);
@@ -152,7 +164,7 @@ export default function ConfigEstrutura() {
       } else {
         res = await createOrganization({
           name: subForm.name.trim(),
-          parent_id: club.id,
+          parent_id: subForm.clubId,
           type: 'SUBCLUB',
           external_id: subForm.externalId.trim() || undefined,
           chippix_manager_id: subForm.chippixManagerId.trim() || undefined,
@@ -492,6 +504,23 @@ export default function ConfigEstrutura() {
                     {subError}
                   </div>
                 )}
+                {/* Club selector — only on create */}
+                {!subForm.editingId && tree.length > 1 && (
+                  <div className="mb-3">
+                    <label className="text-xs text-dark-400 mb-1 block">Clube *</label>
+                    <select
+                      value={subForm.clubId}
+                      onChange={(e) => setSubForm((p) => ({ ...p, clubId: e.target.value }))}
+                      className="input w-full text-sm"
+                    >
+                      {tree.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {(c as any).metadata?.platform ? `(${(c as any).metadata.platform})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-dark-400 mb-1 block">Nome *</label>
@@ -578,7 +607,7 @@ export default function ConfigEstrutura() {
                     <tr className="border-b border-dark-700/40">
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium w-16">Logo</th>
                       <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">Nome</th>
-                      <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">External ID</th>
+                      <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">Clube</th>
                       <th className="text-left py-2 px-2 text-xs text-dark-500 font-medium">ChipPix</th>
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium">Agentes</th>
                       <th className="text-center py-2 px-2 text-xs text-dark-500 font-medium">Status</th>
@@ -616,7 +645,7 @@ export default function ConfigEstrutura() {
                           </div>
                         </td>
                         <td className="py-2.5 px-2 text-white font-medium">{sub.name}</td>
-                        <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">{sub.external_id || '—'}</td>
+                        <td className="py-2.5 px-2 text-dark-400 text-xs">{(sub as any).clubName || '—'}{(sub as any).platform ? <span className="ml-1.5 text-[10px] text-dark-500 uppercase">{(sub as any).platform}</span> : ''}</td>
                         <td className="py-2.5 px-2 text-dark-400 font-mono text-xs">
                           {(sub as any).chippix_manager_id ? (
                             <span className="bg-poker-900/20 text-poker-400 border border-poker-500/30 px-1.5 py-0.5 rounded text-[10px] font-bold">
