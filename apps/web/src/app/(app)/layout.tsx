@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Landmark,
   UserCheck,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import TenantSelector from '@/components/TenantSelector';
@@ -48,6 +49,7 @@ const financeiroItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
+  { href: '/config', label: 'Configuracao', icon: Settings },
   { href: '/config/equipe', label: 'Equipe', icon: Users },
 ];
 
@@ -77,6 +79,7 @@ function isRouteActive(pathname: string, href: string): boolean {
   if (href === '/import') return pathname === '/import' || pathname.startsWith('/import/');
   if (href === '/financeiro/caixa') return pathname === '/financeiro/caixa' || pathname === '/caixa-geral';
   if (href === '/financeiro/agentes') return pathname === '/financeiro/agentes';
+  if (href === '/config') return pathname === '/config';
   if (href === '/config/equipe') return pathname === '/config/equipe';
   return pathname === href || pathname.startsWith(href + '/');
 }
