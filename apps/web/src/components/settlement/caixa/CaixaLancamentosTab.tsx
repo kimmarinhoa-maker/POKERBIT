@@ -106,7 +106,7 @@ export default function CaixaLancamentosTab({
     return map;
   }, [entries]);
 
-  // ─── Build consolidated rows: 1 per agent per channel (LÍQUIDO) ──
+  // ─── Build consolidated rows: 1 per agent/group per channel (LÍQUIDO) ──
   const { rows, channelTotals, plTotal, agentCount } = useMemo(() => {
     const allRows: MovRow[] = [];
     let totalPix = 0;
@@ -114,21 +114,26 @@ export default function CaixaLancamentosTab({
     let totalRakeback = 0;
     let totalSaldoAnterior = 0;
 
-    for (const agent of agents) {
-      const agPlayers = playersByAgent.get(agent.agent_name) || [];
-
-      // Collect all ledger entries for this agent (same logic as PosicaoTab)
+    // Helper: collect ledger entries for a list of players
+    function collectEntries(
+      agentIds: string[],
+      groupPlayers: PlayerMetric[],
+      globalSeen: Set<string>,
+    ): LedgerEntry[] {
       const seen = new Set<string>();
-      const agEntries: LedgerEntry[] = [];
+      const result: LedgerEntry[] = [];
       function add(list: LedgerEntry[] | undefined) {
         if (!list) return;
         for (const e of list) {
-          if (!seen.has(e.id)) { seen.add(e.id); agEntries.push(e); }
+          if (!seen.has(e.id) && !globalSeen.has(e.id)) {
+            seen.add(e.id);
+            globalSeen.add(e.id);
+            result.push(e);
+          }
         }
       }
-      add(ledgerByEntity.get(agent.id));
-      if (agent.agent_id) add(ledgerByEntity.get(agent.agent_id));
-      for (const p of agPlayers) {
+      for (const aid of agentIds) add(ledgerByEntity.get(aid));
+      for (const p of groupPlayers) {
         if (p.id) add(ledgerByEntity.get(p.id));
         if (p.player_id) add(ledgerByEntity.get(p.player_id));
         if (p.external_player_id) {
@@ -137,12 +142,22 @@ export default function CaixaLancamentosTab({
           add(ledgerByEntity.get(`cp_${eid}`));
         }
       }
+      return result;
+    }
 
+    // Helper: process entries + metrics for a group (agent or orphan)
+    function processGroup(
+      groupId: string,
+      groupName: string,
+      groupEntries: LedgerEntry[],
+      groupPlayers: PlayerMetric[],
+      carryKey: string | null,
+    ) {
       // Consolidar por canal: PIX líquido e ChipPix líquido
       let pixIn = 0, pixOut = 0, pixCount = 0;
       let cpIn = 0, cpOut = 0, cpCount = 0;
 
-      for (const e of agEntries) {
+      for (const e of groupEntries) {
         const amt = Number(e.amount);
         const src = (e.source || '').toLowerCase();
         const isChippix = src === 'chippix';
@@ -156,14 +171,14 @@ export default function CaixaLancamentosTab({
         }
       }
 
-      // Linha ChipPix líquido (se houver transações)
+      // Linha ChipPix líquido
       const cpLiquido = round2(cpIn - cpOut);
       if (cpCount > 0) {
         totalChippix += cpLiquido;
         allRows.push({
-          id: `cp_${agent.id}`,
+          id: `cp_${groupId}`,
           via: 'chippix',
-          agenteName: agent.agent_name,
+          agenteName: groupName,
           descricao: cpCount === 1 ? '1 transacao' : `${cpCount} transacoes`,
           valorLiquido: cpLiquido,
           entradas: round2(cpIn),
@@ -172,14 +187,14 @@ export default function CaixaLancamentosTab({
         });
       }
 
-      // Linha PIX líquido (se houver transações)
+      // Linha PIX líquido
       const pixLiquido = round2(pixIn - pixOut);
       if (pixCount > 0) {
         totalPix += pixLiquido;
         allRows.push({
-          id: `pix_${agent.id}`,
+          id: `pix_${groupId}`,
           via: 'pix',
-          agenteName: agent.agent_name,
+          agenteName: groupName,
           descricao: pixCount === 1 ? '1 transacao' : `${pixCount} transacoes`,
           valorLiquido: pixLiquido,
           entradas: round2(pixIn),
@@ -189,37 +204,60 @@ export default function CaixaLancamentosTab({
       }
 
       // Rakeback from player metrics
-      const rbTotal = round2(agPlayers.reduce((s, p) => s + (p.rb_value_brl || 0), 0));
+      const rbTotal = round2(groupPlayers.reduce((s, p) => s + (p.rb_value_brl || 0), 0));
       if (rbTotal > 0) {
         totalRakeback += rbTotal;
         allRows.push({
-          id: `rb_${agent.id}`,
+          id: `rb_${groupId}`,
           via: 'rakeback',
-          agenteName: agent.agent_name,
-          descricao: `${agPlayers.length} jogador(es)`,
-          valorLiquido: -rbTotal, // rakeback é dedução (saída)
+          agenteName: groupName,
+          descricao: `${groupPlayers.length} jogador(es)`,
+          valorLiquido: -rbTotal,
           entradas: 0,
           saidas: rbTotal,
-          txCount: agPlayers.length,
+          txCount: groupPlayers.length,
         });
       }
 
       // Saldo Anterior from carry_forward
-      const carryKey = agent.agent_id || agent.id;
-      const carry = carryMap[carryKey] || 0;
-      if (Math.abs(carry) > 0.01) {
-        totalSaldoAnterior += carry;
-        allRows.push({
-          id: `carry_${agent.id}`,
-          via: 'saldo_anterior',
-          agenteName: agent.agent_name,
-          descricao: 'Saldo Anterior',
-          valorLiquido: carry, // positivo = a receber, negativo = a pagar
-          entradas: carry > 0 ? carry : 0,
-          saidas: carry < 0 ? Math.abs(carry) : 0,
-          txCount: 1,
-        });
+      if (carryKey) {
+        const carry = carryMap[carryKey] || 0;
+        if (Math.abs(carry) > 0.01) {
+          totalSaldoAnterior += carry;
+          allRows.push({
+            id: `carry_${groupId}`,
+            via: 'saldo_anterior',
+            agenteName: groupName,
+            descricao: 'Saldo Anterior',
+            valorLiquido: carry,
+            entradas: carry > 0 ? carry : 0,
+            saidas: carry < 0 ? Math.abs(carry) : 0,
+            txCount: 1,
+          });
+        }
       }
+    }
+
+    // Track globally seen entry IDs to avoid double-counting
+    const globalSeen = new Set<string>();
+
+    // 1) Process agents with their players
+    for (const agent of agents) {
+      const agPlayers = playersByAgent.get(agent.agent_name) || [];
+      const agentIds = [agent.id, agent.agent_id].filter(Boolean) as string[];
+      const agEntries = collectEntries(agentIds, agPlayers, globalSeen);
+      const carryKey = agent.agent_id || agent.id;
+      processGroup(agent.id, agent.agent_name, agEntries, agPlayers, carryKey);
+    }
+
+    // 2) Process orphan players (sem agente) — players not matched to any agent
+    const agentNames = new Set(agents.map(a => a.agent_name));
+    const orphanPlayers = players.filter(
+      p => !p.agent_name || !agentNames.has(p.agent_name),
+    );
+    if (orphanPlayers.length > 0) {
+      const orphanEntries = collectEntries([], orphanPlayers, globalSeen);
+      processGroup('_orphan', 'SEM AGENTE', orphanEntries, orphanPlayers, null);
     }
 
     const pl = Math.abs(subclub.totals?.ganhos ?? 0);
@@ -233,9 +271,9 @@ export default function CaixaLancamentosTab({
         saldo_anterior: round2(totalSaldoAnterior),
       },
       plTotal: pl,
-      agentCount: agents.length,
+      agentCount: agents.length + (orphanPlayers.length > 0 ? 1 : 0),
     };
-  }, [agents, playersByAgent, ledgerByEntity, carryMap, subclub.totals]);
+  }, [agents, players, playersByAgent, ledgerByEntity, carryMap, subclub.totals]);
 
   // ─── Computed totals ────────────────────────────────────────────
   const totalRecebido = round2(
