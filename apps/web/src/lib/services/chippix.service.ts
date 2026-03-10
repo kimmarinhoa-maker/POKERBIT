@@ -49,10 +49,207 @@ interface ChipPixRow {
 }
 
 export class ChipPixService {
+  // ─── Helper: parse number (handles BR format + Excel native) ──────
+  private parseNum(val: any): number {
+    if (val === '' || val === null || val === undefined) return 0;
+    if (typeof val === 'number') return val;
+    const s = String(val).trim();
+    if (s.includes(',')) {
+      return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return parseFloat(s) || 0;
+  }
+
+  // ─── Helper: extract date string from cell value ──────────────────
+  private parseDateCell(rawDate: any): string {
+    if (!rawDate) return '';
+    if (typeof rawDate === 'number') {
+      const d = XLSX.SSF.parse_date_code(rawDate);
+      if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+      return '';
+    }
+    const s = String(rawDate).substring(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s;
+    return '';
+  }
+
   // ─── Parse XLSX ChipPix → aggregated player records ──────────────
   parseChipPix(buffer: Buffer): ParsedPlayer[] {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
 
+    // Auto-detect format: PPPoker has "Transações" sheet
+    const pppokerSheet = workbook.SheetNames.find((n) =>
+      n.toLowerCase().includes('transa') || n.toLowerCase().includes('transac')
+    );
+    if (pppokerSheet && workbook.SheetNames.some((n) => n.toLowerCase() === 'geral' || n.toLowerCase().includes('detalhado'))) {
+      return this.parsePPPokerTransactions(workbook, pppokerSheet);
+    }
+
+    // Suprema ChipPix format
+    return this.parseSupremaChipPix(workbook);
+  }
+
+  // ─── Parse PPPoker Transações sheet ────────────────────────────────
+  private parsePPPokerTransactions(workbook: XLSX.WorkBook, sheetName: string): ParsedPlayer[] {
+    const sheet = workbook.Sheets[sheetName];
+    const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    if (data.length < 4) throw new Error('Aba Transações vazia ou sem dados');
+
+    // PPPoker Transações layout (rows 0-2 are headers):
+    // Row 0: disclaimer
+    // Row 1: group headers (Tempo, Remetente, Destinatário, Dar crédito, Fichas, Ticket)
+    // Row 2: column headers (ID de clube, ID do jogador, Apelido, Nome de memorando, ...)
+    // Row 3+: data
+    //
+    // Columns (0-indexed):
+    // 0: Tempo
+    // 1: Remetente > ID de clube
+    // 2: Remetente > ID do jogador
+    // 3: Remetente > Apelido
+    // 4: Remetente > Nome de memorando
+    // 5: Destinatário > ID do jogador
+    // 6: Destinatário > Apelido
+    // 7: Destinatário > Nome de memorando
+    // 8: Dar crédito > Enviado
+    // 9: Dar crédito > Resgatado
+    // 10: Dar crédito > Saiu do clube
+    // 11: Fichas > Enviado
+    // 12-16: Fichas > Classificações
+    // 17: Fichas > Resgatado
+    // 18: Fichas > Saiu do clube
+    // 19-21: Ticket
+
+    // Find the header row with "ID do jogador" to auto-detect column indices
+    let headerRowIdx = -1;
+    let iSenderId = -1, iSenderNick = -1, iSenderMemo = -1;
+    let iRecvId = -1, iRecvNick = -1, iRecvMemo = -1;
+    let iFichasEnviado = -1, iFichasResgatado = -1;
+    let iCreditoEnviado = -1, iCreditoResgatado = -1;
+
+    for (let r = 0; r < Math.min(5, data.length); r++) {
+      const row = (data[r] || []).map((h: any) => String(h).trim().toLowerCase());
+      const firstPlayerIdIdx = row.indexOf('id do jogador');
+      if (firstPlayerIdIdx >= 0) {
+        headerRowIdx = r;
+        iSenderId = firstPlayerIdIdx;
+        iSenderNick = row.indexOf('apelido', iSenderId);
+        iSenderMemo = row.findIndex((h, i) => i > iSenderId && (h.includes('memorando') || h.includes('nome de memorando')));
+        iRecvId = row.indexOf('id do jogador', iSenderId + 1);
+        if (iRecvId >= 0) {
+          iRecvNick = row.indexOf('apelido', iRecvId);
+          iRecvMemo = row.findIndex((h, i) => i > iRecvId && (h.includes('memorando') || h.includes('nome de memorando')));
+        }
+        // Find "enviado" and "resgatado" columns
+        const enviados = row.reduce<number[]>((acc, h, i) => { if (h === 'enviado') acc.push(i); return acc; }, []);
+        const resgatados = row.reduce<number[]>((acc, h, i) => { if (h === 'resgatado') acc.push(i); return acc; }, []);
+        // Dar crédito: first pair, Fichas: second pair
+        if (enviados.length >= 2) {
+          iCreditoEnviado = enviados[0];
+          iFichasEnviado = enviados[1];
+        } else if (enviados.length === 1) {
+          iFichasEnviado = enviados[0];
+        }
+        if (resgatados.length >= 2) {
+          iCreditoResgatado = resgatados[0];
+          iFichasResgatado = resgatados[1];
+        } else if (resgatados.length === 1) {
+          iFichasResgatado = resgatados[0];
+        }
+        break;
+      }
+    }
+
+    if (headerRowIdx < 0) {
+      throw new Error('Formato PPPoker: cabeçalho "ID do jogador" não encontrado na aba Transações');
+    }
+
+    const dataStartRow = headerRowIdx + 1;
+    const grupos: Record<string, ParsedPlayer> = {};
+
+    for (let r = dataStartRow; r < data.length; r++) {
+      const row = data[r];
+      if (!row || row.length === 0) continue;
+
+      const tempo = String(row[0] || '').trim();
+      if (!tempo || !tempo.match(/^\d{4}-/)) continue; // skip non-data rows
+
+      const senderId = String(row[iSenderId] || '').trim();
+      const senderNick = iSenderNick >= 0 ? String(row[iSenderNick] || '').trim() : '';
+      const senderMemo = iSenderMemo >= 0 ? String(row[iSenderMemo] || '').trim() : '';
+      const recvId = iRecvId >= 0 ? String(row[iRecvId] || '').trim() : '';
+      const recvNick = iRecvNick >= 0 ? String(row[iRecvNick] || '').trim() : '';
+      const recvMemo = iRecvMemo >= 0 ? String(row[iRecvMemo] || '').trim() : '';
+
+      const fichasEnviado = iFichasEnviado >= 0 ? this.parseNum(row[iFichasEnviado]) : 0;
+      const fichasResgatado = iFichasResgatado >= 0 ? this.parseNum(row[iFichasResgatado]) : 0;
+      const creditoEnviado = iCreditoEnviado >= 0 ? this.parseNum(row[iCreditoEnviado]) : 0;
+      const creditoResgatado = iCreditoResgatado >= 0 ? this.parseNum(row[iCreditoResgatado]) : 0;
+
+      // Determine player and direction:
+      // Fichas Enviado > 0 → club sending chips to receiver (deposit/entrada for receiver)
+      // Fichas Resgatado > 0 → club receiving chips back from sender (withdrawal/saida for sender)
+      // Credito Enviado/Resgatado → same logic for credit
+
+      const entrada = fichasEnviado + creditoEnviado;
+      const saida = fichasResgatado + creditoResgatado;
+
+      if (entrada === 0 && saida === 0) continue; // skip empty transactions
+
+      // For deposits (entrada): the receiver is the player
+      // For withdrawals (saida): the sender is the player
+      // If both, use receiver as primary player
+      let playerId = '';
+      let playerNick = '';
+      let playerMemo = '';
+
+      if (entrada > 0) {
+        playerId = recvId || senderId;
+        playerNick = recvNick || senderNick;
+        playerMemo = recvMemo || senderMemo;
+      } else {
+        playerId = senderId || recvId;
+        playerNick = senderNick || recvNick;
+        playerMemo = senderMemo || recvMemo;
+      }
+
+      if (!playerId) continue;
+
+      const dateStr = tempo.substring(0, 10);
+      const nome = playerMemo || playerNick || playerId;
+
+      if (!grupos[playerId]) {
+        grupos[playerId] = {
+          idJog: playerId,
+          nome,
+          entrada: 0,
+          saida: 0,
+          taxa: 0,
+          txns: 0,
+          datas: [],
+          saldo: 0,
+        };
+      }
+
+      const g = grupos[playerId];
+      g.entrada += entrada;
+      g.saida += saida;
+      g.txns++;
+      if (!g.nome && nome) g.nome = nome;
+      if (dateStr && !g.datas.includes(dateStr)) g.datas.push(dateStr);
+    }
+
+    const result = Object.values(grupos);
+    for (const g of result) {
+      g.saldo = g.entrada - g.saida;
+    }
+    result.sort((a, b) => b.entrada - a.entrada);
+
+    return result;
+  }
+
+  // ─── Parse Suprema ChipPix format ─────────────────────────────────
+  private parseSupremaChipPix(workbook: XLSX.WorkBook): ParsedPlayer[] {
     // Find sheet: prefer one containing "opera" (Operações), fallback to first
     const sheetName = workbook.SheetNames.find((n) => n.toLowerCase().includes('opera')) || workbook.SheetNames[0];
 
@@ -95,40 +292,13 @@ export class ChipPixService {
         idJog = `_noid_${idOp}`;
       }
 
-      const parseNum = (val: any): number => {
-        if (val === '' || val === null || val === undefined) return 0;
-        // If Excel already parsed as number, use directly
-        if (typeof val === 'number') return val;
-        const s = String(val).trim();
-        // Brazilian format: "20.999,50" → dots are thousands, comma is decimal
-        // International format: "20999.50" → dot is decimal
-        if (s.includes(',')) {
-          // Has comma → Brazilian format: remove dots (thousands), replace comma with dot (decimal)
-          return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-        }
-        // No comma → international format or integer, parse directly
-        return parseFloat(s) || 0;
-      };
-
-      const entrada = iEnt >= 0 ? parseNum(row[iEnt]) : 0;
-      const saida = iSai >= 0 ? parseNum(row[iSai]) : 0;
-      const taxa = iTaxa >= 0 ? parseNum(row[iTaxa]) : 0;
+      const entrada = iEnt >= 0 ? this.parseNum(row[iEnt]) : 0;
+      const saida = iSai >= 0 ? this.parseNum(row[iSai]) : 0;
+      const taxa = iTaxa >= 0 ? this.parseNum(row[iTaxa]) : 0;
       const nome = iNome >= 0 ? String(row[iNome] || '').trim() : '';
       const finalidade = iFin >= 0 ? String(row[iFin] || '').trim() : '';
 
-      // Date from first column (column 0)
-      let dateStr = '';
-      const rawDate = row[0];
-      if (rawDate) {
-        if (typeof rawDate === 'number') {
-          // Excel serial date
-          const d = XLSX.SSF.parse_date_code(rawDate);
-          if (d) dateStr = `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
-        } else {
-          const s = String(rawDate).substring(0, 10);
-          if (/^\d{4}-\d{2}-\d{2}/.test(s)) dateStr = s;
-        }
-      }
+      const dateStr = this.parseDateCell(row[0]);
 
       if (!grupos[idJog]) {
         grupos[idJog] = {
