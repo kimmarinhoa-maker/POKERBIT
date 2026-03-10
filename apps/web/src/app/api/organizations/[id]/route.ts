@@ -18,6 +18,7 @@ const updateOrgSchema = z.object({
   is_active: z.boolean().optional(),
   whatsapp_group_link: z.string().max(255).nullable().optional(),
   chippix_manager_id: z.string().max(50).nullable().optional(),
+  metadata: z.record(z.any()).optional(),
 });
 
 export async function PUT(req: NextRequest, { params }: Params) {
@@ -64,6 +65,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
           updates.whatsapp_group_link = parsed.data.whatsapp_group_link || null;
         if (parsed.data.chippix_manager_id !== undefined)
           updates.chippix_manager_id = parsed.data.chippix_manager_id || null;
+        if (parsed.data.metadata !== undefined)
+          updates.metadata = parsed.data.metadata;
 
         const oldName = existing.name;
 

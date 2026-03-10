@@ -26,6 +26,8 @@ export default function ClubDadosClube({ orgId }: Props) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [chippixManagerId, setChippixManagerId] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('');
+  const [pixKey, setPixKey] = useState('');
   const [dirty, setDirty] = useState(false);
   const { toast } = useToast();
 
@@ -55,6 +57,8 @@ export default function ClubDadosClube({ orgId }: Props) {
           setOrg(data);
           setName(data.name);
           setChippixManagerId(found.chippix_manager_id || '');
+          setPixKeyType(found.metadata?.pix_key_type || '');
+          setPixKey(found.metadata?.pix_key || '');
         }
       }
     } catch {
@@ -72,6 +76,11 @@ export default function ClubDadosClube({ orgId }: Props) {
     try {
       const payload: Record<string, any> = { name };
       payload.chippix_manager_id = chippixManagerId.trim() || null;
+      payload.metadata = {
+        ...org.metadata,
+        pix_key_type: pixKeyType.trim() || null,
+        pix_key: pixKey.trim() || null,
+      };
       const res = await updateOrganization(org.id, payload);
       if (res.success) {
         toast('Dados atualizados', 'success');
@@ -192,7 +201,34 @@ export default function ClubDadosClube({ orgId }: Props) {
                   />
                 </div>
                 <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha (coluna Manager Remark)</p>
+            </div>
+
+            {/* Chave PIX */}
+            <div>
+              <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">Chave PIX</label>
+              <div className="flex gap-2">
+                <select
+                  value={pixKeyType}
+                  onChange={(e) => { setPixKeyType(e.target.value); setDirty(true); }}
+                  className="input text-sm w-36 shrink-0"
+                >
+                  <option value="">Tipo...</option>
+                  <option value="cpf">CPF</option>
+                  <option value="cnpj">CNPJ</option>
+                  <option value="email">E-mail</option>
+                  <option value="celular">Celular</option>
+                  <option value="aleatoria">Aleatória</option>
+                </select>
+                <input
+                  type="text"
+                  value={pixKey}
+                  onChange={(e) => { setPixKey(e.target.value); setDirty(true); }}
+                  className="input w-full text-sm font-mono"
+                  placeholder={pixKeyType === 'cpf' ? '000.000.000-00' : pixKeyType === 'cnpj' ? '00.000.000/0000-00' : pixKeyType === 'email' ? 'email@exemplo.com' : pixKeyType === 'celular' ? '+5511999999999' : 'Chave PIX'}
+                />
               </div>
+              <p className="text-[10px] text-dark-600 mt-1">Chave PIX para receber pagamentos deste clube</p>
+            </div>
 
             {/* Save — right aligned, compact */}
             <div className="flex justify-end pt-1">

@@ -66,6 +66,7 @@ export async function updateOrganization(
     is_active?: boolean;
     whatsapp_group_link?: string | null;
     chippix_manager_id?: string | null;
+    metadata?: Record<string, any>;
   },
 ) {
   return apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) });
