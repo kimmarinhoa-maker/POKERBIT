@@ -323,6 +323,9 @@ function parseWorkbook(workbook, config = {}) {
   // 6) Ler aba "Retorno de taxa" para rbRates
   const rbRates = parseRetornoDeTaxa(workbook);
 
+  // 6b) Ler aba "Transações" para chippixTrades (cross-reference)
+  const chippixResult = parsePPPokerTransacoes(workbook);
+
   // 7) Agrupar por status
   const all          = dedupPlayers.filter(p => p._status !== 'ignored');
   const ignored      = dedupPlayers.filter(p => p._status === 'ignored');
@@ -340,16 +343,149 @@ function parseWorkbook(workbook, config = {}) {
     ok,
     duplicates,
     rakeValidation: { matches: 0, diffs: 0, diffDetails: [] },
-    chippixTrades: {},
+    chippixTrades: chippixResult.trades,
     rbRates,
     meta: {
       totalRows: rows.length - actualStartRow,
       parsed: dedupPlayers.length,
       sheets: workbook.SheetNames,
       hasStatistics: false,
-      hasTradeRecord: false,
+      hasTradeRecord: chippixResult.hasData,
     },
   };
+}
+
+
+// ─── Parse "Transações" sheet (ChipPix cross-reference) ─────────
+// Returns data in same format as Suprema's Manager Trade Record
+// so the Cruzamento UI works identically for both platforms.
+
+function parsePPPokerTransacoes(workbook) {
+  const sheetName = workbook.SheetNames.find(n =>
+    n.toLowerCase().includes('transa') || n.toLowerCase().includes('transac')
+  );
+  if (!sheetName) return { trades: {}, hasData: false };
+
+  const sheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if (data.length < 4) return { trades: {}, hasData: false };
+
+  // Find header row with "ID do jogador"
+  let headerRowIdx = -1;
+  let iSenderId = -1, iSenderNick = -1;
+  let iRecvId = -1, iRecvNick = -1, iRecvMemo = -1;
+  let iFichasEnviado = -1, iFichasResgatado = -1;
+  let iCreditoEnviado = -1, iCreditoResgatado = -1;
+
+  for (let r = 0; r < Math.min(5, data.length); r++) {
+    const row = (data[r] || []).map(h => String(h).trim().toLowerCase());
+    const firstPlayerIdIdx = row.indexOf('id do jogador');
+    if (firstPlayerIdIdx >= 0) {
+      headerRowIdx = r;
+      iSenderId = firstPlayerIdIdx;
+      iSenderNick = row.indexOf('apelido', iSenderId);
+      iRecvId = row.indexOf('id do jogador', iSenderId + 1);
+      if (iRecvId >= 0) {
+        iRecvNick = row.indexOf('apelido', iRecvId);
+        iRecvMemo = row.findIndex((h, i) => i > iRecvId && (h.includes('memorando') || h.includes('nome de memorando')));
+      }
+      // Find "enviado" and "resgatado" columns
+      const enviados = [];
+      const resgatados = [];
+      row.forEach((h, i) => {
+        if (h === 'enviado') enviados.push(i);
+        if (h === 'resgatado') resgatados.push(i);
+      });
+      if (enviados.length >= 2) {
+        iCreditoEnviado = enviados[0];
+        iFichasEnviado = enviados[1];
+      } else if (enviados.length === 1) {
+        iFichasEnviado = enviados[0];
+      }
+      if (resgatados.length >= 2) {
+        iCreditoResgatado = resgatados[0];
+        iFichasResgatado = resgatados[1];
+      } else if (resgatados.length === 1) {
+        iFichasResgatado = resgatados[0];
+      }
+      break;
+    }
+  }
+
+  if (headerRowIdx < 0) return { trades: {}, hasData: false };
+
+  const dataStartRow = headerRowIdx + 1;
+  const playerMap = {};
+  let totalIN = 0;
+  let totalOUT = 0;
+  let txnCount = 0;
+
+  for (let r = dataStartRow; r < data.length; r++) {
+    const row = data[r];
+    if (!row || row.length === 0) continue;
+
+    const tempo = String(row[0] || '').trim();
+    if (!tempo || !/^\d{4}-/.test(tempo)) continue;
+
+    const fichasEnv = iFichasEnviado >= 0 ? parseNum(row[iFichasEnviado]) : 0;
+    const fichasRes = iFichasResgatado >= 0 ? parseNum(row[iFichasResgatado]) : 0;
+    const creditoEnv = iCreditoEnviado >= 0 ? parseNum(row[iCreditoEnviado]) : 0;
+    const creditoRes = iCreditoResgatado >= 0 ? parseNum(row[iCreditoResgatado]) : 0;
+
+    const entrada = fichasEnv + creditoEnv;
+    const saida = fichasRes + creditoRes;
+
+    if (entrada === 0 && saida === 0) continue;
+
+    // Determine player (receiver for deposits, sender for withdrawals)
+    let playerId, playerName;
+    if (entrada > 0) {
+      playerId = iRecvId >= 0 ? String(row[iRecvId] || '').trim() : '';
+      playerName = iRecvMemo >= 0 ? String(row[iRecvMemo] || '').trim() : '';
+      if (!playerName) playerName = iRecvNick >= 0 ? String(row[iRecvNick] || '').trim() : '';
+    } else {
+      playerId = String(row[iSenderId] || '').trim();
+      playerName = iSenderNick >= 0 ? String(row[iSenderNick] || '').trim() : '';
+    }
+    if (!playerId) continue;
+
+    totalIN += entrada;
+    totalOUT += saida;
+    txnCount++;
+
+    if (!playerMap[playerId]) {
+      playerMap[playerId] = { name: playerName || playerId, in: 0, out: 0, saldo: 0, txns: 0 };
+    }
+    playerMap[playerId].in += entrada;
+    playerMap[playerId].out += saida;
+    playerMap[playerId].txns++;
+    if (!playerMap[playerId].name && playerName) playerMap[playerId].name = playerName;
+  }
+
+  // Compute saldo per player
+  for (const p of Object.values(playerMap)) {
+    p.saldo = p.in - p.out;
+  }
+
+  if (txnCount === 0) return { trades: {}, hasData: false };
+
+  // Return in same format as Suprema Manager Trade Record
+  // Use a single key "PPPoker_Transacoes" (analogous to "Chippix_143")
+  const trades = {
+    'PPPoker_Transacoes': {
+      manager: 'PPPoker Transações',
+      managerId: 'PPPoker_Transacoes',
+      managerName: 'PPPoker',
+      totalIN,
+      totalOUT,
+      saldo: totalIN - totalOUT,
+      txnCount,
+      playerCount: Object.keys(playerMap).length,
+      players: playerMap,
+    },
+  };
+
+  return { trades, hasData: true };
 }
 
 
