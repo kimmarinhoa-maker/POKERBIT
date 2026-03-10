@@ -25,6 +25,7 @@ export default function ClubDadosClube({ orgId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
+  const [chippixManagerId, setChippixManagerId] = useState('');
   const [dirty, setDirty] = useState(false);
   const { toast } = useToast();
 
@@ -53,6 +54,7 @@ export default function ClubDadosClube({ orgId }: Props) {
           };
           setOrg(data);
           setName(data.name);
+          setChippixManagerId(found.chippix_manager_id || '');
         }
       }
     } catch {
@@ -68,7 +70,11 @@ export default function ClubDadosClube({ orgId }: Props) {
     if (!org) return;
     setSaving(true);
     try {
-      const res = await updateOrganization(org.id, { name });
+      const payload: Record<string, any> = { name };
+      if (org.type === 'SUBCLUB') {
+        payload.chippix_manager_id = chippixManagerId.trim() || null;
+      }
+      const res = await updateOrganization(org.id, payload);
       if (res.success) {
         toast('Dados atualizados', 'success');
         setDirty(false);
@@ -169,6 +175,28 @@ export default function ClubDadosClube({ orgId }: Props) {
                 </div>
               )}
             </div>
+
+            {/* ChipPix Manager ID — only for subclubes */}
+            {isSubclub && (
+              <div>
+                <label className="block text-[11px] text-dark-500 uppercase tracking-wider mb-1">ChipPix Manager ID</label>
+                <div className="flex items-stretch">
+                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-dark-600 bg-dark-800 text-dark-400 text-sm font-mono select-none">Chippix_</span>
+                  <input
+                    type="text"
+                    value={chippixManagerId.replace(/^[Cc]hippix_/i, '')}
+                    onChange={(e) => {
+                      const num = e.target.value.replace(/^[Cc]hippix_/i, '').trim();
+                      setChippixManagerId(num ? `Chippix_${num}` : '');
+                      setDirty(true);
+                    }}
+                    className="input w-full text-sm font-mono rounded-l-none"
+                    placeholder="143"
+                  />
+                </div>
+                <p className="text-[10px] text-dark-600 mt-1">Numero do operador na planilha (coluna Manager Remark)</p>
+              </div>
+            )}
 
             {/* Save — right aligned, compact */}
             <div className="flex justify-end pt-1">
