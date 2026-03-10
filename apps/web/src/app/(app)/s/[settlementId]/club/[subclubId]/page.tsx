@@ -344,6 +344,7 @@ function SubclubPanelPage() {
             <Caixa
               weekStart={settlement.week_start}
               clubId={subclub.id}
+              settlementId={settlement.id}
               subclub={subclub}
               fees={fees}
               settlementStatus={settlement.status}

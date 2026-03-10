@@ -43,7 +43,7 @@ const operacaoItems: NavItem[] = [
 ];
 
 const financeiroItems: NavItem[] = [
-  { href: '/financeiro/caixa', label: 'Caixa', icon: Wallet, permKey: 'page:caixa_geral' },
+  { href: '/financeiro/caixa', label: 'Caixa Geral', icon: Wallet, permKey: 'page:caixa_geral' },
   { href: '/financeiro/agentes', label: 'Fech. Agentes', icon: UserCheck, permKey: 'page:caixa_geral' },
 ];
 

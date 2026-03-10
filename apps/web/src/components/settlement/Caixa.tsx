@@ -5,24 +5,26 @@ import { buildSubclubEntityIds } from '@/lib/subclubEntityIds';
 import type { SubclubData, AgentMetric, PlayerMetric } from '@/types/settlement';
 import PosicaoTab from './caixa/PosicaoTab';
 import FluxoTab from './caixa/FluxoTab';
+import CaixaLancamentosTab from './caixa/CaixaLancamentosTab';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 interface Props {
   weekStart: string;
   clubId: string;
+  settlementId: string;
   subclub: SubclubData & { id: string; agents: AgentMetric[]; players: PlayerMetric[] };
   fees: Record<string, number>;
   settlementStatus: string;
   onDataChange: () => void;
 }
 
-type CaixaSubTab = 'posicao' | 'fluxo';
+type CaixaSubTab = 'posicao' | 'fluxo' | 'lancamentos';
 
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function Caixa({
-  weekStart, clubId, subclub, fees,
+  weekStart, clubId, settlementId, subclub, fees,
   settlementStatus, onDataChange,
 }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<CaixaSubTab>('posicao');
@@ -34,9 +36,14 @@ export default function Caixa({
   // Reset sub-tab when week changes
   useEffect(() => { setActiveSubTab('posicao'); }, [weekStart]);
 
+  // P&L total = abs(ganhos dos jogadores)
+  const plTotal = Math.abs(subclub.totals?.ganhos ?? 0);
+  const agentCount = subclub.agents?.length ?? 0;
+
   const subTabs: { key: CaixaSubTab; label: string }[] = [
     { key: 'posicao', label: 'Posicao' },
     { key: 'fluxo', label: 'Fluxo' },
+    { key: 'lancamentos', label: 'Fluxo de Caixa' },
   ];
 
   return (
@@ -78,6 +85,17 @@ export default function Caixa({
           settlementStatus={settlementStatus}
           onDataChange={onDataChange}
           subclubEntityIds={subclubEntityIds}
+        />
+      )}
+      {activeSubTab === 'lancamentos' && (
+        <CaixaLancamentosTab
+          settlementId={settlementId}
+          clubId={clubId}
+          weekStart={weekStart}
+          plTotal={plTotal}
+          agentCount={agentCount}
+          settlementStatus={settlementStatus}
+          onDataChange={onDataChange}
         />
       )}
     </div>
