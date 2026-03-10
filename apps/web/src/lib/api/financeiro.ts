@@ -58,3 +58,62 @@ export async function getAgentConsolidatedSettlement(
 ): Promise<ApiResponse<AgentConsolidatedSettlement>> {
   return apiFetch(`/financeiro/agent-settlement?groupId=${groupId}&weekStart=${weekStart}`);
 }
+
+// ─── Caixa (Fluxo de Caixa) ─────────────────────────────────────────
+
+import type {
+  CaixaLancamento,
+  CaixaResumo,
+  CaixaCanal,
+  CaixaCreatePayload,
+  CaixaUpdatePayload,
+} from '@/types/caixa';
+
+export async function listCaixaLancamentos(
+  filters?: { settlement_id?: string; club_id?: string; tipo?: string; via?: string; status?: string },
+): Promise<ApiResponse<CaixaLancamento[]>> {
+  const params = new URLSearchParams();
+  if (filters?.settlement_id) params.set('settlement_id', filters.settlement_id);
+  if (filters?.club_id) params.set('club_id', filters.club_id);
+  if (filters?.tipo) params.set('tipo', filters.tipo);
+  if (filters?.via) params.set('via', filters.via);
+  if (filters?.status) params.set('status', filters.status);
+  const qs = params.toString();
+  return apiFetch(`/financeiro/caixa${qs ? `?${qs}` : ''}`);
+}
+
+export async function createCaixaLancamento(
+  payload: CaixaCreatePayload,
+): Promise<ApiResponse<CaixaLancamento>> {
+  return apiFetch('/financeiro/caixa', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCaixaLancamento(
+  id: string,
+  payload: CaixaUpdatePayload,
+): Promise<ApiResponse<CaixaLancamento>> {
+  return apiFetch(`/financeiro/caixa/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCaixaLancamento(id: string): Promise<ApiResponse<void>> {
+  return apiFetch(`/financeiro/caixa/${id}`, { method: 'DELETE' });
+}
+
+export interface CaixaResumoResponse {
+  resumo: CaixaResumo;
+  canais: CaixaCanal[];
+  cobrancas_pendentes: Array<{ nome: string; valor: number }>;
+  pagamentos_pendentes: Array<{ nome: string; valor: number }>;
+}
+
+export async function getCaixaResumo(
+  settlementId: string,
+): Promise<ApiResponse<CaixaResumoResponse>> {
+  return apiFetch(`/financeiro/caixa/resumo?settlement_id=${settlementId}`);
+}
