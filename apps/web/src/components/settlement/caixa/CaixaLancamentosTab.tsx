@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, getCarryForward, formatBRL } from '@/lib/api';
+import { listLedger, getCarryForward, formatBRL, createLedgerEntry, invalidateCache } from '@/lib/api';
 import { round2 } from '@/lib/formatters';
 import { useSortable } from '@/lib/useSortable';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/lib/useAuth';
 import EmptyState from '@/components/ui/EmptyState';
 import Highlight from '@/components/ui/Highlight';
 import SettlementSkeleton from '@/components/ui/SettlementSkeleton';
-import { Wallet } from 'lucide-react';
+import { Wallet, Plus, X } from 'lucide-react';
 import type { AgentMetric, PlayerMetric, LedgerEntry, SubclubData } from '@/types/settlement';
 
 // ─── Props ──────────────────────────────────────────────────────────
@@ -39,10 +40,10 @@ interface MovRow {
   via: string;
   agenteName: string;
   descricao: string;
-  valorLiquido: number; // signed: positivo = entrada, negativo = saída
-  entradas: number;     // gross IN
-  saidas: number;       // gross OUT
-  txCount: number;      // qtd transações originais
+  valorLiquido: number;
+  entradas: number;
+  saidas: number;
+  txCount: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -51,6 +52,9 @@ export default function CaixaLancamentosTab({
   settlementId, clubId, weekStart, subclub, settlementStatus, onDataChange,
 }: Props) {
   const { toast } = useToast();
+  const { canAccess } = useAuth();
+  const canEdit = canAccess('OWNER', 'ADMIN', 'FINANCEIRO');
+  const isDraft = settlementStatus === 'DRAFT';
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
@@ -65,7 +69,10 @@ export default function CaixaLancamentosTab({
   const [filterVia, setFilterVia] = useState<FilterVia>('all');
   const [search, setSearch] = useState('');
 
-  // ─── Load data (same pattern as PosicaoTab) ─────────────────────
+  // Modal
+  const [showModal, setShowModal] = useState(false);
+
+  // ─── Load data ────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -85,7 +92,7 @@ export default function CaixaLancamentosTab({
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ─── Group players by agent ─────────────────────────────────────
+  // ─── Group players by agent ───────────────────────────────────────
   const playersByAgent = useMemo(() => {
     const map = new Map<string, PlayerMetric[]>();
     for (const p of players) {
@@ -96,7 +103,7 @@ export default function CaixaLancamentosTab({
     return map;
   }, [players]);
 
-  // ─── Group ledger by entity_id ──────────────────────────────────
+  // ─── Group ledger by entity_id ────────────────────────────────────
   const ledgerByEntity = useMemo(() => {
     const map = new Map<string, LedgerEntry[]>();
     for (const e of entries) {
@@ -106,7 +113,7 @@ export default function CaixaLancamentosTab({
     return map;
   }, [entries]);
 
-  // ─── Build consolidated rows: 1 per agent/group per channel (LÍQUIDO) ──
+  // ─── Build consolidated rows ──────────────────────────────────────
   const { rows, channelTotals, plTotal, agentCount } = useMemo(() => {
     const allRows: MovRow[] = [];
     let totalPix = 0;
@@ -114,7 +121,6 @@ export default function CaixaLancamentosTab({
     let totalRakeback = 0;
     let totalSaldoAnterior = 0;
 
-    // Helper: collect ledger entries for a list of players
     function collectEntries(
       agentIds: string[],
       groupPlayers: PlayerMetric[],
@@ -145,7 +151,6 @@ export default function CaixaLancamentosTab({
       return result;
     }
 
-    // Helper: process entries + metrics for a group (agent or orphan)
     function processGroup(
       groupId: string,
       groupName: string,
@@ -153,16 +158,13 @@ export default function CaixaLancamentosTab({
       groupPlayers: PlayerMetric[],
       carryKey: string | null,
     ) {
-      // Consolidar por canal: PIX líquido e ChipPix líquido
       let pixIn = 0, pixOut = 0, pixCount = 0;
       let cpIn = 0, cpOut = 0, cpCount = 0;
 
       for (const e of groupEntries) {
         const amt = Number(e.amount);
         const src = (e.source || '').toLowerCase();
-        const isChippix = src === 'chippix';
-
-        if (isChippix) {
+        if (src === 'chippix') {
           if (e.dir === 'IN') cpIn += amt; else cpOut += amt;
           cpCount++;
         } else {
@@ -171,132 +173,75 @@ export default function CaixaLancamentosTab({
         }
       }
 
-      // Linha ChipPix líquido
       const cpLiquido = round2(cpIn - cpOut);
       if (cpCount > 0) {
         totalChippix += cpLiquido;
-        allRows.push({
-          id: `cp_${groupId}`,
-          via: 'chippix',
-          agenteName: groupName,
-          descricao: cpCount === 1 ? '1 transacao' : `${cpCount} transacoes`,
-          valorLiquido: cpLiquido,
-          entradas: round2(cpIn),
-          saidas: round2(cpOut),
-          txCount: cpCount,
-        });
+        allRows.push({ id: `cp_${groupId}`, via: 'chippix', agenteName: groupName, descricao: cpCount === 1 ? '1 transacao' : `${cpCount} transacoes`, valorLiquido: cpLiquido, entradas: round2(cpIn), saidas: round2(cpOut), txCount: cpCount });
       }
 
-      // Linha PIX líquido
       const pixLiquido = round2(pixIn - pixOut);
       if (pixCount > 0) {
         totalPix += pixLiquido;
-        allRows.push({
-          id: `pix_${groupId}`,
-          via: 'pix',
-          agenteName: groupName,
-          descricao: pixCount === 1 ? '1 transacao' : `${pixCount} transacoes`,
-          valorLiquido: pixLiquido,
-          entradas: round2(pixIn),
-          saidas: round2(pixOut),
-          txCount: pixCount,
-        });
+        allRows.push({ id: `pix_${groupId}`, via: 'pix', agenteName: groupName, descricao: pixCount === 1 ? '1 transacao' : `${pixCount} transacoes`, valorLiquido: pixLiquido, entradas: round2(pixIn), saidas: round2(pixOut), txCount: pixCount });
       }
 
-      // Rakeback from player metrics
       const rbTotal = round2(groupPlayers.reduce((s, p) => s + (p.rb_value_brl || 0), 0));
       if (rbTotal > 0) {
         totalRakeback += rbTotal;
-        allRows.push({
-          id: `rb_${groupId}`,
-          via: 'rakeback',
-          agenteName: groupName,
-          descricao: `${groupPlayers.length} jogador(es)`,
-          valorLiquido: -rbTotal,
-          entradas: 0,
-          saidas: rbTotal,
-          txCount: groupPlayers.length,
-        });
+        allRows.push({ id: `rb_${groupId}`, via: 'rakeback', agenteName: groupName, descricao: `${groupPlayers.length} jogador(es)`, valorLiquido: -rbTotal, entradas: 0, saidas: rbTotal, txCount: groupPlayers.length });
       }
 
-      // Saldo Anterior from carry_forward
       if (carryKey) {
         const carry = carryMap[carryKey] || 0;
         if (Math.abs(carry) > 0.01) {
           totalSaldoAnterior += carry;
-          allRows.push({
-            id: `carry_${groupId}`,
-            via: 'saldo_anterior',
-            agenteName: groupName,
-            descricao: 'Saldo Anterior',
-            valorLiquido: carry,
-            entradas: carry > 0 ? carry : 0,
-            saidas: carry < 0 ? Math.abs(carry) : 0,
-            txCount: 1,
-          });
+          allRows.push({ id: `carry_${groupId}`, via: 'saldo_anterior', agenteName: groupName, descricao: 'Saldo Anterior', valorLiquido: carry, entradas: carry > 0 ? carry : 0, saidas: carry < 0 ? Math.abs(carry) : 0, txCount: 1 });
         }
       }
     }
 
-    // Track globally seen entry IDs to avoid double-counting
     const globalSeen = new Set<string>();
 
-    // 1) Process agents with their players
     for (const agent of agents) {
       const agPlayers = playersByAgent.get(agent.agent_name) || [];
       const agentIds = [agent.id, agent.agent_id].filter(Boolean) as string[];
       const agEntries = collectEntries(agentIds, agPlayers, globalSeen);
-      const carryKey = agent.agent_id || agent.id;
-      processGroup(agent.id, agent.agent_name, agEntries, agPlayers, carryKey);
+      processGroup(agent.id, agent.agent_name, agEntries, agPlayers, agent.agent_id || agent.id);
     }
 
-    // 2) Process orphan players (sem agente) — players not matched to any agent
     const agentNames = new Set(agents.map(a => a.agent_name));
-    const orphanPlayers = players.filter(
-      p => !p.agent_name || !agentNames.has(p.agent_name),
-    );
+    const orphanPlayers = players.filter(p => !p.agent_name || !agentNames.has(p.agent_name));
     if (orphanPlayers.length > 0) {
       const orphanEntries = collectEntries([], orphanPlayers, globalSeen);
       processGroup('_orphan', 'SEM AGENTE', orphanEntries, orphanPlayers, null);
     }
 
-    const pl = Math.abs(subclub.totals?.ganhos ?? 0);
-
     return {
       rows: allRows,
-      channelTotals: {
-        pix: round2(totalPix),
-        chippix: round2(totalChippix),
-        rakeback_deduzido: round2(totalRakeback),
-        saldo_anterior: round2(totalSaldoAnterior),
-      },
-      plTotal: pl,
+      channelTotals: { pix: round2(totalPix), chippix: round2(totalChippix), rakeback_deduzido: round2(totalRakeback), saldo_anterior: round2(totalSaldoAnterior) },
+      plTotal: Math.abs(subclub.totals?.ganhos ?? 0),
       agentCount: agents.length + (orphanPlayers.length > 0 ? 1 : 0),
     };
   }, [agents, players, playersByAgent, ledgerByEntity, carryMap, subclub.totals]);
 
-  // ─── Computed totals ────────────────────────────────────────────
-  const totalRecebido = round2(
-    Math.max(0, channelTotals.pix) + Math.max(0, channelTotals.chippix) + Math.max(0, channelTotals.saldo_anterior)
-  );
+  // ─── Computed totals ──────────────────────────────────────────────
+  const totalRecebido = round2(Math.max(0, channelTotals.pix) + Math.max(0, channelTotals.chippix) + Math.max(0, channelTotals.saldo_anterior));
   const faltaReceber = Math.max(0, round2(plTotal - totalRecebido));
   const pctRecebido = plTotal > 0 ? round2((totalRecebido / plTotal) * 100) : 0;
   const pctFalta = plTotal > 0 ? round2((faltaReceber / plTotal) * 100) : 0;
 
-  // ─── Filter rows ───────────────────────────────────────────────
+  // ─── Filter rows ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = rows;
     if (filterVia !== 'all') result = result.filter((r) => r.via === filterVia);
     if (search) {
       const s = search.toLowerCase();
-      result = result.filter(
-        (r) => r.agenteName.toLowerCase().includes(s) || r.descricao.toLowerCase().includes(s),
-      );
+      result = result.filter((r) => r.agenteName.toLowerCase().includes(s) || r.descricao.toLowerCase().includes(s));
     }
     return result;
   }, [rows, filterVia, search]);
 
-  // ─── Sort ──────────────────────────────────────────────────────
+  // ─── Sort ─────────────────────────────────────────────────────────
   type SortKey = 'agente' | 'via' | 'valor';
   const getSortValue = useCallback((r: MovRow, key: SortKey): string | number => {
     switch (key) {
@@ -312,25 +257,44 @@ export default function CaixaLancamentosTab({
     getValue: getSortValue,
   });
 
-  // Footer totals
   const footerLiquido = round2(filtered.reduce((s, r) => s + r.valorLiquido, 0));
 
+  // ─── Clear filter helper ──────────────────────────────────────────
+  const clearFilter = () => setFilterVia('all');
+
   if (loading) return <SettlementSkeleton kpis={3} />;
+
+  // ─── Sidebar channel data ─────────────────────────────────────────
+  const sidebarCanais = [
+    { key: 'pix' as const, label: 'PIX', valor: Math.abs(channelTotals.pix), color: '#06b6d4' },
+    { key: 'chippix' as const, label: 'ChipPix', valor: Math.abs(channelTotals.chippix), color: '#a855f7' },
+    { key: 'rakeback_deduzido' as const, label: 'Rakeback', valor: channelTotals.rakeback_deduzido, color: '#f97316' },
+    { key: 'saldo_anterior' as const, label: 'Saldo Ant.', valor: Math.abs(channelTotals.saldo_anterior), color: '#3b82f6' },
+  ];
+  const maxSidebarVal = Math.max(...sidebarCanais.map(c => c.valor), 1);
 
   return (
     <div>
 
-      {/* Header */}
-      <div className="mb-5">
-        <h3 className="text-lg font-bold text-white">Fluxo de Caixa</h3>
-        <p className="text-dark-500 text-xs">
-          Valores liquidos por agente e canal (IN - OUT)
-        </p>
+      {/* ─── Header + Novo Lancamento ──────────────────────────────── */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-lg font-bold text-white">Fluxo de Caixa</h3>
+          <p className="text-dark-500 text-xs">Valores liquidos por agente e canal (IN - OUT)</p>
+        </div>
+        {isDraft && canEdit && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-3 py-1.5 rounded-lg bg-poker-600/20 text-poker-400 border border-poker-700/40 text-xs font-semibold hover:bg-poker-600/30 transition-colors flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Novo Lancamento
+          </button>
+        )}
       </div>
 
-      {/* ─── Hero KPIs ──────────────────────────────────────────── */}
+      {/* ─── Hero KPIs (barras h-1.5) ────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-        {/* P&L Total */}
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
           <div className="h-0.5 bg-red-500" />
           <div className="p-4">
@@ -340,49 +304,50 @@ export default function CaixaLancamentosTab({
           </div>
         </div>
 
-        {/* Ja Recebido */}
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
           <div className="h-0.5 bg-poker-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Ja Recebido</p>
             <p className="text-xl font-bold font-mono text-poker-400">{formatBRL(totalRecebido)}</p>
             <p className="text-[10px] text-dark-500 mt-0.5">{pctRecebido}% do total</p>
-            <div className="w-full bg-dark-800 rounded-full h-1 mt-1.5">
-              <div className="h-1 rounded-full bg-poker-500 transition-all duration-700" style={{ width: `${Math.min(pctRecebido, 100)}%` }} />
+            <div className="w-full bg-dark-800 rounded-full h-1.5 mt-1.5">
+              <div className="h-1.5 rounded-full bg-poker-500 transition-all duration-700" style={{ width: `${Math.min(pctRecebido, 100)}%` }} />
             </div>
           </div>
         </div>
 
-        {/* Falta Receber */}
         <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
           <div className="h-0.5 bg-yellow-500" />
           <div className="p-4">
             <p className="text-[10px] text-dark-500 uppercase tracking-widest font-bold mb-1">Falta Receber</p>
             <p className="text-xl font-bold font-mono text-yellow-400">{formatBRL(faltaReceber)}</p>
             <p className="text-[10px] text-dark-500 mt-0.5">{pctFalta}% pendente</p>
-            <div className="w-full bg-dark-800 rounded-full h-1 mt-1.5">
-              <div className="h-1 rounded-full bg-yellow-500 transition-all duration-700" style={{ width: `${Math.min(pctFalta, 100)}%` }} />
+            <div className="w-full bg-dark-800 rounded-full h-1.5 mt-1.5">
+              <div className="h-1.5 rounded-full bg-yellow-500 transition-all duration-700" style={{ width: `${Math.min(pctFalta, 100)}%` }} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── Canal Cards (líquido + breakdown IN/OUT) ─────────────── */}
+      {/* ─── Canal Cards (opacity-35 se zerado, IN/OUT em 2 linhas, barra h-1.5) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {(['pix', 'chippix', 'rakeback_deduzido', 'saldo_anterior'] as const).map((via) => {
           const cfg = CANAIS[via];
           const liquido = channelTotals[via];
           const absLiquido = Math.abs(liquido);
+          const isZero = absLiquido < 0.01;
           const pct = plTotal > 0 ? round2((absLiquido / plTotal) * 100) : 0;
 
-          // Calcular IN/OUT brutos para o card
           const viaKey = via === 'rakeback_deduzido' ? 'rakeback' : via;
           const viaRows = rows.filter(r => r.via === viaKey);
           const grossIn = round2(viaRows.reduce((s, r) => s + r.entradas, 0));
           const grossOut = round2(viaRows.reduce((s, r) => s + r.saidas, 0));
 
           return (
-            <div key={via} className="bg-dark-900 border border-dark-700 rounded-xl p-3 hover:border-dark-600 transition-colors">
+            <div
+              key={via}
+              className={`bg-dark-900 border border-dark-700 rounded-xl p-3 hover:border-dark-600 transition-all ${isZero ? 'opacity-35' : ''}`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-white">{cfg.label}</span>
                 <span className="text-[10px] text-dark-500 font-mono">{pct}%</span>
@@ -390,16 +355,26 @@ export default function CaixaLancamentosTab({
               <p className={`text-sm font-bold font-mono mb-1 ${liquido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
                 {liquido < 0 ? '\u2212' : ''}{formatBRL(absLiquido)}
               </p>
-              {(grossIn > 0 || grossOut > 0) && (
-                <div className="text-[10px] text-dark-500 flex items-center gap-1 flex-wrap">
-                  {grossIn > 0 && <span className="text-poker-400/70">IN {formatBRL(grossIn)}</span>}
-                  {grossIn > 0 && grossOut > 0 && <span className="text-dark-600">•</span>}
-                  {grossOut > 0 && <span className="text-red-400/70">OUT {formatBRL(grossOut)}</span>}
+              {/* IN/OUT em duas linhas separadas */}
+              {!isZero && (grossIn > 0 || grossOut > 0) && (
+                <div className="mt-2 space-y-0.5">
+                  {grossIn > 0 && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-dark-500">Entradas</span>
+                      <span className="font-mono font-semibold text-poker-400">{formatBRL(grossIn)}</span>
+                    </div>
+                  )}
+                  {grossOut > 0 && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-dark-500">Saidas</span>
+                      <span className="font-mono font-semibold text-red-400">{formatBRL(grossOut)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-              <div className="w-full bg-dark-800 rounded-full h-1 mt-2">
+              <div className="w-full bg-dark-800 rounded-full h-1.5 mt-2">
                 <div
-                  className="h-1 rounded-full transition-all duration-500"
+                  className="h-1.5 rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: `${cfg.color}90` }}
                 />
               </div>
@@ -408,7 +383,7 @@ export default function CaixaLancamentosTab({
         })}
       </div>
 
-      {/* ─── Two Column: Table + Sidebar ────────────────────────── */}
+      {/* ─── Two Column: Table + Sidebar ─────────────────────────── */}
       <div className="flex gap-4">
 
         {/* Left: Table */}
@@ -422,13 +397,20 @@ export default function CaixaLancamentosTab({
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 max-w-[200px] bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
             />
-            <select value={filterVia} onChange={(e) => setFilterVia(e.target.value as FilterVia)} className="bg-dark-800 border border-dark-700/50 rounded-lg px-2 py-1.5 text-xs text-dark-200 focus:border-poker-500 focus:outline-none">
-              <option value="all">Via: Todas</option>
-              <option value="pix">PIX</option>
-              <option value="chippix">ChipPix</option>
-              <option value="rakeback">Rakeback</option>
-              <option value="saldo_anterior">Saldo Ant.</option>
-            </select>
+            <div className="flex items-center gap-1">
+              <select value={filterVia} onChange={(e) => setFilterVia(e.target.value as FilterVia)} className="bg-dark-800 border border-dark-700/50 rounded-lg px-2 py-1.5 text-xs text-dark-200 focus:border-poker-500 focus:outline-none">
+                <option value="all">Via: Todas</option>
+                <option value="pix">PIX</option>
+                <option value="chippix">ChipPix</option>
+                <option value="rakeback">Rakeback</option>
+                <option value="saldo_anterior">Saldo Ant.</option>
+              </select>
+              {filterVia !== 'all' && (
+                <button onClick={clearFilter} className="p-1 rounded hover:bg-dark-700 text-dark-400 hover:text-white transition-colors" title="Limpar filtro">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Table */}
@@ -462,22 +444,32 @@ export default function CaixaLancamentosTab({
                               <p className="text-[10px] text-dark-500">{r.descricao}</p>
                             </div>
                           </td>
+                          {/* Badge clicável como filtro */}
                           <td className="px-2 py-2 text-center">
                             {viaCfg ? (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: viaCfg.bg, color: viaCfg.color, border: `1px solid ${viaCfg.border}` }}>
+                              <button
+                                onClick={() => setFilterVia(r.via as FilterVia)}
+                                className="px-1.5 py-0.5 rounded text-[9px] font-bold cursor-pointer hover:brightness-125 transition-all"
+                                style={{ background: viaCfg.bg, color: viaCfg.color, border: `1px solid ${viaCfg.border}` }}
+                                title={`Filtrar por ${viaCfg.label}`}
+                              >
                                 {viaCfg.label}
-                              </span>
+                              </button>
                             ) : <span className="text-dark-600 text-[10px]">{r.via}</span>}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono text-xs text-poker-400/70">
-                            {r.entradas > 0 ? formatBRL(r.entradas) : '\u2014'}
+                          {/* Entradas — vazio se zero (sem traço) */}
+                          <td className="px-3 py-2 text-right font-mono text-xs">
+                            {r.entradas > 0 && (
+                              <span className="text-poker-400 font-semibold">{formatBRL(r.entradas)}</span>
+                            )}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono text-xs text-red-400/70">
-                            {r.saidas > 0 ? formatBRL(r.saidas) : '\u2014'}
+                          {/* Saidas — vazio se zero (sem traço) */}
+                          <td className="px-3 py-2 text-right font-mono text-xs">
+                            {r.saidas > 0 && (
+                              <span className="text-red-400 font-semibold">{formatBRL(r.saidas)}</span>
+                            )}
                           </td>
-                          <td className={`px-3 py-2 text-right font-mono font-bold text-xs ${
-                            isPositive ? 'text-poker-400' : 'text-red-400'
-                          }`}>
+                          <td className={`px-3 py-2 text-right font-mono font-bold text-xs ${isPositive ? 'text-poker-400' : 'text-red-400'}`}>
                             {isPositive ? '+' : '\u2212'}{formatBRL(Math.abs(r.valorLiquido))}
                           </td>
                         </tr>
@@ -505,74 +497,218 @@ export default function CaixaLancamentosTab({
           )}
         </div>
 
-        {/* Right: Sidebar */}
+        {/* ─── Sidebar ─────────────────────────────────────────────── */}
         <div className="w-[280px] flex-shrink-0 space-y-3 hidden xl:block">
 
-          {/* Fluxo Visual */}
+          {/* Fluxo do Dinheiro — barras proporcionais */}
           <div className="card p-3">
             <h4 className="text-[10px] font-bold text-dark-400 uppercase tracking-wider mb-3">Fluxo do Dinheiro</h4>
-            {(['pix', 'chippix', 'rakeback_deduzido', 'saldo_anterior'] as const).map((via) => {
-              const cfg = CANAIS[via];
-              const liquido = channelTotals[via];
-              const absVal = Math.abs(liquido);
-              const pct = plTotal > 0 ? round2((absVal / plTotal) * 100) : 0;
-              return (
-                <div key={via} className="mb-2.5">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] text-dark-400">{cfg.label}</span>
-                    <span className={`text-[10px] font-mono ${liquido >= 0 ? 'text-dark-300' : 'text-red-400'}`}>
-                      {liquido < 0 ? '\u2212' : ''}{formatBRL(absVal)}
+            <div className="space-y-2">
+              {sidebarCanais.map((canal) => {
+                const barPct = maxSidebarVal > 0 ? (canal.valor / maxSidebarVal) * 100 : 0;
+                const totalGeral = sidebarCanais.reduce((s, c) => s + c.valor, 0);
+                const sharePct = totalGeral > 0 ? Math.round((canal.valor / totalGeral) * 100) : 0;
+                return (
+                  <div key={canal.key} className="flex items-center gap-2">
+                    <span className="w-14 text-right text-[10px] font-semibold shrink-0" style={{ color: canal.color }}>
+                      {canal.label}
+                    </span>
+                    <div className="flex-1 h-5 bg-white/[0.02] rounded overflow-hidden">
+                      <div
+                        className="h-full rounded flex items-center pl-1.5 transition-all duration-700"
+                        style={{ width: `${barPct}%`, backgroundColor: `${canal.color}50` }}
+                      >
+                        {barPct > 15 && (
+                          <span className="text-[9px] font-mono font-bold text-white/80">{sharePct}%</span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="w-20 text-right text-[10px] font-mono font-bold shrink-0" style={{ color: canal.color }}>
+                      {formatBRL(canal.valor)}
                     </span>
                   </div>
-                  <div className="w-full bg-dark-800 rounded-full h-1.5">
-                    <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: cfg.color }} />
-                  </div>
-                </div>
-              );
-            })}
-            <div className="border-t border-dark-700/50 pt-2 mt-2">
-              <div className="text-[9px] text-dark-500 uppercase tracking-wider font-bold text-center mb-1">CAIXA DO CLUBE</div>
-              <div className="w-full bg-dark-800 rounded-full h-2">
-                <div className="h-2 rounded-full bg-poker-500 transition-all duration-500" style={{ width: `${Math.min(pctRecebido, 100)}%` }} />
+                );
+              })}
+            </div>
+
+            {/* Separador ▼ CAIXA DO CLUBE */}
+            <div className="flex items-center gap-2 my-3 text-[10px] text-dark-500">
+              <div className="flex-1 h-px bg-dark-700/50" />
+              <span>▼ CAIXA DO CLUBE</span>
+              <div className="flex-1 h-px bg-dark-700/50" />
+            </div>
+
+            {/* Barra verde de progresso geral */}
+            <div className="h-6 bg-white/[0.02] rounded overflow-hidden">
+              <div
+                className="h-full rounded bg-emerald-500/50 flex items-center justify-center transition-all duration-700"
+                style={{ width: `${Math.min(pctRecebido, 100)}%` }}
+              >
+                <span className="text-[10px] font-mono font-bold text-white">{pctRecebido.toFixed(1)}%</span>
               </div>
-              <div className="text-center text-[10px] text-dark-400 mt-0.5 font-mono">{pctRecebido}%</div>
             </div>
           </div>
 
-          {/* Resultado */}
+          {/* Resultado — Rakeback em vermelho, Total com destaque */}
           <div className="card p-3">
             <h4 className="text-[10px] font-bold text-dark-400 uppercase tracking-wider mb-2">Resultado</h4>
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-0.5">
                 <span className="text-dark-400">PIX (liquido)</span>
-                <span className={`font-mono ${channelTotals.pix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                <span className={`font-mono font-semibold ${channelTotals.pix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
                   {channelTotals.pix < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.pix))}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-0.5">
                 <span className="text-dark-400">ChipPix (liquido)</span>
-                <span className={`font-mono ${channelTotals.chippix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                <span className={`font-mono font-semibold ${channelTotals.chippix >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
                   {channelTotals.chippix < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.chippix))}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-0.5">
                 <span className="text-dark-400">(-) Rakeback</span>
-                <span className="font-mono text-red-400">{formatBRL(channelTotals.rakeback_deduzido)}</span>
+                <span className="font-mono font-semibold text-red-400">{formatBRL(channelTotals.rakeback_deduzido)}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-0.5">
                 <span className="text-dark-400">Saldo Anterior</span>
-                <span className={`font-mono ${channelTotals.saldo_anterior >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                <span className={`font-mono font-semibold ${channelTotals.saldo_anterior >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
                   {channelTotals.saldo_anterior < 0 ? '\u2212' : ''}{formatBRL(Math.abs(channelTotals.saldo_anterior))}
                 </span>
               </div>
             </div>
-            <div className="border-t border-dark-700/50 pt-2 mt-2 flex items-center justify-between">
-              <span className="text-xs font-bold text-white">Total Recebido</span>
-              <span className={`text-lg font-bold font-mono ${totalRecebido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-                {formatBRL(totalRecebido)}
-              </span>
+            {/* Total Recebido com mais destaque */}
+            <div className="mt-2 pt-3 border-t border-emerald-500/20">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-white">Total Recebido</span>
+                <span className={`font-mono text-lg font-extrabold ${totalRecebido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {formatBRL(totalRecebido)}
+                </span>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ─── Modal: Novo Lancamento ──────────────────────────────── */}
+      {showModal && (
+        <NovoLancamentoModal
+          weekStart={weekStart}
+          agents={agents}
+          onClose={() => setShowModal(false)}
+          onCreated={() => {
+            setShowModal(false);
+            invalidateCache('/ledger');
+            loadData();
+            onDataChange();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Novo Lancamento Modal ──────────────────────────────────────────
+
+function NovoLancamentoModal({
+  weekStart, agents, onClose, onCreated,
+}: {
+  weekStart: string;
+  agents: AgentMetric[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [dir, setDir] = useState<'IN' | 'OUT'>('IN');
+  const [agentId, setAgentId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('PIX');
+  const [description, setDescription] = useState('');
+
+  const selectedAgent = agents.find(a => (a.agent_id || a.id) === agentId);
+
+  const handleSave = async () => {
+    const numVal = Number(amount.replace(',', '.'));
+    if (!numVal || numVal <= 0) { toast('Valor invalido', 'error'); return; }
+    if (!agentId) { toast('Selecione um agente', 'error'); return; }
+
+    setSaving(true);
+    try {
+      const res = await createLedgerEntry({
+        entity_id: agentId,
+        entity_name: selectedAgent?.agent_name || 'Manual',
+        week_start: weekStart,
+        dir,
+        amount: numVal,
+        method: method || undefined,
+        description: description || undefined,
+      });
+      if (res.success) { toast('Lancamento criado', 'success'); onCreated(); }
+      else toast(res.error || 'Erro', 'error');
+    } catch { toast('Erro ao criar lancamento', 'error'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-dark-900 border border-dark-700 rounded-xl shadow-modal w-full max-w-md animate-scale-in">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-dark-700/50">
+          <h3 className="text-white font-semibold">Novo Lancamento</h3>
+          <button onClick={onClose} className="text-dark-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Tipo */}
+          <div>
+            <label className="text-xs text-dark-400 font-medium block mb-1">Tipo</label>
+            <div className="flex gap-2">
+              {(['IN', 'OUT'] as const).map((d) => (
+                <button key={d} onClick={() => setDir(d)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+                    dir === d
+                      ? d === 'IN' ? 'bg-poker-900/30 text-poker-400 border-poker-700/40' : 'bg-red-900/30 text-red-400 border-red-700/40'
+                      : 'bg-dark-800 text-dark-400 border-dark-700/50 hover:bg-dark-700/50'
+                  }`}>
+                  {d === 'IN' ? '▲ Entrada' : '▼ Saida'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Agente */}
+          <div>
+            <label className="text-xs text-dark-400 font-medium block mb-1">Agente</label>
+            <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white focus:border-poker-500 focus:outline-none">
+              <option value="">Selecionar...</option>
+              {agents.map(a => (
+                <option key={a.id} value={a.agent_id || a.id}>{a.agent_name}</option>
+              ))}
+            </select>
+          </div>
+          {/* Metodo */}
+          <div>
+            <label className="text-xs text-dark-400 font-medium block mb-1">Metodo</label>
+            <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white focus:border-poker-500 focus:outline-none">
+              <option value="PIX">PIX</option>
+              <option value="ChipPix">ChipPix</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          {/* Valor */}
+          <div>
+            <label className="text-xs text-dark-400 font-medium block mb-1">Valor (R$)</label>
+            <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white font-mono focus:border-poker-500 focus:outline-none" />
+          </div>
+          {/* Descricao */}
+          <div>
+            <label className="text-xs text-dark-400 font-medium block mb-1">Descricao</label>
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descricao opcional" className="w-full bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-2 text-sm text-white focus:border-poker-500 focus:outline-none" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-5 py-4 border-t border-dark-700/50">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-dark-800 text-dark-300 text-sm hover:bg-dark-700 transition-colors">Cancelar</button>
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-poker-600/20 text-poker-400 border border-poker-700/40 text-sm font-medium hover:bg-poker-600/30 transition-colors disabled:opacity-50">
+            {saving ? 'Salvando...' : 'Criar Lancamento'}
+          </button>
         </div>
       </div>
     </div>
