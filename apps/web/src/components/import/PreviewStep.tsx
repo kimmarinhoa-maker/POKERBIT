@@ -98,7 +98,7 @@ export default function PreviewStep({
     const q = playerSearch.toLowerCase().trim();
     const filterFn = STATUS_FILTERS.find((f) => f.key === statusFilter)?.match || (() => true);
 
-    let list = players.filter((p) => {
+    const list = players.filter((p) => {
       // Status filter
       if (!filterFn(p._status || 'ok')) return false;
       // Text search

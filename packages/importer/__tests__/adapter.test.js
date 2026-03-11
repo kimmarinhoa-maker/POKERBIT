@@ -275,7 +275,7 @@ describe('parseStatisticsBreakdown', () => {
     const map = parseStatisticsBreakdown(rows);
     expect(map['1001']).toBeDefined();
     expect(map['1001'].ringGame).toBe(30);
-    expect(map['1001'].mtt).toBe(10);
+    expect(map['1001'].mttLocal).toBe(10);
     expect(map['1001'].total).toBe(50);
   });
 
@@ -314,6 +314,7 @@ describe('parseStatisticsBreakdown', () => {
       { 'Player ID': '1002', 'Ring Game Total(Local)': 20 },
     ]);
     const map = parseStatisticsBreakdown(rows);
-    expect(Object.keys(map)).toHaveLength(2);
+    const playerKeys = Object.keys(map).filter(k => k !== '__meta' && k !== '_diagGaps');
+    expect(playerKeys).toHaveLength(2);
   });
 });

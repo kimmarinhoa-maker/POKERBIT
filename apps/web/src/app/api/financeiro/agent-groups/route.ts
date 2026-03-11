@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       const orgById = new Map<string, any>();
       for (const o of allOrgs || []) orgById.set(o.id, o);
 
-      function findClubAncestor(orgId: string): any | null {
+      const findClubAncestor = (orgId: string): any | null => {
         const visited = new Set<string>();
         let current = orgById.get(orgId);
         while (current) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
           current = orgById.get(current.parent_id);
         }
         return null;
-      }
+      };
 
       // 4. Assemble result
       const result = (groups || []).map((g: any) => {

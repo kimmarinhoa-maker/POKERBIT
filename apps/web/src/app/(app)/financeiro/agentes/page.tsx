@@ -79,7 +79,7 @@ export default function FechamentoAgentesPage() {
       const orgMap = new Map<string, any>();
       for (const o of allRes.data as any[]) orgMap.set(o.id, o);
 
-      function findClubAndSubclub(orgId: string): { club: any | null; subclub: any | null } {
+      const findClubAndSubclub = (orgId: string): { club: any | null; subclub: any | null } => {
         const visited = new Set<string>();
         let cur = orgMap.get(orgId);
         let subclub: any | null = null;
@@ -92,7 +92,7 @@ export default function FechamentoAgentesPage() {
           cur = orgMap.get(cur.parent_id);
         }
         return { club: null, subclub };
-      }
+      };
 
       const orgs = (agentRes.data as any[])
         .filter((org: any) => !/^(none|sem agente|\(sem agente\))$/i.test(org.name))

@@ -151,15 +151,16 @@ describe('parseWorkbook', () => {
     expect(result.autoResolved[0].clube).toBe('TGP');
   });
 
-  it('agente desconhecido → unknown_subclub', () => {
+  it('agente desconhecido → sem_vinculo', () => {
     const wb = makeWorkbook([{
       'Player ID': '1001',
       'Agent ID': 'AG01',
       'Agent Name': 'Random Agent XYZ',
     }]);
     const result = parseWorkbook(wb);
-    expect(result.unknown).toHaveLength(1);
-    expect(result.unknown[0]._status).toBe('unknown_subclub');
+    const semVinculo = result.all.filter(p => p._status === 'sem_vinculo');
+    expect(semVinculo).toHaveLength(1);
+    expect(semVinculo[0].clube).toBe('SEM V\u00cdNCULO');
   });
 
   it('duplicatas sao mergeadas', () => {
@@ -191,14 +192,15 @@ describe('parseWorkbook', () => {
     const result = parseWorkbook(wb);
     expect(result.ok[0].rakeBreakdown).toBeDefined();
     expect(result.ok[0].rakeBreakdown.ringGame).toBe(30);
-    expect(result.ok[0].rakeBreakdown.mtt).toBe(10);
+    expect(result.ok[0].rakeBreakdown.mttLocal).toBe(10);
     expect(result.meta.hasStatistics).toBe(true);
   });
 
-  it('sem Statistics sheet: rakeBreakdown zerado', () => {
+  it('sem Statistics sheet: rakeBreakdown usa resumeRake como fallback', () => {
     const wb = makeWorkbook([{ 'Player ID': '1001', 'Agent Name': 'AMS X', 'Agent ID': 'AG01' }]);
     const result = parseWorkbook(wb);
-    expect(result.ok[0].rakeBreakdown.total).toBe(0);
+    // Sem Statistics, total = resumeRake (Total Fee default=50 × guToBrl=5 = 250)
+    expect(result.ok[0].rakeBreakdown.total).toBe(250);
     expect(result.meta.hasStatistics).toBe(false);
   });
 

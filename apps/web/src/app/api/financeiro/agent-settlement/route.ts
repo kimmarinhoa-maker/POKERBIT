@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       for (const o of allOrgs || []) orgById.set(o.id, o);
 
       // Helper: walk up org tree to find CLUB ancestor
-      function findClubAncestor(orgId: string): any | null {
+      const findClubAncestor = (orgId: string): any | null => {
         const visited = new Set<string>();
         let current = orgById.get(orgId);
         while (current) {
@@ -78,17 +78,17 @@ export async function GET(req: NextRequest) {
           current = orgById.get(current.parent_id);
         }
         return null;
-      }
+      };
 
-      function getPlatform(orgId: string): string {
+      const getPlatform = (orgId: string): string => {
         const club = findClubAncestor(orgId);
         return (club?.metadata?.platform || 'outro').toLowerCase();
-      }
+      };
 
-      function getClubName(orgId: string): string {
+      const getClubName = (orgId: string): string => {
         const club = findClubAncestor(orgId);
         return club?.name || '';
-      }
+      };
 
       // 3. For each member, resolve club_id
       const orgToClubId = new Map<string, string>();
