@@ -32,17 +32,16 @@ const CANAIS: Record<string, { label: string; color: string; bg: string; border:
   saldo_anterior:    { label: 'Saldo Anterior',    color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)' },
 };
 
-type FilterVia = 'all' | 'pix' | 'chippix' | 'rakeback' | 'saldo_anterior';
-
-// Row consolidada: 1 linha por agente por canal, valor = líquido
-interface MovRow {
+// Row consolidada: 1 linha por agente (espelha Comprovantes)
+interface AgenteCaixaRow {
   id: string;
-  via: string;
   agenteName: string;
-  descricao: string;
-  valorLiquido: number;
-  entradas: number;
-  saidas: number;
+  canais: string[];          // canais usados (pix, chippix, etc)
+  canalPrincipal: string;    // canal com mais transações
+  pl: number;                // P/L dos jogadores (negativo = jogador perdeu)
+  pagamentos: number;        // total líquido recebido/pago (ChipPix+PIX net)
+  rb: number;                // rakeback total
+  liquido: number;           // |P/L| - pagamentos - rb
   txCount: number;
 }
 
@@ -66,7 +65,6 @@ export default function CaixaLancamentosTab({
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [filterVia, setFilterVia] = useState<FilterVia>('all');
   const [search, setSearch] = useState('');
 
   // Modal
@@ -113,9 +111,9 @@ export default function CaixaLancamentosTab({
     return map;
   }, [entries]);
 
-  // ─── Build consolidated rows ──────────────────────────────────────
+  // ─── Build agent-centric rows (espelha Comprovantes) ─────────────
   const { rows, channelTotals, plTotal, agentCount } = useMemo(() => {
-    const allRows: MovRow[] = [];
+    const allRows: AgenteCaixaRow[] = [];
     let totalPix = 0;
     let totalChippix = 0;
     let totalRakeback = 0;
@@ -151,13 +149,13 @@ export default function CaixaLancamentosTab({
       return result;
     }
 
-    function processGroup(
+    function processAgent(
       groupId: string,
       groupName: string,
       groupEntries: LedgerEntry[],
       groupPlayers: PlayerMetric[],
       carryKey: string | null,
-    ) {
+    ): AgenteCaixaRow {
       let pixIn = 0, pixOut = 0, pixCount = 0;
       let cpIn = 0, cpOut = 0, cpCount = 0;
 
@@ -174,30 +172,51 @@ export default function CaixaLancamentosTab({
       }
 
       const cpLiquido = round2(cpIn - cpOut);
-      if (cpCount > 0) {
-        totalChippix += cpLiquido;
-        allRows.push({ id: `cp_${groupId}`, via: 'chippix', agenteName: groupName, descricao: cpCount === 1 ? '1 transacao' : `${cpCount} transacoes`, valorLiquido: cpLiquido, entradas: round2(cpIn), saidas: round2(cpOut), txCount: cpCount });
-      }
-
       const pixLiquido = round2(pixIn - pixOut);
-      if (pixCount > 0) {
-        totalPix += pixLiquido;
-        allRows.push({ id: `pix_${groupId}`, via: 'pix', agenteName: groupName, descricao: pixCount === 1 ? '1 transacao' : `${pixCount} transacoes`, valorLiquido: pixLiquido, entradas: round2(pixIn), saidas: round2(pixOut), txCount: pixCount });
-      }
+      totalChippix += cpLiquido;
+      totalPix += pixLiquido;
 
-      const rbTotal = round2(groupPlayers.reduce((s, p) => s + (p.rb_value_brl || 0), 0));
-      if (rbTotal > 0) {
-        totalRakeback += rbTotal;
-        allRows.push({ id: `rb_${groupId}`, via: 'rakeback', agenteName: groupName, descricao: `${groupPlayers.length} jogador(es)`, valorLiquido: -rbTotal, entradas: 0, saidas: rbTotal, txCount: groupPlayers.length });
-      }
+      // Canais usados
+      const canais: string[] = [];
+      if (pixCount > 0) canais.push('pix');
+      if (cpCount > 0) canais.push('chippix');
+      const canalPrincipal = cpCount >= pixCount && cpCount > 0 ? 'chippix' : pixCount > 0 ? 'pix' : '';
 
+      // Saldo anterior
+      let carry = 0;
       if (carryKey) {
-        const carry = carryMap[carryKey] || 0;
+        carry = carryMap[carryKey] || 0;
         if (Math.abs(carry) > 0.01) {
           totalSaldoAnterior += carry;
-          allRows.push({ id: `carry_${groupId}`, via: 'saldo_anterior', agenteName: groupName, descricao: 'Saldo Anterior', valorLiquido: carry, entradas: carry > 0 ? carry : 0, saidas: carry < 0 ? Math.abs(carry) : 0, txCount: 1 });
+          canais.push('saldo_anterior');
         }
       }
+
+      // Pagamentos = total líquido recebido (PIX + ChipPix + Saldo Anterior)
+      const pagamentos = round2(pixLiquido + cpLiquido + carry);
+
+      // Rakeback
+      const rb = round2(groupPlayers.reduce((s, p) => s + (p.rb_value_brl || 0), 0));
+      totalRakeback += rb;
+      if (rb > 0) canais.push('rakeback');
+
+      // P/L = soma dos ganhos dos jogadores deste agente
+      const pl = round2(groupPlayers.reduce((s, p) => s + (p.winnings_brl || 0), 0));
+
+      // Líquido = |P/L| - pagamentos - rb (o que falta resolver)
+      const liquido = round2(Math.abs(pl) - pagamentos - rb);
+
+      return {
+        id: groupId,
+        agenteName: groupName,
+        canais,
+        canalPrincipal,
+        pl,
+        pagamentos,
+        rb,
+        liquido,
+        txCount: pixCount + cpCount,
+      };
     }
 
     const globalSeen = new Set<string>();
@@ -206,21 +225,23 @@ export default function CaixaLancamentosTab({
       const agPlayers = playersByAgent.get(agent.agent_name) || [];
       const agentIds = [agent.id, agent.agent_id].filter(Boolean) as string[];
       const agEntries = collectEntries(agentIds, agPlayers, globalSeen);
-      processGroup(agent.id, agent.agent_name, agEntries, agPlayers, agent.agent_id || agent.id);
+      const row = processAgent(agent.id, agent.agent_name, agEntries, agPlayers, agent.agent_id || agent.id);
+      allRows.push(row);
     }
 
     const agentNames = new Set(agents.map(a => a.agent_name));
     const orphanPlayers = players.filter(p => !p.agent_name || !agentNames.has(p.agent_name));
     if (orphanPlayers.length > 0) {
       const orphanEntries = collectEntries([], orphanPlayers, globalSeen);
-      processGroup('_orphan', 'SEM AGENTE', orphanEntries, orphanPlayers, null);
+      const row = processAgent('_orphan', 'SEM AGENTE', orphanEntries, orphanPlayers, null);
+      allRows.push(row);
     }
 
     return {
       rows: allRows,
       channelTotals: { pix: round2(totalPix), chippix: round2(totalChippix), rakeback_deduzido: round2(totalRakeback), saldo_anterior: round2(totalSaldoAnterior) },
       plTotal: Math.abs(subclub.totals?.ganhos ?? 0),
-      agentCount: agents.length + (orphanPlayers.length > 0 ? 1 : 0),
+      agentCount: allRows.length,
     };
   }, [agents, players, playersByAgent, ledgerByEntity, carryMap, subclub.totals]);
 
@@ -233,34 +254,36 @@ export default function CaixaLancamentosTab({
   // ─── Filter rows ──────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = rows;
-    if (filterVia !== 'all') result = result.filter((r) => r.via === filterVia);
     if (search) {
       const s = search.toLowerCase();
-      result = result.filter((r) => r.agenteName.toLowerCase().includes(s) || r.descricao.toLowerCase().includes(s));
+      result = result.filter((r) => r.agenteName.toLowerCase().includes(s));
     }
     return result;
-  }, [rows, filterVia, search]);
+  }, [rows, search]);
 
   // ─── Sort ─────────────────────────────────────────────────────────
-  type SortKey = 'agente' | 'via' | 'valor';
-  const getSortValue = useCallback((r: MovRow, key: SortKey): string | number => {
+  type SortKey = 'agente' | 'pl' | 'pagamentos' | 'rb' | 'liquido';
+  const getSortValue = useCallback((r: AgenteCaixaRow, key: SortKey): string | number => {
     switch (key) {
       case 'agente': return r.agenteName;
-      case 'via': return r.via;
-      case 'valor': return r.valorLiquido;
+      case 'pl': return r.pl;
+      case 'pagamentos': return r.pagamentos;
+      case 'rb': return r.rb;
+      case 'liquido': return r.liquido;
     }
   }, []);
 
-  const { sorted, handleSort, sortIcon, ariaSort } = useSortable<MovRow, SortKey>({
+  const { sorted, handleSort, sortIcon, ariaSort } = useSortable<AgenteCaixaRow, SortKey>({
     data: filtered,
-    defaultKey: 'valor',
+    defaultKey: 'liquido',
     getValue: getSortValue,
   });
 
-  const footerLiquido = round2(filtered.reduce((s, r) => s + r.valorLiquido, 0));
-
-  // ─── Clear filter helper ──────────────────────────────────────────
-  const clearFilter = () => setFilterVia('all');
+  // Footer totals
+  const footerPl = round2(filtered.reduce((s, r) => s + r.pl, 0));
+  const footerPag = round2(filtered.reduce((s, r) => s + r.pagamentos, 0));
+  const footerRb = round2(filtered.reduce((s, r) => s + r.rb, 0));
+  const footerLiquido = round2(filtered.reduce((s, r) => s + r.liquido, 0));
 
   if (loading) return <SettlementSkeleton kpis={3} />;
 
@@ -329,7 +352,7 @@ export default function CaixaLancamentosTab({
         </div>
       </div>
 
-      {/* ─── Canal Cards (opacity-35 se zerado, IN/OUT em 2 linhas, barra h-1.5) */}
+      {/* ─── Canal Cards (opacity-35 se zerado, barra h-1.5) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {(['pix', 'chippix', 'rakeback_deduzido', 'saldo_anterior'] as const).map((via) => {
           const cfg = CANAIS[via];
@@ -337,11 +360,6 @@ export default function CaixaLancamentosTab({
           const absLiquido = Math.abs(liquido);
           const isZero = absLiquido < 0.01;
           const pct = plTotal > 0 ? round2((absLiquido / plTotal) * 100) : 0;
-
-          const viaKey = via === 'rakeback_deduzido' ? 'rakeback' : via;
-          const viaRows = rows.filter(r => r.via === viaKey);
-          const grossIn = round2(viaRows.reduce((s, r) => s + r.entradas, 0));
-          const grossOut = round2(viaRows.reduce((s, r) => s + r.saidas, 0));
 
           return (
             <div
@@ -355,23 +373,6 @@ export default function CaixaLancamentosTab({
               <p className={`text-sm font-bold font-mono mb-1 ${liquido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
                 {liquido < 0 ? '\u2212' : ''}{formatBRL(absLiquido)}
               </p>
-              {/* IN/OUT em duas linhas separadas */}
-              {!isZero && (grossIn > 0 || grossOut > 0) && (
-                <div className="mt-2 space-y-0.5">
-                  {grossIn > 0 && (
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-dark-500">Entradas</span>
-                      <span className="font-mono font-semibold text-poker-400">{formatBRL(grossIn)}</span>
-                    </div>
-                  )}
-                  {grossOut > 0 && (
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-dark-500">Saidas</span>
-                      <span className="font-mono font-semibold text-red-400">{formatBRL(grossOut)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
               <div className="w-full bg-dark-800 rounded-full h-1.5 mt-2">
                 <div
                   className="h-1.5 rounded-full transition-all duration-500"
@@ -388,8 +389,8 @@ export default function CaixaLancamentosTab({
 
         {/* Left: Table */}
         <div className="flex-1 min-w-0">
-          {/* Filters */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {/* Search */}
+          <div className="flex items-center gap-2 mb-3">
             <input
               type="text"
               placeholder="Buscar agente..."
@@ -397,20 +398,7 @@ export default function CaixaLancamentosTab({
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 max-w-[200px] bg-dark-800 border border-dark-700/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-dark-500 focus:border-poker-500 focus:outline-none"
             />
-            <div className="flex items-center gap-1">
-              <select value={filterVia} onChange={(e) => setFilterVia(e.target.value as FilterVia)} className="bg-dark-800 border border-dark-700/50 rounded-lg px-2 py-1.5 text-xs text-dark-200 focus:border-poker-500 focus:outline-none">
-                <option value="all">Via: Todas</option>
-                <option value="pix">PIX</option>
-                <option value="chippix">ChipPix</option>
-                <option value="rakeback">Rakeback</option>
-                <option value="saldo_anterior">Saldo Ant.</option>
-              </select>
-              {filterVia !== 'all' && (
-                <button onClick={clearFilter} className="p-1 rounded hover:bg-dark-700 text-dark-400 hover:text-white transition-colors" title="Limpar filtro">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            <span className="text-[10px] text-dark-500">{filtered.length} agentes</span>
           </div>
 
           {/* Table */}
@@ -425,69 +413,84 @@ export default function CaixaLancamentosTab({
                   <thead>
                     <tr className="bg-dark-800/50">
                       <th className="px-3 py-2.5 text-left font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('agente')} aria-sort={ariaSort('agente')}>Agente{sortIcon('agente')}</th>
-                      <th className="px-2 py-2.5 text-center font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('via')} aria-sort={ariaSort('via')}>Canal{sortIcon('via')}</th>
-                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase">Entradas</th>
-                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase">Saidas</th>
-                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('valor')} aria-sort={ariaSort('valor')}>Liquido{sortIcon('valor')}</th>
+                      <th className="px-2 py-2.5 text-center font-medium text-[10px] text-dark-400 uppercase">Canal</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('pl')} aria-sort={ariaSort('pl')}>P/L{sortIcon('pl')}</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('pagamentos')} aria-sort={ariaSort('pagamentos')}>Pagamentos{sortIcon('pagamentos')}</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('rb')} aria-sort={ariaSort('rb')}>RB{sortIcon('rb')}</th>
+                      <th className="px-3 py-2.5 text-right font-medium text-[10px] text-dark-400 uppercase cursor-pointer hover:text-dark-200" onClick={() => handleSort('liquido')} aria-sort={ariaSort('liquido')}>Liquido{sortIcon('liquido')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-800/50">
-                    {sorted.map((r) => {
-                      const viaCfg = CANAIS[r.via] || CANAIS[r.via === 'rakeback' ? 'rakeback_deduzido' : r.via];
-                      const isPositive = r.valorLiquido >= 0;
-
-                      return (
-                        <tr key={r.id} className="hover:bg-dark-800/30">
-                          <td className="px-3 py-2 text-white text-xs">
-                            <div>
-                              <Highlight text={r.agenteName} query={search} />
-                              <p className="text-[10px] text-dark-500">{r.descricao}</p>
-                            </div>
-                          </td>
-                          {/* Badge clicável como filtro */}
-                          <td className="px-2 py-2 text-center">
-                            {viaCfg ? (
-                              <button
-                                onClick={() => setFilterVia(r.via as FilterVia)}
-                                className="px-1.5 py-0.5 rounded text-[9px] font-bold cursor-pointer hover:brightness-125 transition-all"
-                                style={{ background: viaCfg.bg, color: viaCfg.color, border: `1px solid ${viaCfg.border}` }}
-                                title={`Filtrar por ${viaCfg.label}`}
-                              >
-                                {viaCfg.label}
-                              </button>
-                            ) : <span className="text-dark-600 text-[10px]">{r.via}</span>}
-                          </td>
-                          {/* Entradas — vazio se zero (sem traço) */}
-                          <td className="px-3 py-2 text-right font-mono text-xs">
-                            {r.entradas > 0 && (
-                              <span className="text-poker-400 font-semibold">{formatBRL(r.entradas)}</span>
-                            )}
-                          </td>
-                          {/* Saidas — vazio se zero (sem traço) */}
-                          <td className="px-3 py-2 text-right font-mono text-xs">
-                            {r.saidas > 0 && (
-                              <span className="text-red-400 font-semibold">{formatBRL(r.saidas)}</span>
-                            )}
-                          </td>
-                          <td className={`px-3 py-2 text-right font-mono font-bold text-xs ${isPositive ? 'text-poker-400' : 'text-red-400'}`}>
-                            {isPositive ? '+' : '\u2212'}{formatBRL(Math.abs(r.valorLiquido))}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {sorted.map((r) => (
+                      <tr key={r.id} className="hover:bg-dark-800/30">
+                        <td className="px-3 py-2 text-white text-xs">
+                          <div>
+                            <Highlight text={r.agenteName} query={search} />
+                            <p className="text-[10px] text-dark-500">{r.txCount > 0 ? `${r.txCount} transacoes` : 'Sem transacoes'}</p>
+                          </div>
+                        </td>
+                        {/* Canal badges */}
+                        <td className="px-2 py-2 text-center">
+                          <div className="flex flex-wrap gap-0.5 justify-center">
+                            {r.canais.length > 0 ? r.canais.map((via) => {
+                              const viaCfg = CANAIS[via] || CANAIS[via === 'rakeback' ? 'rakeback_deduzido' : via];
+                              if (!viaCfg) return null;
+                              return (
+                                <span
+                                  key={via}
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                                  style={{ background: viaCfg.bg, color: viaCfg.color, border: `1px solid ${viaCfg.border}` }}
+                                >
+                                  {viaCfg.label}
+                                </span>
+                              );
+                            }) : <span className="text-dark-600 text-[10px]">-</span>}
+                          </div>
+                        </td>
+                        {/* P/L */}
+                        <td className="px-3 py-2 text-right font-mono text-xs">
+                          {r.pl !== 0 ? (
+                            <span className={`font-semibold ${r.pl >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                              {r.pl < 0 ? '\u2212' : ''}{formatBRL(Math.abs(r.pl))}
+                            </span>
+                          ) : null}
+                        </td>
+                        {/* Pagamentos */}
+                        <td className="px-3 py-2 text-right font-mono text-xs">
+                          {r.pagamentos !== 0 ? (
+                            <span className={`font-semibold ${r.pagamentos >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                              {r.pagamentos < 0 ? '\u2212' : ''}{formatBRL(Math.abs(r.pagamentos))}
+                            </span>
+                          ) : null}
+                        </td>
+                        {/* RB — sempre vermelho */}
+                        <td className="px-3 py-2 text-right font-mono text-xs">
+                          {r.rb > 0 ? (
+                            <span className="font-semibold text-red-400">{formatBRL(r.rb)}</span>
+                          ) : null}
+                        </td>
+                        {/* Líquido */}
+                        <td className={`px-3 py-2 text-right font-mono font-bold text-xs ${r.liquido >= 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                          {r.liquido > 0 ? formatBRL(r.liquido) : r.liquido < 0 ? `\u2212${formatBRL(Math.abs(r.liquido))}` : null}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                   <tfoot>
                     <tr className="bg-dark-800/40 border-t-2 border-dark-600">
                       <td className="px-3 py-2.5 text-white text-xs font-bold">TOTAL</td>
-                      <td className="px-2 py-2.5 text-center text-[10px] text-dark-400">{filtered.length} linhas</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-xs text-poker-400 font-bold">
-                        {formatBRL(round2(filtered.reduce((s, r) => s + r.entradas, 0)))}
+                      <td className="px-2 py-2.5 text-center text-[10px] text-dark-400">{filtered.length} agentes</td>
+                      <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold ${footerPl >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                        {footerPl < 0 ? '\u2212' : ''}{formatBRL(Math.abs(footerPl))}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-xs text-red-400 font-bold">
-                        {formatBRL(round2(filtered.reduce((s, r) => s + r.saidas, 0)))}
+                      <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold ${footerPag >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
+                        {footerPag < 0 ? '\u2212' : ''}{formatBRL(Math.abs(footerPag))}
                       </td>
-                      <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold ${footerLiquido >= 0 ? 'text-poker-400' : 'text-red-400'}`}>
-                        {footerLiquido >= 0 ? '+' : '\u2212'}{formatBRL(Math.abs(footerLiquido))}
+                      <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-red-400">
+                        {footerRb > 0 ? formatBRL(footerRb) : null}
+                      </td>
+                      <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold ${footerLiquido >= 0 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                        {footerLiquido > 0 ? formatBRL(footerLiquido) : footerLiquido < 0 ? `\u2212${formatBRL(Math.abs(footerLiquido))}` : null}
                       </td>
                     </tr>
                   </tfoot>
