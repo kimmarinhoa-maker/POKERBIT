@@ -141,6 +141,7 @@ export async function createLedgerEntry(data: {
   amount: number;
   method?: string;
   description?: string;
+  bank_account_id?: string;
 }) {
   return apiFetch('/ledger', {
     method: 'POST',

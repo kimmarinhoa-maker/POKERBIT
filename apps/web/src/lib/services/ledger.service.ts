@@ -24,6 +24,7 @@ export class LedgerService {
         amount: dto.amount,
         method: dto.method || null,
         description: dto.description || null,
+        bank_account_id: dto.bank_account_id || null,
         source: 'manual',
         created_by: userId,
       })
@@ -53,7 +54,7 @@ export class LedgerService {
   async listEntries(tenantId: string, weekStart: string, entityId?: string, page?: number, limit?: number) {
     let query = supabaseAdmin
       .from('ledger_entries')
-      .select('*', { count: 'exact' })
+      .select('*, bank_accounts(name)', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .eq('week_start', weekStart)
       .order('created_at', { ascending: true });

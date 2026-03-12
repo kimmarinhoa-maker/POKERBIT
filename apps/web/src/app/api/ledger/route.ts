@@ -17,6 +17,7 @@ const createEntrySchema = z.object({
   amount: z.number().positive(),
   method: z.string().optional(),
   description: z.string().optional(),
+  bank_account_id: z.string().uuid().optional(),
 });
 
 // ─── GET ────────────────────────────────────────────────────────────

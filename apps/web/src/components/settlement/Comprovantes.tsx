@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry, getTenantConfig, generateReceiptLink } from '@/lib/api';
+import { listLedger, getCarryForward, formatBRL, listPlayers, sendWhatsApp, createLedgerEntry, deleteLedgerEntry, getTenantConfig, generateReceiptLink, listBankAccounts } from '@/lib/api';
 import { buildCobrancaMessage, openWhatsApp } from '@/lib/whatsappMessages';
 import { round2, fmtDateTime } from '@/lib/formatters';
 import { formatDate as fmtDate } from '@/lib/api';
@@ -67,9 +67,12 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
   const [agentPhoneMap, setAgentPhoneMap] = useState<Record<string, string>>({});
   const [pixKey, setPixKey] = useState('');
 
+  // ─── Bank accounts (per subclub) ─────────────────────────────────
+  const [bankAccounts, setBankAccounts] = useState<Array<{ id: string; name: string; bank_code: string | null; is_default: boolean; is_active: boolean }>>([]);
+
   // ─── Quick-pay state (modal) ──────────────────────────────────────
   const [payModalAgent, setPayModalAgent] = useState<AgentMetric | null>(null);
-  const [payForm, setPayForm] = useState({ amount: '', method: 'PIX', description: '', dir: 'OUT' as 'IN' | 'OUT' });
+  const [payForm, setPayForm] = useState({ amount: '', method: 'PIX', description: '', dir: 'OUT' as 'IN' | 'OUT', bank_account_id: '' });
   const [payPendente, setPayPendente] = useState(0);
   const [saving, setSaving] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null);
@@ -94,7 +97,10 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
       const [ledgerRes, carryRes] = await Promise.all([listLedger(weekStart), getCarryForward(weekStart, clubId)]);
       if (!mountedRef.current) return;
       if (ledgerRes.success) {
-        const all = ledgerRes.data || [];
+        const all = (ledgerRes.data || []).map((e: any) => ({
+          ...e,
+          bank_account_name: e.bank_accounts?.name || null,
+        }));
         setEntries(all.filter((e: LedgerEntry) => subclubEntityIds.has(e.entity_id)));
       }
       if (carryRes.success) {
@@ -117,19 +123,22 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
     loadEntries();
   }, [loadEntries]);
 
-  // Load agent phones + PIX key (for WhatsApp billing)
+  // Load agent phones + PIX key + bank accounts
   useEffect(() => {
     (async () => {
       try {
-        const [tenantRes] = await Promise.all([getTenantConfig()]);
+        const [tenantRes, banksRes] = await Promise.all([getTenantConfig(), listBankAccounts(subclub.id)]);
         if (tenantRes.success && tenantRes.data?.pix_key) {
           setPixKey(tenantRes.data.pix_key);
         }
+        if (banksRes.success && banksRes.data) {
+          setBankAccounts(banksRes.data.filter((b: any) => b.is_active));
+        }
       } catch (err) {
-        console.warn('[Comprovantes] Erro ao carregar config PIX:', err);
+        console.warn('[Comprovantes] Erro ao carregar config:', err);
       }
     })();
-  }, []);
+  }, [subclub.id]);
 
   // Build phone map from agent metadata (agents come from org tree with metadata.phone)
   useEffect(() => {
@@ -145,11 +154,13 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
   function openQuickPay(agent: AgentMetric, pendente: number) {
     setPayModalAgent(agent);
     setPayPendente(pendente);
+    const defaultBank = bankAccounts.find(b => b.is_default);
     setPayForm({
       amount: String(Math.abs(round2(pendente))),
       method: 'PIX',
       description: `Pagamento ${agent.agent_name}`,
       dir: pendente > 0 ? 'OUT' : 'IN',
+      bank_account_id: defaultBank?.id || '',
     });
   }
 
@@ -167,6 +178,7 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
         amount,
         method: payForm.method || undefined,
         description: payForm.description || undefined,
+        bank_account_id: payForm.bank_account_id || undefined,
       });
       if (res.success) {
         setPayModalAgent(null);
@@ -925,6 +937,25 @@ export default function Comprovantes({ subclub, weekStart, clubId, clubExternalI
                   </div>
                 </div>
 
+                {/* Conta Bancária */}
+                {bankAccounts.length > 0 && (payForm.method === 'PIX' || payForm.method === 'TED') && (
+                  <div>
+                    <label className="block text-xs text-dark-400 font-medium mb-1.5">Conta Bancaria</label>
+                    <select
+                      value={payForm.bank_account_id}
+                      onChange={(e) => setPayForm(p => ({ ...p, bank_account_id: e.target.value }))}
+                      className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-poker-500 outline-none"
+                    >
+                      <option value="">Selecione a conta...</option>
+                      {bankAccounts.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}{b.bank_code ? ` (${b.bank_code})` : ''}{b.is_default ? ' ★' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Descricao */}
                 <div>
                   <label className="block text-xs text-dark-400 font-medium mb-1.5">Descricao (opcional)</label>
@@ -1132,6 +1163,11 @@ function AgentRow({
                                 {e.method && (
                                   <span className="px-1.5 py-0 rounded text-[9px] font-bold bg-dark-700 text-dark-400">
                                     {e.method}
+                                  </span>
+                                )}
+                                {e.bank_account_name && (
+                                  <span className="px-1.5 py-0 rounded text-[9px] font-medium bg-dark-700/60 text-dark-500">
+                                    {e.bank_account_name}
                                   </span>
                                 )}
                                 {e.description && (

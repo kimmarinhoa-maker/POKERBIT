@@ -81,6 +81,8 @@ export interface LedgerEntry {
   external_ref?: string | null;
   is_reconciled?: boolean;
   category_id?: string | null;
+  bank_account_id?: string | null;
+  bank_account_name?: string | null;
 }
 
 /** Subclub panel data retornada pelo GET /api/settlements/:id/full */

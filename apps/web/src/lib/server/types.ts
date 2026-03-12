@@ -116,6 +116,7 @@ export interface LedgerEntry {
   method: string | null;
   description: string | null;
   source: string;
+  bank_account_id: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -140,6 +141,7 @@ export interface CreateLedgerEntryDTO {
   amount: number;
   method?: string;
   description?: string;
+  bank_account_id?: string;
 }
 
 export interface WeekQuery {
