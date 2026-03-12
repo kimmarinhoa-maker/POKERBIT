@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════
-//  GET/POST /api/config/bank-accounts — Bank Accounts CRUD
+//  GET/POST /api/config/bank-accounts — Bank Accounts CRUD (per org)
 // ══════════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,11 +10,19 @@ import { safeErrorMessage } from '@/lib/server/apiError';
 export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {
     try {
-      const { data, error } = await supabaseAdmin
+      const orgId = req.nextUrl.searchParams.get('organization_id');
+
+      let query = supabaseAdmin
         .from('bank_accounts')
         .select('*')
         .eq('tenant_id', ctx.tenantId)
         .order('name');
+
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return NextResponse.json({ success: true, data });
@@ -33,7 +41,7 @@ export async function POST(req: NextRequest) {
     async (ctx) => {
       try {
         const body = await req.json();
-        const { name, bank_code, agency, account_nr, is_default } = body;
+        const { name, bank_code, agency, account_nr, is_default, organization_id } = body;
 
         if (!name || typeof name !== 'string') {
           return NextResponse.json(
@@ -42,17 +50,26 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        if (!organization_id) {
+          return NextResponse.json(
+            { success: false, error: 'Campo "organization_id" obrigatório' },
+            { status: 400 },
+          );
+        }
+
         if (is_default) {
           await supabaseAdmin
             .from('bank_accounts')
             .update({ is_default: false })
-            .eq('tenant_id', ctx.tenantId);
+            .eq('tenant_id', ctx.tenantId)
+            .eq('organization_id', organization_id);
         }
 
         const { data, error } = await supabaseAdmin
           .from('bank_accounts')
           .insert({
             tenant_id: ctx.tenantId,
+            organization_id,
             name: name.trim(),
             bank_code: bank_code || null,
             agency: agency || null,

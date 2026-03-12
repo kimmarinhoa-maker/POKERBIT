@@ -77,14 +77,16 @@ export async function deletePaymentMethod(id: string) {
   return apiFetch(`/config/payment-methods/${id}`, { method: 'DELETE' });
 }
 
-// ─── Bank Accounts ───────────────────────────────────────────────
+// ─── Bank Accounts (per organization) ────────────────────────────
 
-export async function listBankAccounts() {
-  return apiFetch('/config/bank-accounts');
+export async function listBankAccounts(organizationId?: string) {
+  const params = organizationId ? `?organization_id=${organizationId}` : '';
+  return apiFetch(`/config/bank-accounts${params}`);
 }
 
 export async function createBankAccount(data: {
   name: string;
+  organization_id: string;
   bank_code?: string;
   agency?: string;
   account_nr?: string;
@@ -102,6 +104,7 @@ export async function updateBankAccount(
     account_nr?: string;
     is_default?: boolean;
     is_active?: boolean;
+    organization_id?: string;
   },
 ) {
   return apiFetch(`/config/bank-accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) });

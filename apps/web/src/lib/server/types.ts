@@ -206,6 +206,7 @@ export interface PaymentMethod {
 export interface BankAccount {
   id: string;
   tenant_id: string;
+  organization_id: string | null;
   name: string;
   bank_code: string | null;
   agency: string | null;

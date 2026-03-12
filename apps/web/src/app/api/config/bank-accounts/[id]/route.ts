@@ -17,13 +17,14 @@ export async function PUT(
       try {
         const { id } = await params;
         const body = await req.json();
-        const { name, bank_code, agency, account_nr, is_default, is_active } = body;
+        const { name, bank_code, agency, account_nr, is_default, is_active, organization_id } = body;
 
-        if (is_default) {
+        if (is_default && organization_id) {
           await supabaseAdmin
             .from('bank_accounts')
             .update({ is_default: false })
-            .eq('tenant_id', ctx.tenantId);
+            .eq('tenant_id', ctx.tenantId)
+            .eq('organization_id', organization_id);
         }
 
         const update: Record<string, any> = {};
