@@ -34,6 +34,7 @@ interface LedgerData {
   dir: 'IN' | 'OUT';
   amount: number;
   method?: string | null;
+  bank_account_name?: string | null;
   created_at?: string;
 }
 
@@ -317,6 +318,11 @@ export default function ComprovantePage() {
                       {e.method && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-800 text-dark-300 font-bold uppercase">
                           {e.method}
+                        </span>
+                      )}
+                      {e.bank_account_name && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-700/60 text-dark-400 font-medium">
+                          {e.bank_account_name}
                         </span>
                       )}
                       {e.created_at && (

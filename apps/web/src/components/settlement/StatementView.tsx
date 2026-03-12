@@ -330,6 +330,11 @@ export default function StatementView({
                         {e.method}
                       </span>
                     )}
+                    {e.bank_account_name && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-700/60 print:bg-gray-100 text-dark-400 print:text-gray-500 font-medium">
+                        {e.bank_account_name}
+                      </span>
+                    )}
                     <span className="text-dark-500 print:text-gray-500 font-mono text-[10px]">
                       {fmtDateTime(e.created_at!)}
                     </span>

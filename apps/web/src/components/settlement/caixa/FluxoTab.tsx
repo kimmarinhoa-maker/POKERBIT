@@ -355,6 +355,11 @@ export default function FluxoTab({ weekStart, settlementStatus, onDataChange, su
                       <div className="flex items-center gap-1.5">
                         <Highlight text={e.entity_name || '\u2014'} query={debouncedSearch} />
                         {e.method && <MethodBadge method={e.method} />}
+                        {e.bank_account_name && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-700/60 text-dark-400 font-medium">
+                            {e.bank_account_name}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-dark-400 text-xs truncate max-w-[200px]">

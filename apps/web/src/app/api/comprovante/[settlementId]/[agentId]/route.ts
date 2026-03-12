@@ -81,7 +81,7 @@ export async function GET(
 
     const { data: ledgerEntries } = await supabaseAdmin
       .from('ledger_entries')
-      .select('id, entity_id, entity_name, dir, amount, method, description, source, created_at')
+      .select('id, entity_id, entity_name, dir, amount, method, description, source, created_at, bank_account_id, bank_accounts(name)')
       .eq('tenant_id', tenantId)
       .eq('week_start', settlement.week_start)
       .in('entity_id', entityIds)
@@ -129,7 +129,11 @@ export async function GET(
       data: {
         agent: agentMetric,
         players: players || [],
-        ledgerEntries: ledgerEntries || [],
+        ledgerEntries: (ledgerEntries || []).map((e: any) => ({
+          ...e,
+          bank_account_name: e.bank_accounts?.name || null,
+          bank_accounts: undefined,
+        })),
         saldoAnterior,
         settlement: {
           id: settlement.id,

@@ -52,9 +52,15 @@ export async function GET(req: NextRequest) {
         limit,
       );
 
+      const mapped = paged.map((e: any) => ({
+        ...e,
+        bank_account_name: e.bank_accounts?.name || null,
+        bank_accounts: undefined,
+      }));
+
       return NextResponse.json({
         success: true,
-        data: paged,
+        data: mapped,
         meta: { total, page, limit, pages: Math.ceil(total / limit) },
       });
     } catch (err: unknown) {

@@ -525,7 +525,14 @@ function AgentRow({ pos, isExpanded, onToggle, isDraft, canEdit, onQuickPay, pro
                         {e.created_at ? new Date(e.created_at).toLocaleDateString('pt-BR') : '\u2014'}
                       </td>
                       <td className="px-3 py-1.5">
-                        <SourceBadge source={e.source || e.method || 'manual'} />
+                        <div className="flex items-center gap-1.5">
+                          <SourceBadge source={e.source || e.method || 'manual'} />
+                          {e.bank_account_name && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-700/60 text-dark-400 font-medium">
+                              {e.bank_account_name}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-1.5 text-dark-400 truncate max-w-[200px]">{e.description || e.entity_name || '\u2014'}</td>
                       <td className={`px-3 py-1.5 text-right font-mono font-medium ${e.dir === 'IN' ? 'text-emerald-400' : 'text-red-400'}`}>
